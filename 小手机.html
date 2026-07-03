@@ -560,6 +560,9 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
+/* ☁️ 云同步（Supabase）：换设备/清缓存也不丢。key 是公开的 publishable key，可以放心内嵌 */
+const CLOUD_URL='https://lovbzibismsjqvjujilz.supabase.co';
+const CLOUD_KEY='sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
 /* ================= 改密码看这里（搜「改密码」就能跳到） =================
    想换访问口令：把下面单引号里的 1225206 改成你想要的新口令，保存/提交即可。
    true 改成 false 就是【完全关掉口令门】(谁打开都不用输)。
@@ -571,7 +574,7 @@ const SHARE_GATE=true, SHARE_PW='Claudeopus4.6';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v291 · PWA:可"添加到主屏当App用"(粉色图标·全屏,无需上架);小黑屋和线下约会的上下文条数可自己调(设置里),小黑屋重试次数也可调、默认降到1次更省API';
+const APP_VER='v292 · 云同步:聊天/角色/记忆等全部数据可一键备份到云(Supabase),换手机或清缓存用同一个"云ID"就能拉回来,再也不怕丢(设置最底下☁️云同步);可开自动备份';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1853,7 +1856,8 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <button class="btn p" onclick="saveSettings()">保存设置</button>
     ${storageMeter()}
     <div class="btns" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
-    <div class="btns" style="margin-top:10px"><button class="btn g" onclick="exportData()">导出备份</button><button class="btn g" onclick="importData()">导入</button></div>
+    <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
@@ -6130,6 +6134,35 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出');}
 function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=Object.assign(defState(),d);save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
+/* ---------- ☁️ 云同步 ---------- */
+function cloudId(){S.settings=S.settings||{};if(!S.settings.cloudId)S.settings.cloudId='yb_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);save();return S.settings.cloudId;}
+async function cloudBackup(){const id=cloudId();const data=JSON.stringify(S);/* 完整存档(含消息/图)，和导出一致 */
+  const r=await fetch(CLOUD_URL+'/rest/v1/backups',{method:'POST',headers:{'apikey':CLOUD_KEY,'Authorization':'Bearer '+CLOUD_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data,ver:APP_VER,updated_at:new Date().toISOString()})});
+  if(!r.ok){let t='';try{t=await r.text();}catch(_){}throw new Error('HTTP '+r.status+(t?(' '+t.slice(0,120)):''));}
+  S.settings.cloudLast=Date.now();save();return data.length;}
+async function cloudRestore(idOverride){const id=(idOverride||cloudId());
+  const r=await fetch(CLOUD_URL+'/rest/v1/backups?id=eq.'+encodeURIComponent(id)+'&select=data,updated_at',{headers:{'apikey':CLOUD_KEY,'Authorization':'Bearer '+CLOUD_KEY}});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const rows=await r.json();if(!rows||!rows.length)throw new Error('云端没找到这个云ID的备份');
+  const d=JSON.parse(rows[0].data);if(!d||!d.settings)throw new Error('云端数据格式不对');
+  S=Object.assign(defState(),d);save();return rows[0].updated_at;}
+function cloudSyncModal(){const id=cloudId();const last=S.settings.cloudLast?(fmtDur(Date.now()-S.settings.cloudLast)+'前'):'从未';
+  openModal(`<h3>☁️ 云同步</h3><div class="hint">把聊天/角色/记忆/朋友圈/钱包等<b>全部数据</b>备份到云端。换手机、清了缓存，用<b>同一个云ID</b>就能一键拉回来，再也不怕丢。</div>
+    <div class="field"><label>你的云ID（换设备时在新机填这个就能恢复）</label>
+      <div style="display:flex;gap:6px"><input id="cl_id" value="${esc(id)}" readonly style="flex:1;font-size:12px"><button class="minibtn" onclick="cloudCopyId()">复制</button></div></div>
+    <div style="font-size:12px;color:#888;padding:0 2px 10px">上次备份：${last}</div>
+    <div class="btns"><button class="btn p" onclick="cloudDoBackup()">☁️ 立即备份到云</button><button class="btn g" onclick="cloudDoRestore()">⬇️ 从云恢复</button></div>
+    <button class="btn g" style="margin-top:8px" onclick="cloudUseOtherId()">🔁 在新设备：输入旧云ID恢复</button>
+    <div class="it" style="margin-top:8px"><span>自动备份<br><small style="color:#888">打开后：进App时+之后每10分钟自动备份一次（这台push到云）</small></span><span class="sw ${S.settings.cloudAuto?'on':''}" onclick="S.settings.cloudAuto=!S.settings.cloudAuto;save();this.classList.toggle('on');toast(S.settings.cloudAuto?'已开自动备份':'已关自动备份')"></span></div>
+    <div class="hint" style="color:#888;margin-top:6px">提示：云ID是你的钥匙，别随便发别人。恢复会用云端覆盖这台当前的数据。</div>
+    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function cloudCopyId(){const id=cloudId();try{navigator.clipboard&&navigator.clipboard.writeText(id);}catch(_){}const el=$('#cl_id');if(el){el.select&&el.select();}toast('已复制云ID');}
+async function cloudDoBackup(){toast('备份中…☁️');try{const n=await cloudBackup();toast('✅ 已备份到云（'+Math.round(n/1024)+'KB）');cloudSyncModal();}catch(e){toast('备份失败：'+e.message);}}
+async function cloudDoRestore(){if(!await uiConfirm('用云端备份覆盖这台设备现在的数据？\n（当前这台会被云上的替换，建议先备份当前的）'))return;toast('恢复中…');try{const w=await cloudRestore();closeModal();render();toast('✅ 已从云恢复');}catch(e){toast('恢复失败：'+e.message);}}
+function cloudUseOtherId(){openModal(`<h3>🔁 用旧云ID恢复</h3><div class="hint">在旧设备的「云同步」里点复制云ID，粘贴到这里，把数据拉到这台设备。恢复后这台也会用这个云ID，之后两台就同步了。</div><div class="field"><input id="cl_other" placeholder="粘贴旧设备的云ID"></div><div class="btns"><button class="btn g" onclick="cloudSyncModal()">返回</button><button class="btn p" onclick="cloudRestoreOther()">恢复到这台</button></div>`);}
+async function cloudRestoreOther(){const oid=(($('#cl_other')||{}).value||'').trim();if(!oid){toast('先粘贴云ID');return;}if(!await uiConfirm('用这个云ID的备份覆盖本机数据？'))return;toast('恢复中…');try{await cloudRestore(oid);/* cloudRestore 已把 S 换成云端的(含它自己的cloudId)，两台从此同步 */render();closeModal();toast('✅ 已恢复到这台');}catch(e){toast('恢复失败：'+e.message);}}
+let _cloudAutoT=0;function cloudAutoTick(){if(!(S.settings&&S.settings.cloudAuto))return;const now=Date.now();if(now-_cloudAutoT<300000)return;_cloudAutoT=now;cloudBackup().catch(()=>{});}
+setInterval(cloudAutoTick,600000);setTimeout(()=>{if(S.settings&&S.settings.cloudAuto)cloudBackup().catch(()=>{});},9000);
 /* ---------- 存储用量 ---------- */
 function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=new Blob([s||JSON.stringify(S)]).size;}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
   const CAP=5*1024*1024;return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100))};}
