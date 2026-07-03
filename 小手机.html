@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Claudeopus4.6';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v286 · 小黑屋:[放出]一定放人(哪怕同段带选择题也放),说放就真放;不再被"我不会再关你"误判成不放;加大上下文防重复盘问;跳戏自动重生成3次;长按可删对方那条(隐藏式不出戏)';
+const APP_VER='v287 · 记忆总结:不再半句断掉(按句子边界截断+加大长度);加强视角铁律,绝不再把"他训我"总结成"我训他"(尤其小黑屋);线下/通话/小黑屋总结都更完整';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3625,8 +3625,8 @@ async function offEnd(id){const o=offData(id);if(!o.msgs||!o.msgs.length){offQui
   if(!await uiConfirm('结束这次约会？会自动把这次见面总结成一条记忆(微信里的ta也会知道)。'))return;
   toast('正在回味这次约会…');const c=getC(id);
   try{const text=o.msgs.map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':c.name)+'：'+m.text).join('\n');
-    const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会【完整地】记成一段第一人称记忆：写清楚在哪、什么时段、你们一起做了什么、聊了哪些重要的话、有什么亲密或难忘的瞬间、你当时的心情感受。要具体、有细节、有情绪，像写一小段日记，120~200字，以后聊微信你能清楚回忆起这次见面。直接写正文，别写"记忆："这种前缀。'},{role:'user',content:text}],{max:600});
-    const clean=cleanReply(sum).slice(0,400)||'见了一面';
+    const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会【完整地】记成一段第一人称记忆：写清楚在哪、什么时段、你们一起做了什么、聊了哪些重要的话、有什么亲密或难忘的瞬间、你当时的心情感受。要具体、有细节、有情绪，像写一小段日记，120~200字、把最后一句也写完整别断，以后聊微信你能清楚回忆起这次见面。直接写正文，别写"记忆："这种前缀。'+perspRule(c)},{role:'user',content:text}],{max:600});
+    const clean=trimSentence(cleanReply(sum),400)||'见了一面';
     o.memory=o.memory||[];o.memory.push({ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:clean});
     // 同时写进长期「记忆总结」，标注是线下约会，让ta长久记得
     c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(o.loc||'外面')+'】'+clean,imp:4});
@@ -3767,11 +3767,11 @@ function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.
 async function summarizeJail(c,reason,backdoor,jmsgs){if(!c)return;
   const stamp=new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
   c.summaries=c.summaries||[];
-  const push=t=>{addSummary(c,(t||'').slice(0,300),4,'【小黑屋】');};
+  const push=t=>{addSummary(c,trimSentence(t,320),4,'【小黑屋】');};
   const fallback='我把'+S.me.name+'关进了禁闭室小黑屋惩罚ta'+(reason?('，因为'+reason):'')+'，'+(backdoor?'ta认输求饶后我才放ta出来':'我逼问审够、ta认错服软了才放ta出来')+'，积压的旧账也都清算翻篇了。';
   const text=(jmsgs||[]).map(m=>{const who=(m.who==='me')?S.me.name:(m.who==='旁白'?'（场景）':(c.name||'我'));return who+'：'+(m.text||'');}).filter(x=>x.slice(-1)!=='：'&&x.indexOf('（场景）：')!==0).join('\n');
   if(!text.trim()){push(fallback);return;}
-  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你刚把'+S.me.name+'关进"小黑屋禁闭室"惩罚ta时发生的事（你的逼问、ta的认错求饶、你出的选择题等）。请用第一人称把这次小黑屋经历记成一段记忆：为什么关ta、你逼问/算了哪些账、ta认了什么错、求饶/保证了什么、最后怎么放ta出来、你的感受。用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。3到4句、一两百字，是你的口吻和视角，直接写正文别分点。'},{role:'user',content:text}],{max:360,temp:.5});
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是【你】刚把'+S.me.name+'关进"小黑屋禁闭室"惩罚ta时发生的事（是你在逼问ta、你在审ta、ta在认错求饶）。请用第一人称把这次小黑屋经历记成一段记忆：为什么关ta、你逼问/算了哪些账、ta认了什么错、求饶/保证了什么、最后怎么放ta出来、你的感受。用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。3到4句、一两百字、把话说完整，是你的口吻和视角，直接写正文别分点。\n【特别注意·绝不搞反】这次是【你关了ta、你审了ta、你训了ta】，一定要写成"我把ta关进小黑屋、我逼问ta、ta认错求饶"，【绝对不能】写反成"ta把我关起来/ta审我/ta训我"——搞反就全错了。'+perspRule(c)},{role:'user',content:text}],{max:520,temp:.5});
     push((sum?cleanReply(sum):'')||fallback);
   }catch(e){push(fallback);}}
 async function jailBackdoor(){if(!await uiConfirm('真的认输、不玩了？\n会强制开门出来。（真实模式下他会更记仇、冷处理更久）'))return;releaseJail(true);}
@@ -5276,6 +5276,10 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 // ===== 记忆总结·重要度(1-5) + 自动清理 =====
 const IMP_INSTR='\n最后，请在【最前面单独一行】用「重要度：N」给这段记忆打个分：N是1到5的整数——1=普通日常闲聊、2=有点小事、3=一般值得记、4=重要、5=刻骨铭心的大事(比如表白/订婚/纪念日/ta哭了/重大承诺/大吵又和好)。第一行只写「重要度：N」，第二行起再写日记正文。';
 function rateAndText(raw){let imp=3,text=(raw||'').trim();const m=text.match(/^\s*重要度\s*[:：]?\s*([1-5])[^\n]*\n?/);if(m){imp=+m[1];text=text.slice(m[0].length).trim();}return {imp:imp,text:text};}
+// 按句子边界截断，别把最后一句砍掉一半（记忆总结不再"突然断掉"）
+function trimSentence(t,max){t=(''+t).trim();if(t.length<=max)return t;const s=t.slice(0,max);let last=-1;for(const ch of ['。','！','？','…','!','?','.','~','～']){const k=s.lastIndexOf(ch);if(k>last)last=k;}return last>max*0.4?s.slice(0,last+1):s.trim();}
+// 视角铁律：防止总结把"他做的"和"我做的"搞反
+function perspRule(c){return '\n【视角铁律·绝不搞反】始终站在你自己（'+(c.name||'你')+'）的视角写："我"永远指你自己、"'+S.me.name+'"永远指对方。谁做的事就写在谁头上——是你骂了/罚了/管教/审问了ta，就写"我…ta"，【绝对不能反过来】写成"ta…我"；是ta撒娇/认错/做错，就照实写在ta身上。千万别把你俩的角色对调、别把你做的事安到ta头上、也别把ta做的安到自己头上。';}
 function sumStamp(){return new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
 function pruneSummaries(c){if(S.settings.memAutoClean===false)return;const cap=(+S.settings.memCap)||100;let arr=c.summaries||[];
   while(arr.length>cap){let cand=-1,candImp=99;for(let i=0;i<arr.length;i++){const im=arr[i].imp||3;if(im>=5)continue;if(im<candImp){candImp=im;cand=i;}}if(cand<0)break;/* 剩下全是5星就不再删 */arr.splice(cand,1);}}
@@ -5286,15 +5290,15 @@ async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summ
   const all=msgs(id);const keep=rounds*2;if(all.length<=keep+6)return;
   const done=c._sumCount||0;const upto=all.length-keep;if(upto-done<6)return;
   const chunk=all.slice(done,upto).map(m=>{const t=msgToText(m);return t?((m._call?(m._ck==='video'?'(视频通话里)':'(语音通话里)'):'')+t):'';}).filter(Boolean).join('\n');if(!chunk)return;
-  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚发生的事（包含文字聊天，以及打电话/视频里说的话，都要一起算上）。用第一人称写一句日记记下来：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇说她加班到很晚，还说想吃我做的糖醋排骨，我心都化了"。把这段里【重要的事】都记上（ta说了啥、答应了啥、你们约定了啥、ta的喜好/状态、闹了啥），50字左右、可以两小句，必须是你('+c.name+')的口吻和视角，不是'+S.me.name+'的视角、不要旁白，直接写正文。'+IMP_INSTR},{role:'user',content:chunk}],{max:220,temp:.4});
-    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text){addSummary(c,rt.text.slice(0,100),rt.imp);c._sumCount=upto;save();}}
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚发生的事（包含文字聊天，以及打电话/视频里说的话，都要一起算上）。用第一人称写成一段完整的日记：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇说她加班到很晚，还说想吃我做的糖醋排骨，我心都化了"。把这段里【重要的事】都记上（ta说了啥、答应了啥、你们约定了啥、ta的喜好/状态、闹了啥），2到3句、把话说完整别写一半，必须是你('+c.name+')的口吻和视角，不要旁白，直接写正文。'+perspRule(c)+IMP_INSTR},{role:'user',content:chunk}],{max:320,temp:.4});
+    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text){addSummary(c,trimSentence(rt.text,180),rt.imp);c._sumCount=upto;save();}}
   }catch(e){}}
 async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
   const cms=msgs(id).filter(m=>m._call&&(!sess||m._cs===sess));if(!cms.length)return;
   const text=cms.map(m=>(m.role==='user'?S.me.name:c.name)+'：'+((m.content||(m.type==='voice'?(m.content||'[语音]'):''))||'')).filter(x=>x.slice(-1)!=='：').join('\n');
   if(!text.trim())return;
-  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚才这通'+kindTxt+'里说的话。请用第一人称【较完整地】把这通'+kindTxt+'记成一段记忆：聊到的事情大概都记一下、重要的点别漏、再带上你的感受。用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。可以写3到5句（一两百字），是你的口吻和视角，直接写正文，别分点别带前缀。'+IMP_INSTR},{role:'user',content:text}],{max:420,temp:.5});
-    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text)addSummary(c,rt.text.slice(0,260),rt.imp,'【'+kindTxt+'】');}
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚才这通'+kindTxt+'里说的话。请用第一人称【较完整地】把这通'+kindTxt+'记成一段记忆：聊到的事情大概都记一下、重要的点别漏、再带上你的感受。用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。写3到5句（一两百字）、把每句话说完整别断在半截，是你的口吻和视角，直接写正文，别分点别带前缀。'+perspRule(c)+IMP_INSTR},{role:'user',content:text}],{max:600,temp:.5});
+    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text)addSummary(c,trimSentence(rt.text,320),rt.imp,'【'+kindTxt+'】');}
   }catch(e){}}
 let _replyTimers={};
 let _replying=null;
