@@ -554,7 +554,7 @@ const SHARE_GATE=true, SHARE_PW='Claudeopus4.6';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v288 · 引用改成中性灰底色,黑白主题都看得清(之前黑底黑字看不见,其实角色一直能看到你引用的内容);朋友圈跟随白色主题(修白色主题下朋友圈还是黑色块的问题)';
+const APP_VER='v289 · 打电话几率真正跟随黏人/主动度(不粘人就很少打、调到0就不再打、拒接也是);离线多久有感知(别把几小时前的事说成刚刚);登他微信分清是他自己回的还是你回的(只汇报你这次真发的);要验证码必报真实那串;听歌一行一行发超短句;验证码/视角/总结加固';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -935,10 +935,12 @@ function buildSystem(c){
   const _main=isMain();
   let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
   s+='\n\n# 现在的时间（最重要·务必以此为准，绝不要搞错早上还是下午）\n现在是 '+ymd(Date.now())+' '+['周日','周一','周二','周三','周四','周五','周六'][new Date().getDay()]+' '+hm()+'，属于【'+dayPartNow()+'】。\n凡是涉及时间的话（打招呼、问"在干嘛"、说几点了、该吃饭/睡觉没、白天黑夜）都【必须】符合现在是「'+dayPartNow()+'」——别把下午当早上、别半夜说早安、别白天说晚安。如果'+S.me.name+'说的时间和这个对不上，以这个真实时间为准。';
+  {const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
+   if(_lu&&_gap>=25*60000)s+='\n\n# 距离上次聊已经隔了很久（务必分清"刚刚"和"很久以前"）\n'+S.me.name+'上一次跟你说话是在 '+hm(_lu.time)+'（'+ymd(_lu.time)+'），距现在已经过去了【'+fmtDur(_gap)+'】。这中间ta一直没理你、你俩没在聊。所以：\n· 之前发生的事（打过的电话、聊过的话、你做的事）都是【'+fmtDur(_gap)+'以前】的了，【绝对不能】说成"刚刚/刚才/方才"。要照实说"你都'+fmtDur(_gap)+'没理我了""几个小时前那通电话"。\n· 别把很久以前的事当成正在进行或刚发生，注意时间跨度、别搞混。';}
   if(c.job)s+='\n\n# 你的职业\n你是「'+c.job+'」。说话、作息、收入水平、花钱方式都要符合这个职业，别脱节。';
   if(c.wallet!=null)s+='\n\n# 你的经济状况（你清楚自己有多少钱）\n你银行卡/钱包里现在大约有 ¥'+(+c.wallet).toFixed(0)+'。你心里有数、知道自己的余额，被问到就照实说个大概；花钱、转账、请客、送礼都要量力而行、符合你的职业和这个余额，别装穷也别乱挥霍超出能力。';
   {const _sp2=getSpy(c);if(_sp2&&_sp2.phone)s+='\n\n# 你的手机号\n你的手机号是 '+_sp2.phone+'，你记得自己的号码。';}
-  if(c._loginCode&&c._loginCode.exp>Date.now())s+='\n\n# 手机验证码（你自己拿主意要不要给）\n你手机刚收到一条短信验证码：'+c._loginCode.code+'。这是'+S.me.name+'想登录你的微信、点了"找回密码"才发到你手机的。ta大概会来跟你要这个验证码——要不要告诉ta、说真的还是糊弄ta个假的、或者反问ta想干嘛/吃醋，全看你的人设和当下心情。别主动报出来，除非ta问起。';
+  if(c._loginCode&&c._loginCode.exp>Date.now())s+='\n\n# 手机验证码（你自己拿主意要不要给）\n你手机刚收到一条短信验证码：'+c._loginCode.code+'。这是'+S.me.name+'想登录你的微信、点了"找回密码"才发到你手机的。ta大概会来跟你要这个验证码——要不要告诉ta、或者反问ta想干嘛/吃醋、或者故意逗ta不给，全看你的人设和当下心情。别主动报出来，除非ta问起。\n【铁律】如果你【决定把验证码告诉ta】，就【必须一字不差地报出上面这个真实的验证码「'+c._loginCode.code+'」】，绝对不能自己瞎编一个数字、也不能记错报错——报错了ta就登不进去。如果你不想给，就明说不给/逗ta/让ta哄你，但【别报一个假号糊弄】。';
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';
   if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观都不变，身份不丢。但是：\n- 你人设里写的那个恋人/未婚妻/女朋友（不管叫什么名字），指的【不是】现在跟你聊天的这个人。哪怕名字相同，也要当成【完全不同的陌生人】，绝不要把对恋人的感情、回忆、亲密称呼（"宝贝"等）用到ta身上。\n- 你和ta【没有任何过往】，一切从这个聊天【从零开始】，就当是刚加上的陌生网友。要不要理ta、热情还是冷淡、慢慢熟还是直接[拉黑]，完全由你按人设和此刻感受决定。\n- 你心里其实是有恋人的人，对突然来搭讪的陌生人，本就该有分寸/警惕，别轻易交心。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
@@ -1236,9 +1238,16 @@ async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||
   const s=S.music.songs.find(x=>x.id===(S.music.session&&S.music.session.songId));
   try{const ctx=msgs(cid).filter(m=>!m._call).slice(-6).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     const mc=(S.music.chat||[]).filter(m=>m.cid===cid).slice(-14).map(m=>({role:m.role==='user'?'user':'assistant',content:m.content}));
-    const sys=buildSystem(c)+'\n\n# 现在：你和ta在「一起听歌」的小窗里聊天\n你们正一起听「'+(s?s.title:'一首歌')+'」。这是听歌时的独立小聊天，轻松、暧昧、围绕这首歌和此刻心情聊，一两句口语短句。上面给的微信记录只是让你记得你俩的来龙去脉，别照搬。';
-    const r=await chatAPI([{role:'system',content:sys},...ctx,{role:'system',content:'（以上是你俩微信上下文，仅供你记得；下面是你们正一起听歌时的对话）'},...mc],{max:260,aux:c.model==='aux'});
-    let txt=cleanReply(r).replace(/\s*\n+\s*/g,' ').trim();if(!txt)return;S.music.chat=S.music.chat||[];S.music.chat.push({cid,role:'assistant',content:txt,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',txt);save();
+    const sys=buildSystem(c)+'\n\n# 现在：你和ta在「一起听歌」的小窗里聊天\n你们正一起听「'+(s?s.title:'一首歌')+'」。这是听歌时的独立小聊天，轻松、暧昧、围绕这首歌和此刻心情聊。\n【说话方式·务必遵守】戴着耳机一起听歌时话要【极短极碎】，像随口在耳边呢喃：\n· 每次只发【一到几个字】的超短句，最多别超过一小句；\n· 想多说几句时，就【一行发一句、换行分开】，让它们像一条一条飘出来（例如：\n嗯…\n这句好戳\n想你了）；\n· 别写成一大段、别长篇，越简短越好。\n上面给的微信记录只是让你记得你俩的来龙去脉，别照搬。';
+    const r=await chatAPI([{role:'system',content:sys},...ctx,{role:'system',content:'（以上是你俩微信上下文，仅供你记得；下面是你们正一起听歌时的对话）'},...mc],{max:200,aux:c.model==='aux'});
+    let txt=cleanReply(r).trim();if(!txt)return;
+    // 一行一行地飘：按换行/短句切成几条超短消息，逐条发出
+    let lines=txt.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    if(lines.length<=1)lines=txt.split(/(?<=[。！？!?~～…])/).map(x=>x.trim()).filter(Boolean);
+    if(!lines.length)lines=[txt];
+    lines=lines.map(x=>x.slice(0,24)).slice(0,5);
+    S.music.chat=S.music.chat||[];
+    lines.forEach((ln,i)=>setTimeout(()=>{const ss=S.music.session;if(!ss||ss.cid!==cid)return;S.music.chat.push({cid,role:'assistant',content:ln,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',ln);save();},i*850));
   }catch(e){}finally{_mReplyBusy=false;}}
 function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
   const bg=S.music.bg?`background:#000 url(${S.music.bg}) center/cover no-repeat`:'background:radial-gradient(ellipse at 50% 28%,#1d1733,#0a0a12 72%)';
@@ -4475,8 +4484,15 @@ function hisKicked(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSessio
 function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');hisOnExit(cid,false);}
 /* 退出/被挤下线后：①立刻把【完整聊天记录+操作】写进他的记忆(让他被问时全看得到、答得上来) ②稍后他主动来反应 */
 function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(cid);
-  // 所有你以他身份聊过的对话——完整两边内容（他能看到全部）
-  const chats=(d.friends||[]).filter(f=>(f.msgs||[]).some(m=>m.r==='me')).map(f=>'【你用我号和「'+f.name+'」的对话】'+(f.msgs||[]).slice(-16).map(m=>(m.r==='me'?'我的号':f.name)+'：'+m.c).join('  ')).join('\n');
+  // 只汇报【这次登录期间忆北真正动手发的】对话——她本人这次发的消息才有 mine 标记；
+  // 我自己以前发的旧消息(r:'me'但无mine)只当背景、绝不能算成"她回的"，避免我把自己回的当成她回的。
+  const chats=(d.friends||[]).filter(f=>(f.msgs||[]).some(m=>m.mine)).map(f=>{
+    const arr=f.msgs||[];const fromIdx=arr.findIndex(m=>m.mine);const recent=arr.slice(Math.max(0,fromIdx-2));// 从她第一条动手起(带前2条上下文)
+    const body=recent.map(m=>{const who=m.mine?'【忆北冒充我发的】':(m.r==='me'?'（我之前发的旧消息）':f.name+'：');const tm=m.t?hm(m.t)+' ':'';return tm+who+m.c;}).join('  ');
+    return '【这次忆北用我的号主动跟「'+f.name+'」聊了】'+body;
+  }).join('\n');
+  // 汇报完清掉本次的 mine 标记：下次她若没再动这个人，就不会被旧记录反复翻出来说事
+  (d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));
   // 其它操作（发朋友圈/删好友/加好友/删记录），逐条发消息的旧日志去掉（聊天用上面完整版）
   const acts=(d.log||[]).map(x=>x.txt).filter(t=>!/给「[^」]*」发了/.test(t));d.log=[];
   const parts=[];if(acts.length)parts.push(acts.join('；'));if(chats)parts.push(chats);
@@ -4489,7 +4505,7 @@ function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(
   const delay=caught?(1.8+Math.random()*2.5):(8+Math.random()*12);
   setTimeout(()=>hisDiscover(cid,caught,(summary.length>1200?summary.slice(0,1200)+'…':summary)),delay*1000);}
 function hisDiscover(cid,caught,summary){const c=getC(cid);if(!c||c.blocked)return;summary=summary||'登进去翻看了一圈';
-  const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
+  const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n【看清楚谁做的·别搞反】上面标了【忆北冒充我发的】的，才是ta这次用你号发出去的话；标了（我之前发的旧消息）的是你自己早先发的、不是ta干的，别把自己发过的旧消息当成ta刚发的来质问。也【只针对上面这次的事】反应，别把很久以前的旧账翻出来重说。如果ta其实没替你回谁、只是登进去看了看，就别硬说ta"回了谁的消息"。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
   scheduleReply(cid,note);}
 /* 他的微信主界面 */
 function renderHisWx(){const s=_hisLogin;if(!s){home();return '';}const cid=s.cid;const c=getC(cid);if(!c){hisEndSession();home();return '';}hisSeed(cid);/* 每次进来都合并最新的查手机数据，无需清空重登 */const d=hisWxData(cid);
@@ -4520,7 +4536,7 @@ function renderHisChat(cid,fid){const s=_hisLogin;if(!s){home();return '';}const
    <div class="inputbar"><textarea id="his_in" rows="1" placeholder="以${esc(c.name)}的身份发…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisChatSend('${cid}','${fid}')">发送</button></div>
   </div>`;}
 function hisChatSend(cid,fid){const inp=$('#his_in');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!f)return;
-  f.msgs.push({r:'me',c:t,t:Date.now()});hisLog(cid,'用他的号给「'+f.name+'」发了："'+t+'"');
+  f.msgs.push({r:'me',c:t,t:Date.now(),mine:1});hisLog(cid,'用他的号给「'+f.name+'」发了："'+t+'"');
   hisSpyFriend(cid,f.name).lines.push('他：'+t);/* 同步进查他手机 */
   save();render();const lg=$('#hischatlog');if(lg)lg.scrollTop=lg.scrollHeight;aiHisFriendReply(cid,fid);}
 let _hisReplyBusy=false;
@@ -5508,17 +5524,20 @@ function hangupCall(byAI){if(!_call)return;blip(300,.3);endCallTimers();hideCall
     else if(dur<25)maybeCallBack(id,_kind,true);// 她没聊几句就莫名其妙挂了/闹脾气逃避 → 至少再回拨一次，之后看心情
     else{c._cbTries=0;save();setTimeout(()=>aiReply(id,'[系统：你们这通'+kindTxt+'聊了'+durTxt+'，是'+S.me.name+'挂断的，你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你人设）。]'),2500);}
   }}
-// 她挂电话逃避 → 角色回拨。第一次一定再拨一次；之后拨不拨看心情值（最多3次），不拨就改用文字找ta
+// 有效打电话几率：设置里的几率 × 这个角色的黏人度/主动度（黏人主动的更爱打、高冷独立的很少打）
+function effCallProb(c){const cp=(S.settings.callProb==null?35:+S.settings.callProb);const t=(c&&c.traits)||{};const cl=(t.cling!=null?+t.cling:50),ac=(t.active!=null?+t.active:50);return Math.max(0,Math.min(100,Math.round(cp*(1+(((cl+ac)/2-50)/50)*0.8))));}
+// 她挂电话逃避 → 角色回拨。回拨强度由「有效打电话几率」决定：几率低就不再打、改用文字；几率高才追着回拨(最多3次)
 function maybeCallBack(id,kind,forced){const c=getC(id);if(!c||c.blocked)return;if(S.jail&&S.jail.active)return;
-  const tries=c._cbTries||0;if(tries>=3)return;kind=kind==='video'?'video':'voice';
+  const eff=effCallProb(c);const tries=c._cbTries||0;if(tries>=3)return;kind=kind==='video'?'video':'voice';
   const mv=(c.moodVal==null?70:c.moodVal);
-  let p;if(forced&&tries===0)p=1;else{p=0.6-(tries-1)*0.22;if(mv<40)p+=0.18;else if(mv>82)p+=0.08;p=Math.max(.2,Math.min(.95,p));}
+  let p;if(forced&&tries===0)p=eff/100;else{p=(0.55-(tries-1)*0.2)*(eff/45);if(mv<40)p+=0.12;else if(mv>82)p+=0.05;}
+  p=Math.max(0,Math.min(.95,p));
   c._cbTries=tries+1;save();
-  if(Math.random()<p){const delay=4000+Math.floor(Math.random()*5000);
+  if(eff>0&&Math.random()<p){const delay=4000+Math.floor(Math.random()*5000);
     setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked||(S.jail&&S.jail.active))return;
       msgs(id).push({role:'user',type:'sys',content:(cc.remark||cc.name)+'又拨过来了…',time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
       incomingCall(id,kind);if(_call)_call._cb=true;},delay);
-  }else setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked)return;aiReply(id,'[系统：'+S.me.name+'刚挂了你电话躲着你，你这次忍住没再回拨，但心里很在意ta——发条文字消息找ta（委屈/担心/或有点气地问怎么了，符合你的心情值和人设）。]');},2600);}
+  }else setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked)return;aiReply(id,'[系统：'+S.me.name+'刚挂了你电话，你这次没再回拨，改发条文字消息找ta（委屈/担心/或有点气地问怎么了，符合你的心情值和人设）。]');},2600);}
 function renderCallTime(){if(!_call||_call.state!=='active')return;const s=$('#callStat');if(s){const d=Math.floor((Date.now()-_call.start)/1000);s.textContent=Math.floor(d/60)+':'+(d%60).toString().padStart(2,'0');}}
 // 通话里你突然不说话的升级：3分钟问→10分钟再问→20分钟挂断重拨（重拨15秒没接就发消息）。睡觉/报备/哄睡/说了等下回来都不催。
 function checkCallSilence(){if(!_call||_call.state!=='active')return;
@@ -5535,7 +5554,9 @@ function checkCallSilence(){if(!_call||_call.state!=='active')return;
     summarizeCall(id,kind==='video'?'视频通话':'语音通话',sess);
     msgs(id).push({role:'user',type:'sys',content:'对方因你长时间没回应挂断了',time:Date.now(),id:uid()});
     endCallTimers();ringStop();_call=null;_callBusy=false;_callPend=null;renderCall();if(cur().p==='chat'&&cur().id===id)render();
-    setTimeout(()=>{if(_call||!getC(id)||getC(id).blocked)return;incomingCall(id,kind);if(_call)_call._silentRedial=true;},3000);return;}
+    setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked)return;
+      if(effCallProb(cc)<=0||Math.random()*100>=effCallProb(cc)){aiReply(id,'[系统：刚才通话你因'+S.me.name+'长时间没出声而挂断了，这次没再回拨，改发条文字消息关心一下ta（问怎么突然不说话了/是不是走开了/有点担心，符合你人设）。]');return;}
+      incomingCall(id,kind);if(_call)_call._silentRedial=true;},3000);return;}
   if(stage<2&&sil>=T2*M){_call.silentStage=2;callAI('[系统：'+S.me.name+'在通话里已经安静'+T2+'分钟了还没出声。你更在意了，再轻声问一次ta在不在、在干嘛、怎么不说话，语气带点担心或小委屈，别凶。]');return;}
   if(stage<1&&sil>=T1*M){_call.silentStage=1;callAI('[系统：'+S.me.name+'在通话里安静了'+T1+'分钟没说话。你有点在意，温柔地轻声问一句ta还在不在、是不是走开了或困了，别凶。]');return;}}
 function callStoryIntent(t){return /讲(个|一个|讲|点)?故事|听(个|你讲)?故事|说个故事|讲(睡前|个睡前)|睡前故事/.test(t||'');}
@@ -5829,8 +5850,7 @@ async function maybeProactive(id){if(!isMain())return;if(_call)return;/* 通话�
   const today=new Date().toDateString();const pc=S._proactiveCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
   if(pc.n>=(c.proactive.times||1))return;pc.n++;S._proactiveCount[id]=pc;save();
   // 打电话几率：按设置为基准，再按这个角色的【黏人度/主动度】调整——黏人主动的更爱直接打来，高冷独立的很少打
-  let cp=(S.settings.callProb==null?35:+S.settings.callProb);
-  {const t=c.traits||{};const cl=(t.cling!=null?+t.cling:50),ac=(t.active!=null?+t.active:50);const f=((cl+ac)/2-50)/50;/* -1~+1 */cp=Math.max(0,Math.min(100,Math.round(cp*(1+f*0.8))));}
+  const cp=effCallProb(c);
   if(cp>0&&Math.random()*100<cp&&!_call&&!(S.jail&&S.jail.active)&&!(S.me.sleep&&S.me.sleep.active)){if(proCall(id))return;}
   const _wn=whereNow(c);const _share=Math.random()<0.55;// 一半几率"分享他自己的一天"，一半是"想你找你"
   const note=_share
