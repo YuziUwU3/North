@@ -587,7 +587,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v314 · 新增角色扮演软件:独立剧情开局、邀请卡片、分离式旁白聊天、单独剧情存档';
+const APP_VER='v315 · 加固角色发图格式:自然语言照片描述也会稳定转成真图片';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -5869,7 +5869,22 @@ function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］�
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
   return t;}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
-const CARD_RE=/^\[(转账|红包|位置|图片|文件)\|([^\]]*)\]$/;
+const CARD_RE=/^[\[【]\s*(转账|红包|位置|图片|照片|文件)\s*[\|｜]\s*([^\]】]*)[\]】]$/;
+function cleanPhotoDescText(t){return (t||'').replace(/^[\s:：,，。；;]+|[\s\]】]+$/g,'').replace(/[|｜]/g,'，').trim().slice(0,420);}
+function normalizeImageLine(line){
+  let s=(line||'').trim(),m;if(!s)return s;
+  m=s.match(/^[\[【]\s*(图片|照片|自拍)\s*[\|｜:：]\s*([\s\S]*?)[\]】]$/);
+  if(m)return '[图片|'+cleanPhotoDescText(m[2])+']';
+  m=s.match(/^[\[【]\s*(?:我\s*)?(?:给你|向你)?(?:发|发送|发了|发来|拍|拍了)\s*(?:一张|张|个)?\s*(?:照片|图片|自拍)(?:\s*[,，。；;:：]\s*(?:画面是|画面为|内容是|描述是|照片是|图片是))?\s*[:：]?\s*([\s\S]*?)[\]】]$/);
+  if(m)return '[图片|'+cleanPhotoDescText(m[1])+']';
+  m=s.match(/^(?:我\s*)?(?:给你|向你)?(?:发|发送|发了|发来|拍|拍了)\s*(?:一张|张|个)?\s*(?:照片|图片|自拍)(?:\s*[,，。；;:：]\s*(?:画面是|画面为|内容是|描述是|照片是|图片是))\s*[:：]?\s*([\s\S]*)$/);
+  if(m&&m[1]&&m[1].trim().length>8)return '[图片|'+cleanPhotoDescText(m[1])+']';
+  return s;
+}
+function isPhotoPromptFragment(line){
+  const s=(line||'').trim();if(!s||s.length>160)return false;
+  return /(低头|侧影|背影|逆光|遮挡|脸看不清|不露正脸|自然光|无文字水印|真实照片|照片质感|俯拍|手持感|构图|镜头|光线|背景|不换背景|水印|自拍|男友视角)/.test(s)&&!/[吗呢吧呀哦哈？?！!]/.test(s);
+}
 /* 生成照片的提示词：贴合角色身形气质、不露脸、场景照描述。
    【必须简短】——长提示词会让生图明显变慢甚至超时失败，所以人设只取要点、整体压到200字内。 */
 function charImgPrompt(c,desc){
@@ -5949,9 +5964,10 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     content=content.replace(/[\[【]\s*订票\s*[\|｜:：]\s*([^\|｜\]】]{1,12})\s*[\|｜:：]\s*([^\]】]{1,20})[\]】]/g,(m,city,date)=>{tvCharBook(c,(city||'').trim(),(date||'').trim());return '';});
     // 他送你一趟独自旅行（不是见面）：生成登机牌卡片通知你
     content=content.replace(/[\[【]\s*送票\s*[\|｜:：]\s*([^\|｜\]】]{1,12})\s*[\|｜:：]\s*([^\]】]{1,20})[\]】]/g,(m,city,date)=>{tvCharGift(c,(city||'').trim(),(date||'').trim());return '';});
-    const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;const cap=Math.max(1,+c.msgMax||4);
+    const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
-      let line=normTag(lines[i]);if(!line)continue;
+      let line=normalizeImageLine(normTag(lines[i]));if(!line)continue;
+      if(photoTail>0&&isPhotoPromptFragment(line)){photoTail--;continue;}
       if(/^\[联网\|/.test(line))continue;
       if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
@@ -6001,6 +6017,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
         const msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
         if(pendQuote&&(msg.type==='text'||msg.type==='voice')){msg.quote={who:'me',text:pendQuote};pendQuote=null;}
         msg.time=Date.now();msg.id=uid();msgs(id).push(msg);save();
+        if(msg.type==='image')photoTail=3;
         notifyIncoming(c,msg);
         if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));cb.scrollTop=cb.scrollHeight;}}
         else if(cur().p==='wechat')render();}}
