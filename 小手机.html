@@ -9,11 +9,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-<meta name="apple-mobile-web-app-title" content="小手机" />
+<meta name="apple-mobile-web-app-title" content="North" />
 <meta name="theme-color" content="#ff8fab" />
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
-<title>忆北的小手机 📱</title>
+<title>North 📱</title>
 <script>
 /* PWA：运行时画个粉色图标、生成 manifest —— 全内嵌、不依赖任何外部文件，安卓可"安装"、iPhone可"添加到主屏幕" */
 (function(){try{
@@ -24,7 +24,7 @@
   var png=C.toDataURL('image/png');
   var al=document.getElementById('pwaAppleIcon');if(al)al.href=png;
   var base=location.href.replace(/[?#].*$/,'');var dir=base.replace(/[^\/]*$/,'');
-  var man={name:'忆北的小手机',short_name:'小手机',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:png,sizes:'192x192',type:'image/png',purpose:'any'},{src:png,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:png,sizes:'192x192',type:'image/png',purpose:'any'},{src:png,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
   var b=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});var ml=document.getElementById('pwaManifest');if(ml)ml.href=URL.createObjectURL(b);
 }catch(e){}})();
 </script>
@@ -584,7 +584,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v294 · 邀请码:进入口令改成"邀请码"(云端核销·用过即废),你在后台一次建一批、想踢谁把那行关掉即可;你自己用云端可反复用的"主码"进,公开代码里不再留后门口令';
+const APP_VER='v295 · 改名 North(标题/主屏图标名/进入页/欢迎语/说明书/备份文件名都改了;内部存储标识不动、数据不受影响)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3027,7 +3027,7 @@ function renderTasks(){const c=taskC();
       <button class="btn" style="background:#fff;color:#b45309;font-weight:700" ${_taskBusy?'disabled':''} onclick="genTasks()">${_taskBusy?'ta在安排…':'📋 让ta布置今天的任务'}</button></div>
     <div class="section" style="margin:12px"><div class="it"><span>每天任务条数</span><span class="v"><input id="tk_n" type="number" min="1" max="8" value="${n}" style="width:46px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="(function(){var v=Math.max(1,Math.min(8,+$('#tk_n').value||3));taskC().taskN=v;save();toast('每天'+v+'条');})()">存</button></span></div>
       <div class="it"><span>每天布置时间</span><span class="v"><input id="tk_time" type="time" value="${c.taskTime||'09:00'}" style="border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="(function(){taskC().taskTime=$('#tk_time').value||'09:00';save();toast('每天'+taskC().taskTime+'布置');})()">存</button></span></div>
-      <div class="hint" style="padding:0 14px">到这个点之后、你打开小手机就会收到当天任务（不会再凌晨发）。也能随时点上面的按钮手动让ta布置。</div></div>`;}
+      <div class="hint" style="padding:0 14px">到这个点之后、你打开 North 就会收到当天任务（不会再凌晨发）。也能随时点上面的按钮手动让ta布置。</div></div>`;}
   else{const done=t.list.filter(x=>x.done).length,total=t.list.length,all=total&&done===total;
     body=`<div style="margin:14px;padding:16px;border-radius:16px;background:linear-gradient(145deg,${all?'#19a463,#0c6b3f':'#f59e0b,#b45309'});color:#fff;text-align:center">
       <div style="font-size:14px">今天的任务 · ${esc(c.remark||c.name)} 布置</div>
@@ -3134,7 +3134,7 @@ function wxChats(){
   const searchbar=`<div onclick="openWxSearch()" style="margin:8px 12px;padding:8px 12px;background:${S.me.wxTheme==='white'?'#fff':'#1c1c1e'};border-radius:9px;color:#999;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">${svgIc('search',15,'#999')} 搜索聊天记录</div>`;
   let html=banner+searchbar+'<div class="list">';
   groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;});
-  if(!list.length&&!groups.length)return banner+'<div class="empty">'+(isMain()?'欢迎来到小手机～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
+  if(!list.length&&!groups.length)return banner+'<div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
   html+=list.map(c=>{const lm=lastMsg(c.id);
     return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
@@ -3145,9 +3145,9 @@ function wxChats(){
 function gpreview(m,g){const nm=gnm(g,m.senderId);return nm+'：'+gmText(m);}
 function gmText(m){return m.type==='text'?m.content:m.type==='transfer'?'[转账]':m.type==='redpacket'?'[红包]':'[消息]';}
 /* ===== 群聊 ===== */
-function showManual(){openModal(`<h3>小手机 · 使用说明书</h3>
+function showManual(){openModal(`<h3>North · 使用说明书</h3>
   <div style="font-size:13.5px;line-height:1.95;color:#e6e6e6;max-height:62vh;overflow:auto;text-align:left">
-    欢迎来玩～这是一个能和你自己创建的角色用「微信」聊天的小手机。所有数据都只存在你自己这台设备上，没有人能看到。<br><br>
+    欢迎来玩～North 是一个能和你自己创建的角色用「微信」聊天的小手机。所有数据都只存在你自己这台设备上，没有人能看到。<br><br>
     <b>① 先填接口（必做一次）</b><br>
     回主屏幕进「设置」，在「聊天模型」里填上你的 <b>API Key</b>（地址和模型名一般已经填好，不会就用默认的）。识图想用别的模型可以单独填。<br><br>
     <b>② 新建你的角色</b><br>
@@ -3168,7 +3168,7 @@ function maybeFirstRun(){try{if(!gateOK())return;if(localStorage.getItem('yibei_
     if(noContacts&&noKey){localStorage.setItem('yibei_manual_seen','1');showManual();}}catch(e){}}
 function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   if(!el){el=document.createElement('div');el.id='gate';el.className='gate';document.body.appendChild(el);}
-  el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>小手机</h2><p>请输入邀请码开始<br>（找邀请你的人要，一个码只能用一次）</p><input id="gateInp" inputmode="text" placeholder="邀请码" autocomplete="off"><button id="gateBtn">进入</button><div class="gerr" id="gateErr"></div>';
+  el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>North</h2><p>请输入邀请码开始<br>（找邀请你的人要，一个码只能用一次）</p><input id="gateInp" inputmode="text" placeholder="邀请码" autocomplete="off"><button id="gateBtn">进入</button><div class="gerr" id="gateErr"></div>';
   const inp=document.getElementById('gateInp'),err=document.getElementById('gateErr'),btn=document.getElementById('gateBtn');
   const unlock=()=>{try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);};
   let _busy=false;
@@ -6148,7 +6148,7 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 
 /* ---------- 备份 ---------- */
 function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出');}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='North备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出');}
 function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=Object.assign(defState(),d);save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
 /* ---------- ☁️ 云同步 ---------- */
 function cloudId(){S.settings=S.settings||{};if(!S.settings.cloudId)S.settings.cloudId='yb_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);save();return S.settings.cloudId;}
