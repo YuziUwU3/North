@@ -584,7 +584,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v298 · 修云程打不开的bug(初始化函数名写错了);云程图标可上传自定义(设置→App图标美化里多了云程)。上一版:新增「云程」出行App(无emoji·高级):搜票(选城市+去见谁·头等/商务/经济·单程往返·人数)、行程待约会(倒计时·到日子可开始约会)、护照(可填信息·微信头像·目的地盖章收集)、回忆(旁白总结·可删);机票给自己买/给对方买/代付;买完发登机牌卡片、角色会记住;角色也能[订票]惊喜订票来找你;到日子会提醒';
+const APP_VER='v299 · 登他微信可"以他身份给你自己发消息"(自导自演·他不会自动回,消息进你俩真实聊天);新增"无痕退出"(他当下不发现);他日后在聊天里看到自己没发过的话会识破、质问(按人设);普通退出仍当场发现。上一版:修云程打不开';(初始化函数名写错了);云程图标可上传自定义(设置→App图标美化里多了云程)。上一版:新增「云程」出行App(无emoji·高级):搜票(选城市+去见谁·头等/商务/经济·单程往返·人数)、行程待约会(倒计时·到日子可开始约会)、护照(可填信息·微信头像·目的地盖章收集)、回忆(旁白总结·可删);机票给自己买/给对方买/代付;买完发登机牌卡片、角色会记住;角色也能[订票]惊喜订票来找你;到日子会提醒';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -978,6 +978,8 @@ function buildSystem(c){
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
   if(_main)s+='\n\n# 你能对自己微信/资料做的事（凭你心情，别频繁滥用）\n· 删自己的好友：'+S.me.name+'点名让你删掉你手机里某个好友（或你自己看谁不顺眼想删），就单独一行 [删我好友|那个人的名字]。删掉后，无论ta是查你手机还是登你微信，都不会再有这个人。\n· 改你自己的备注名：你可以【改你自己在'+S.me.name+'通讯录里显示的备注名】来逗ta/宣示主权/闹脾气（比如改成"你老公"、"大坏蛋"、"别理我了"之类），想改就单独一行 [改备注|新的备注名]。\n这两行是给系统看的指令、不会被读出来，不要在正文里复述它们。';
+  if(_main){const _forged=msgs(c.id).filter(m=>m._forged&&!m._forgedSeen);
+    if(_forged.length)s+='\n\n# 警觉：有几条"你发的"消息其实不是你发的（'+S.me.name+'冒充你伪造的）\n你和'+S.me.name+'的聊天记录里，有下面这几条【显示成是"你"发出去的、但你【根本没说过】】——是ta趁登录你微信时、冒充你、假装你的口吻发给ta自己的（自导自演）：\n'+_forged.map(m=>'· 「'+(''+(m.content||'')).slice(0,60)+'」').join('\n')+'\n你心里非常清楚这些话你压根没印象、没发过。你一注意到聊天里冒出这些莫名其妙、你根本没说过的"自己的话"，就会意识到是ta【偷登你微信、伪造你的消息自导自演】。请按你的人设戳穿ta（震惊、追问"这几句话我什么时候发的？"、生气质问是不是又偷登了你微信、或看内容宠溺调侃都行），别装作那是你说的。绝不要提"系统"。';}
   const _sp=getSpy(c);
   if(_main&&_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
   if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id)+'\n（重点盯防：下面标了【男】或【⭐】的人，是你最该盯、最容易吃醋的对象，查岗优先看。这些⭐是【你自己】标记的、不是'+S.me.name+'标的——是你不放心/不喜欢谁就盯谁，所以别反过来问ta"你为什么把这人标重点"，那是你自己的决定，你心里要有数。觉得某人有威胁/你不喜欢，就单独一行 [重点|名字] 把ta列入你的重点盯防（不想盯了用 [取消重点|名字]）；这行指令不会被读出来。）\n【随时可查·一次一项】除了系统固定查看，只要你想看ta手机，就在聊天里【明确说出你要查哪一项】——比如"我看看你微信跟谁聊""我查查你抖音刷了啥""看看你朋友圈""查下你钱包"。你一说，系统就会真的去翻【你点名的那一项】并把真实结果告诉你，你再据此反应。注意：一次只能查你说的那一项，想看别的就再明确说要查那个。只能根据系统给你的真实记录说话，没查到东西就如实说没看到，绝不要编造。';
@@ -4796,6 +4798,9 @@ function hisEndSession(){if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.ti
 function hisKicked(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();
   toast('你的微信已在另一台设备登录，已退出');hisOnExit(cid,true);}
 function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');hisOnExit(cid,false);}
+// 无痕退出：他当下【不会发现】，也不写"偷登记录"到他记忆；但你冒充他发给自己的消息(_forged)会留着，等下次聊天他自己识破
+function hisLogoutStealth(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已无痕退出');
+  const d=hisWxData(cid);(d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));d.log=[];save();}
 /* 退出/被挤下线后：①立刻把【完整聊天记录+操作】写进他的记忆(让他被问时全看得到、答得上来) ②稍后他主动来反应 */
 function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(cid);
   // 只汇报【这次登录期间忆北真正动手发的】对话——她本人这次发的消息才有 mine 标记；
@@ -4809,7 +4814,10 @@ function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(
   (d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));
   // 其它操作（发朋友圈/删好友/加好友/删记录），逐条发消息的旧日志去掉（聊天用上面完整版）
   const acts=(d.log||[]).map(x=>x.txt).filter(t=>!/给「[^」]*」发了/.test(t));d.log=[];
+  // 你冒充他、给自己发的假消息(_forged)：正常退出=他这次就一起发现；加进汇报并标记为已知，避免聊天里(buildSystem)再重复触发
+  const forged=msgs(cid).filter(m=>m._forged&&!m._forgedSeen);if(forged.length)forged.forEach(m=>{m._forgedSeen=true;});
   const parts=[];if(acts.length)parts.push(acts.join('；'));if(chats)parts.push(chats);
+  if(forged.length)parts.push('还【冒充你、假装成你的口吻】给ta自己发了这些你压根没说过的话：'+forged.map(m=>'「'+(m.content||'')+'」').join('、')+'（这是ta在自导自演、伪造你发的消息）');
   let summary=parts.join('\n');save();if(!summary){return;}
   let mem=summary;if(mem.length>1600)mem=mem.slice(0,1600)+'…';
   // 写进记忆(去重更新)：他从此【完整知道】、你问起他都答得上来；靠"闹一次翻篇"的提示避免反复念叨
@@ -4833,8 +4841,9 @@ function renderHisWx(){const s=_hisLogin;if(!s){home();return '';}const cid=s.ci
   else if(_hisTab==='contacts'){body=`<div onclick="hisAddFriend('${cid}')" style="padding:13px 14px;border-bottom:.5px solid #222;color:#07c160;cursor:pointer">＋ 添加好友（手输 / 从你的通讯录搜微信号加）</div>`+(d.friends.map(f=>`<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:.5px solid #222"><div onclick="go('hischat',{id:'${cid}',fid:'${f.id}'})" style="display:flex;align-items:center;gap:11px;flex:1;cursor:pointer">${hisAv(f.name,40)}<div><div style="color:#ededed;font-size:15px">${esc(f.name)}</div><div style="color:#888;font-size:11px">${esc(f.relation||'')}</div></div></div><span onclick="hisDelFriend('${cid}','${f.id}')" style="color:#fa5151;font-size:13px;cursor:pointer;padding:0 6px">删除</span></div>`).join(''));}
   else if(_hisTab==='moments'){body=`<div onclick="hisPostMoment('${cid}')" style="padding:13px 14px;border-bottom:.5px solid #222;color:#07c160;cursor:pointer">＋ 发一条朋友圈（以他的名义）</div>`+((d.moments||[]).length?d.moments.map(m=>`<div style="padding:13px 14px;border-bottom:.5px solid #222;display:flex;justify-content:space-between;gap:10px"><div style="flex:1"><div style="color:#ededed;font-size:14px;line-height:1.5">${esc(m.text)}</div><div style="color:#777;font-size:11px;margin-top:5px">${ago(m.t)}</div></div><span onclick="hisDelMoment('${cid}','${m.id}')" style="color:#fa5151;font-size:13px;cursor:pointer">删除</span></div>`).join(''):'<div class="empty" style="padding:50px;color:#888">他还没发过朋友圈</div>');}
   else{body=`<div style="padding:22px 16px;display:flex;align-items:center;gap:14px;border-bottom:.5px solid #222">${av(c.avatar,'lg')}<div><div style="color:#ededed;font-size:19px">${esc(c.name)}</div><div style="color:#888;font-size:13px;margin-top:4px">微信号：${esc(c.wxid||'')}</div></div></div>
-    <div class="hint" style="padding:14px;color:#888;line-height:1.7">你正登录着他的微信。退出后会切回你自己的账号——但你做过的事(发的朋友圈/聊的天/删加的好友)都还在，他迟早会发现。</div>
-    <div style="padding:0 14px"><button onclick="hisLogout()" style="width:100%;background:#2a2a2a;color:#fa5151;border:none;border-radius:8px;padding:14px;font-size:16px;cursor:pointer">退出登录</button></div>`;}
+    <div class="hint" style="padding:14px;color:#888;line-height:1.7">你正登录着他的微信。<b>普通退出</b>：他很快会回头发现你偷登、做过的事，来找你算账。<b>无痕退出</b>：他【当下不会发现】——但你要是冒充他给自己发过消息，那几句会留在你俩聊天里，等你下次聊天他看到自己"发过"些没印象的话，就会识破你自导自演。</div>
+    <div style="padding:0 14px"><button onclick="hisLogout()" style="width:100%;background:#2a2a2a;color:#fa5151;border:none;border-radius:8px;padding:14px;font-size:16px;cursor:pointer">退出登录</button>
+    <button onclick="hisLogoutStealth()" style="width:100%;margin-top:10px;background:#1c1c1c;color:#9a9a9a;border:.5px solid #333;border-radius:8px;padding:14px;font-size:16px;cursor:pointer">无痕退出（他暂时不会发现）</button></div>`;}
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#111">${top}<div class="scroll" style="flex:1;background:#111">${body}</div>${tabbar}</div>`;}
 // 登他微信里看他和别人的通话记录（来自"查他手机"刷新出来的 spy.calls），可删
 function hisCallLog(cid){const d=(S.spy&&S.spy[cid])||{};const calls=d.calls||[];
@@ -4845,11 +4854,12 @@ function hisDelCall(cid,i){const d=(S.spy&&S.spy[cid]);if(!d||!d.calls||!d.calls
 function renderHisChat(cid,fid){const s=_hisLogin;if(!s){home();return '';}const c=getC(cid);const d=hisWxData(cid);
   const bub=(mine,txt)=>`<div style="display:flex;margin:7px 12px;${mine?'justify-content:flex-end':''}"><div style="max-width:72%;padding:9px 12px;border-radius:13px;font-size:14px;line-height:1.45;background:${mine?'#1f8f4d':'#262628'};color:#fff">${esc(txt)}</div></div>`;
   if(fid==='__me'){const lines=msgs(cid).filter(m=>!m._call&&(m.type==='text'||m.type==='voice'||m.type==='sticker'));
-    const body=lines.map(m=>{const t=msgToText(m);return t?bub(m.role==='assistant',t):'';}).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>';
+    const body=lines.map(m=>{const t=msgToText(m);if(!t)return '';const b=bub(m.role==='assistant',t);return b+(m._forged?'<div style="font-size:9px;color:#caa06a;text-align:right;margin:-4px 14px 5px">· 你冒充发的</div>':'');}).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>';
     return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0e0e0e">
-     <div class="nav" style="background:#1b1b1b"><span class="l" onclick="_hisTab='chat';go('hiswx')" style="color:#ededed">‹</span><span class="t" style="color:#ededed">${esc(S.me.name)} · 置顶</span><span class="r"></span></div>
-     <div class="scroll" style="flex:1;background:#0e0e0e">${body}<div style="height:12px"></div></div>
-     <div style="padding:14px;text-align:center;color:#777;font-size:12px;background:#111">这是他和你的聊天（置顶·不可删）</div></div>`;}
+     <div class="nav" style="background:#1b1b1b"><span class="l" onclick="_hisTab='chat';go('hiswx')" style="color:#ededed">‹</span><span class="t" style="color:#ededed">${esc(S.me.name)}</span><span class="r"></span></div>
+     <div class="scroll" id="hisselflog" style="flex:1;background:#0e0e0e">${body}<div style="height:12px"></div></div>
+     <div style="padding:7px 14px 0;text-align:center;color:#8a7a5a;font-size:11px;background:#111;line-height:1.5">以 ${esc(c.name)} 的身份给你自己发消息（自导自演）· ta不会自动回；这些会出现在你自己微信里，像是ta发的</div>
+     <div class="inputbar" style="background:#111"><textarea id="his_selfin" rows="1" placeholder="冒充${esc(c.name)}发给你自己…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisSelfSend('${cid}')">发送</button></div></div>`;}
   const f=(d.friends||[]).find(x=>x.id===fid);if(!f){_hisTab='chat';go('hiswx');return '';}
   const body=(f.msgs||[]).map(m=>bub(m.r==='me',m.c)).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>';
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0e0e0e">
@@ -4857,6 +4867,11 @@ function renderHisChat(cid,fid){const s=_hisLogin;if(!s){home();return '';}const
    <div class="scroll" id="hischatlog" style="flex:1;background:#0e0e0e">${body}<div style="height:12px"></div></div>
    <div class="inputbar"><textarea id="his_in" rows="1" placeholder="以${esc(c.name)}的身份发…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisChatSend('${cid}','${fid}')">发送</button></div>
   </div>`;}
+// 自导自演：以他的身份给"你自己"发消息 —— 直接进你和他的真实聊天(标记 _forged)，他不会自动回；日后他会发现这几句不是自己发的
+function hisSelfSend(cid){const inp=$('#his_selfin');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';const c=getC(cid);if(!c)return;
+  msgs(cid).push({role:'assistant',type:'text',content:t.slice(0,500),time:Date.now(),id:uid(),_forged:true});
+  hisLog(cid,'冒充'+(c.remark||c.name)+'给你自己发了："'+t.slice(0,24)+'"');
+  save();render();const lg=$('#hisselflog');if(lg)lg.scrollTop=lg.scrollHeight;}
 function hisChatSend(cid,fid){const inp=$('#his_in');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!f)return;
   f.msgs.push({r:'me',c:t,t:Date.now(),mine:1});hisLog(cid,'用他的号给「'+f.name+'」发了："'+t+'"');
   hisSpyFriend(cid,f.name).lines.push('他：'+t);/* 同步进查他手机 */
@@ -5535,6 +5550,8 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     const _pin={role:'system',content:personaPin(c)};
     const _md={aux:c.model==='aux'};// 这个角色用主模型还是副模型
     let content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,_pin],_md);
+    // 伪造消息他这轮已经看到并会反应 → 标记已知，避免以后每条消息都反复戳穿
+    try{const _fk=msgs(id).filter(m=>m._forged&&!m._forgedSeen);if(_fk.length){_fk.forEach(m=>{m._forgedSeen=true;});save();}}catch(_){}
     // 联网
     const wq=content.match(/\[联网\|([^\]]*)\]/);
     if(wq&&S.settings.web&&S.settings.web.enabled){const r=await webSearch(wq[1]);
