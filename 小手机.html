@@ -560,9 +560,10 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-/* ☁️ 云同步（Supabase）：换设备/清缓存也不丢。key 是公开的 publishable key，可以放心内嵌 */
-const CLOUD_URL='https://lovbzibismsjqvjujilz.supabase.co';
-const CLOUD_KEY='sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
+/* ☁️ 云同步（Supabase）：云地址+key 在「设置→云同步」里各自填(不写死在公开代码里)，
+   你和每个网友各填各的 Supabase，数据各进各的云、互不相干 */
+function cloudUrl(){return (((S.settings&&S.settings.cloudUrl)||'').trim()).replace(/\/+$/,'');}
+function cloudKey(){return ((S.settings&&S.settings.cloudKey)||'').trim();}
 /* ================= 改密码看这里（搜「改密码」就能跳到） =================
    想换访问口令：把下面单引号里的 1225206 改成你想要的新口令，保存/提交即可。
    true 改成 false 就是【完全关掉口令门】(谁打开都不用输)。
@@ -574,7 +575,7 @@ const SHARE_GATE=true, SHARE_PW='Claudeopus4.6';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v292 · 云同步:聊天/角色/记忆等全部数据可一键备份到云(Supabase),换手机或清缓存用同一个"云ID"就能拉回来,再也不怕丢(设置最底下☁️云同步);可开自动备份';
+const APP_VER='v293 · 云同步的云地址+Key改成设置里各自填(不写死在公开代码里):你和每个网友各填各的Supabase,数据各进各的云、互不相干、也不占别人额度';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -6136,19 +6137,25 @@ function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'appl
 function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=Object.assign(defState(),d);save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
 /* ---------- ☁️ 云同步 ---------- */
 function cloudId(){S.settings=S.settings||{};if(!S.settings.cloudId)S.settings.cloudId='yb_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);save();return S.settings.cloudId;}
-async function cloudBackup(){const id=cloudId();const data=JSON.stringify(S);/* 完整存档(含消息/图)，和导出一致 */
-  const r=await fetch(CLOUD_URL+'/rest/v1/backups',{method:'POST',headers:{'apikey':CLOUD_KEY,'Authorization':'Bearer '+CLOUD_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data,ver:APP_VER,updated_at:new Date().toISOString()})});
+async function cloudBackup(){const U=cloudUrl(),K=cloudKey();if(!U||!K)throw new Error('还没填云地址/Key，先在云同步里填一下');const id=cloudId();const data=JSON.stringify(S);/* 完整存档(含消息/图)，和导出一致 */
+  const r=await fetch(U+'/rest/v1/backups',{method:'POST',headers:{'apikey':K,'Authorization':'Bearer '+K,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id,data,ver:APP_VER,updated_at:new Date().toISOString()})});
   if(!r.ok){let t='';try{t=await r.text();}catch(_){}throw new Error('HTTP '+r.status+(t?(' '+t.slice(0,120)):''));}
   S.settings.cloudLast=Date.now();save();return data.length;}
-async function cloudRestore(idOverride){const id=(idOverride||cloudId());
-  const r=await fetch(CLOUD_URL+'/rest/v1/backups?id=eq.'+encodeURIComponent(id)+'&select=data,updated_at',{headers:{'apikey':CLOUD_KEY,'Authorization':'Bearer '+CLOUD_KEY}});
+async function cloudRestore(idOverride){const U=cloudUrl(),K=cloudKey();if(!U||!K)throw new Error('还没填云地址/Key，先在云同步里填一下');const id=(idOverride||cloudId());
+  const r=await fetch(U+'/rest/v1/backups?id=eq.'+encodeURIComponent(id)+'&select=data,updated_at',{headers:{'apikey':K,'Authorization':'Bearer '+K}});
   if(!r.ok)throw new Error('HTTP '+r.status);
   const rows=await r.json();if(!rows||!rows.length)throw new Error('云端没找到这个云ID的备份');
   const d=JSON.parse(rows[0].data);if(!d||!d.settings)throw new Error('云端数据格式不对');
   S=Object.assign(defState(),d);save();return rows[0].updated_at;}
 function cloudSyncModal(){const id=cloudId();const last=S.settings.cloudLast?(fmtDur(Date.now()-S.settings.cloudLast)+'前'):'从未';
-  openModal(`<h3>☁️ 云同步</h3><div class="hint">把聊天/角色/记忆/朋友圈/钱包等<b>全部数据</b>备份到云端。换手机、清了缓存，用<b>同一个云ID</b>就能一键拉回来，再也不怕丢。</div>
-    <div class="field"><label>你的云ID（换设备时在新机填这个就能恢复）</label>
+  const hasKeys=!!(cloudUrl()&&cloudKey());
+  openModal(`<h3>☁️ 云同步</h3><div class="hint">把聊天/角色/记忆/朋友圈/钱包等<b>全部数据</b>备份到你自己的云。换手机、清了缓存，用<b>同一个云ID</b>就能一键拉回来，再也不怕丢。</div>
+    <div class="field" style="background:rgba(120,120,165,.1);border-radius:10px;padding:10px"><label>① 先填你自己的云（各人各自的 Supabase）${hasKeys?' <span style="color:#20b26c;font-size:12px">✓ 已填</span>':' <span style="color:#f0913b;font-size:12px">← 先填这个</span>'}</label>
+      <input id="cl_url" value="${esc((S.settings.cloudUrl)||'')}" placeholder="云地址 https://xxxx.supabase.co" style="margin-bottom:6px">
+      <input id="cl_key" value="${esc((S.settings.cloudKey)||'')}" placeholder="云Key sb_publishable_...">
+      <button class="minibtn" style="margin-top:8px;background:#7c5cff;color:#fff" onclick="cloudSaveKeys()">保存云地址+Key</button>
+      <div style="font-size:11px;color:#888;margin-top:6px">不会弄？照着「Supabase云同步教程」文件做一遍，5分钟。地址和Key存好，换设备要用。</div></div>
+    <div class="field"><label>② 你的云ID（换设备时在新机填这个就能恢复）</label>
       <div style="display:flex;gap:6px"><input id="cl_id" value="${esc(id)}" readonly style="flex:1;font-size:12px"><button class="minibtn" onclick="cloudCopyId()">复制</button></div></div>
     <div style="font-size:12px;color:#888;padding:0 2px 10px">上次备份：${last}</div>
     <div class="btns"><button class="btn p" onclick="cloudDoBackup()">☁️ 立即备份到云</button><button class="btn g" onclick="cloudDoRestore()">⬇️ 从云恢复</button></div>
@@ -6157,6 +6164,7 @@ function cloudSyncModal(){const id=cloudId();const last=S.settings.cloudLast?(fm
     <div class="hint" style="color:#888;margin-top:6px">提示：云ID是你的钥匙，别随便发别人。恢复会用云端覆盖这台当前的数据。</div>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function cloudCopyId(){const id=cloudId();try{navigator.clipboard&&navigator.clipboard.writeText(id);}catch(_){}const el=$('#cl_id');if(el){el.select&&el.select();}toast('已复制云ID');}
+function cloudSaveKeys(){S.settings=S.settings||{};S.settings.cloudUrl=((($('#cl_url')||{}).value)||'').trim();S.settings.cloudKey=((($('#cl_key')||{}).value)||'').trim();save();toast(cloudUrl()&&cloudKey()?'✅ 云配置已保存':'已保存(还差地址或Key)');cloudSyncModal();}
 async function cloudDoBackup(){toast('备份中…☁️');try{const n=await cloudBackup();toast('✅ 已备份到云（'+Math.round(n/1024)+'KB）');cloudSyncModal();}catch(e){toast('备份失败：'+e.message);}}
 async function cloudDoRestore(){if(!await uiConfirm('用云端备份覆盖这台设备现在的数据？\n（当前这台会被云上的替换，建议先备份当前的）'))return;toast('恢复中…');try{const w=await cloudRestore();closeModal();render();toast('✅ 已从云恢复');}catch(e){toast('恢复失败：'+e.message);}}
 function cloudUseOtherId(){openModal(`<h3>🔁 用旧云ID恢复</h3><div class="hint">在旧设备的「云同步」里点复制云ID，粘贴到这里，把数据拉到这台设备。恢复后这台也会用这个云ID，之后两台就同步了。</div><div class="field"><input id="cl_other" placeholder="粘贴旧设备的云ID"></div><div class="btns"><button class="btn g" onclick="cloudSyncModal()">返回</button><button class="btn p" onclick="cloudRestoreOther()">恢复到这台</button></div>`);}
