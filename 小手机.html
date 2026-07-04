@@ -587,7 +587,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v313 · 生图视角修正:强制角色自己拍的第一人称/男友视角，禁第三视角假拍';
+const APP_VER='v314 · 新增角色扮演软件:独立剧情开局、邀请卡片、分离式旁白聊天、单独剧情存档';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -783,6 +783,7 @@ function msgToText(m){
     if(m.type==='namecard')return '[我把我的朋友「'+m.cname+'」'+(m.persona?'（'+m.persona+'）':'')+'推荐给了你'+(m.added?'，你已经加了ta':'，推荐你加一下')+']';
     if(m.type==='dateinvite')return '[我向你发出线下约会邀请：'+(m.when||'')+' 在「'+(m.loc||'')+'」见面'+(m.accepted?'，你答应了':m.declined?'，你拒绝了':'，等你答应')+']';
     if(m.type==='homeinvite')return '[我邀请你回我们的像素小家一起待着'+(m.accepted?'，你回来了':m.declined?'，你说改天':'，等你回来')+']';
+    if(m.type==='roleplayinvite')return '[我邀请你去角色扮演软件里玩「'+(m.title||'本次剧情')+'」'+(m.hisRole?'，你这局扮演'+m.hisRole:'')+(m.meRole?'，我扮演'+m.meRole:'')+(m.active?'（已经开局）':'')+']';
     if(m.type==='food')return '[我给你点了外卖「'+(m.name||'')+'」'+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（点好了，约15分钟送到）')+'，别再重复点了]';
     if(m.type==='transfer')return '[我给你转了 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，备注「'+m.note+'」':'')+']';
     if(m.type==='redpacket')return '[我给你发了个红包 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，「'+m.note+'」':'')+']';
@@ -796,6 +797,7 @@ function msgToText(m){
   }
   switch(m.type){
     case 'namecard':return '[我给你推荐了我的好友「'+m.cname+'」（微信号'+(m.wxid||'')+'）'+(m.persona?'，'+m.persona:'')+'，推荐你也加一下]';
+    case 'roleplayinvite':return '[我邀请你去角色扮演软件里玩「'+(m.title||'本次剧情')+'」'+(m.hisRole?'，你这局扮演'+m.hisRole:'')+(m.meRole?'，我扮演'+m.meRole:'')+(m.active?'（已经开局）':'')+']';
     case 'familybuy':return '[我刚用你给的亲属卡买了「'+m.name+'」，花了¥'+(+m.price).toFixed(2)+'，本月这卡已用¥'+(+m.used).toFixed(2)+'/'+(+m.quota).toFixed(0)+']';
     case 'familyreq':return '[我向你申请绑定一张亲属卡，想用你的额度买点东西]';
     case 'weblink':return '[我转发给你一条联网搜到的资料：'+m.title+'——'+((m.snippet||'').slice(0,120))+']';
@@ -1156,6 +1158,9 @@ function render(){
   else if(c.p==='uc')html=renderUC();
   else if(c.p==='calllog')html=renderCallLog(c.id);
   else if(c.p==='off')html=renderOff(c.id);
+  else if(c.p==='rphub')html=renderRPHub();
+  else if(c.p==='rpset')html=renderRPSetup(c.id);
+  else if(c.p==='rp')html=renderRP(c.id);
   else if(c.p==='browser')html=renderBrowser();
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='hislogin')html=renderHisLogin(c.id);
@@ -1437,13 +1442,13 @@ const APPDEFS={
   shop:{e:'🛒',c:'#ff6b6b',t:'购物',lk:1},calendar:{e:'📅',c:'#4ecdc4',t:'日历',lk:1},x:{e:'𝕏',c:'#1a1a1f',t:'X',lk:1},
   douyin:{e:'🎵',c:'#1a1a1f',t:'抖音',lk:1},food:{e:'🍔',c:'#ffb83b',t:'外卖',lk:1},couple:{e:'💞',c:'#ff8fab',t:'情侣空间'},
   tasks:{e:'📋',c:'#f59e0b',t:'任务便签'},games:{e:'🎮',c:'#6c5ce7',t:'游戏大厅',lk:1},mail:{e:'📮',c:'#f4a93b',t:'信箱',lk:1,badge:1},
-  offline:{e:'🌹',c:'#e84d6f',t:'线下约会',lk:1},music:{e:'🎵',c:'linear-gradient(135deg,#ff8fab,#b8a4e3)',t:'音乐'},
+  offline:{e:'🌹',c:'#e84d6f',t:'线下约会',lk:1},music:{e:'🎵',c:'linear-gradient(135deg,#ff8fab,#b8a4e3)',t:'音乐'},roleplay:{e:'',c:'linear-gradient(135deg,#1b2330,#55657d)',t:'角色扮演',icon:'roleplay'},
   cozy:{e:'🏡',c:'linear-gradient(135deg,#b07be0,#ff8fab)',t:'像素小家',icon:'cozyhome'},
   tale:{e:'🕯️',c:'linear-gradient(135deg,#3a0010,#1a1a1f)',t:'规则怪谈'},dread:{e:'🩸',c:'linear-gradient(135deg,#5a0012,#23000a)',t:'惊悚抉择'},
   travel:{e:'✈',c:'linear-gradient(135deg,#26324a,#5a6b8c)',t:'云程',lk:1}};
-const APPRUN={wechat:()=>openWeChat(),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openMusic(),cozy:()=>go('cozy'),tale:()=>taleStart(),dread:()=>dreadStart(),travel:()=>openApp('travel')};
+const APPRUN={wechat:()=>openWeChat(),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openMusic(),roleplay:()=>go('rphub'),cozy:()=>go('cozy'),tale:()=>taleStart(),dread:()=>dreadStart(),travel:()=>openApp('travel')};
 const APP_PAGES=3;
-const APP_DEFLAYOUT=[['wechat','settings','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail','offline'],['travel','music','cozy','tale','dread'],[]];
+const APP_DEFLAYOUT=[['wechat','settings','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail','offline'],['roleplay','travel','music','cozy','tale','dread'],[]];
 function appLayoutInit(){let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
@@ -1675,6 +1680,7 @@ const MICO={
   offline:_MI('<path d="M8.4 3.5h7.2l-.8 5.1a2.8 2.8 0 0 1-5.6 0zM12 11.4V19M9 19h6"/>'),
   music:_MI('<path d="M19 4 9 6.1v9.4A3 3 0 1 0 11 18V9.7l6-1.2v4.8A3 3 0 1 0 19 16z"/>',true),
   cozyhome:_MI('<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/><path d="M10.5 20v-4.5h3V20"/>'),
+  roleplay:_MI('<path d="M4.5 6.2h6.3v4.2a3.2 3.2 0 0 1-6.3 0z"/><path d="M13.2 6.2h6.3v4.2a3.2 3.2 0 0 1-6.3 0z"/><path d="M7.1 12.8c1 .8 2.2 1.2 3.7 1.2"/><path d="M17 12.8c-1 .8-2.2 1.2-3.7 1.2"/><path d="M12 13.5v6"/><path d="M8.5 19.5h7"/>'),
   tale:_MI('<rect x="8.5" y="9" width="7" height="11" rx="1"/><path d="M12 9V6.4"/><path d="M12 2.4c1.5 1.3 2.2 2.5 2.2 3.6a2.2 2.2 0 0 1-4.4 0c0-1.1.7-2.3 2.2-3.6z"/><path d="M6.8 20.2h10.4"/>'),
   travel:_MI('<path d="M3.5 12.2 20.5 5l-5.1 15.5-3.3-6.4-6.6-1.9z"/><path d="M12.1 14.1 20.5 5"/><path d="M5.5 12.7 3.8 18l4.6-2.8"/>'),
   dread:_MI('<path d="M12 3.2c3.2 4.2 6 7.2 6 10.6a6 6 0 0 1-12 0c0-3.4 2.8-6.4 6-10.6z"/>')
@@ -1746,7 +1752,7 @@ const ICONS={
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
-const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
@@ -2695,6 +2701,7 @@ function clean(s){return String(s||'').replace(/["'@]/g,'').trim();}
 if(!S.x)S.x=defState().x;['tweets','dms','following','blocked'].forEach(k=>{if(!Array.isArray(S.x[k]))S.x[k]=[];});S.x.circle=S.x.circle||{};S.x.users=S.x.users||{};S.x.profile=Object.assign({handle:'@me',bio:'',fans:0,following:0,cover:''},S.x.profile||{});
 initAccounts();
 if(!S.offline)S.offline={};
+if(!S.roleplay)S.roleplay={};
 if(!S.browser)S.browser={q:'',items:[],history:[]};
 if(S.couple&&S.couple.grant===undefined){S.couple.grant={};Object.keys(LOCKABLE).forEach(k=>S.couple.grant[k]=true);save();}
 if(S.couple&&S.couple.walletAuth===undefined)S.couple.walletAuth=false;
@@ -3916,6 +3923,91 @@ function offSetting(id){const o=offData(id);
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();o.daypart=$('#os_part').value;save();closeModal();render();})()">保存</button></div>`);}
 function offQuit(){_off=null;_offSel=null;home();}
 
+/* ===== 角色扮演 ===== */
+let _rp=null,_rpSel=null;
+function rpData(id){S.roleplay=S.roleplay||{};if(!S.roleplay[id])S.roleplay[id]={active:false,title:'',date:todayStr(),time:'20:30',daypart:'晚上',plot:'',scene:'',myRole:'',hisRole:'',myPersona:'',hisPersona:'',msgs:[],memory:[],startedAt:0,inviteMid:'',summary:''};return S.roleplay[id];}
+function rpWhenText(d){return [d.date||'',d.time||'',d.daypart||''].filter(Boolean).join(' · ');}
+function rpStatusText(d){return d.active?('进行中 · '+(d.title||'本次剧情')):((d.memory&&d.memory.length)?('已有 '+d.memory.length+' 条存档'):'还没开局');}
+function openRoleplayFromCard(id){const d=rpData(id);if(d.active){_rp={id:id,busy:false};go('rp',{id:id});}else go('rpset',{id:id});}
+function renderRPHub(){S.roleplay=S.roleplay||{};const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">角色扮演</span><span class="r"></span></div><div class="scroll" style="background:#0f141b"><div class="empty" style="padding:46px 26px;line-height:1.9">要先有一个角色，才能邀请他进入剧情。<br><button class="btn p" style="margin-top:14px;width:auto;padding:9px 20px;background:#243447" onclick="openWeChat()">去微信新建角色</button></div></div>`;
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">角色扮演</span><span class="r" onclick="render()">${svgIc('refresh',18,'#cfd8e3')}</span></div>
+  <div class="scroll" style="background:#0f141b;padding:12px">
+    <div class="hint" style="background:#151c25;border:1px solid #253344;color:#a8b5c4;line-height:1.8">这里是独立的剧情软件。你可以给角色临时换身份、换设定、写剧情、选日期和时段；这些只在本局里生效，不会改动微信里的原设。</div>
+    ${cs.map(c=>{const d=rpData(c.id);return `<div class="section" style="margin-top:10px;background:#151c25;border:1px solid #253344;border-radius:14px;overflow:hidden"><div class="it" onclick="rpOpen('${c.id}')" style="padding:14px 16px;background:transparent;border:none"><div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">${av(c.avatar,'sm')}<div class="meta" style="flex:1;min-width:0"><div class="n" style="color:#eef3f8">${esc(c.remark||c.name)}</div><div class="s" style="color:#91a0b2">${esc(rpStatusText(d))}</div></div></div><span class="v" style="color:#7f91a7">›</span></div><div style="display:flex;gap:8px;padding:0 16px 14px"><button class="minibtn" style="background:#243447;color:#fff" onclick="event.stopPropagation();rpOpen('${c.id}')">${d.active?'继续剧情':'配置开局'}</button><button class="minibtn" onclick="event.stopPropagation();rpMemory('${c.id}')">剧情存档</button></div></div>`;}).join('')}
+  </div>`;}
+function rpOpen(id){const d=rpData(id);if(d.active){_rp={id:id,busy:false};go('rp',{id:id});}else go('rpset',{id:id});}
+function renderRPSetup(id){const c=getC(id);if(!c)return '';const d=rpData(id);const active=!!d.active;
+  return `<div class="nav"><span class="l" onclick="${active?`go('rp',{id:'${id}'})`:`go('rphub')`}">‹</span><span class="t">剧情配置</span><span class="r" onclick="rpMemory('${id}')">${svgIc('book',18,'#cfd8e3')}</span></div>
+  <div class="scroll" style="background:#0f141b;padding:14px 14px 24px">
+    <div style="background:#151c25;border:1px solid #253344;border-radius:16px;padding:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">${av(c.avatar,'sm')}<div><div style="font-size:16px;color:#eef3f8;font-weight:600">${esc(c.remark||c.name)}</div><div style="font-size:12px;color:#8d9cad">本局临时身份与剧情只在角色扮演里生效</div></div></div>
+      <div class="field"><label>剧情标题</label><input id="rp_title" value="${esc(d.title||'')}" placeholder="比如：深夜门诊 / 课后办公室 / 雨夜旅馆"></div>
+      <div class="field"><label>剧情背景</label><textarea id="rp_plot" rows="4" placeholder="写这一局的世界观、关系、气氛、冲突、任务">${esc(d.plot||'')}</textarea></div>
+      <div class="field"><label>开场场景</label><textarea id="rp_scene" rows="3" placeholder="写这一幕从哪里开始，比如：夜班诊室只剩你们两个人，他刚摘下手套看向你">${esc(d.scene||'')}</textarea></div>
+      <div class="two"><div class="field"><label>你的本局身份</label><input id="rp_me_role" value="${esc(d.myRole||'')}" placeholder="比如：实习生 / 病人 / 学生"></div><div class="field"><label>他的本局身份</label><input id="rp_his_role" value="${esc(d.hisRole||'')}" placeholder="比如：医生 / 老师 / 警官"></div></div>
+      <div class="field"><label>你的本局设定</label><textarea id="rp_me_persona" rows="3" placeholder="写你在这局里的状态、性格、秘密、目标">${esc(d.myPersona||'')}</textarea></div>
+      <div class="field"><label>他的本局设定</label><textarea id="rp_his_persona" rows="4" placeholder="写他这局的人设、语气、立场、底色；不改微信原设">${esc(d.hisPersona||'')}</textarea></div>
+      <div class="two"><div class="field"><label>日期</label><input id="rp_date" type="date" value="${esc(d.date||todayStr())}"></div><div class="field"><label>时间</label><input id="rp_time" type="time" value="${esc(d.time||'20:30')}"></div></div>
+      <div class="field"><label>时段</label><select id="rp_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(x=>`<option ${x===(d.daypart||'晚上')?'selected':''}>${x}</option>`).join('')}</select></div>
+      ${active?`<div class="btns"><button class="btn g" onclick="go('rp',{id:'${id}'})">取消</button><button class="btn p" style="background:#243447" onclick="rpSaveSetup('${id}','save')">保存并返回</button></div>`:`<div class="btns"><button class="btn g" onclick="go('rphub')">取消</button><button class="btn p" style="background:#243447" onclick="rpSaveSetup('${id}','card')">发卡开局</button></div><button class="btn g" style="margin-top:8px" onclick="rpSaveSetup('${id}','direct')">直接开局</button>`}
+    </div>
+  </div>`;}
+function rpSaveSetup(id,mode){const d=rpData(id),active=!!d.active;
+  d.title=(($('#rp_title')||{}).value||'').trim()||'本次剧情';
+  d.plot=(($('#rp_plot')||{}).value||'').trim();
+  d.scene=(($('#rp_scene')||{}).value||'').trim();
+  d.myRole=(($('#rp_me_role')||{}).value||'').trim();
+  d.hisRole=(($('#rp_his_role')||{}).value||'').trim();
+  d.myPersona=(($('#rp_me_persona')||{}).value||'').trim();
+  d.hisPersona=(($('#rp_his_persona')||{}).value||'').trim();
+  d.date=(($('#rp_date')||{}).value||todayStr()).trim();
+  d.time=(($('#rp_time')||{}).value||'20:30').trim();
+  d.daypart=(($('#rp_part')||{}).value||'晚上').trim();
+  if(mode==='save'){save();toast('本局配置已保存');go(active?'rp':'rphub',active?{id:id}:undefined);return;}
+  d.active=true;d.startedAt=Date.now();d.summary='';d.inviteMid='';d.msgs=[];d.msgs.push({id:uid(),who:'旁白',text:'剧情已载入：'+d.title+'。'+(d.scene||d.plot||'')});save();
+  if(mode==='card')rpSendInviteCard(id);
+  _rp={id:id,busy:false};go('rp',{id:id});
+  rpAI('[系统：独立角色扮演开始。按本局临时身份与剧情开场：先用一条旁白交代这一幕，再说1到2句台词。这里发生的一切只属于这局游戏，不影响微信里的真实身份和关系。]');
+}
+function rpSendInviteCard(id){const c=getC(id),d=rpData(id);if(!c)return;const mid=uid();d.inviteMid=mid;pushMsg(id,{role:'user',type:'roleplayinvite',title:d.title,meRole:d.myRole,hisRole:d.hisRole,when:rpWhenText(d),active:true,finished:false,id:mid});if(!c.blocked)scheduleReply(id,'[系统：'+S.me.name+'邀请你去手机里的角色扮演软件玩一局独立剧情《'+d.title+'》。这不影响微信里的真实身份和关系，只是本局游戏：你在里面扮演「'+(d.hisRole||c.name)+'」，ta扮演「'+(d.myRole||S.me.name)+'」。你可以在微信里自然回应一句，表示答应/期待/逗ta，但别直接把剧情演到微信里。]');}
+function rpSystem(c){const d=rpData(c.id);const base=((c.persona||'')+traitDesc(c)).slice(0,600);
+  let s='【独立角色扮演游戏】你正在和'+S.me.name+'玩一局单独的剧情软件。这不是微信聊天，也不会改动你在微信里的真实设定、真实关系、真实记忆。\n- 本局标题：'+(d.title||'本次剧情')+'\n- 本局时间：'+(rpWhenText(d)||dayPartNow())+'\n- 本局剧情背景：'+(d.plot||'由当下对话自然展开')+'\n- 本局开场场景：'+(d.scene||'从你们此刻对上的这一幕开始')+'\n- 你这局扮演：'+(d.hisRole||c.name)+'\n- '+S.me.name+'这局扮演：'+(d.myRole||S.me.name)+'\n- 你这局的临时设定：'+(d.hisPersona||'沿用你自己的语气底色，但以本局身份和剧情为准')+'\n- '+S.me.name+'这局的临时设定：'+(d.myPersona||'未额外指定')+'\n- 你本人的真实底色仅供语气参考：'+(base||'自然、有代入感。');
+  if(d.memory&&d.memory.length)s+='\n\n# 你们以前玩过的剧情存档（只知道个大概，别把旧身份串到本局）\n'+d.memory.slice(-6).map((m,i)=>(i+1)+'. '+(m.title||'本次剧情')+'：'+(m.summary||m.text||'')).join('\n');
+  s+='\n\n# 本局输出规则\n- 沉浸式扮演，只说本局里的话，不要提AI/程序/规则。\n- 动作、神态、环境、心理一律写成【旁白】单独成行；说出口的话单独成行。\n- 旁白用第三人称描写（他/她/两人），台词用第一人称直接说。\n- 一次回复写1到4行，按行一条条分开，短一点、像真人现场互动。\n- 不要发微信卡片、红包、语音、来电、图片标签，也不要跳回微信真实设定。';
+  return s;}
+async function rpAI(note){if(!_rp)return;const c=getC(_rp.id);const d=rpData(_rp.id);_rp.busy=true;rpRender();
+  try{const hist=d.msgs.slice(-Math.max(10,Math.min(80,+(S.settings&&S.settings.offHist)||30))).map(m=>({role:m.who==='me'?'user':'assistant',content:m.who==='旁白'?('【'+m.text+'】'):m.text}));if(note)hist.push({role:'user',content:note});
+    let r=await chatAPI([{role:'system',content:rpSystem(c)},...hist,{role:'system',content:personaPin(c)}],{aux:!!(S.settings&&S.settings.offAux)});
+    if(!_rp)return;
+    const items=[];splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({id:uid(),who:nar?'旁白':'ta',text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
+    for(let i=0;i<items.length;i++){if(!_rp)return;d.msgs.push(items[i]);save();playDing();rpRender();if(i<items.length-1)await new Promise(res=>setTimeout(res,Math.min(1600,520+(items[i].text||'').length*24)));}
+  }catch(e){d.msgs.push({id:uid(),who:'旁白',text:'（场景停顿了一下，剧情还可以继续。）'});save();playDing();}
+  if(_rp)_rp.busy=false;rpRender();}
+function rpRender(){if(cur().p==='rp'){render();const b=$('#rpbg');if(b)b.scrollTop=b.scrollHeight;}}
+function rpSay(){if(!_rp||_rp.busy)return;const ta=$('#rp_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';rpData(_rp.id).msgs.push({id:uid(),who:'me',text:v});save();playDing();rpRender();}
+function rpNarrate(){if(!_rp||_rp.busy)return;const t=prompt('加一段旁白（第三人称，用 他/她/两人 描写动作、环境或剧情推进）：','');if(t==null)return;const v=t.trim();if(!v)return;rpData(_rp.id).msgs.push({id:uid(),who:'旁白',text:v});save();playDing();rpRender();}
+function rpReply(){if(!_rp||_rp.busy)return;rpAI();}
+function rpReKeep(){const b=$('#rpbg');const st=b?b.scrollTop:null;render();const g=$('#rpbg');if(g&&st!=null)g.scrollTop=st;}
+function rpSelToggle(){_rpSel=_rpSel?null:[];rpReKeep();}
+function rpSelTog(mid){if(!_rpSel)return;const i=_rpSel.indexOf(mid);if(i<0)_rpSel.push(mid);else _rpSel.splice(i,1);rpReKeep();}
+function rpEditMsg(id,mid){const t=$('#rp_e');const v=t?t.value:'';const mm=rpData(id).msgs.find(x=>x.id===mid);if(mm)mm.text=v;save();closeModal();rpReKeep();}
+function rpDelMsg(id,mid){rpData(id).msgs=rpData(id).msgs.filter(x=>x.id!==mid);save();closeModal();rpReKeep();}
+async function rpDelSel(id){if(!_rpSel||!_rpSel.length){toast('先选几条');return;}if(!await uiConfirm('删除选中的 '+_rpSel.length+' 条？'))return;const ids=_rpSel.slice();rpData(id).msgs=rpData(id).msgs.filter(x=>ids.indexOf(x.id)<0);_rpSel=null;save();rpReKeep();toast('已删除');}
+async function rpClearMsgs(id){if(!rpData(id).msgs.length){toast('当前没有内容');return;}if(!await uiConfirm('清空这一局的全部聊天和旁白？'))return;rpData(id).msgs=[];save();rpReKeep();toast('已清空');}
+function rpMsgMenu(id,mid){const d=rpData(id),m=d.msgs.find(x=>x.id===mid);if(!m)return;openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="rp_e" rows="3">${esc(m.text)}</textarea></div><div class="btns"><button class="btn d" onclick="rpDelMsg('${id}','${mid}')">删除</button><button class="btn p" onclick="rpEditMsg('${id}','${mid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function rpMemory(id){const d=rpData(id),c=getC(id);openModal(`<h3>${esc((c&&c.remark)||'角色')} 的剧情存档</h3><div class="hint">这些只保存在角色扮演软件里，不会改动微信设定。可以删。</div>${(d.memory||[]).map((m,i)=>`<div style="background:#151c25;border:1px solid #253344;border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:8px"><div style="flex:1"><div style="font-size:13px;color:#eef3f8;font-weight:600">${esc(m.title||'本次剧情')}</div><div style="font-size:11px;color:#7f91a7;margin-top:3px">${esc(m.when||'')} ${(m.hisRole||m.meRole)?('· '+esc((m.hisRole||'')+(m.meRole?(' / '+m.meRole):''))):''}</div><div style="font-size:13px;color:#c6d0da;line-height:1.6;margin-top:6px">${esc(m.summary||m.text||'')}</div></div><div style="white-space:nowrap"><span onclick="rpData('${id}').memory.splice(${i},1);save();rpMemory('${id}')" style="color:#fa5151;cursor:pointer">删除</span></div></div></div>`).join('')||'<div class="empty">还没有剧情存档</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+async function rpEnd(id){const d=rpData(id);if(!d.msgs.length){d.active=false;save();go('rphub');return;}if(!await uiConfirm('结束这局角色扮演，并保存一条剧情存档？'))return;toast('正在整理这局剧情…');const c=getC(id);
+  let sum='';try{const text=d.msgs.map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':(d.hisRole||c.name))+'：'+m.text).join('\n');sum=trimSentence(cleanReply(await chatAPI([{role:'system',content:'你就是这局角色扮演里的「'+(d.hisRole||c.name)+'」。请把你和'+S.me.name+'刚刚玩完的这一局剧情，写成一段简短存档摘要：交代这局大概在玩什么、彼此扮演了什么身份、发生了什么关键推进、最后停在什么状态。80到140字，直接写正文，不要分点，不要写成微信现实。'},{role:'user',content:text}],{max:260,temp:.5})),220);}catch(e){}
+  if(!sum)sum='这一局围绕「'+(d.title||'本次剧情')+'」展开，你们按设定把剧情推进了一段，并留下了单独的本局记录。';
+  d.memory=d.memory||[];d.memory.push({ts:Date.now(),title:d.title||'本次剧情',when:rpWhenText(d),hisRole:d.hisRole||c.name,meRole:d.myRole||S.me.name,summary:sum});d.active=false;d.summary=sum;
+  if(d.inviteMid){const m=msgs(id).find(x=>x.id===d.inviteMid);if(m){m.active=false;m.finished=true;m.summary=sum;}}
+  save();_rp=null;_rpSel=null;toast('剧情存档已保存');go('rphub');}
+function renderRP(id){const c=getC(id);if(!c)return '';const d=rpData(id);const sel=_rpSel;const body=d.msgs.map(m=>{const on=sel&&sel.indexOf(m.id)>=0;const cb=sel?`<span style="margin-right:6px;color:${on?'#19a463':'#888'}">${on?'▣':'□'}</span>`:'';const oc=sel?`rpSelTog('${m.id}')`:`rpMsgMenu('${id}','${m.id}')`;if(m.who==='旁白')return `<div onclick="${oc}" style="text-align:center;color:#9db0c6;font-size:15px;padding:11px 20px;line-height:1.75">${cb}${esc(m.text)}</div>`;if(m.who==='me')return `<div class="msg me" onclick="${oc}"><div class="col"><div class="bubble">${cb}${esc(m.text)}</div></div></div>`;return `<div class="msg them" onclick="${oc}" style="padding-left:14px"><div class="col"><div class="bubble">${cb}${esc(m.text)}</div></div></div>`;}).join('')+(_rp&&_rp.busy?`<div class="msg them" style="padding-left:14px"><div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
+  return `<div class="nav"><span class="l" onclick="go('rphub')">‹</span><span class="t">${esc(d.title||'角色扮演')}</span><span class="r" onclick="rpEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
+   <div style="padding:8px 12px;background:#151c25;color:#c6d0da;font-size:12px;border-bottom:1px solid #253344;display:flex;justify-content:space-between;gap:8px"><span>${esc((d.hisRole||c.remark||c.name)+(d.myRole?(' / '+d.myRole):''))}<br><small style="color:#7f91a7">${esc(rpWhenText(d)||'')}</small></span><span style="white-space:nowrap;text-align:right"><span onclick="go('rpset',{id:'${id}'})" style="cursor:pointer;margin-right:12px">${svgIc('gear',14,'#cfd8e3')} 设定</span><span onclick="rpMemory('${id}')" style="cursor:pointer;margin-right:12px">${svgIc('book',14,'#cfd8e3')} 存档</span><span onclick="rpSelToggle()" style="cursor:pointer;margin-right:12px">${sel?'取消':'多选'}</span><span onclick="rpClearMsgs('${id}')" style="cursor:pointer">清空</span></span></div>
+   <div class="scroll" id="rpbg" style="background:#0f141b">${body||'<div class="empty" style="padding:34px;line-height:1.9">先记下一句台词或一段动作，再让对方进入剧情。</div>'}</div>
+   ${sel?`<div class="inputbar" style="justify-content:space-between"><button class="btn g" style="flex:1" onclick="rpSelToggle()">取消</button><button class="btn d" style="flex:1;margin-left:8px" onclick="rpDelSel('${id}')">删除选中(${sel.length})</button></div>`:`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%;background:#243447" ${_rp&&_rp.busy?'disabled':''} onclick="rpReply()">${_rp&&_rp.busy?'对方回应中…':'让TA回应'}</button></div><div class="inputbar"><button class="send" style="background:#3a4756;margin-right:6px" onclick="rpNarrate()" title="添加旁白">${svgIc('thought',16,'#fff')}</button><textarea id="rp_in" rows="1" placeholder="写台词；动作和环境请用左侧旁白按钮分开写" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();rpSay();}"></textarea><button class="send" onclick="rpSay()">记下</button></div>`}`;}
+
 /* ===== 云程 · 出行（机票 / 行程待约会 / 护照 / 回忆）—— 无emoji·高级简约 ===== */
 const TV_CITIES=[
  {n:'北京',c:'PEK',i:0},{n:'上海',c:'SHA',i:0},{n:'广州',c:'CAN',i:0},{n:'深圳',c:'SZX',i:0},
@@ -4533,8 +4625,8 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="S.couple.startDate=$('#cp_d').value||S.couple.startDate;save();closeModal();render()">保存</button></div>`);}
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
-function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';if(m.type==='homeinvite')return '[🏡 回家邀请]';return splitBubbles(m.content)[0]||'[消息]';}
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',homeinvite:'[🏡 回家邀请]',outpass:'[📍 出门申请]',musicinvite:'[🎧 一起听歌]',gameinvite:'[🎮 游戏邀请]',sys:m.content})[m.type]||'[消息]';}
+function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';if(m.type==='homeinvite')return '[回家邀请]';if(m.type==='roleplayinvite')return '[角色扮演邀请]';return splitBubbles(m.content)[0]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',homeinvite:'[回家邀请]',roleplayinvite:'[角色扮演邀请]',outpass:'[出门申请]',musicinvite:'[一起听歌]',gameinvite:'[游戏邀请]',sys:m.content})[m.type]||'[消息]';}
 
 let _ctSearch='';
 function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTML=ctListHTML();}
@@ -5421,6 +5513,7 @@ function buildPart(c,m,me){
   if(m.type==='homeinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#241a33;border:1px solid #7a5bb0"><div style="padding:12px"><div style="color:#c5a6ff;font-size:11px;margin-bottom:4px">🏡 回家吧</div><div style="color:#ece0ff;font-size:14px;font-weight:600">ta邀请你回你们的小家</div><div style="color:#b9a6e0;font-size:12px;margin-top:5px">一起做饭 · 看电影 · 喂米香奶茶 · 抱着睡</div></div><div class="cfoot" style="color:#a98fd0">${m.accepted?'你回家啦🏡':m.declined?'你说改天':'ta在小家等你'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#7a5bb0;color:#fff" onclick="event.stopPropagation();acceptHome('${m.id}')">回家陪ta</button><button class="minibtn" onclick="event.stopPropagation();declineHome('${m.id}')">改天</button></div>`}`;}
   if(m.type==='outpass'){const st=m.status;return `<div class="card" style="width:240px;background:#23303a;border:1px solid #3a6b8a"><div style="padding:12px"><div style="color:#9ec5fe;font-size:11px;margin-bottom:4px">📍 出门报备申请</div><div style="color:#dbeafe;font-size:14px;font-weight:600">去：${esc(m.where||'')}</div>${m.who?`<div style="color:#a9c7e8;font-size:12px;margin-top:3px">同行：${esc(m.who)}</div>`:''}${m.dur?`<div style="color:#a9c7e8;font-size:12px">时长：${esc(m.dur)}</div>`:''}</div><div class="cfoot" style="color:${st==='approved'?'#19a463':st==='rejected'?'#fa5151':'#c9a86b'}">${st==='approved'?'✅ ta批准了'+(m.reason?'：'+esc(m.reason):''):st==='rejected'?'🚫 ta驳回了'+(m.reason?'：'+esc(m.reason):''):'⏳ 等ta批准'}</div></div>`;}
   if(m.type==='familyreq'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡申请</div><div class="t2">想绑定你的亲属卡用额度</div></div></div><div class="cfoot">等ta同意并设额度</div></div>`;}
+  if(m.type==='roleplayinvite'){const st=m.finished?'本局已结束':(m.active?'剧情进行中':'等待进入');return `<div class="card" style="width:246px;background:#101821;border:1px solid #435267"><div style="padding:12px"><div style="color:#9db0c6;font-size:11px;margin-bottom:4px;display:flex;align-items:center;gap:5px">${svgIc('mask',12,'#9db0c6')} 角色扮演邀请</div><div style="color:#eef3f8;font-size:14px;font-weight:600">${esc(m.title||'本次剧情')}</div><div style="color:#9fb0c0;font-size:12px;margin-top:5px;line-height:1.6">${m.hisRole?('本局你扮演：'+esc(m.hisRole)):''}${m.meRole?('<br>我扮演：'+esc(m.meRole)):''}${m.when?('<br>时间：'+esc(m.when)) : ''}</div></div><div class="cfoot" style="color:#7f91a7">${esc(st)}</div></div><div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#243447;color:#fff" onclick="event.stopPropagation();openRoleplayFromCard('${c.id}')">进入剧情</button></div>`;}
   if(m.type==='gameinvite'){const st=m.status;const playing=st==='accepted';
     return `<div class="card" style="width:240px;background:#1d2342;border:1px solid #4a5bb0"><div style="padding:12px"><div style="color:#9db4ff;font-size:11px;margin-bottom:4px">🎮 游戏邀请</div><div style="color:#e3e9ff;font-size:14px;font-weight:600">${esc(m.ge||'')} ${esc(m.gname||'一起玩')}</div><div style="color:#aab6e8;font-size:12px;margin-top:5px">想拉你进游戏空间一起玩～</div></div><div class="cfoot" style="color:#8fa0d8">${st==='accepted'?'ta答应啦🎮':st==='declined'?'ta这会儿不想玩':'等ta同意…'}</div></div>${playing?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#5b6bd6;color:#fff" onclick="event.stopPropagation();enterGameNow('${c.id}','${m.game}')">▶ 进入游戏</button></div>`:''}`;}
   return quoteBar(m)+`<div class="bubble">${esc(m.content)}</div>`;}
