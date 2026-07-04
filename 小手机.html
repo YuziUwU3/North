@@ -586,7 +586,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v304 · AI真图:开启后角色发照片会用你的绘图API真生成一张图([图片|画面描述]),自动贴合角色人设外貌;设置-偏好里开关(默认关),约1分钟一张·耗token;其余同v303';
+const APP_VER='v305 · 一起逛街:购物App点「邀他一起逛」,他会自己逛/搜/看/想买(顶部实时显示他在干嘛),他想买的要你[同意/拒绝]、你想买的点「想要·问他」求他同意;敲定的都进购物车等结算,结算时自己买单或让他代付都行;频率关/慢/中/快可控·离开购物页就停;其余同v304';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -607,7 +607,7 @@ function defState(){return{
   weather:null,
   spy:{},
   offline:{},
-  shop:{cart:[],results:[],q:'',orders:[],cs:{msgs:[]}},
+  shop:{cart:[],results:[],q:'',orders:[],cs:{msgs:[]},co:{on:false,cid:null,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0}},
   food:{cart:[],results:[],q:''},
   calendar:[],
   x:{profile:{handle:'@yibei_0414',bio:'做一只无忧无虑的小猫～',fans:328,following:12,cover:''},tweets:[],dms:[],following:[],blocked:[],circle:{},users:{}},
@@ -2277,10 +2277,11 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
 
 /* ---------- 购物 ---------- */
 let _shopBusy=false;
-function renderShop(){const r=S.shop.results||[];const cartN=(S.shop.cart||[]).length;
-  const orderN=(S.shop.orders||[]).filter(o=>!o.refunded).length;
+function renderShop(){coInit();const r=S.shop.results||[];const cartN=(S.shop.cart||[]).length;
+  const orderN=(S.shop.orders||[]).filter(o=>!o.refunded).length;const co=S.shop.co;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">购物</span><span class="r" onclick="openOrders()">${svgIc('bag',20,'#fff')}${orderN?'<span class="badge" style="margin-left:2px">'+orderN+'</span>':''}</span></div>
-    <div style="padding:6px 12px;text-align:right;background:#111;border-bottom:.5px solid #2a2a2c"><button class="minibtn" onclick="openCart()">购物车${cartN?'('+cartN+')':''}</button> <button class="minibtn" onclick="openOrders()">我的订单${orderN?'('+orderN+')':''}</button> <button class="minibtn" style="background:#ff6b6b;color:#fff" onclick="go('shopcs')">客服</button></div>
+    <div style="padding:6px 12px;text-align:right;background:#111;border-bottom:.5px solid #2a2a2c">${co.on?'':'<button class="minibtn" style="background:#ff8fab;color:#fff" onclick="coInvite()">👫 邀他一起逛</button> '}<button class="minibtn" onclick="openCart()">购物车${cartN?'('+cartN+')':''}</button> <button class="minibtn" onclick="openOrders()">我的订单${orderN?'('+orderN+')':''}</button> <button class="minibtn" style="background:#ff6b6b;color:#fff" onclick="go('shopcs')">客服</button></div>
+    ${co.on?coPanel():''}
     <div style="padding:10px 12px;background:#1c1c1e;display:flex;gap:8px;border-bottom:.5px solid #2a2a2c">
       <input id="shop_q" value="${esc(S.shop.q||'')}" placeholder="搜索想要的东西…" style="flex:1;border:1px solid #38383a;border-radius:18px;padding:8px 14px;background:#2c2c2e;color:#eee;outline:none">
       <button class="send" onclick="shopSearch()" ${_shopBusy?'disabled':''}>${_shopBusy?'…':'搜'}</button></div>
@@ -2291,6 +2292,7 @@ function shopCard(p,i){return `<div class="mpost" style="align-items:center">
       <div style="font-size:12px;color:#888;margin:3px 0">${esc(p.shop||'好物商城')} · ${esc(p.desc||'')}</div>
       <div style="color:#ff6b6b;font-size:17px;font-weight:600">¥${(+p.price).toFixed(2)}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+        ${(S.shop.co&&S.shop.co.on)?`<button class="minibtn" style="background:#ff8fab;color:#fff" onclick="coAskHim(${i})">想要·问他</button>`:''}
         <button class="minibtn" onclick="addCart(${i})">加购物车</button>
         <button class="minibtn" onclick="buyNow(${i})">立即购买</button>
         <button class="minibtn" onclick="giftFlow(${i})">送给TA</button>
@@ -2307,7 +2309,7 @@ async function shopSearch(){if(_shopBusy)return;const q=($('#shop_q')?$('#shop_q
 function addCart(i){const p=S.shop.results[i];if(!p)return;S.shop.cart.push(p);save();render();toast('已加入购物车 🛒');}
 function buyNow(i){const p=S.shop.results[i];if(!p)return;doBuy([p],'self');}
 function openCart(){const cart=S.shop.cart||[];const total=cart.reduce((s,p)=>s+(+p.price),0);
-  openModal(`<h3>购物车</h3>${cart.length?cart.map((p,i)=>`<div class="bill"><div>${p.emoji||'🛍️'} ${esc(p.name)}<small>${esc(p.shop||'')}</small></div><div>¥${(+p.price).toFixed(2)} <span onclick="S.shop.cart.splice(${i},1);save();openCart()" style="color:#fa5151;cursor:pointer;margin-left:6px">✕</span></div></div>`).join('')+`<div style="text-align:right;padding:10px 4px;font-size:16px;color:#ff6b6b">合计 ¥${total.toFixed(2)}</div><div class="btns"><button class="btn p" onclick="doBuy(S.shop.cart.slice(),'self')">自己买单</button><button class="btn g" onclick="closeModal();cartPayFlow()">让TA代付</button></div>${familyContacts().length?`<button class="btn g" style="margin-top:8px;background:#e8527f;color:#fff" onclick="closeModal();familyPayFlow(S.shop.cart.slice())">用亲属卡付</button>`:''}`:'<div class="empty">购物车空空的</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+  openModal(`<h3>购物车</h3>${cart.length?cart.map((p,i)=>`<div class="bill"><div>${p.emoji||'🛍️'} ${esc(p.name)}${p._coBy==='ta'?'<span style="color:#ff8fab;font-size:10px;margin-left:4px">他挑·你同意</span>':p._coBy==='me'?'<span style="color:#8fb7ff;font-size:10px;margin-left:4px">你挑·他同意</span>':''}<small>${esc(p.shop||'')}</small></div><div>¥${(+p.price).toFixed(2)} <span onclick="S.shop.cart.splice(${i},1);save();openCart()" style="color:#fa5151;cursor:pointer;margin-left:6px">✕</span></div></div>`).join('')+`<div style="text-align:right;padding:10px 4px;font-size:16px;color:#ff6b6b">合计 ¥${total.toFixed(2)}</div><div class="btns"><button class="btn p" onclick="doBuy(S.shop.cart.slice(),'self')">自己买单</button><button class="btn g" onclick="closeModal();cartPayFlow()">让TA代付</button></div>${familyContacts().length?`<button class="btn g" style="margin-top:8px;background:#e8527f;color:#fff" onclick="closeModal();familyPayFlow(S.shop.cart.slice())">用亲属卡付</button>`:''}`:'<div class="empty">购物车空空的</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function doBuy(items,who){if(!items.length)return;const total=items.reduce((s,p)=>s+(+p.price),0);
   if(who==='self'){if(total>S.me.balance){toast('余额不够啦（去钱包改余额）');return;}
     items.forEach(p=>{addBill('out',+p.price,'在'+(p.shop||'商城')+'买了'+p.name);parcelDeliver(null,p.name,+p.price,'self',{emoji:p.emoji||'🛒',shop:p.shop||'商城'});});
@@ -2382,6 +2384,84 @@ function receiveGift(mid){let found;for(const k in S.messages){const m=S.message
 function rejectGift(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
   if(!found||found.m.received||found.m.declined)return;found.m.declined=true;msgs(found.k).push({role:'user',type:'sys',content:'你拒收了礼物：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,-12);save();render();toast('已拒收');
   const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'拒收了你送的礼物「'+found.m.name+'」，你有点失落或不甘，回应一下。]'),1500);}
+
+/* ---------- 和角色「一起逛街」 ---------- */
+let _coBusy=false;
+function coInit(){if(!S.shop.co||typeof S.shop.co!=='object')S.shop.co={on:false,cid:null,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0};
+  const co=S.shop.co;co.feed=co.feed||[];co.hisPending=co.hisPending||[];co.myPending=co.myPending||[];if(!co.pace)co.pace='slow';
+  if(co.on){const c=getC(co.cid);if(!c||c.deleted)co.on=false;}}
+function coClip(s,n){s=(''+(s||'')).trim().replace(/^["'「」]+|["'「」]+$/g,'');return s.length>n?s.slice(0,n)+'…':s;}
+function coNormItem(it){if(!it||!it.name)return null;return {name:(''+it.name).slice(0,40),price:+(''+it.price).replace(/[^0-9.]/g,'')||(20+Math.floor(Math.random()*180)),shop:(''+(it.shop||'好物商城')).slice(0,20),desc:(''+(it.desc||'')).slice(0,40),emoji:(''+(it.emoji||'🛍️')).slice(0,2)};}
+function coFeed(k,text){const co=S.shop.co;if(!co)return;co.feed.push({id:uid(),k,text,ts:Date.now()});if(co.feed.length>40)co.feed=co.feed.slice(-40);}
+function coInvite(){coInit();pickTarget(coStart);}
+function coStart(id){coInit();const c=getC(id);if(!c){toast('先创建一个角色');return;}
+  S.shop.co={on:true,cid:id,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0};
+  coFeed('sys','💌 你拉着 '+(c.remark||c.name)+' 一起来逛街啦~');save();render();toast('和 '+(c.remark||c.name)+' 一起逛街咯 👫');
+  setTimeout(()=>coHisAuto(false),1500);}
+function coExit(){const co=S.shop.co;if(co){co.on=false;co.hisPending=[];co.myPending=[];}save();if(cur().p==='shop')render();toast('结束一起逛街~ 敲定的东西在购物车里等你结算 🛒');}
+function coSetPace(p){const co=S.shop.co;if(!co)return;co.pace=p;co.lastActTs=Date.now();save();render();}
+function coNudge(){coHisAuto(true);}
+function coHeartbeat(){try{const co=S.shop&&S.shop.co;if(!co||!co.on||co.pace==='off'||_coBusy)return;if(cur().p!=='shop')return;const gap={slow:45000,mid:22000,fast:11000}[co.pace]||45000;if(Date.now()-(co.lastActTs||0)<gap)return;coHisAuto(false);}catch(e){}}
+setInterval(coHeartbeat,5000);
+async function coGen(kind,c){const ctx=(S.shop.co.feed||[]).slice(-2).map(f=>f.text).join('；');
+  const sys='【沉浸式角色扮演】你就是「'+(c.remark||c.name)+'」本人：'+((c.persona||'').slice(0,500))+'\n你正在和恋人'+S.me.name+'一起用购物App逛街。全程中文、口语、贴合你的人设和喜好，绝不提AI/程序。只输出JSON，不要多余文字。'+(ctx?'\n刚刚的动态：'+ctx:'');
+  let u;
+  if(kind==='search')u='你想自己搜点你（按人设/喜好）想买的东西。输出JSON：{"keyword":"想搜的关键词(2-8字)","say":"像和恋人逛街时随口说的一句(≤18字)"}';
+  else if(kind==='look')u='你在商城里看中一件你自己想要的商品（贴合你人设喜好）。输出JSON：{"item":{"name":"商品名","price":数字,"shop":"店铺名","desc":"一句卖点","emoji":"1个emoji"},"say":"一句感想(≤18字)"}';
+  else if(kind==='want')u='你看中一件很想买的东西，想让恋人同意你买。输出JSON：{"item":{"name":"商品名","price":数字,"shop":"店铺名","desc":"一句卖点","emoji":"1个emoji"},"say":"跟ta请求/撒娇想买它的一句(≤22字)"}';
+  else u='你和恋人一起逛街，随口说一句话（调情/嫌ta乱买/催ta/分享心情都行）。输出JSON：{"say":"一句话(≤22字)"}';
+  return await aiGen([{role:'system',content:sys},{role:'user',content:u}],{max:200,aux:true},parseObj,2);}
+async function coHisAuto(manual){const co=S.shop.co;if(!co||!co.on)return;
+  if(_coBusy){if(manual)toast('他正在逛…等一下');return;}
+  const c=getC(co.cid);if(!c||c.blocked||c.deleted){co.on=false;save();if(cur().p==='shop')render();return;}
+  _coBusy=true;co.lastActTs=Date.now();if(cur().p==='shop')render();
+  const kinds=co.hisPending.length>=2?['look','look','search','chat']:['want','want','want','look','look','look','search','search','chat'];
+  const kind=kinds[Math.floor(Math.random()*kinds.length)];const nm=c.remark||c.name;
+  try{const o=await coGen(kind,c)||{};
+    if(kind==='search'){const kw=(''+(o.keyword||'')).slice(0,20)||'喜欢的东西';coFeed('search','🔎 '+nm+' 在搜「'+kw+'」'+(o.say?' — '+coClip(o.say,24):''));}
+    else if(kind==='chat'){coFeed('chat','💬 '+nm+'：'+(coClip(o.say,30)||'一起逛真开心~'));}
+    else{const it=coNormItem(o.item);
+      if(!it){coFeed('chat','💬 '+nm+'：'+(coClip(o.say,30)||'嗯…再看看'));}
+      else if(kind==='look'){coFeed('look','👀 '+nm+' 在看「'+it.name+'」¥'+it.price.toFixed(2)+(o.say?' — '+coClip(o.say,22):''));}
+      else{co.hisPending.push({id:uid(),item:it,say:coClip(o.say,40)||'我想要这个~',ts:Date.now()});coFeed('want','🛍️ '+nm+' 想买「'+it.name+'」，等你同意');if(S.settings.sound&&typeof playDing==='function'){try{playDing();}catch(_){}}}
+    }
+  }catch(e){}
+  co.lastActTs=Date.now();_coBusy=false;save();if(cur().p==='shop')render();}
+async function coAskHim(i){const co=S.shop.co;if(!co||!co.on)return;const p=S.shop.results[i];if(!p)return;const c=getC(co.cid);if(!c){toast('对方不在了');return;}
+  if(_coBusy){toast('等他一下下~');return;}
+  const it=coNormItem(p);const req={id:uid(),item:it,status:'wait',say:'',ts:Date.now()};co.myPending.push(req);
+  coFeed('ask','🙋 你想买「'+it.name+'」，问了问 '+(c.remark||c.name)+'…');_coBusy=true;save();render();
+  try{const sys='【沉浸式角色扮演】你就是「'+(c.remark||c.name)+'」本人：'+((c.persona||'').slice(0,500))+'\n你在和恋人'+S.me.name+'一起逛街。ta想买一样东西，来问你同不同意ta买。按你的人设和此刻心情决定（可爽快答应/宠溺答应/嫌贵逗ta/心疼钱不许ta乱买/趁机撒娇提条件）。中文口语，绝不提AI。只输出JSON。';
+    const u='恋人'+S.me.name+'想买「'+it.name+'」（¥'+it.price.toFixed(2)+(it.shop?'，'+it.shop:'')+'）。你同不同意ta买？输出JSON：{"ok":true或false,"say":"你的回应一句(≤26字)"}';
+    const o=await aiGen([{role:'system',content:sys},{role:'user',content:u}],{max:180,aux:true},parseObj,2)||{};
+    req.status=o.ok?'ok':'no';req.say=coClip(o.say,40)||(o.ok?'嗯，买吧~':'不许，太贵了');
+    if(o.ok){S.shop.cart.push(Object.assign({},it,{_coBy:'me'}));coFeed('okme','✅ '+(c.remark||c.name)+' 同意了：「'+it.name+'」已进购物车');adjMood(co.cid,4);}
+    else coFeed('nome','❌ '+(c.remark||c.name)+' 没同意你买「'+it.name+'」');
+  }catch(e){req.status='no';req.say='（他没回应）';}
+  _coBusy=false;save();render();}
+async function coApproveHis(pid){const co=S.shop.co;if(!co)return;const idx=co.hisPending.findIndex(x=>x.id===pid);if(idx<0)return;const req=co.hisPending.splice(idx,1)[0];const c=getC(co.cid);const nm=c?(c.remark||c.name):'ta';
+  S.shop.cart.push(Object.assign({},req.item,{_coBy:'ta'}));coFeed('okhis','💝 你同意 '+nm+' 买「'+req.item.name+'」，已进购物车');adjMood(co.cid,6);save();render();
+  if(c&&!_coBusy){_coBusy=true;try{const o=await aiGen([{role:'system',content:'【沉浸式角色扮演】你就是「'+nm+'」本人：'+((c.persona||'').slice(0,400))+'\n你在和恋人'+S.me.name+'一起逛街。只输出JSON，中文口语，别提AI。'},{role:'user',content:'恋人'+S.me.name+'同意了你买「'+req.item.name+'」。开心地谢谢ta/得意/撒娇一句。输出JSON：{"say":"(≤22字)"}'}],{max:120,aux:true},parseObj,2)||{};if(o.say)coFeed('chat','💬 '+nm+'：'+coClip(o.say,30));}catch(e){}_coBusy=false;save();if(cur().p==='shop')render();}}
+async function coRejectHis(pid){const co=S.shop.co;if(!co)return;const idx=co.hisPending.findIndex(x=>x.id===pid);if(idx<0)return;const req=co.hisPending.splice(idx,1)[0];const c=getC(co.cid);const nm=c?(c.remark||c.name):'ta';
+  coFeed('nohis','🙅 你拒绝了 '+nm+' 买「'+req.item.name+'」');adjMood(co.cid,-5);save();render();
+  if(c&&!_coBusy){_coBusy=true;try{const o=await aiGen([{role:'system',content:'【沉浸式角色扮演】你就是「'+nm+'」本人：'+((c.persona||'').slice(0,400))+'\n你在和恋人'+S.me.name+'一起逛街。只输出JSON，中文口语，别提AI。'},{role:'user',content:'恋人'+S.me.name+'不同意你买「'+req.item.name+'」（不让你买/嫌贵）。按你的人设自然反应（失落/耍赖继续求/撒娇/懂事作罢/闹点小情绪都行）。输出JSON：{"say":"(≤26字)"}'}],{max:130,aux:true},parseObj,2)||{};if(o.say)coFeed('chat','💬 '+nm+'：'+coClip(o.say,32));}catch(e){}_coBusy=false;save();if(cur().p==='shop')render();}}
+function coAvatar(c){if(c&&isImg(c.avatar))return `<img src="${c.avatar}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none">`;return `<div style="width:34px;height:34px;border-radius:50%;background:#3a2f36;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none">${c?esc(c.avatar||'👤'):'👤'}</div>`;}
+function coPanel(){const co=S.shop.co;const c=getC(co.cid);const name=c?(c.remark||c.name):'ta';
+  const last=(co.feed[co.feed.length-1]||{}).text||'一起逛街中~';
+  const paceBtn=(p,t)=>`<span onclick="coSetPace('${p}')" style="cursor:pointer;padding:3px 9px;border-radius:11px;font-size:12px;${co.pace===p?'background:#ff8fab;color:#fff':'color:#999;background:#2a2a2c'}">${t}</span>`;
+  const hisCards=co.hisPending.map(r=>`<div style="background:#211b1f;border:1px solid #4a2f3a;border-radius:11px;padding:8px 10px;margin:6px 0;display:flex;gap:8px;align-items:center">
+    <div style="font-size:24px">${r.item.emoji||'🛍️'}</div>
+    <div style="flex:1;min-width:0"><div style="color:#eee;font-size:13.5px">${esc(r.item.name)} <span style="color:#ff6b6b">¥${(+r.item.price).toFixed(2)}</span></div>${r.say?`<div style="color:#ff9ec2;font-size:12px;margin-top:2px">${esc(name)}：${esc(r.say)}</div>`:''}</div>
+    <div style="white-space:nowrap;display:flex;flex-direction:column;gap:4px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="coApproveHis('${r.id}')">同意</button><button class="minibtn" style="background:#3a3a3c;color:#ddd" onclick="coRejectHis('${r.id}')">拒绝</button></div></div>`).join('');
+  const myCards=co.myPending.slice(-4).map(r=>`<div style="font-size:12px;color:#aaa;padding:2px 0">🙋 你想买「${esc(r.item.name)}」— ${r.status==='wait'?'<span style="color:#ffb83b">等他回复…</span>':r.status==='ok'?`<span style="color:#19a463">他同意了✓</span>${r.say?' <span style="color:#ff9ec2">'+esc(r.say)+'</span>':''}`:`<span style="color:#fa5151">他拒绝了✗</span>${r.say?' <span style="color:#ff9ec2">'+esc(r.say)+'</span>':''}`}</div>`).join('');
+  const feedLog=co.feed.slice(-8).map(f=>`<div style="font-size:11.5px;color:#8a8a90;padding:1px 0">${esc(f.text)}</div>`).join('');
+  return `<div style="background:linear-gradient(135deg,#2a1e26,#1c1c1e);border-bottom:1px solid #3a2a32;padding:10px 12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">${coAvatar(c)}<div style="flex:1;min-width:0"><div style="color:#ff9ec2;font-size:14px;font-weight:600">和 ${esc(name)} 一起逛街</div><div style="color:#ccc;font-size:12.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_coBusy?'✨ '+esc(name)+' 正在逛…':esc(last)}</div></div><button class="minibtn" style="background:#3a3a3c;color:#ddd" onclick="coExit()">退出</button></div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:11.5px;color:#888">他逛的频率</span>${paceBtn('off','关')}${paceBtn('slow','慢')}${paceBtn('mid','中')}${paceBtn('fast','快')}<button class="minibtn" style="margin-left:auto" onclick="coNudge()" ${_coBusy?'disabled':''}>${_coBusy?'…':'催他逛一下'}</button></div>
+    ${hisCards?`<div style="margin-top:5px">${hisCards}</div>`:''}
+    ${myCards?`<div style="margin-top:5px">${myCards}</div>`:''}
+    ${feedLog?`<details style="margin-top:6px"><summary style="font-size:11.5px;color:#777;cursor:pointer">逛街动态</summary>${feedLog}</details>`:''}
+  </div>`;}
 
 /* ---------- 外卖 ---------- */
 let _foodBusy=false;
