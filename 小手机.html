@@ -586,7 +586,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v309 · 生图换更好模型:默认改用 gpt-4o-image(更快~36秒·更少被审核拒绝,老用户自动升级),照片场景严格跟随他此刻所在地点(不再一会办公室一会健身房);表情面板去掉整排emoji,只留可添加图片表情的自定义表情;其余同v308';
+const APP_VER='v310 · 生图修复+一起逛街增强:生图提示词大幅精简(之前太长导致超时失败·现约半分钟出图),AI真图可单独填接口/Key/拉取模型+测试出图按钮,超时放宽到180秒;一起逛街他不再重复想买同一样,且他会知道正在/刚刚和你逛街及何时结束(微信里能自然接话);其余同v309';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -594,7 +594,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true,
-    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-4o-image'
+    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-4o-image', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
@@ -742,14 +742,16 @@ async function visionAPI(dataURL,prompt){const a=S.settings.vision;
   if(!res.ok)throw new Error('vision-fail');
   return (d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'').trim();
 }
-/* AI 真图：用聊天模型的地址+Key 走 /images/generations 真生成一张图，返回图片URL */
+/* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
 async function genImage(prompt){
-  const a=S.settings.chat||{};
-  if(!a.base||!a.key)throw new Error('还没设置聊天 API');
+  const ch=S.settings.chat||{};
+  const base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,'');
+  const key=(S.settings.imgKey||ch.key)||'';
+  if(!base||!key)throw new Error('还没设置绘图/聊天 API');
   const model=(S.settings.imgModel||'gpt-4o-image');
-  const res=await fetchT(a.base.replace(/\/+$/,'')+'/images/generations',{method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
-    body:JSON.stringify({model,prompt:(prompt||'一张生活照').slice(0,900),n:1,size:'1024x1024'})},120000);
+  const res=await fetchT(base+'/images/generations',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({model,prompt:(prompt||'一张生活照').slice(0,600),n:1,size:'1024x1024'})},180000);
   const d=await res.json().catch(()=>null);
   if(!res.ok)throw new Error('HTTP '+res.status+'：'+((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'生图失败').slice(0,140));
   const it=d&&d.data&&d.data[0];
@@ -1022,6 +1024,10 @@ function buildSystem(c){
   // 记忆（仅主身份）
   if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(_main&&c.gamesPlayed&&c.gamesPlayed.length)s+='\n\n# 你和'+S.me.name+'一起玩过的游戏\n你记得跟ta在游戏大厅一起玩过：'+c.gamesPlayed.join('、')+'。被提起时要想得起来、能自然回味这些一起玩过的事，别说没玩过（具体每局怎么玩的不重要，记得玩过就行）。';
+  if(_main){const _co=S.shop&&S.shop.co;
+    if(_co&&_co.on&&_co.cid===c.id)s+='\n\n# 你正在和'+S.me.name+'一起逛街（进行中）\n你俩此刻正一起用购物App逛街、边看边挑东西：你会自己看中/想买些东西让ta同意，ta想买的也会来问你同不同意。ta聊到"一起买的/你挑的/刚看的那个"时，你心里清楚这事正在发生，自然接着聊。';
+    else if(_co&&_co.endedCid===c.id&&_co.endedAt&&Date.now()-_co.endedAt<7200000){const _mins=Math.round((Date.now()-_co.endedAt)/60000);const _when=_mins<1?'就在刚刚':(_mins<60?_mins+'分钟前':'大约'+Math.round(_mins/60)+'小时前');
+      s+='\n\n# 你们刚一起逛完街（'+_when+'结束）\n'+_when+'你和'+S.me.name+'一起在购物App逛了街'+(_co.endedItems?('，两人一起挑并买下了：'+_co.endedItems+'。你很清楚这些是你俩刚一起买的、是谁挑的、买了啥'):'（东西还在购物车里/没买啥）')+'。ta提起时别装不知道、别说没这回事，自然承接、可以回味或吐槽刚才逛街的事。';}}
   if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
@@ -1901,10 +1907,13 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     </div>
     <div class="section">
       <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
-      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时用你上面「聊天模型」的地址+Key 真生成一张图（不露脸·贴合人设身形气质），每张耗几分钱token；关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
-      <div class="field" style="padding:0 14px 4px"><label>绘图模型名（推荐 gpt-4o-image：更快·更少被拒）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-4o-image')}" placeholder="gpt-4o-image" style="flex:1"><button class="minibtn" onclick="S.settings.imgModel='gpt-4o-image';$('#s_imgmodel').value='gpt-4o-image';save();toast('已设为 gpt-4o-image')">用推荐</button></div></div>
-      <div style="padding:0 14px 8px">${[['gpt-4o-image','4o图·推荐(快·少拒)'],['gpt-image-2','image-2(慢·爱拒)']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
-      <div class="hint" style="padding:0 14px 12px">走 <b>/images/generations</b> 接口。照片<b>不露正脸</b>（更神秘·也避免每次脸不一样），并会尽量贴合角色人设身形、和他此刻所在的场景。慢和费用你自己掂量，不想花钱就关掉。</div>
+      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时真生成一张图（不露脸·贴合人设身形），每张耗几分钱token、约半分钟；关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
+      <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
+      <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
+      <div class="field" style="padding:0 14px 4px"><label>绘图模型名（推荐 gpt-4o-image：更快·更少被拒）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-4o-image')}" placeholder="gpt-4o-image" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
+      <div style="padding:0 14px 6px">${[['gpt-4o-image','4o图·推荐(快·少拒)'],['gpt-image-2','image-2(慢·爱拒)']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
+      <div class="btns" style="padding:0 14px 4px"><button class="btn g" onclick="testImg()">测试出图（真生成一张·约半分钟）</button></div><div id="testImgO" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
+      <div class="hint" style="padding:0 14px 12px">走 <b>/images/generations</b> 接口。照片<b>不露正脸</b>（更神秘·也避免每次脸不一样），贴合角色身形和他此刻所在场景。<b>先点「测试出图」</b>确认模型能用；若测试通过但发照片还失败，多半是那张描述太露被模型拒了，换个词或换模型即可。</div>
     </div>
     </div>
     <div id="testOut" style="display:none"></div>
@@ -1927,6 +1936,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():((S.settings.tts||{}).group||''))};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-4o-image';
+  if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
   S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));save();toast('已保存 ✅');}
 // 一键清空所有数据：清掉全部聊天/活动痕迹，但保留 你和角色的人设·头像、API设置、主屏布局
 async function clearAllData(){
@@ -1985,6 +1995,19 @@ async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999
   try{const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:[{type:'text',text:'这是什么颜色?'},{type:'image_url',image_url:{url:img}}]}]})});
     if(r.ok)o.style.color='#19a463',o.textContent='✅ 识图模型可用';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,80);}
   }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：这个模型多半不支持识图，或网络慢（换成 gpt-4o / 支持视觉的模型）':'❌ '+e.message;}}
+async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999';o.textContent='真生成一张测试图中…（约30-60秒，别急）';
+  const base=((($('#s_ibase')&&$('#s_ibase').value.trim())||(S.settings.chat&&S.settings.chat.base)||'').replace(/\/+$/,''));
+  const key=($('#s_ikey')&&$('#s_ikey').value.trim())||(S.settings.chat&&S.settings.chat.key)||'';
+  const model=($('#s_imgmodel')&&$('#s_imgmodel').value.trim())||S.settings.imgModel||'gpt-4o-image';
+  if(!base||!key){o.style.color='#e85';o.textContent='先填接口地址和Key（留空会用聊天模型的，但聊天那栏也得先填好）';return;}
+  const t0=Date.now();
+  try{const r=await fetchT(base+'/images/generations',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,prompt:'一只可爱的小猫坐在窗台上，阳光明媚，真实照片质感',n:1,size:'1024x1024'})},180000);
+    const d=await r.json().catch(()=>null);const sec=Math.round((Date.now()-t0)/1000);
+    if(!r.ok){o.style.color='#e85';o.textContent='❌ '+r.status+'：'+((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'失败').slice(0,140);return;}
+    const it=d&&d.data&&d.data[0];const url=it&&(it.url||(it.b64_json?'b64':''));
+    if(url){o.style.color='#19a463';o.innerHTML='✅ 出图成功（'+sec+'秒）这个模型能用 👍'+(typeof url==='string'&&url.indexOf('http')===0?'　<a href="'+esc(url)+'" target="_blank" style="color:#54a0ff">点开看</a>':'');}
+    else{o.style.color='#e85';o.textContent='❌ 没返回图片（'+sec+'秒）：这个模型可能不支持出图，换一个再测';}
+  }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时(>180秒)：这个模型太慢，建议换 gpt-4o-image':'❌ '+e.message;}}
 async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(iOS必须如此),否则第二次测试时上下文已挂起、网络回来再播就没声 */
   const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
   const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
@@ -2393,23 +2416,25 @@ function rejectGift(mid){let found;for(const k in S.messages){const m=S.messages
 /* ---------- 和角色「一起逛街」 ---------- */
 let _coBusy=false;
 function coInit(){if(!S.shop.co||typeof S.shop.co!=='object')S.shop.co={on:false,cid:null,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0};
-  const co=S.shop.co;co.feed=co.feed||[];co.hisPending=co.hisPending||[];co.myPending=co.myPending||[];if(!co.pace)co.pace='slow';
+  const co=S.shop.co;co.feed=co.feed||[];co.hisPending=co.hisPending||[];co.myPending=co.myPending||[];co.doneNames=co.doneNames||[];if(!co.pace)co.pace='slow';
   if(co.on){const c=getC(co.cid);if(!c||c.deleted)co.on=false;}}
 function coClip(s,n){s=(''+(s||'')).trim().replace(/^["'「」]+|["'「」]+$/g,'');return s.length>n?s.slice(0,n)+'…':s;}
 function coNormItem(it){if(!it||!it.name)return null;return {name:(''+it.name).slice(0,40),price:+(''+it.price).replace(/[^0-9.]/g,'')||(20+Math.floor(Math.random()*180)),shop:(''+(it.shop||'好物商城')).slice(0,20),desc:(''+(it.desc||'')).slice(0,40),emoji:(''+(it.emoji||'🛍️')).slice(0,2)};}
 function coFeed(k,text){const co=S.shop.co;if(!co)return;co.feed.push({id:uid(),k,text,ts:Date.now()});if(co.feed.length>40)co.feed=co.feed.slice(-40);}
 function coInvite(){coInit();pickTarget(coStart);}
 function coStart(id){coInit();const c=getC(id);if(!c){toast('先创建一个角色');return;}
-  S.shop.co={on:true,cid:id,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0};
+  S.shop.co={on:true,cid:id,pace:'slow',feed:[],hisPending:[],myPending:[],doneNames:[],lastActTs:0};
   coFeed('sys','💌 你拉着 '+(c.remark||c.name)+' 一起来逛街啦~');save();render();toast('和 '+(c.remark||c.name)+' 一起逛街咯 👫');
   setTimeout(()=>coHisAuto(false),1500);}
-function coExit(){const co=S.shop.co;if(co){co.on=false;co.hisPending=[];co.myPending=[];}save();if(cur().p==='shop')render();toast('结束一起逛街~ 敲定的东西在购物车里等你结算 🛒');}
+function coExit(){const co=S.shop.co;if(co){if(co.on){co.endedAt=Date.now();co.endedCid=co.cid;co.endedItems='';}co.on=false;co.hisPending=[];co.myPending=[];}save();if(cur().p==='shop')render();toast('结束一起逛街~ 敲定的东西在购物车里等你结算 🛒');}
 /* 结算完：把一起挑的东西记进角色记忆(微信+线下都会知道)，并自动退出一起逛 */
 function coFinalize(items){const co=S.shop.co;if(!co)return;
   const picks=(items||[]).filter(x=>x&&x._coBy);
-  if(picks.length){const c=getC(co.cid);if(c){const list=picks.map(p=>p.name).join('、');
+  if(picks.length){const list=picks.map(p=>p.name).join('、');const c=getC(co.cid);if(c){
     c.memory=c.memory||[];c.memory.push('和'+S.me.name+'一起逛街，两个人一起挑并买下了：'+list+'（'+ymd(Date.now())+'）');if(c.memory.length>80)c.memory=c.memory.slice(-80);
-    c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 一起逛街',text:'【一起逛街】我和'+S.me.name+'一起在购物App逛街，两人一起挑中并买下了：'+list+'。这是我们一起买的东西，线下见面聊起来我记得。',imp:3});}}
+    c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 一起逛街',text:'【一起逛街】我和'+S.me.name+'一起在购物App逛街，两人一起挑中并买下了：'+list+'。这是我们一起买的东西，线下见面聊起来我记得。',imp:3});}
+    co.endedItems=list;}
+  co.endedAt=Date.now();co.endedCid=co.cid;
   if(co.on){co.on=false;co.hisPending=[];co.myPending=[];}
   save();if(cur().p==='shop')render();
   if(picks.length)toast('一起逛结束啦，敲定的都下单了~ 想再逛就重新邀他 👫');}
@@ -2437,13 +2462,20 @@ async function coHisAuto(manual){const co=S.shop.co;if(!co||!co.on)return;
     else{const it=coNormItem(o.item);
       if(!it){coFeed('chat','💬 '+nm+'：'+(coClip(o.say,30)||'嗯…再看看'));}
       else if(kind==='look'){coFeed('look','👀 '+nm+' 在看「'+it.name+'」¥'+it.price.toFixed(2)+(o.say?' — '+coClip(o.say,22):''));}
-      else{co.hisPending.push({id:uid(),item:it,say:coClip(o.say,40)||'我想要这个~',ts:Date.now()});coFeed('want','🛍️ '+nm+' 想买「'+it.name+'」，等你同意');if(S.settings.sound&&typeof playDing==='function'){try{playDing();}catch(_){}}}
+      else{// want：同一样东西不重复想买/重复下单
+        const dup=(co.doneNames||[]).includes(it.name)||co.hisPending.some(h=>h.item&&h.item.name===it.name)||(S.shop.cart||[]).some(x=>x.name===it.name);
+        if(dup){coFeed('look','👀 '+nm+' 又瞄了眼「'+it.name+'」'+(o.say?' — '+coClip(o.say,20):''));}
+        else{co.doneNames=co.doneNames||[];co.doneNames.push(it.name);if(co.doneNames.length>60)co.doneNames=co.doneNames.slice(-60);
+          co.hisPending.push({id:uid(),item:it,say:coClip(o.say,40)||'我想要这个~',ts:Date.now()});coFeed('want','🛍️ '+nm+' 想买「'+it.name+'」，等你同意');if(S.settings.sound&&typeof playDing==='function'){try{playDing();}catch(_){}}}}
     }
   }catch(e){}
   co.lastActTs=Date.now();_coBusy=false;save();if(cur().p==='shop')render();}
 async function coAskHim(i){const co=S.shop.co;if(!co||!co.on)return;const p=S.shop.results[i];if(!p)return;const c=getC(co.cid);if(!c){toast('对方不在了');return;}
   if(_coBusy){toast('等他一下下~');return;}
-  const it=coNormItem(p);const req={id:uid(),item:it,status:'wait',say:'',ts:Date.now()};co.myPending.push(req);
+  const it=coNormItem(p);
+  if((S.shop.cart||[]).some(x=>x.name===it.name)){toast('「'+it.name+'」已经在购物车啦，别重复买~');return;}
+  if(co.myPending.some(r=>r.item&&r.item.name===it.name&&r.status==='wait')){toast('这个正在问他，等他回~');return;}
+  const req={id:uid(),item:it,status:'wait',say:'',ts:Date.now()};co.myPending.push(req);
   coFeed('ask','🙋 你想买「'+it.name+'」，问了问 '+(c.remark||c.name)+'…');_coBusy=true;save();render();
   try{const sys='【沉浸式角色扮演】你就是「'+(c.remark||c.name)+'」本人：'+((c.persona||'').slice(0,500))+'\n你在和恋人'+S.me.name+'一起逛街。ta想买一样东西，来问你同不同意ta买。按你的人设和此刻心情决定（可爽快答应/宠溺答应/嫌贵逗ta/心疼钱不许ta乱买/趁机撒娇提条件）。中文口语，绝不提AI。只输出JSON。';
     const u='恋人'+S.me.name+'想买「'+it.name+'」（¥'+it.price.toFixed(2)+(it.shop?'，'+it.shop:'')+'）。你同不同意ta买？输出JSON：{"ok":true或false,"say":"你的回应一句(≤26字)"}';
@@ -5718,16 +5750,15 @@ function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］�
   return t;}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
 const CARD_RE=/^\[(转账|红包|位置|图片|文件)\|([^\]]*)\]$/;
-/* 让生成的照片贴合角色人设（身形/气质），但【不露脸】，更神秘也避免每次脸不一样 */
+/* 生成照片的提示词：贴合角色身形气质、不露脸、场景照描述。
+   【必须简短】——长提示词会让生图明显变慢甚至超时失败，所以人设只取要点、整体压到200字内。 */
 function charImgPrompt(c,desc){
-  const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,420):'';
-  let p='';
-  if(per)p+='图中人物的身形、气质、穿衣风格符合这个人物设定：'+per+'。';
-  p+='画面内容：'+(desc||'一张自然的生活照')+'。';
-  p+='【场景严格照描述】严格按照上面画面内容里写的地点和场景来画，不要自己更换、新增或混入其它地点/背景（描述是健身房就只在健身房，是办公室就只在办公室）。';
-  p+='【重要·必须不露脸】不要拍到清晰的正脸五官：用背影、侧影、低头、逆光剪影、脸被头发/帽子/手臂/物品遮住、只拍脖子以下或半张脸模糊等方式，让脸看不清、留白神秘感。';
-  p+='要求：真实照片质感，自然光线，构图自然有氛围感，不要出现文字、水印或多余的人。';
-  return p;
+  const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,90):'';
+  let p='真实照片质感。';
+  if(per)p+='人物身形气质符合：'+per+'。';
+  p+=(desc||'一张自然的生活照')+'。';
+  p+='严格按描述的地点场景来拍，不换背景。不露正脸（低头/侧影/背影/逆光/遮挡，让脸看不清、更神秘）。自然光、有氛围，无文字水印。';
+  return p.slice(0,600);
 }
 function lineToMsg(line,cch){
   const dm=line.match(/^\[骰子(?:\|([1-6]))?\]$/);
