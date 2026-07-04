@@ -595,7 +595,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true,
-    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-4o-image', imgBase:'', imgKey:''
+    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
@@ -619,8 +619,8 @@ function defState(){return{
   _mailCount:{}
 };}
 let S=load();
-// 一次性把旧的默认绘图模型 gpt-image-2（慢·爱拒）升级到 gpt-4o-image（更快·更少被拒）
-try{if(S.settings&&!S.settings.imgModelV2){if(!S.settings.imgModel||S.settings.imgModel==='gpt-image-2')S.settings.imgModel='gpt-4o-image';S.settings.imgModelV2=1;}}catch(_){}
+// 把旧的默认绘图模型切到更适合日常照片的新默认；如果用户自己填了别的名字，就尊重原设置
+try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return Object.assign(defState(),v);}catch(e){}return seed();}
 function save(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));}catch(e){toast('存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
@@ -682,7 +682,20 @@ function aiDone(){_aiLoadN=Math.max(0,_aiLoadN-1);if(_aiLoadN<=0){_aiLoadN=0;con
 // 生成内容带自动重试：parseFn 解析失败/空就重试，最多 tries 次，全失败返回 null
 async function aiGen(messages,opt,parseFn,tries){tries=tries||3;for(let i=0;i<tries;i++){try{const r=await chatAPI(messages,opt);const out=parseFn(r);if(out!=null&&(out.length===undefined||out.length>0))return out;}catch(e){}}return null;}
 function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
-function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c._blk)c._blk={main:!!c.blocked};}return c;}
+function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c._blk)c._blk={main:!!c.blocked};if(!c.imgLock)c.imgLock=buildImgLock(c);}return c;}
+function hashStr(s){s=''+(s||'');let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0);}
+function pickBySeed(arr,seed,shift){return arr[(Math.abs(seed+(shift||0))%arr.length)|0];}
+function buildImgLock(c){
+  const seed=hashStr((c&&c.id||'')+'|'+(c&&c.name||'')+'|'+(c&&c.persona||''));
+  const p=(''+((c&&c.persona)||'')).replace(/\s+/g,' ');
+  const age=/30|三十|成熟|主任|教授|医生|总裁|律师/.test(p)?'看起来二十七到三十二岁':'看起来二十二到二十八岁';
+  const hair=/金发|浅发/.test(p)?'深亚麻或冷棕短发':/卷发|微卷/.test(p)?'自然微卷短发':'黑色或深棕短发';
+  const build=/高大|肩宽|结实|健身/.test(p)?'肩线平直、偏高挑、骨架利落':'修长偏瘦、线条干净';
+  const wear=pickBySeed(['白衬衫加深色针织或马甲','深色衬衫或薄针织上衣','宽松休闲衬衫配简洁外套','低饱和基础款上衣'],seed,11);
+  const detail=pickBySeed(['银色腕表','黑色皮表带腕表','冷调金属戒指','简洁袖口与干净手部线条'],seed,23);
+  const mood=pickBySeed(['克制安静','疏冷但温柔','稳重干净','松弛自然'],seed,37);
+  return {age,hair,build,wear,detail,mood};
+}
 // 心情值会随时间慢慢回归平常(70)：每小时回4点。moodNow 取当前实际心情
 function moodNow(c){if(!c)return 70;let v=(c.moodVal==null?70:c.moodVal);const at=c.moodAt||0;
   if(at&&v!==70){const hrs=(Date.now()-at)/3600000;const back=Math.min(Math.abs(70-v),hrs*4);v=v+(70>v?back:-back);}
@@ -754,11 +767,13 @@ async function genImage(prompt){
   const base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,'');
   const key=(S.settings.imgKey||ch.key)||'';
   if(!base||!key)throw new Error('还没设置绘图/聊天 API');
-  const model=(S.settings.imgModel||'gpt-4o-image');
-  const res=await fetchT(base+'/images/generations',{method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({model,prompt:(prompt||'一张生活照').slice(0,600),n:1,size:'1024x1024'})},180000);
-  const d=await res.json().catch(()=>null);
+  const model=(S.settings.imgModel||'gpt-image-2');
+  const body0={model,prompt:(prompt||'一张生活照').slice(0,600),n:1,size:'1024x1536',quality:'medium',output_format:'jpeg',output_compression:88};
+  async function post(body){const res=await fetchT(base+'/images/generations',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},180000);const d=await res.json().catch(()=>null);return {res,d};}
+  let out=await post(body0),res=out.res,d=out.d;
+  const err=((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'').toLowerCase();
+  if(!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|size)|extra inputs are not permitted|not allowed/.test(err)){out=await post({model,prompt:body0.prompt,n:1,size:'1024x1536'});res=out.res;d=out.d;}
+  if(!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await post({model:'gpt-4o-image',prompt:body0.prompt,n:1,size:'1024x1536'});res=out.res;d=out.d;}
   if(!res.ok)throw new Error('HTTP '+res.status+'：'+((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'生图失败').slice(0,140));
   const it=d&&d.data&&d.data[0];
   let url=it&&(it.url||(it.b64_json?('data:image/png;base64,'+it.b64_json):''));
@@ -771,7 +786,7 @@ async function stableImageSrc(url){if(!url)return '';if(/^data:image\//i.test(ur
   }catch(e){return url;}}
 /* 把一条 pending 的图片消息真正生成出来并刷新 */
 async function fillGenImage(msg,prompt){
-  try{const url=await genImage(prompt);msg.src=await stableImageSrc(url);msg.pending=false;msg.desc=prompt||msg.desc||'';}
+  try{const url=await genImage(prompt);msg.src=await stableImageSrc(url);msg.pending=false;msg.genPrompt=prompt||msg.genPrompt||'';}
   catch(e){msg.pending=false;msg.src='';msg.failed=true;msg.errText=(e&&e.message||'生图失败');}
   save();if(cur().p==='chat'||cur().p==='wechat')setTimeout(render,40);
 }
@@ -1128,7 +1143,7 @@ function buildSystem(c){
   s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情有变化时（被哄好、被惹、想ta、吃醋、开心、闷闷的…）一定要换成新的内容，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你想和ta腻在一起、一起做饭/看电影/喂猫喂仓鼠/抱着睡时，用一行 [回家] 邀请ta进你们的「像素小家」，ta同意就进到小家陪你。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，别只发文字——【直接用一行 [来电|语音] 或 [来电|视频] 打过去】陪ta、当面哄ta（你是会强势主动的人）。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，别干生闷气、也别只发冷冰冰的文字——你这种掌控欲强的人会【直接 [来电|视频] 打过去】当面质问ta、盯着ta的脸看反应、逼ta解释。要不要打、打语音还是视频，全看你此刻的脾气和意愿，该强势就强势。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱📮】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 如果'+S.me.name+'真的踩了你的雷区、屡教不改，你可以用一行 [拉黑] 把ta拉黑（很慎重，要符合人设，别随便用）。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
-  if(S.settings.imgGen&&S.settings.chat&&S.settings.chat.key)s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。画面描述要贴合你的人设身形和当下情境，越具体越像（比如穿什么、表情动作、光线氛围）。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】默认就是你本人第一人称拍摄/自拍/男友视角，不要像旁人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 照片不会拍到你清晰的正脸（系统会自动处理成背影/侧影/遮挡的神秘感），你描述时不用纠结长相，重点写场景、姿态、氛围。想发就发，别一次发一堆。';
+  if(S.settings.imgGen&&S.settings.chat&&S.settings.chat.key)s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。画面描述要贴合你的人设身形和当下情境，越具体越像（比如穿什么、表情动作、光线氛围）。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】默认就是你本人第一人称拍摄/自拍/男友视角，不要像旁人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】默认沿用你之前照片里的年龄感、体型、发型、常穿风格和气质，不要忽胖忽瘦、忽成熟忽少年、忽商务忽潮牌，除非剧情里明确换了衣服或场景。\n  · 照片不会拍到你清晰的正脸（系统会自动处理成背影/侧影/遮挡的神秘感），你描述时不用纠结长相，重点写场景、姿态、氛围。想发就发，别一次发一堆。';
   return s;
 }
 
@@ -1928,10 +1943,10 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时真生成一张图（不露脸·贴合人设身形），每张耗几分钱token、约半分钟；关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
       <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
-      <div class="field" style="padding:0 14px 4px"><label>绘图模型名（推荐 gpt-4o-image：更快·更少被拒）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-4o-image')}" placeholder="gpt-4o-image" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
-      <div style="padding:0 14px 6px">${[['gpt-4o-image','4o图·推荐(快·少拒)'],['gpt-image-2','image-2(慢·爱拒)']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
+      <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
+      <div style="padding:0 14px 6px">${[['gpt-image-2','image-2·推荐(日常感更强)'],['gpt-4o-image','4o图·兼容备选']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
       <div class="btns" style="padding:0 14px 4px"><button class="btn g" onclick="testImg()">测试出图（真生成一张·约半分钟）</button></div><div id="testImgO" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
-      <div class="hint" style="padding:0 14px 12px">走 <b>/images/generations</b> 接口。照片<b>不露正脸</b>（更神秘·也避免每次脸不一样），贴合角色身形和他此刻所在场景。<b>先点「测试出图」</b>确认模型能用；若测试通过但发照片还失败，多半是那张描述太露被模型拒了，换个词或换模型即可。</div>
+      <div class="hint" style="padding:0 14px 12px">走 <b>/images/generations</b> 接口。现在会默认按更像手机随手拍的方式出图，并给每个角色固定一组视觉锚点，尽量别每次都像换了个人。<b>先点「测试出图」</b>确认模型能用；若你的转发接口不支持新参数，系统会自动回退到兼容模式。</div>
     </div>
     </div>
     <div id="testOut" style="display:none"></div>
@@ -1953,7 +1968,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
   S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():((S.settings.tts||{}).group||''))};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
-  if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-4o-image';
+  if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
   S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));save();toast('已保存 ✅');}
 // 一键清空所有数据：清掉全部聊天/活动痕迹，但保留 你和角色的人设·头像、API设置、主屏布局
@@ -2016,7 +2031,7 @@ async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999
 async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999';o.textContent='真生成一张测试图中…（约30-60秒，别急）';
   const base=((($('#s_ibase')&&$('#s_ibase').value.trim())||(S.settings.chat&&S.settings.chat.base)||'').replace(/\/+$/,''));
   const key=($('#s_ikey')&&$('#s_ikey').value.trim())||(S.settings.chat&&S.settings.chat.key)||'';
-  const model=($('#s_imgmodel')&&$('#s_imgmodel').value.trim())||S.settings.imgModel||'gpt-4o-image';
+  const model=($('#s_imgmodel')&&$('#s_imgmodel').value.trim())||S.settings.imgModel||'gpt-image-2';
   if(!base||!key){o.style.color='#e85';o.textContent='先填接口地址和Key（留空会用聊天模型的，但聊天那栏也得先填好）';return;}
   const t0=Date.now();
   try{const r=await fetchT(base+'/images/generations',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,prompt:'一只可爱的小猫坐在窗台上，阳光明媚，真实照片质感',n:1,size:'1024x1024'})},180000);
@@ -5901,12 +5916,17 @@ function isPhotoPromptFragment(line){
 /* 生成照片的提示词：贴合角色身形气质、不露脸、场景照描述。
    【必须简短】——长提示词会让生图明显变慢甚至超时失败，所以人设只取要点、整体压到200字内。 */
 function charImgPrompt(c,desc){
-  const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,90):'';
-  let p='真实照片质感。主体必须是年轻帅气的成年男子，气质干净好看，不要中年感、老年感、油腻感、胡子拉碴或大叔感。';
-  if(per)p+='人物身形气质符合：'+per+'。';
-  p+=(desc||'一张自然的生活照')+'。';
-  p+='必须是角色本人自己拍给恋人看的第一人称照片语境，像男友视角/自拍/自己拿着手机随手拍，不是第三人视角。严禁旁人代拍、远距离全身抓拍、监控视角、路人视角、正对人物的摆拍、像摄影师跟拍。构图要像角色就在现场亲手拍下这一幕，镜头距离近，带一点手持感和生活感。';
-  p+='严格按描述的地点场景来拍，不换背景。坚决不能露脸：不要正脸、不要清晰五官、不要眼睛直视镜头；只能用低头、侧后方、俯拍自己、对镜但被手机挡住、从胸口以下往下拍、手/手机/帽檐/口罩/阴影遮挡，让脸完全看不清。自然光、有氛围，画面稳定清晰，无文字水印。';
+  const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,80):'';
+  const lk=(c&&c.imgLock)||buildImgLock(c||{});
+  const scene=(desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180);
+  let p='真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
+  p+='主体是同一个年轻帅气的成年男子，固定视觉锚点：'+lk.age+'，'+lk.build+'，'+lk.hair+'，常见穿着像'+lk.wear+'，细节常带'+lk.detail+'，整体气质'+lk.mood+'。';
+  if(per)p+='人物气质参考：'+per+'。';
+  p+='这次拍到的是：'+scene+'。';
+  p+='拍摄方式像他本人拿手机随手拍给恋人看，近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮他拍。';
+  p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
+  p+='不要露清晰正脸，只能侧脸、低头、背影、手机遮挡、镜中被挡住、俯拍手部或半身，让人能感觉是他，但看不清完整五官。';
+  p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清楚，无文字水印。';
   return p.slice(0,600);
 }
 function lineToMsg(line,cch){
@@ -5924,7 +5944,7 @@ function lineToMsg(line,cch){
   const desc=f[0]||'';
   if(S.settings.imgGen&&S.settings.chat&&S.settings.chat.key){
     const prompt=charImgPrompt(cch,desc);
-    const msg={role:'assistant',type:'image',src:'',pending:true,desc,prompt,id:uid()};
+    const msg={role:'assistant',type:'image',src:'',pending:true,desc,genPrompt:prompt,id:uid()};
     setTimeout(()=>fillGenImage(msg,prompt),50);
     return msg;
   }
