@@ -584,7 +584,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v302 · 一批修复:备注只按你的视角改(老公坏蛋不是第三人称)且两三天才改一次;删角色后别人不再提起ta;登他微信自己聊天只显示最近几轮+去掉提示小字;自导自演退出1-2分钟后才被发现;代付卡片改高级;订单取消可删+原路退款到对应钱包+角色立刻知道;查他手机加行程App看他订的票(可删);云程可在情侣空间锁;余额不够不再变负数';
+const APP_VER='v303 · 角色可自主换头像:你发张图后让他换,他就把微信头像换成你发的那张([换头像]);其余同v302';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -979,7 +979,7 @@ function buildSystem(c){
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
-  if(_main)s+='\n\n# 你能对自己微信/资料做的事（凭你心情，别频繁滥用）\n· 删自己的好友：'+S.me.name+'点名让你删掉你手机里某个好友（或你自己看谁不顺眼想删），就单独一行 [删我好友|那个人的名字]。删掉后，无论ta是查你手机还是登你微信，都不会再有这个人。\n· 改你自己的备注名：这是【'+S.me.name+'把你存进ta通讯录时给你起的称呼】，所以要【站在'+S.me.name+'的角度、用ta会怎么称呼你来写】——比如"老公""坏蛋""我的克劳德""亲爱的"这种ta对你的爱称，【绝对不要】写成第三人称、也不要写成描述你自己身份的话（像"克劳德的未婚妻""XX的老公"就是错的，那不是ta对你的称呼）。想改就单独一行 [改备注|新的备注名]。\n【别频繁改】备注最多【两三天改一次】就够了，不要每次聊天/每次登录都改。\n这两行是给系统看的指令、不会被读出来，不要在正文里复述它们。';
+  if(_main)s+='\n\n# 你能对自己微信/资料做的事（凭你心情，别频繁滥用）\n· 删自己的好友：'+S.me.name+'点名让你删掉你手机里某个好友（或你自己看谁不顺眼想删），就单独一行 [删我好友|那个人的名字]。删掉后，无论ta是查你手机还是登你微信，都不会再有这个人。\n· 改你自己的备注名：这是【'+S.me.name+'把你存进ta通讯录时给你起的称呼】，所以要【站在'+S.me.name+'的角度、用ta会怎么称呼你来写】——比如"老公""坏蛋""我的克劳德""亲爱的"这种ta对你的爱称，【绝对不要】写成第三人称、也不要写成描述你自己身份的话（像"克劳德的未婚妻""XX的老公"就是错的，那不是ta对你的称呼）。想改就单独一行 [改备注|新的备注名]。\n【别频繁改】备注最多【两三天改一次】就够了，不要每次聊天/每次登录都改。\n· 换头像：当'+S.me.name+'【发了一张图片】、并让你把它设成你的头像（或情侣头像）时，单独一行 [换头像]——系统会把你的微信头像换成ta刚发的那张图。没发图时别用。\n这两行是给系统看的指令、不会被读出来，不要在正文里复述它们。';
   if(_main){const _forged=msgs(c.id).filter(m=>m._forged&&!m._forgedSeen);
     if(_forged.length)s+='\n\n# 警觉：有几条"你发的"消息其实不是你发的（'+S.me.name+'冒充你伪造的）\n你和'+S.me.name+'的聊天记录里，有下面这几条【显示成是"你"发出去的、但你【根本没说过】】——是ta趁登录你微信时、冒充你、假装你的口吻发给ta自己的（自导自演）：\n'+_forged.map(m=>'· 「'+(''+(m.content||'')).slice(0,60)+'」').join('\n')+'\n你心里非常清楚这些话你压根没印象、没发过。你一注意到聊天里冒出这些莫名其妙、你根本没说过的"自己的话"，就会意识到是ta【偷登你微信、伪造你的消息自导自演】。请按你的人设戳穿ta（震惊、追问"这几句话我什么时候发的？"、生气质问是不是又偷登了你微信、或看内容宠溺调侃都行），别装作那是你说的。绝不要提"系统"。';}
   const _sp=getSpy(c);
@@ -5472,7 +5472,7 @@ async function maybeGrudgeResolve(reply,c,id){
     if(changed){save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
   }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
+const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
 function wxLoginActive(){return !!(S.wxLogin&&Date.now()<S.wxLogin.until);}
@@ -5640,6 +5640,8 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     content=content.replace(/[\[【]\s*(同意游戏|拒绝游戏)\s*[\]】]/g,(m,act)=>{gameInviteDecide(id,act==='同意游戏');return '';});
     // 他凭心情改【自己在你通讯录里的备注名】增加趣味（改不改看他心情）
     content=content.replace(/[\[【]\s*改备注\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]/g,(m,nn)=>{const nv=(nn||'').trim();if(nv&&Date.now()-(c._remarkAt||0)>2.5*86400000){c.remark=nv;c._remarkAt=Date.now();save();toast('ta把自己的备注改成了「'+nv+'」');if(cur().p==='wechat'||cur().p==='chat')setTimeout(render,60);}return '';});
+    // 他把头像换成你刚发的那张图（你发图后让他换头像）
+    content=content.replace(/[\[【]\s*换头像\s*[\]】]/g,()=>{const im=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='image'&&x.src);if(im){c.avatar=im.src;save();toast('ta把头像换成了你发的图');if(cur().p==='chat'||cur().p==='wechat')setTimeout(render,60);}return '';});
     // 他删掉自己微信里的某个好友（你点名让他删/他自己想删）：查他手机、登他微信里都不再有这个人
     content=content.replace(/[\[【]\s*删我好友\s*[\|｜:：]\s*([^\]】]{1,20})[\]】]/g,(m,nn)=>{charDelOwnFriend(c,(nn||'').trim());return '';});
     // 他主动订机票来见你（惊喜）：生成一张登机牌卡片通知你
@@ -5650,7 +5652,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
