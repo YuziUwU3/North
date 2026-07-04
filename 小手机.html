@@ -570,12 +570,21 @@ function cloudKey(){return ((S.settings&&S.settings.cloudKey)||'').trim();}
    已经进来过的人不受影响；你自己本机有存档也不会被拦。
    ====================================================================== */
 const SHARE_GATE=true, SHARE_PW='Claudeopus4.6';
+/* 🎟️ 邀请码验证（menkou 项目·只放邀请码、不含隐私）。谁输码进来 → 云端核销、用过即废；
+   你自己用云端"主码"(可反复用)进，代码里不留后门。 */
+const GATE_URL='https://lkhlyfpssmrjkkzhuzag.supabase.co';
+const GATE_KEY='sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
+async function redeemInvite(code){try{
+  const r=await fetch(GATE_URL+'/rest/v1/rpc/redeem_invite',{method:'POST',headers:{'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'},body:JSON.stringify({p_code:code})});
+  if(!r.ok)return {ok:false,err:'验证服务出错('+r.status+')，稍后再试'};
+  const v=await r.json();return {ok:v===true};
+}catch(e){return {ok:false,err:'连不上验证服务器，检查下网络'};}}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（1→2→3…），所有老设备下次打开都要重新输新口令。
    她自己的设备因为有本地存档(_bootHadSave)永远不会被踢。 */
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v293 · 云同步的云地址+Key改成设置里各自填(不写死在公开代码里):你和每个网友各填各的Supabase,数据各进各的云、互不相干、也不占别人额度';
+const APP_VER='v294 · 邀请码:进入口令改成"邀请码"(云端核销·用过即废),你在后台一次建一批、想踢谁把那行关掉即可;你自己用云端可反复用的"主码"进,公开代码里不再留后门口令';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3159,10 +3168,16 @@ function maybeFirstRun(){try{if(!gateOK())return;if(localStorage.getItem('yibei_
     if(noContacts&&noKey){localStorage.setItem('yibei_manual_seen','1');showManual();}}catch(e){}}
 function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   if(!el){el=document.createElement('div');el.id='gate';el.className='gate';document.body.appendChild(el);}
-  el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>小手机</h2><p>请输入访问口令开始<br>（找邀请你的人要）</p><input id="gateInp" inputmode="text" placeholder="访问口令" autocomplete="off"><button id="gateBtn">进入</button><div class="gerr" id="gateErr"></div>';
-  const inp=document.getElementById('gateInp'),err=document.getElementById('gateErr');
-  const tryIn=()=>{if((inp.value||'').trim()===SHARE_PW){try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}el.remove();render();setTimeout(maybeFirstRun,400);}else{err.textContent='口令不对，再试试';inp.value='';inp.focus();}};
-  document.getElementById('gateBtn').onclick=tryIn;
+  el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>小手机</h2><p>请输入邀请码开始<br>（找邀请你的人要，一个码只能用一次）</p><input id="gateInp" inputmode="text" placeholder="邀请码" autocomplete="off"><button id="gateBtn">进入</button><div class="gerr" id="gateErr"></div>';
+  const inp=document.getElementById('gateInp'),err=document.getElementById('gateErr'),btn=document.getElementById('gateBtn');
+  const unlock=()=>{try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);};
+  let _busy=false;
+  const tryIn=async()=>{if(_busy)return;const v=(inp.value||'').trim();if(!v){err.textContent='请输入邀请码';inp.focus();return;}
+    _busy=true;btn.disabled=true;btn.textContent='验证中…';err.textContent='';
+    const res=await redeemInvite(v);
+    _busy=false;btn.disabled=false;btn.textContent='进入';
+    if(res.ok){unlock();}else{err.textContent=res.err||'邀请码无效或已被使用';inp.value='';inp.focus();}};
+  btn.onclick=tryIn;
   inp.onkeydown=e=>{if(e.key==='Enter')tryIn();};
   setTimeout(()=>inp.focus(),100);}
 function chatAddMenu(){openModal(`<h3>＋</h3>
