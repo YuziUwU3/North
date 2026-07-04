@@ -587,7 +587,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v311 · 云程图标/批量表情/生图稳定/删后找回记录:白色主题图标可见;自定义和角色表情包支持批量添加;生图会转存为稳定图片并强约束年轻帅气不露脸;删除后找回会留下已重新添加记录;修复固定口令入口';
+const APP_VER='v312 · 一起购物归属:结算后角色会知道正在和你购物、谁挑了什么、谁付了款;不写入长期记忆';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1037,8 +1037,8 @@ function buildSystem(c){
   if(_main&&c.gamesPlayed&&c.gamesPlayed.length)s+='\n\n# 你和'+S.me.name+'一起玩过的游戏\n你记得跟ta在游戏大厅一起玩过：'+c.gamesPlayed.join('、')+'。被提起时要想得起来、能自然回味这些一起玩过的事，别说没玩过（具体每局怎么玩的不重要，记得玩过就行）。';
   if(_main){const _co=S.shop&&S.shop.co;
     if(_co&&_co.on&&_co.cid===c.id)s+='\n\n# 你正在和'+S.me.name+'一起逛街（进行中）\n你俩此刻正一起用购物App逛街、边看边挑东西：你会自己看中/想买些东西让ta同意，ta想买的也会来问你同不同意。ta聊到"一起买的/你挑的/刚看的那个"时，你心里清楚这事正在发生，自然接着聊。';
-    else if(_co&&_co.endedCid===c.id&&_co.endedAt&&Date.now()-_co.endedAt<7200000){const _mins=Math.round((Date.now()-_co.endedAt)/60000);const _when=_mins<1?'就在刚刚':(_mins<60?_mins+'分钟前':'大约'+Math.round(_mins/60)+'小时前');
-      s+='\n\n# 你们刚一起逛完街（'+_when+'结束）\n'+_when+'你和'+S.me.name+'一起在购物App逛了街'+(_co.endedItems?('，两人一起挑并买下了：'+_co.endedItems+'。你很清楚这些是你俩刚一起买的、是谁挑的、买了啥'):'（东西还在购物车里/没买啥）')+'。ta提起时别装不知道、别说没这回事，自然承接、可以回味或吐槽刚才逛街的事。';}}
+    else if(_co&&_co.endedCid===c.id&&_co.endedAt&&Date.now()-_co.endedAt<86400000){const _mins=Math.round((Date.now()-_co.endedAt)/60000);const _when=_mins<1?'就在刚刚':(_mins<60?_mins+'分钟前':_mins<1440?'大约'+Math.round(_mins/60)+'小时前':'昨天');
+      s+='\n\n# 你们刚一起逛完街（'+_when+'结束）\n'+_when+'你和'+S.me.name+'一起在购物App逛了街'+(_co.endedDetail?('，最后的小票是：'+_co.endedDetail):(_co.endedItems?('，两人一起挑并买下了：'+_co.endedItems):'（东西还在购物车里/没买啥）'))+'。你要分清楚：哪些是你自己看中/想买的，哪些是'+S.me.name+'想买而你同意的，谁付款也要说对。ta提起时别装不知道、别说没这回事，自然承接、可以回味或吐槽刚才逛街的事。';}}
   if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
@@ -2353,7 +2353,7 @@ function doBuy(items,who){if(!items.length)return;const total=items.reduce((s,p)
     items.forEach(p=>{addBill('out',+p.price,'在'+(p.shop||'商城')+'买了'+p.name);parcelDeliver(null,p.name,+p.price,'self',{emoji:p.emoji||'🛒',shop:p.shop||'商城'});});
     S.shop.cart=S.shop.cart.filter(c=>!items.includes(c));save();closeModal();render();toast('下单成功 ¥'+total.toFixed(2)+'，已发货，预计明天到信箱 📦');return true;}}
 // 购物车「自己买单」：买成功后如果在一起逛,记进记忆并自动退出
-function cartBuySelf(){const items=(S.shop.cart||[]).slice();if(doBuy(items,'self'))coFinalize(items);}
+function cartBuySelf(){const items=(S.shop.cart||[]).slice();if(doBuy(items,'self'))coFinalize(items,'me');}
 function orderEta(ts){const ms=ts-Date.now();if(ms<=0)return '即将到达';const h=Math.floor(ms/3600000);const m=Math.floor((ms%3600000)/60000);return h>0?('还有约 '+h+' 小时'+(m?m+'分':'')+' 到货'):('还有约 '+Math.max(1,m)+' 分钟到货');}
 function openOrders(){const os=S.shop.orders||[];const refN=os.filter(o=>o.refunded).length;
   openModal(`<h3>我的订单</h3><div style="max-height:60vh;overflow:auto">${os.length?os.map(o=>{const arrived=Date.now()>=o.arriveTs;const tag=o.parcel?(o.kind==='pay'?'代付':o.kind==='self'?'自购':'礼物'):'';const refundable=(!o.parcel||o.kind==='self')&&!o.refunded;
@@ -2417,7 +2417,7 @@ function payTo(id){const p=window._pp;if(!p)return;
   pushMsg(id,{role:'user',type:'paycard',name:p.name,price:+p.price,shop:p.shop||'',kind:p.kind||'',id:uid()});
   closeModal();toast('已请ta代付 💳');scheduleReply(id);}
 function cartPayFlow(){const cart=S.shop.cart||[];if(!cart.length)return;window._pp={name:cart.map(p=>p.name).join('、'),price:cart.reduce((s,p)=>s+(+p.price),0),shop:'购物车'};pickTarget(payCartTo);}
-function payCartTo(id){const items=(S.shop.cart||[]).slice();payTo(id);S.shop.cart=[];save();coFinalize(items);}
+function payCartTo(id){const items=(S.shop.cart||[]).slice();payTo(id);S.shop.cart=[];save();coFinalize(items,id);}
 function receiveGift(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
   if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你领取了礼物：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,8);save();render();toast('收下了 '+found.m.name);
   const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'收下了你送的礼物「'+found.m.name+'」，回应一下。]'),1500);}
@@ -2438,14 +2438,21 @@ function coStart(id){coInit();const c=getC(id);if(!c){toast('先创建一个角�
   S.shop.co={on:true,cid:id,pace:'slow',feed:[],hisPending:[],myPending:[],doneNames:[],lastActTs:0};
   coFeed('sys','💌 你拉着 '+(c.remark||c.name)+' 一起来逛街啦~');save();render();toast('和 '+(c.remark||c.name)+' 一起逛街咯 👫');
   setTimeout(()=>coHisAuto(false),1500);}
-function coExit(){const co=S.shop.co;if(co){if(co.on){co.endedAt=Date.now();co.endedCid=co.cid;co.endedItems='';}co.on=false;co.hisPending=[];co.myPending=[];}save();if(cur().p==='shop')render();toast('结束一起逛街~ 敲定的东西在购物车里等你结算 🛒');}
-/* 结算完：把一起挑的东西记进角色记忆(微信+线下都会知道)，并自动退出一起逛 */
-function coFinalize(items){const co=S.shop.co;if(!co)return;
+function coPickedSummary(items,payerId){const co=S.shop.co||{};const c=getC(co.cid);const nm=c?(c.remark||c.name):'ta';
   const picks=(items||[]).filter(x=>x&&x._coBy);
-  if(picks.length){const list=picks.map(p=>p.name).join('、');const c=getC(co.cid);if(c){
-    c.memory=c.memory||[];c.memory.push('和'+S.me.name+'一起逛街，两个人一起挑并买下了：'+list+'（'+ymd(Date.now())+'）');if(c.memory.length>80)c.memory=c.memory.slice(-80);
-    c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 一起逛街',text:'【一起逛街】我和'+S.me.name+'一起在购物App逛街，两人一起挑中并买下了：'+list+'。这是我们一起买的东西，线下见面聊起来我记得。',imp:3});}
-    co.endedItems=list;}
+  const mine=picks.filter(p=>p._coBy==='me').map(p=>p.name);
+  const his=picks.filter(p=>p._coBy==='ta').map(p=>p.name);
+  const payer=payerId==='me'?S.me.name:(getC(payerId)?(getC(payerId).remark||getC(payerId).name):(payerId||'未付款'));
+  const parts=[];if(his.length)parts.push(nm+'自己想买、'+S.me.name+'同意买下：'+his.join('、'));
+  if(mine.length)parts.push(S.me.name+'想买、'+nm+'同意买下：'+mine.join('、'));
+  if(picks.length)parts.push('付款/下单：'+payer);
+  return {text:parts.join('；'),names:picks.map(p=>p.name).join('、'),mine,his,payer,nm,picks};}
+function coExit(){const co=S.shop.co;if(co){if(co.on){co.endedAt=Date.now();co.endedCid=co.cid;co.endedItems='';co.endedDetail='';}co.on=false;co.hisPending=[];co.myPending=[];}save();if(cur().p==='shop')render();toast('结束一起逛街~ 敲定的东西在购物车里等你结算 🛒');}
+/* 结算完：只留下本次购物短期上下文，不写进长期记忆/总结 */
+function coFinalize(items,payerId){const co=S.shop.co;if(!co)return;
+  const sum=coPickedSummary(items,payerId||'me'),picks=sum.picks;
+  if(picks.length){const c=getC(co.cid);co.endedItems=sum.names;co.endedDetail=sum.text;
+    if(c)msgs(co.cid).push({role:'user',type:'sys',content:'你和'+S.me.name+'刚一起逛完购物App并结算了：'+sum.text+'。这是刚发生的购物上下文，不是长期记忆；接下来聊天时要分清谁想买、谁同意、谁付款。',time:Date.now(),id:uid()});}
   co.endedAt=Date.now();co.endedCid=co.cid;
   if(co.on){co.on=false;co.hisPending=[];co.myPending=[];}
   save();if(cur().p==='shop')render();
@@ -5593,7 +5600,7 @@ function doBuyFamily(id){const c=getC(id);const items=window._fpItems||[];if(!it
   S.shop.cart=(S.shop.cart||[]).filter(x=>!items.includes(x));
   S.food.cart=(S.food.cart||[]).filter(x=>!items.includes(x));
   msgs(id).push({role:'user',type:'familybuy',name:names,price:total,used:f.used,quota:f.quota,time:Date.now(),id:uid()});
-  save();closeModal();render();toast('已用亲属卡支付 ¥'+total.toFixed(2));coFinalize(items);
+  save();closeModal();render();toast('已用亲属卡支付 ¥'+total.toFixed(2));coFinalize(items,id);
   scheduleReply(id,'[系统：'+S.me.name+'刚用你给的亲属卡买了「'+names+'」，花了¥'+total.toFixed(2)+'，本月这张卡已用¥'+f.used.toFixed(2)+'/'+(+f.quota).toFixed(0)+'。你立刻收到消费提醒，主动发消息（心疼/宠溺/调侃/管教/问买来干嘛，符合人设），别装不知道。]');}
 function cLoc(id){$('#panel').classList.remove('show');openModal(`<h3>位置</h3>
   <div class="field"><label>地点</label><input id="lc_n" placeholder="星巴克"></div>
