@@ -584,7 +584,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v299 · 登他微信可"以他身份给你自己发消息"(自导自演·他不会自动回,消息进你俩真实聊天);新增"无痕退出"(他当下不发现);他日后在聊天里看到自己没发过的话会识破、质问(按人设);普通退出仍当场发现。上一版:修云程打不开';(初始化函数名写错了);云程图标可上传自定义(设置→App图标美化里多了云程)。上一版:新增「云程」出行App(无emoji·高级):搜票(选城市+去见谁·头等/商务/经济·单程往返·人数)、行程待约会(倒计时·到日子可开始约会)、护照(可填信息·微信头像·目的地盖章收集)、回忆(旁白总结·可删);机票给自己买/给对方买/代付;买完发登机牌卡片、角色会记住;角色也能[订票]惊喜订票来找你;到日子会提醒';
+const APP_VER='v300 · 修复上一版黑屏(版本号那行有个小笔误把代码写坏了,现已修好);登他微信可以他身份给你自己发消息自导自演+无痕退出,他日后会识破质问;云程出行App(搜票/待约会/护照/回忆)可用、图标可自定义';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
