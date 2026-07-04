@@ -584,7 +584,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v300 · 修复上一版黑屏(版本号那行有个小笔误把代码写坏了,现已修好);登他微信可以他身份给你自己发消息自导自演+无痕退出,他日后会识破质问;云程出行App(搜票/待约会/护照/回忆)可用、图标可自定义';
+const APP_VER='v301 · 云程加独自旅行:搜票可切和TA见面或自己去玩;自己去玩不用选见谁,自己买或让某角色请客都行,不算线下约会只盖章;你说想去哪玩他可以送票让你一个人去;到日子自动出行盖章。上一版修黑屏';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -777,7 +777,9 @@ function msgToText(m){
     case 'gameinvite':return '[我给你发了游戏邀请，想一起玩「'+(m.gname||'游戏')+'」'+(m.status==='accepted'?'，你答应了、可以一起玩了':m.status==='declined'?'，你拒绝了':'，等你[同意游戏]或[拒绝游戏]')+']';
     case 'outpass':return '[我向你申请出门报备：去「'+(m.where||'')+'」'+(m.who?'、和「'+m.who+'」一起':'')+(m.dur?'、大约'+m.dur:'')+(m.status==='approved'?'，你批准了'+(m.reason?'（'+m.reason+'）':''):m.status==='rejected'?'，你驳回了'+(m.reason?'（'+m.reason+'）':''):'，等你批准')+']';
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'['+S.me.name+'给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（等你 [收外卖] 或 [拒外卖]）')+']';
-    case 'ticket':{const tr=m.trip||{};const fl=tr.flier==='me'?S.me.name:'你';return '[机票·登机牌：'+(tr.from||'')+'→'+(tr.to||'')+'，'+tvMD(tr.date)+' '+(tr.dep||'')+'，'+(TV_CLS.find(x=>x.k===tr.cls)||{t:''}).t+'，'+fl+'飞。'+(tr.by==='me'?(tr.flier==='me'?(S.me.name+'要飞去'+tr.to+'见你'):(S.me.name+'给你订了票、请你飞去'+tr.to+'见面')):('你订了票要飞去'+(tr.to||'')+'见'+S.me.name))+'，到'+tvMD(tr.date)+'有一场线下见面]';}
+    case 'ticket':{const tr=m.trip||{};const cls=(TV_CLS.find(x=>x.k===tr.cls)||{t:''}).t;
+      if(tr.meet===false){const who=tr.by==='me'?(tr.payer==='ta'?(S.me.name+'订了机票要一个人去'+tr.to+'旅行，机票钱记在你账上（你请客）'):(S.me.name+'订了机票要一个人去'+tr.to+'旅行，不是来见你')):('你送了'+S.me.name+'一张机票、让ta一个人去'+tr.to+'玩');return '[机票·登机牌：'+(tr.from||'')+'→'+(tr.to||'')+'，'+tvMD(tr.date)+'，'+cls+'。'+who+'（独自旅行·不是见面）]';}
+      const fl=tr.flier==='me'?S.me.name:'你';return '[机票·登机牌：'+(tr.from||'')+'→'+(tr.to||'')+'，'+tvMD(tr.date)+' '+(tr.dep||'')+'，'+cls+'，'+fl+'飞。'+(tr.by==='me'?(tr.flier==='me'?(S.me.name+'要飞去'+tr.to+'见你'):(S.me.name+'给你订了票、请你飞去'+tr.to+'见面')):('你订了票要飞去'+(tr.to||'')+'见'+S.me.name))+'，到'+tvMD(tr.date)+'有一场线下见面]';}
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
     case 'dycard':return m.mine?('[我把我自己发的抖音视频分享给你——「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']'):('[我转发给你一条抖音视频——@'+m.author+'：「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']');
     case 'voice':{const vq=(m.quote&&m.quote.who==='ta'&&m.quote.text)?'（我引用了你刚说的那句「'+m.quote.text+'」，就这一句）':'';return m.content?('[语音消息]'+vq+m.content):'['+S.me.name+'发了条语音]';}
@@ -999,9 +1001,10 @@ function buildSystem(c){
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
-  if(_main&&S.travel&&S.travel.trips){const ups=S.travel.trips.filter(x=>x.cid===c.id&&x.status==='upcoming');
+  if(_main&&S.travel&&S.travel.trips){const mineT=S.travel.trips.filter(x=>x.cid===c.id&&x.status==='upcoming');const ups=mineT.filter(x=>x.meet!==false);const soloT=mineT.filter(x=>x.meet===false);
     if(ups.length)s+='\n\n# 你和'+S.me.name+'定好的出行·待约会（还没发生·你记着也期待）\n'+ups.map(tr=>{const dd=tvDays(tr.date);const w=dd==null?'':(dd>0?'（还有'+dd+'天）':dd===0?'（就是今天）':'（日子已到）');return '· '+tvMD(tr.date)+w+'，在「'+tr.to+'」见面（'+(tr.flier==='me'?S.me.name+'飞过来找你':'你飞过去找ta')+'）'+(tr.no?' · 航班'+tr.no:'');}).join('\n')+'\n这些是你俩【约好但还没到】的线下见面。你心里记着、可以自然提起、期待或叮嘱（路上小心、带什么、想不想见），别当成已经发生过的事、也别说自己没这回事。';
-    s+='\n\n# 你也能主动订机票去见ta / 请ta来（惊喜）\n想给'+S.me.name+'惊喜、或ta念叨想见你时，你可以主动订一张机票：单独一行 [订票|城市|日期]（城市=你们见面的城市，日期=几月几号）。系统会真生成一张登机牌卡片通知ta。别频繁乱订，想给惊喜或顺着心意时才订。';}
+    if(soloT.length)s+='\n\n# '+S.me.name+'要独自去旅行（不是来见你，就是ta自己出去玩）\n'+soloT.map(tr=>{const dd=tvDays(tr.date);const w=dd==null?'':(dd>0?'（还有'+dd+'天）':dd===0?'（就是今天）':'（日子已到）');return '· '+tvMD(tr.date)+w+'，ta一个人去「'+tr.to+'」玩'+(tr.payer==='ta'?'（机票是你请客/你出的钱）':'');}).join('\n')+'\n这【不是来见你】、是ta自己去玩。你可以关心行程、叮嘱路上小心、撒娇想跟着、或吃醋ta一个人跑那么远，但别把它当成你俩要见面。';
+    s+='\n\n# 你也能主动订机票（惊喜）\n· 想见ta：单独一行 [订票|城市|日期]（在这个城市和ta见面·会变成一场待约会）。\n· ta说想去哪玩、或你想宠ta：单独一行 [送票|城市|日期]（你出钱送ta一趟【独自旅行】，ta一个人去玩、不是来见你）。\n城市写地名、日期写几月几号。系统会真生成登机牌卡片通知ta。别频繁乱订，想给惊喜或顺心意时才订。';}
   if(_main&&isLover(c)){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
     if(rp&&(rp.log||[]).length){const rl=rp.log.slice(0,4);s+='\n\n# '+S.me.name+'最近的报备\n'+rl.map(r=>r.type+' '+hm(r.start)+'→'+hm(r.end)+'（'+sleepDurTxt(r.end-r.start)+'）').join('；');}}
   if(_main&&isLover(c)&&S.mood&&S.mood.length){const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，只有你这个最亲密的人看得到，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(moodLabel(m.emoji)||'')+(m.note?' '+m.note:'')).join('\n');}
@@ -3747,7 +3750,8 @@ function tvP2(n){return ('0'+n).slice(-2);}
 function tvClsT(k){return (TV_CLS.find(x=>x.k===k)||{t:'经济舱'}).t;}
 function tvInit(){S.travel=S.travel||{};const t=S.travel;t.trips=t.trips||[];t.stamps=t.stamps||[];if(t.results===undefined)t.results=null;
   t.passport=t.passport||{name:'',gender:'女',birth:'',nation:'中国',no:''};
-  t.search=t.search||{from:'苏州',to:'',cid:'',date:todayStr(),ret:'',rt:false,cls:'economy',pax:1};
+  t.search=t.search||{from:'苏州',to:'',cid:'',date:todayStr(),ret:'',rt:false,cls:'economy',pax:1,meet:true};
+  if(t.search.meet===undefined)t.search.meet=true;
   return t;}
 function tvPrice(from,to,cls){const intl=tvCity(from).i||tvCity(to).i;const base=intl?3000:560;const span=intl?5400:1700;
   const h=(''+from+'-'+to).split('').reduce((s,ch)=>s+ch.charCodeAt(0),0);const dist=base+((h%997)/997)*span;
@@ -3769,7 +3773,10 @@ function renderTravel(){const t=tvInit();
 function tvSearchView(){const t=S.travel.search;const c=t.cid?getC(t.cid):null;
   const seg=(sel,opts,fn)=>`<div style="display:flex;background:#161c28;border-radius:12px;padding:3px;gap:2px">${opts.map(o=>`<div onclick="${fn}('${o[0]}')" style="flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:13px;cursor:pointer;color:${sel===o[0]?'#12161f':'#8a94a8'};background:${sel===o[0]?'#c9a86a':'transparent'}">${o[1]}</div>`).join('')}</div>`;
   const cityBox=(label,val,which)=>`<div onclick="tvPickCity('${which}')" style="flex:1;cursor:pointer;min-width:0"><div style="font-size:11px;color:#6b7488;letter-spacing:1px">${label}</div><div style="font-size:23px;color:#e9edf5;font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(val||'选择')}</div><div style="font-size:11px;color:#8a94a8;letter-spacing:3px">${esc(tvCity(val).c)}</div></div>`;
+  const meet=t.meet!==false;
   return `<div style="padding:16px">
+    ${seg(meet?'meet':'solo',[['meet','和 TA 见面'],['solo','自己去玩']],'tvSetMode')}
+    <div style="height:10px"></div>
     ${seg(t.rt?'rt':'ow',[['ow','单程'],['rt','往返']],'tvTripType')}
     <div style="background:#141a24;border:.5px solid rgba(255,255,255,.06);border-radius:16px;padding:18px 16px;margin-top:14px;display:flex;align-items:center;gap:6px">
       ${cityBox('出发',t.from,'from')}
@@ -3787,7 +3794,7 @@ function tvSearchView(){const t=S.travel.search;const c=t.cid?getC(t.cid):null;
       <div style="display:flex;align-items:center;gap:18px"><span onclick="tvPax(-1)" style="width:30px;height:30px;border-radius:50%;border:.5px solid rgba(255,255,255,.16);display:inline-flex;align-items:center;justify-content:center;color:#c9a86a;cursor:pointer">−</span><span style="color:#e9edf5;font-size:16px;min-width:20px;text-align:center">${t.pax}</span><span onclick="tvPax(1)" style="width:30px;height:30px;border-radius:50%;border:.5px solid rgba(255,255,255,.16);display:inline-flex;align-items:center;justify-content:center;color:#c9a86a;cursor:pointer">＋</span></div>
     </div>
     <div onclick="tvPickChar()" style="margin-top:12px;background:#141a24;border:.5px solid rgba(255,255,255,.06);border-radius:12px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-      <span style="font-size:14px;color:#c3cad8">去见谁</span><span style="font-size:14px;color:${c?'#e9edf5':'#6b7488'}">${c?esc(c.remark||c.name):'选择角色'} ›</span></div>
+      <span style="font-size:14px;color:#c3cad8">${meet?'去见谁':'谁给你买单（选填）'}</span><span style="font-size:14px;color:${c?'#e9edf5':'#6b7488'}">${c?esc(c.remark||c.name):(meet?'选择角色':'不选·自己付')} ›</span></div>
     <div onclick="tvSearchDo()" style="margin-top:22px;text-align:center;padding:15px;border-radius:14px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f;font-size:16px;font-weight:700;letter-spacing:3px;cursor:pointer">查询航班</div>
     ${S.travel.results?tvResultsHTML():''}
   </div>`;}
@@ -3803,6 +3810,7 @@ function tvResultsHTML(){const t=S.travel.search;const rf=S.travel.resFor||{};co
         <span style="font-size:12px;color:#8a94a8">${tvClsT(t.cls)} · ${t.pax}人</span><span style="font-size:19px;color:#c9a86a;font-weight:700">¥${(price*t.pax).toLocaleString()}</span></div></div>`).join('')+'</div>';}
 function tvSet(k,v){tvInit().search[k]=v;save();}
 function tvTripType(k){tvInit().search.rt=(k==='rt');save();render();}
+function tvSetMode(m){tvInit().search.meet=(m==='meet');save();render();}
 function tvSetCls(k){tvInit().search.cls=k;save();render();}
 function tvPax(d){const s=tvInit().search;s.pax=Math.max(1,Math.min(9,(s.pax||1)+d));save();render();}
 function tvSwap(){const s=tvInit().search;const a=s.from;s.from=s.to;s.to=a;save();render();}
@@ -3812,33 +3820,47 @@ function tvChooseCity(which,n){tvInit().search[which]=n;save();closeModal();rend
 function tvPickChar(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先在微信里建一个角色');return;}
   openModal(`<h3>去见谁</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="tvChooseChar('${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div></div><span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function tvChooseChar(cid){tvInit().search.cid=cid;save();closeModal();render();}
-function tvSearchDo(){const t=tvInit().search;if(!t.from||!t.to){toast('选一下出发和到达城市');return;}if(t.from===t.to){toast('出发和到达不能是同一个城市');return;}if(!t.cid||!getC(t.cid)){toast('选一下去见谁');return;}if(!t.date){toast('选一下出发日期');return;}
+function tvSearchDo(){const t=tvInit().search;if(!t.from||!t.to){toast('选一下出发和到达城市');return;}if(t.from===t.to){toast('出发和到达不能是同一个城市');return;}if(t.meet!==false&&(!t.cid||!getC(t.cid))){toast('选一下去见谁');return;}if(!t.date){toast('选一下出发日期');return;}
   const intl=tvCity(t.from).i||tvCity(t.to).i;const seed=(''+t.from+t.to+t.date).split('').reduce((s,ch)=>s+ch.charCodeAt(0),0);const res=[];
   for(let i=0;i<5;i++){const dh=6+((seed+i*5)%15);const dm=((seed+i*13)%4)*15;const dur=intl?(8+(seed+i)%7):(1+(seed+i)%3);let ah=dh+dur;const nd=ah>=24;ah=ah%24;
     res.push({no:tvFlightNo(seed+i*29),dep:tvP2(dh)+':'+tvP2(dm),arr:tvP2(ah)+':'+tvP2(dm),dur,nd});}
   const tt=S.travel;tt.results=res;tt.resFor={from:t.from,to:t.to,date:t.date};save();render();
   setTimeout(()=>{const b=document.querySelector('.xscroll');if(b)b.scrollTop=b.scrollHeight;},60);}
-function tvBuySheet(i){const t=S.travel.search;const rf=S.travel.resFor;const f=S.travel.results&&S.travel.results[i];const c=getC(t.cid);if(!f||!c){return;}
-  const total=tvPrice(rf.from,rf.to,t.cls)*t.pax;const nm=(c.remark||c.name);
+function tvBuySheet(i){const t=S.travel.search;const rf=S.travel.resFor;const f=S.travel.results&&S.travel.results[i];if(!f){return;}
+  const meet=t.meet!==false;const c=t.cid?getC(t.cid):null;const nm=c?(c.remark||c.name):'';
+  const total=tvPrice(rf.from,rf.to,t.cls)*t.pax;
+  let btns;
+  if(meet){
+    if(!c){toast('先选去见谁');return;}
+    btns=`<button class="btn p" style="margin-bottom:8px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f" onclick="tvBook(${i},'self')">给自己买（你飞去见ta）</button>
+   <button class="btn g" style="margin-bottom:8px" onclick="tvBook(${i},'forTa')">给${esc(nm)}买（请ta飞去见面地）</button>
+   <button class="btn g" style="margin-bottom:8px" onclick="tvBook(${i},'taPay')">让${esc(nm)}代付（你飞去·ta出钱）</button>`;
+  }else{
+    btns=`<button class="btn p" style="margin-bottom:8px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f" onclick="tvBook(${i},'selfSolo')">自己买（一个人去玩）</button>`
+     +(c?`<button class="btn g" style="margin-bottom:8px" onclick="tvBook(${i},'taPaySolo')">让${esc(nm)}请客（ta出钱·你自己去）</button>`:'');
+  }
   openModal(`<h3>确认预订</h3>
    <div style="background:#141a24;border-radius:12px;padding:14px;margin-bottom:12px;color:#dfe4ee;font-size:14px;line-height:2">
      <div style="display:flex;justify-content:space-between"><span style="color:#8a94a8">航班</span><span>${esc(f.no)} · ${tvClsT(t.cls)}</span></div>
      <div style="display:flex;justify-content:space-between"><span style="color:#8a94a8">行程</span><span>${esc(rf.from)} → ${esc(rf.to)}</span></div>
      <div style="display:flex;justify-content:space-between"><span style="color:#8a94a8">日期</span><span>${tvMD(rf.date)} ${f.dep}</span></div>
-     <div style="display:flex;justify-content:space-between"><span style="color:#8a94a8">见</span><span>${esc(nm)} · ${t.pax}人</span></div>
+     <div style="display:flex;justify-content:space-between"><span style="color:#8a94a8">${meet?'见':'方式'}</span><span>${meet?(esc(nm)+' · 见面'):'自己去旅行'} · ${t.pax}人</span></div>
      <div style="display:flex;justify-content:space-between"><span style="color:#8a94a8">金额</span><span style="color:#c9a86a;font-weight:700">¥${total.toLocaleString()}</span></div>
-   </div>
-   <button class="btn p" style="margin-bottom:8px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f" onclick="tvBook(${i},'self')">给自己买（你飞去见ta）</button>
-   <button class="btn g" style="margin-bottom:8px" onclick="tvBook(${i},'forTa')">给${esc(nm)}买（请ta飞去见面地）</button>
-   <button class="btn g" style="margin-bottom:8px" onclick="tvBook(${i},'taPay')">让${esc(nm)}代付（你飞去·ta出钱）</button>
+   </div>${btns}
    <button class="btn g" onclick="closeModal()">取消</button>`);}
-function tvBook(i,mode){const t=S.travel.search;const rf=S.travel.resFor;const f=S.travel.results&&S.travel.results[i];const c=getC(t.cid);if(!f||!c){closeModal();return;}
-  const total=tvPrice(rf.from,rf.to,t.cls)*t.pax;const nm=(c.remark||c.name);
-  let flier,payer;if(mode==='self'){flier='me';payer='me';}else if(mode==='taPay'){flier='me';payer='ta';}else{flier='ta';payer='me';}
+function tvBook(i,mode){const t=S.travel.search;const rf=S.travel.resFor;const f=S.travel.results&&S.travel.results[i];if(!f){closeModal();return;}
+  const meet=(mode==='self'||mode==='forTa'||mode==='taPay');
+  const c=t.cid?getC(t.cid):null;const nm=c?(c.remark||c.name):'';
+  const total=tvPrice(rf.from,rf.to,t.cls)*t.pax;
+  let flier='me',payer='me';
+  if(mode==='self'||mode==='selfSolo'){flier='me';payer='me';}
+  else if(mode==='taPay'||mode==='taPaySolo'){flier='me';payer='ta';}
+  else if(mode==='forTa'){flier='ta';payer='me';}
+  if(payer==='ta'&&!c){toast('先选一个角色来付钱');return;}
   if(payer==='me'){if(total>S.me.balance){toast('余额不够啦（去钱包改）');return;}addBill('out',total,(mode==='forTa'?'给'+nm+'买':'')+rf.from+'→'+rf.to+'机票');}
-  else if(c.wallet!=null){c.wallet=Math.max(0,(+c.wallet)-total);}
-  const trip={id:uid(),cid:t.cid,from:rf.from,to:rf.to,date:t.date,ret:t.rt?t.ret:'',cls:t.cls,pax:t.pax,by:'me',flier,payer,no:f.no,dep:f.dep,arr:f.arr,price:total,status:'upcoming',ts:Date.now()};
-  S.travel.trips.push(trip);S.travel.results=null;save();tvSendCard(trip);
+  else if(c&&c.wallet!=null){c.wallet=Math.max(0,(+c.wallet)-total);}
+  const trip={id:uid(),cid:c?t.cid:'',from:rf.from,to:rf.to,date:t.date,ret:t.rt?t.ret:'',cls:t.cls,pax:t.pax,by:'me',meet,flier,payer,no:f.no,dep:f.dep,arr:f.arr,price:total,status:'upcoming',ts:Date.now()};
+  S.travel.trips.push(trip);S.travel.results=null;save();if(c)tvSendCard(trip);
   closeModal();_tvTab='trips';render();toast('预订成功');}
 function tvTicketCardHTML(trip,c){const nm=c?(c.remark||c.name):'对方';const flierName=trip.flier==='me'?S.me.name:nm;
   return `<div style="width:250px;background:linear-gradient(135deg,#1b2333,#232d40);border-radius:14px;overflow:hidden;border:.5px solid rgba(201,168,106,.35)">
@@ -3851,23 +3873,30 @@ function tvTicketCardHTML(trip,c){const nm=c?(c.remark||c.name):'对方';const f
    <div style="padding:0 14px 12px;display:flex;justify-content:space-between;color:#b7bfce;font-size:11px"><span>${tvMD(trip.date)} ${esc(trip.dep||'')}</span><span>${tvClsT(trip.cls)} · ${esc(flierName)}登机</span></div></div>`;}
 function tvSendCard(trip){const c=getC(trip.cid);if(!c)return;const nm=(c.remark||c.name);
   pushMsg(trip.cid,{role:'user',type:'ticket',trip:trip,id:uid(),time:Date.now()});
-  let desc;
-  if(trip.flier==='me'&&trip.payer==='me')desc=S.me.name+'订好了'+tvMD(trip.date)+' '+trip.from+'→'+trip.to+'的机票，要亲自飞过去在'+trip.to+'见你';
-  else if(trip.flier==='me'&&trip.payer==='ta')desc=S.me.name+'订了'+tvMD(trip.date)+' '+trip.from+'→'+trip.to+'的机票飞去'+trip.to+'见你，机票钱是记在你账上的（等于你请ta来/你出机票钱）';
-  else desc=S.me.name+'给你订了'+tvMD(trip.date)+' '+trip.from+'→'+trip.to+'的机票，是想请你飞去'+trip.to+'和ta见面';
-  if(!c.blocked)scheduleReply(trip.cid,'[系统：'+desc+'。你刚收到一张登机牌。请按你的人设反应（惊喜/期待/宠溺/害羞/或嗔怪ta乱花钱都行），用普通微信文字回、别用旁白格式。你要【牢牢记住这件事】：到了'+tvMD(trip.date)+'你们在'+trip.to+'有一场线下见面（待约会）。]');}
+  let desc,tail;
+  if(trip.meet===false){
+    desc=S.me.name+'订了'+tvMD(trip.date)+'去「'+trip.to+'」的机票，打算【一个人去旅行】'+(trip.payer==='ta'?'，机票是记在你账上的（等于你请客/你出的钱）':'');
+    tail='。你刚收到一张登机牌。这【不是来见你】、是ta自己出去玩——请按你人设反应（关心行程/嘱咐路上小心/想跟着/吃醋ta一个人跑那么远/宠溺都行），用普通微信文字、别用旁白。你记住ta到了'+tvMD(trip.date)+'要独自去'+trip.to+'玩。';
+  }else{
+    if(trip.flier==='me'&&trip.payer==='me')desc=S.me.name+'订好了'+tvMD(trip.date)+' '+trip.from+'→'+trip.to+'的机票，要亲自飞过去在'+trip.to+'见你';
+    else if(trip.flier==='me'&&trip.payer==='ta')desc=S.me.name+'订了'+tvMD(trip.date)+' '+trip.from+'→'+trip.to+'的机票飞去'+trip.to+'见你，机票钱是记在你账上的（等于你请ta来/你出机票钱）';
+    else desc=S.me.name+'给你订了'+tvMD(trip.date)+' '+trip.from+'→'+trip.to+'的机票，是想请你飞去'+trip.to+'和ta见面';
+    tail='。你刚收到一张登机牌。请按你的人设反应（惊喜/期待/宠溺/害羞/或嗔怪ta乱花钱都行），用普通微信文字回、别用旁白格式。你要【牢牢记住这件事】：到了'+tvMD(trip.date)+'你们在'+trip.to+'有一场线下见面（待约会）。';
+  }
+  if(!c.blocked)scheduleReply(trip.cid,'[系统：'+desc+tail+']');}
 function tvTripsView(){const t=tvInit();const list=t.trips.slice().sort((a,b)=>(a.status==='upcoming'?0:1)-(b.status==='upcoming'?0:1)||((a.date>b.date)?1:-1));
   if(!list.length)return `<div style="padding:60px 30px;text-align:center;color:#6b7488;font-size:14px;line-height:2">还没有行程<br>去「搜票」订一张机票，安排一场见面</div>`;
-  return '<div style="padding:16px">'+list.map(tr=>{const c=getC(tr.cid);const nm=c?(c.remark||c.name):'（已删除）';const dd=tvDays(tr.date);
+  return '<div style="padding:16px">'+list.map(tr=>{const c=tr.cid?getC(tr.cid):null;const nm=c?(c.remark||c.name):(tr.cid?'（已删除）':'');const dd=tvDays(tr.date);const solo=tr.meet===false;
     const done=tr.status==='done',canc=tr.status==='cancelled';const ready=!done&&!canc&&dd!==null&&dd<=0;
-    const badge=canc?'<span style="color:#7c869a">已取消</span>':done?'<span style="color:#6f8f6f">已成行</span>':ready?'<span style="color:#c9a86a">可开始约会</span>':(dd!=null?'<span style="color:#8a94a8">距出发 '+dd+' 天</span>':'');
+    const badge=canc?'<span style="color:#7c869a">已取消</span>':done?('<span style="color:#6f8f6f">'+(solo?'已出行':'已成行')+'</span>'):(ready?(solo?'<span style="color:#8a94a8">出行中</span>':'<span style="color:#c9a86a">可开始约会</span>'):(dd!=null?'<span style="color:#8a94a8">距出发 '+dd+' 天</span>':''));
+    const whoLine=solo?('独自旅行'+(tr.payer==='ta'&&nm?'（'+esc(nm)+'请客）':'')):(tr.flier==='me'?'你飞去见 '+esc(nm):esc(nm)+' 飞来见面');
     return `<div style="background:#141a24;border:.5px solid rgba(255,255,255,.07);border-radius:14px;padding:15px 16px;margin-bottom:12px;${done||canc?'opacity:.7':''}">
       <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="color:#e9edf5;font-size:17px;font-weight:600">${esc(tr.from)} <span style="color:#c9a86a">›</span> ${esc(tr.to)}</div><div style="font-size:12px">${badge}</div></div>
       <div style="color:#8a94a8;font-size:12px;margin-top:5px">${tvMD(tr.date)} ${esc(tr.dep||'')} · ${esc(tr.no)} · ${tvClsT(tr.cls)}</div>
-      <div style="color:#8a94a8;font-size:12px;margin-top:2px">${tr.flier==='me'?'你飞去见 '+esc(nm):esc(nm)+' 飞来见面'} · ${tr.pax}人 · ¥${(+tr.price||0).toLocaleString()}</div>
-      ${(!done&&!canc)?`<div style="display:flex;gap:10px;margin-top:12px">${ready?`<div onclick="tvStartDate('${tr.id}')" style="flex:1;text-align:center;padding:10px;border-radius:10px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f;font-size:14px;font-weight:600;cursor:pointer">开始这场约会</div>`:''}<div onclick="tvCancelTrip('${tr.id}')" style="${ready?'':'flex:1;'}text-align:center;padding:10px ${ready?'16px':''};border-radius:10px;border:.5px solid rgba(255,255,255,.14);color:#a7b0c0;font-size:14px;cursor:pointer">取消</div></div>`:''}
+      <div style="color:#8a94a8;font-size:12px;margin-top:2px">${whoLine} · ${tr.pax}人 · ¥${(+tr.price||0).toLocaleString()}</div>
+      ${(!done&&!canc)?`<div style="display:flex;gap:10px;margin-top:12px">${(ready&&!solo)?`<div onclick="tvStartDate('${tr.id}')" style="flex:1;text-align:center;padding:10px;border-radius:10px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f;font-size:14px;font-weight:600;cursor:pointer">开始这场约会</div>`:''}<div onclick="tvCancelTrip('${tr.id}')" style="${(ready&&!solo)?'':'flex:1;'}text-align:center;padding:10px ${(ready&&!solo)?'16px':''};border-radius:10px;border:.5px solid rgba(255,255,255,.14);color:#a7b0c0;font-size:14px;cursor:pointer">取消</div></div>`:''}
     </div>`;}).join('')+'</div>';}
-function tvStartDate(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid);if(!trip)return;const c=getC(trip.cid);if(!c){toast('这个角色已删除');return;}
+function tvStartDate(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid);if(!trip)return;if(trip.meet===false){toast('这是独自旅行，没有见面');return;}const c=getC(trip.cid);if(!c){toast('这个角色已删除');return;}
   const o=offData(trip.cid);if(o.started){toast('你和'+(c.remark||c.name)+'已经在一场约会里了，先把那场结束');return;}
   o.loc=trip.to;o.when=trip.date;o.daypart=dayPartNow();o.started=true;o.msgs=o.msgs||[];
   o.msgs.push({id:uid(),who:'旁白',text:'（'+tvMD(trip.date)+'，'+(trip.flier==='me'?S.me.name+'飞抵'+trip.to+'，两人在机场相见':(c.remark||c.name)+'飞抵'+trip.to+'，两人在机场相见')+'。）'});
@@ -3921,10 +3950,23 @@ function tvCharBook(c,cityName,dateStr){if(!c||!cityName)return;tvInit();
   msgs(c.id).push({role:'assistant',type:'ticket',trip,id:uid(),time:Date.now()});
   save();if(cur().p==='chat'&&cur().id===c.id)render();
   toast((c.remark||c.name)+' 给你订了到'+city+'的机票');}
+// 角色送你一趟独自旅行(不是见面)：你飞去玩、他出钱，卡片以他名义发给你
+function tvCharGift(c,cityName,dateStr){if(!c||!cityName)return;tvInit();
+  const city=cityName;const date=tvNormDate(dateStr);const from=(S.me&&S.me.city)||'苏州';const price=tvPrice(from,city,'economy');
+  if(c.wallet!=null)c.wallet=Math.max(0,(+c.wallet)-price);
+  const trip={id:uid(),cid:c.id,from,to:city,date,ret:'',cls:'economy',pax:1,by:'ta',meet:false,flier:'me',payer:'ta',no:tvFlightNo((Date.now()+city.length+5)|0),dep:'',arr:'',price,status:'upcoming',ts:Date.now()};
+  S.travel.trips.push(trip);
+  msgs(c.id).push({role:'assistant',type:'ticket',trip,id:uid(),time:Date.now()});
+  save();if(cur().p==='chat'&&cur().id===c.id)render();
+  toast((c.remark||c.name)+' 送了你一趟去'+city+'的旅行');}
 // 到了出发日：提醒一下，并让角色主动提起这场待约会
 function tvCheckDue(){if(!isMain()||!(S.travel&&S.travel.trips))return;let ch=false;
-  S.travel.trips.forEach(tr=>{if(tr.status!=='upcoming'||tr._reminded)return;const dd=tvDays(tr.date);if(dd!==null&&dd<=0){tr._reminded=true;ch=true;const c=getC(tr.cid);
-    if(c&&!c.deleted){msgs(tr.cid).push({role:'user',type:'sys',content:'今天是你和'+(c.remark||c.name)+'约好在「'+tr.to+'」见面的日子，去「云程 → 行程」开始这场约会',time:Date.now(),id:uid()});
+  S.travel.trips.forEach(tr=>{if(tr.status!=='upcoming'||tr._reminded)return;const dd=tvDays(tr.date);if(dd!==null&&dd<=0){tr._reminded=true;ch=true;const c=tr.cid?getC(tr.cid):null;
+    if(tr.meet===false){
+      // 独自旅行：到日子自动出行、盖章；若有关联角色则通知ta关心
+      tr.status='done';S.travel.stamps.push({city:tr.to,code:tvCity(tr.to).c,cid:tr.cid||'',date:tr.date,ts:Date.now()});
+      if(c&&!c.deleted&&!c.blocked)scheduleReply(tr.cid,'[系统：今天'+S.me.name+'出发去「'+tr.to+'」一个人旅行了（'+(tr.payer==='ta'?'机票是你请客/你出的钱':'ta自己订的票')+'，不是来见你）。主动关心一句：路上小心、到了报平安、想ta、或嗔怪ta一个人跑那么远，普通微信文字、别用旁白。]');
+    }else if(c&&!c.deleted){msgs(tr.cid).push({role:'user',type:'sys',content:'今天是你和'+(c.remark||c.name)+'约好在「'+tr.to+'」见面的日子，去「云程 → 行程」开始这场约会',time:Date.now(),id:uid()});
       if(!c.blocked)scheduleReply(tr.cid,'[系统：今天就是你和'+S.me.name+'约好在「'+tr.to+'」线下见面的日子（'+(tr.flier==='me'?S.me.name+'要飞来找你':'你要飞去找ta')+'）。主动跟ta说一句：表达期待、确认行程、或问到了没，普通微信文字，别用旁白。]');}}});
   if(ch){save();const cu=cur();if(cu&&(cu.p==='chat'||cu.p==='wechat'))render();}}
 setInterval(tvCheckDue,120000);setTimeout(tvCheckDue,10000);
@@ -5408,7 +5450,7 @@ async function maybeGrudgeResolve(reply,c,id){
     if(changed){save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
   }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
+const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
 function wxLoginActive(){return !!(S.wxLogin&&Date.now()<S.wxLogin.until);}
@@ -5580,11 +5622,13 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     content=content.replace(/[\[【]\s*删我好友\s*[\|｜:：]\s*([^\]】]{1,20})[\]】]/g,(m,nn)=>{charDelOwnFriend(c,(nn||'').trim());return '';});
     // 他主动订机票来见你（惊喜）：生成一张登机牌卡片通知你
     content=content.replace(/[\[【]\s*订票\s*[\|｜:：]\s*([^\|｜\]】]{1,12})\s*[\|｜:：]\s*([^\]】]{1,20})[\]】]/g,(m,city,date)=>{tvCharBook(c,(city||'').trim(),(date||'').trim());return '';});
+    // 他送你一趟独自旅行（不是见面）：生成登机牌卡片通知你
+    content=content.replace(/[\[【]\s*送票\s*[\|｜:：]\s*([^\|｜\]】]{1,12})\s*[\|｜:：]\s*([^\]】]{1,20})[\]】]/g,(m,city,date)=>{tvCharGift(c,(city||'').trim(),(date||'').trim());return '';});
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
