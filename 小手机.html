@@ -584,7 +584,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v297 · 新增「云程」出行App(无emoji·高级):搜票(选城市+去见谁·头等/商务/经济·单程往返·人数)、行程待约会(倒计时·到日子可开始约会)、护照(可填信息·微信头像·目的地盖章收集)、回忆(旁白总结·可删);机票给自己买/给对方买/代付;买完发登机牌卡片、角色会记住;角色也能[订票]惊喜订票来找你;到日子会提醒';
+const APP_VER='v298 · 修云程打不开的bug(初始化函数名写错了);云程图标可上传自定义(设置→App图标美化里多了云程)。上一版:新增「云程」出行App(无emoji·高级):搜票(选城市+去见谁·头等/商务/经济·单程往返·人数)、行程待约会(倒计时·到日子可开始约会)、护照(可填信息·微信头像·目的地盖章收集)、回忆(旁白总结·可删);机票给自己买/给对方买/代付;买完发登机牌卡片、角色会记住;角色也能[订票]惊喜订票来找你;到日子会提醒';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1696,7 +1696,7 @@ const ICONS={
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
-const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
@@ -1706,7 +1706,7 @@ const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
-  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu,travel:()=>{travelInit();go('travel');}}[key]||(()=>{}))();}
+  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu,travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
