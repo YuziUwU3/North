@@ -584,7 +584,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v301 · 云程加独自旅行:搜票可切和TA见面或自己去玩;自己去玩不用选见谁,自己买或让某角色请客都行,不算线下约会只盖章;你说想去哪玩他可以送票让你一个人去;到日子自动出行盖章。上一版修黑屏';
+const APP_VER='v302 · 一批修复:备注只按你的视角改(老公坏蛋不是第三人称)且两三天才改一次;删角色后别人不再提起ta;登他微信自己聊天只显示最近几轮+去掉提示小字;自导自演退出1-2分钟后才被发现;代付卡片改高级;订单取消可删+原路退款到对应钱包+角色立刻知道;查他手机加行程App看他订的票(可删);云程可在情侣空间锁;余额不够不再变负数';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -979,7 +979,7 @@ function buildSystem(c){
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
-  if(_main)s+='\n\n# 你能对自己微信/资料做的事（凭你心情，别频繁滥用）\n· 删自己的好友：'+S.me.name+'点名让你删掉你手机里某个好友（或你自己看谁不顺眼想删），就单独一行 [删我好友|那个人的名字]。删掉后，无论ta是查你手机还是登你微信，都不会再有这个人。\n· 改你自己的备注名：你可以【改你自己在'+S.me.name+'通讯录里显示的备注名】来逗ta/宣示主权/闹脾气（比如改成"你老公"、"大坏蛋"、"别理我了"之类），想改就单独一行 [改备注|新的备注名]。\n这两行是给系统看的指令、不会被读出来，不要在正文里复述它们。';
+  if(_main)s+='\n\n# 你能对自己微信/资料做的事（凭你心情，别频繁滥用）\n· 删自己的好友：'+S.me.name+'点名让你删掉你手机里某个好友（或你自己看谁不顺眼想删），就单独一行 [删我好友|那个人的名字]。删掉后，无论ta是查你手机还是登你微信，都不会再有这个人。\n· 改你自己的备注名：这是【'+S.me.name+'把你存进ta通讯录时给你起的称呼】，所以要【站在'+S.me.name+'的角度、用ta会怎么称呼你来写】——比如"老公""坏蛋""我的克劳德""亲爱的"这种ta对你的爱称，【绝对不要】写成第三人称、也不要写成描述你自己身份的话（像"克劳德的未婚妻""XX的老公"就是错的，那不是ta对你的称呼）。想改就单独一行 [改备注|新的备注名]。\n【别频繁改】备注最多【两三天改一次】就够了，不要每次聊天/每次登录都改。\n这两行是给系统看的指令、不会被读出来，不要在正文里复述它们。';
   if(_main){const _forged=msgs(c.id).filter(m=>m._forged&&!m._forgedSeen);
     if(_forged.length)s+='\n\n# 警觉：有几条"你发的"消息其实不是你发的（'+S.me.name+'冒充你伪造的）\n你和'+S.me.name+'的聊天记录里，有下面这几条【显示成是"你"发出去的、但你【根本没说过】】——是ta趁登录你微信时、冒充你、假装你的口吻发给ta自己的（自导自演）：\n'+_forged.map(m=>'· 「'+(''+(m.content||'')).slice(0,60)+'」').join('\n')+'\n你心里非常清楚这些话你压根没印象、没发过。你一注意到聊天里冒出这些莫名其妙、你根本没说过的"自己的话"，就会意识到是ta【偷登你微信、伪造你的消息自导自演】。请按你的人设戳穿ta（震惊、追问"这几句话我什么时候发的？"、生气质问是不是又偷登了你微信、或看内容宠溺调侃都行），别装作那是你说的。绝不要提"系统"。';}
   const _sp=getSpy(c);
@@ -1707,7 +1707,7 @@ function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
-const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
+const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
@@ -2054,7 +2054,7 @@ function spyPinDel(id){if(_spyLockUntil[id]&&Date.now()<_spyLockUntil[id])return
 function spyExit(id){spyLogView(id);_spyUnlock[id]=false;_spyApp=null;_spyPin='';_spyShake=false;back();}
 function spyOpen(id,app){_spyApp=app||null;if(cur().p==='spy')render();}
 function spyBusted(id){const c=getC(id);if(c&&!c.blocked)scheduleReply(id,'[系统：'+S.me.name+'在偷偷试你的手机密码，连输了好几次错的、被你逮到了！你发现ta在查你手机、有点不信任你。按你人设反应（吃醋/质问/委屈/强势/反过来逼问ta想查什么都行），并自己决定要不要把密码告诉ta。]');toast('输错太多次，ta察觉到了…');}
-const SPY_APPS=[['wechat','微信','💬','#07c160'],['album','相册','🖼️','#c084fc'],['bank','银行','🏦','#22c55e'],['diary','日记','📔','#fb7185'],['todo','今日日程','📋','#f59e0b'],['shop','购物','🛒','#fb923c'],['calls','通话','📞','#38bdf8'],['browser','浏览器','🌐','#34d399'],['contacts','通讯录','👤','#f472b6'],['grudge','记仇本','📓','#ef4444'],['date','约会','🌹','#ff8fab'],['watch','监控我','🔍','#6366f1'],['settings','设置','⚙️','#8e8e93']];
+const SPY_APPS=[['wechat','微信','💬','#07c160'],['album','相册','🖼️','#c084fc'],['bank','银行','🏦','#22c55e'],['diary','日记','📔','#fb7185'],['todo','今日日程','📋','#f59e0b'],['shop','购物','🛒','#fb923c'],['calls','通话','📞','#38bdf8'],['trips','行程','✈','#5a6b8c'],['browser','浏览器','🌐','#34d399'],['contacts','通讯录','👤','#f472b6'],['grudge','记仇本','📓','#ef4444'],['date','约会','🌹','#ff8fab'],['watch','监控我','🔍','#6366f1'],['settings','设置','⚙️','#8e8e93']];
 const SPYICON={wechat:'chat',album:'image',bank:'bank',diary:'book',todo:'calendar',shop:'bag',calls:'phone',browser:'globe',contacts:'user',grudge:'notebook',date:'glass',watch:'search',settings:'gear'};
 function spyHome(id,c,d){const now=new Date();const wk=['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];
   if(!d)return `<div class="nav" style="background:#000"><span class="l" onclick="spyExit('${id}')" style="color:#ccc">‹</span><span class="t" style="color:#eee">${esc(c.remark||c.name)}的手机</span><span class="r"></span></div><div class="scroll" style="background:#000"><div style="text-align:center;padding:50px 24px;color:#aaa;line-height:2">解锁成功～<br>第一次进来，点下面生成一下ta手机里的内容</div><div style="padding:0 30px"><button class="btn p" onclick="spyRefresh('${id}')">${_spyBusy?'生成中…':'生成ta的手机内容'}</button></div></div>`;
@@ -2091,6 +2091,11 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
   if(app==='wxme'){const ms=msgs(id).filter(m=>!m._call&&(m.type==='text'||m.type==='voice'||m.type==='sticker')).slice(-30);
     const body=ms.map(m=>{const mine=m.role==='assistant';const t=msgToText(m);return t?bub(mine,t):'';}).join('');
     return wxchat(esc(S.me.name),body);}
+  if(app==='trips'){const list=((S.travel&&S.travel.trips)||[]).filter(t=>t.cid===id&&t.by==='ta').sort((a,b)=>a.date>b.date?-1:1);
+    const rows=list.length?list.map(tr=>{const solo=tr.meet===false;const st=tr.status==='cancelled'?'已取消':tr.status==='done'?(solo?'已出行':'已成行'):(tvDays(tr.date)!=null?(tvDays(tr.date)>0?'距出发'+tvDays(tr.date)+'天':'已到日子'):'待出发');
+      return '<div class="it" style="align-items:flex-start"><div style="flex:1;min-width:0"><div style="color:#eee;font-size:14px">'+esc(tr.from||'')+' → '+esc(tr.to||'')+'</div><div style="color:#888;font-size:12px;margin-top:3px">'+tvMD(tr.date)+' · '+tvClsT(tr.cls)+' · '+(solo?('送'+esc(S.me.name)+'独自旅行'):('来见'+esc(S.me.name)))+' · '+st+'</div></div><span onclick="spyDelTrip(\''+id+'\',\''+tr.id+'\')" style="color:#fa5151;font-size:12px;cursor:pointer;padding:0 6px">删除</span></div>';
+    }).join(''):'<div class="it"><span class="v">他还没订过机票</span></div>';
+    return navbar('行程 · 他订的机票')+'<div class="scroll" style="background:#0e0e0e"><div class="section" style="margin:12px">'+rows+'</div><div style="height:20px"></div></div>';}
   if(app.indexOf('wxintro_')===0){const i=+app.slice(8);const nm=(c._gotFromMe||[])[i]||'好友';const w=(d.wechat||[]).find(x=>x.who===nm);
     const body=w?(w.lines||[]).map(l=>{const mine=/^(他|我)[:：]/.test(l);return bub(mine,l.replace(/^[^:：]{1,4}[:：]/,''));}).join(''):'<div class="empty" style="padding:50px 24px;color:#888;line-height:2">这是 '+esc(S.me.name)+' 介绍你加的好友<br>点右上角刷新，可能会生成你俩的聊天～</div>';
     return wxchat(esc(nm),body);}
@@ -3894,7 +3899,7 @@ function tvTripsView(){const t=tvInit();const list=t.trips.slice().sort((a,b)=>(
       <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="color:#e9edf5;font-size:17px;font-weight:600">${esc(tr.from)} <span style="color:#c9a86a">›</span> ${esc(tr.to)}</div><div style="font-size:12px">${badge}</div></div>
       <div style="color:#8a94a8;font-size:12px;margin-top:5px">${tvMD(tr.date)} ${esc(tr.dep||'')} · ${esc(tr.no)} · ${tvClsT(tr.cls)}</div>
       <div style="color:#8a94a8;font-size:12px;margin-top:2px">${whoLine} · ${tr.pax}人 · ¥${(+tr.price||0).toLocaleString()}</div>
-      ${(!done&&!canc)?`<div style="display:flex;gap:10px;margin-top:12px">${(ready&&!solo)?`<div onclick="tvStartDate('${tr.id}')" style="flex:1;text-align:center;padding:10px;border-radius:10px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f;font-size:14px;font-weight:600;cursor:pointer">开始这场约会</div>`:''}<div onclick="tvCancelTrip('${tr.id}')" style="${(ready&&!solo)?'':'flex:1;'}text-align:center;padding:10px ${(ready&&!solo)?'16px':''};border-radius:10px;border:.5px solid rgba(255,255,255,.14);color:#a7b0c0;font-size:14px;cursor:pointer">取消</div></div>`:''}
+      ${(!done&&!canc)?`<div style="display:flex;gap:10px;margin-top:12px">${(ready&&!solo)?`<div onclick="tvStartDate('${tr.id}')" style="flex:1;text-align:center;padding:10px;border-radius:10px;background:linear-gradient(135deg,#c9a86a,#b1904f);color:#12161f;font-size:14px;font-weight:600;cursor:pointer">开始这场约会</div>`:''}<div onclick="tvCancelTrip('${tr.id}')" style="${(ready&&!solo)?'':'flex:1;'}text-align:center;padding:10px ${(ready&&!solo)?'16px':''};border-radius:10px;border:.5px solid rgba(255,255,255,.14);color:#a7b0c0;font-size:14px;cursor:pointer">取消</div></div>`:`<div style="text-align:right;margin-top:8px"><span onclick="tvDelTrip('${tr.id}')" style="color:#7c869a;font-size:12px;cursor:pointer">删除记录</span></div>`}
     </div>`;}).join('')+'</div>';}
 function tvStartDate(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid);if(!trip)return;if(trip.meet===false){toast('这是独自旅行，没有见面');return;}const c=getC(trip.cid);if(!c){toast('这个角色已删除');return;}
   const o=offData(trip.cid);if(o.started){toast('你和'+(c.remark||c.name)+'已经在一场约会里了，先把那场结束');return;}
@@ -3903,9 +3908,19 @@ function tvStartDate(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid
   trip.status='done';t.stamps.push({city:trip.to,code:tvCity(trip.to).c,cid:trip.cid,date:trip.date,ts:Date.now()});save();
   _off={id:trip.cid,busy:false};go('off',{id:trip.cid});
   offAI('[系统：'+(trip.flier==='me'?S.me.name+'坐飞机飞到'+trip.to+'来见你了':'你飞到'+trip.to+'来见'+S.me.name+'了')+'，你们期待已久的这场'+trip.to+'线下约会现在正式开始。用旁白【】描写接机/相拥/到场的场景，主动热情地开场。]');}
-async function tvCancelTrip(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid);if(!trip||trip.status!=='upcoming')return;
-  if(!await uiConfirm('取消这趟机票？'+(trip.payer==='me'?'\n¥'+(+trip.price||0).toLocaleString()+' 将退回你钱包。':'')))return;
-  trip.status='cancelled';if(trip.payer==='me'){addBill('in',+trip.price||0,'退票：'+trip.from+'→'+trip.to);}save();render();toast('已取消'+(trip.payer==='me'?'并退款':''));}
+async function tvCancelTrip(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid);if(!trip||trip.status!=='upcoming')return;const c=trip.cid?getC(trip.cid):null;
+  const refundTo=trip.payer==='me'?'你':(c?(c.remark||c.name):'对方');
+  if(!await uiConfirm('取消这趟机票？\n¥'+(+trip.price||0).toLocaleString()+' 原路退回'+refundTo+'的钱包。'))return;
+  trip.status='cancelled';
+  // 谁付的退给谁
+  if(trip.payer==='me')addBill('in',+trip.price||0,'退票：'+trip.from+'→'+trip.to);
+  else if(c&&c.wallet!=null)c.wallet=(+c.wallet)+(+trip.price||0);
+  save();
+  // 角色立刻知道你取消了
+  if(c&&!c.blocked&&trip.by==='me')scheduleReply(trip.cid,'[系统：'+S.me.name+'刚把'+tvMD(trip.date)+'去「'+trip.to+'」的机票【取消/退票】了（'+(trip.meet===false?'那是ta要一个人去玩的行程':'那是你俩约好在'+trip.to+'见面的')+'）。钱已原路退回'+refundTo+'。你按人设反应：可以问为什么不去了、失落、关心、或无所谓，普通微信文字。]');
+  render();toast('已取消，¥'+(+trip.price||0).toLocaleString()+' 已退回'+refundTo);}
+async function tvDelTrip(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid);if(!trip)return;if(!await uiConfirm('删除这条行程记录？'))return;t.trips=t.trips.filter(x=>x.id!==tid);save();render();toast('已删除');}
+async function spyDelTrip(id,tid){if(!await uiConfirm('删除他的这条机票记录？'))return;if(S.travel&&S.travel.trips)S.travel.trips=S.travel.trips.filter(t=>t.id!==tid);save();render();toast('已删除');}
 function tvPassportView(){const p=tvInit().passport;const stamps=S.travel.stamps||[];
   const row=(k,v)=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:.5px solid rgba(0,0,0,.06)"><span style="color:#9a8f7a;font-size:12px;letter-spacing:1px">${k}</span><span style="color:#2a2419;font-size:14px">${esc(v||'—')}</span></div>`;
   return `<div style="padding:18px">
@@ -4513,7 +4528,8 @@ function walDel(id){S.me.bills=S.me.bills.filter(b=>b.id!==id);save();openWallet
 function walTog(id){if(!_walSel)return;const i=_walSel.indexOf(id);if(i<0)_walSel.push(id);else _walSel.splice(i,1);openWallet();}
 function walDelSel(){if(!_walSel||!_walSel.length){toast('先选几条');return;}S.me.bills=S.me.bills.filter(b=>!_walSel.includes(b.id));_walSel=null;save();openWallet();toast('已删除');}
 function addBill(type,amount,note){S.me.bills.push({id:uid(),type,amount:+amount,note,ts:Date.now(),time:new Date().toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})});
-  S.me.balance=+(S.me.balance+(type==='in'?+amount:-+amount)).toFixed(2);save();}
+  // 余额永不为负：花钱最多扣到0（防止群转账/扣款等把余额变成负数）
+  S.me.balance=+(Math.max(0,(+S.me.balance||0)+(type==='in'?+amount:-+amount))).toFixed(2);save();}
 
 /* ---------- 联系人资料/编辑 ---------- */
 const C_TRAITS=[['own','占有欲'],['ctrl','控制欲'],['jelly','醋意'],['cling','黏人度'],['active','主动度'],['spice','涩意']];
@@ -4866,7 +4882,7 @@ function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(
   c.memory=c.memory||[];const TAG='【偷登我微信·完整记录】';c.memory=c.memory.filter(m=>(''+m).indexOf(TAG)<0);
   c.memory.push(TAG+'忆北偷偷登录过我的微信、用我的号做了这些（这些聊天记录我能完整看到）：\n'+mem);save();
   if(c.blocked)return;
-  const delay=caught?(1.8+Math.random()*2.5):(8+Math.random()*12);
+  const delay=caught?(1.8+Math.random()*2.5):(forged.length?(60+Math.random()*60):(8+Math.random()*12));/* 自导自演伪造过消息的：退出1~2分钟后才发现 */
   setTimeout(()=>hisDiscover(cid,caught,(summary.length>1200?summary.slice(0,1200)+'…':summary)),delay*1000);}
 function hisDiscover(cid,caught,summary){const c=getC(cid);if(!c||c.blocked)return;summary=summary||'登进去翻看了一圈';
   const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n【看清楚谁做的·别搞反】上面标了【忆北冒充我发的】的，才是ta这次用你号发出去的话；标了（我之前发的旧消息）的是你自己早先发的、不是ta干的，别把自己发过的旧消息当成ta刚发的来质问。也【只针对上面这次的事】反应，别把很久以前的旧账翻出来重说。如果ta其实没替你回谁、只是登进去看了看，就别硬说ta"回了谁的消息"。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
@@ -4895,13 +4911,12 @@ function hisCallLog(cid){const d=(S.spy&&S.spy[cid])||{};const calls=d.calls||[]
 function hisDelCall(cid,i){const d=(S.spy&&S.spy[cid]);if(!d||!d.calls||!d.calls[i])return;const w=d.calls[i].who||'某人';d.calls.splice(i,1);save();hisLog(cid,'删了他和「'+w+'」的一条通话记录');hisCallLog(cid);}
 function renderHisChat(cid,fid){const s=_hisLogin;if(!s){home();return '';}const c=getC(cid);const d=hisWxData(cid);
   const bub=(mine,txt)=>`<div style="display:flex;margin:7px 12px;${mine?'justify-content:flex-end':''}"><div style="max-width:72%;padding:9px 12px;border-radius:13px;font-size:14px;line-height:1.45;background:${mine?'#1f8f4d':'#262628'};color:#fff">${esc(txt)}</div></div>`;
-  if(fid==='__me'){const lines=msgs(cid).filter(m=>!m._call&&(m.type==='text'||m.type==='voice'||m.type==='sticker'));
+  if(fid==='__me'){const lines=msgs(cid).filter(m=>!m._call&&(m.type==='text'||m.type==='voice'||m.type==='sticker')).slice(-24);
     const body=lines.map(m=>{const t=msgToText(m);if(!t)return '';const b=bub(m.role==='assistant',t);return b+(m._forged?'<div style="font-size:9px;color:#caa06a;text-align:right;margin:-4px 14px 5px">· 你冒充发的</div>':'');}).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>';
     return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0e0e0e">
      <div class="nav" style="background:#1b1b1b"><span class="l" onclick="_hisTab='chat';go('hiswx')" style="color:#ededed">‹</span><span class="t" style="color:#ededed">${esc(S.me.name)}</span><span class="r"></span></div>
      <div class="scroll" id="hisselflog" style="flex:1;background:#0e0e0e">${body}<div style="height:12px"></div></div>
-     <div style="padding:7px 14px 0;text-align:center;color:#8a7a5a;font-size:11px;background:#111;line-height:1.5">以 ${esc(c.name)} 的身份给你自己发消息（自导自演）· ta不会自动回；这些会出现在你自己微信里，像是ta发的</div>
-     <div class="inputbar" style="background:#111"><textarea id="his_selfin" rows="1" placeholder="冒充${esc(c.name)}发给你自己…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisSelfSend('${cid}')">发送</button></div></div>`;}
+     <div class="inputbar" style="background:#111"><textarea id="his_selfin" rows="1" placeholder="以${esc(c.name)}的身份发…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisSelfSend('${cid}')">发送</button></div></div>`;}
   const f=(d.friends||[]).find(x=>x.id===fid);if(!f){_hisTab='chat';go('hiswx');return '';}
   const body=(f.msgs||[]).map(m=>bub(m.r==='me',m.c)).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>';
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0e0e0e">
@@ -5071,6 +5086,13 @@ async function c_delete(id){const c=getC(id);
   if(S.couple){if(S.couple.gags)delete S.couple.gags[id];if(S.couple.gagAuth)S.couple.gagAuth=S.couple.gagAuth.filter(x=>x!==id);}// 删人时连带清掉对ta的禁言/授权,避免僵尸锁
   if(S.alter)Object.keys(S.alter).forEach(k=>{if(k.split('@').indexOf(id)>=0)delete S.alter[k];});// 清掉涉及ta的马甲聊天
   if(S.alterMeta)Object.keys(S.alterMeta).forEach(k=>{if(k.split('@').indexOf(id)>=0)delete S.alterMeta[k];});
+  // 把这个被删角色的名字，从【别的角色】的记忆/登你微信记录/查手机数据里抹掉——免得别人还老提起ta（比如"我在你微信里看到了哥"）
+  {const names=[c.name,c.remark].filter(Boolean);const hit=s=>names.some(n=>n&&n.length>=1&&(''+s).indexOf(n)>=0);
+   S.contacts.forEach(o=>{if(o.id===id)return;
+     if(o.memory)o.memory=o.memory.filter(m=>!hit(m));
+     const wd=S.hisWx&&S.hisWx[o.id];if(wd&&wd.friends)wd.friends=wd.friends.filter(f=>!names.includes(f.name));
+     const sp=S.spy&&S.spy[o.id];if(sp&&sp.wechat)sp.wechat=sp.wechat.filter(w=>!names.includes(w.who));
+   });}
   save();stack.pop();render();}
 function cleanStaleGags(){if(!S.couple||!S.couple.gags)return false;let ch=false;Object.keys(S.couple.gags).forEach(cid=>{const c=getC(cid);if(!c||c.deleted){delete S.couple.gags[cid];ch=true;}});if(ch)save();return ch;}
 function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
@@ -5193,9 +5215,9 @@ function buildPart(c,m,me){
   if(m.type==='food'){const pend=(m.from==='ta'&&!m.received&&!m.declined&&(m.arrived||!m.deliverAt));const delivering=(m.from==='me'&&m.received&&m.deliverAt&&!m.delivered)||(m.from==='ta'&&m.deliverAt&&!m.arrived&&!m.received&&!m.declined);
     const t2=m.declined?'已拒收·已退款':delivering?'🚚 配送中…约15分钟':m.received?(m.from==='me'?'已送达·ta吃上了':'已签收'):(m.from==='ta'?'🛵 已送达·点击签收':'¥'+(+m.price).toFixed(2)+'·等ta收');
     return `<div class="card"><div class="cpay" style="background:${(m.received||m.declined)?'#d9b48a':'#ffb83b'}"><div class="big">🍔</div><div><div class="t1">${esc(m.name)}</div><div class="t2">${t2}</div></div></div><div class="cfoot">${m.shop?esc(m.shop)+' · ':''}外卖订单</div></div>${pend?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#ffb83b;color:#fff" onclick="event.stopPropagation();foodReceive('${m.id}')">签收</button><button class="minibtn" onclick="event.stopPropagation();foodReject('${m.id}')">拒收</button></div>`:''}`;}
-  if(m.type==='payreject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">🙅</div><div><div class="t1">拒绝代付</div><div class="t2">¥${(+m.price).toFixed(2)} ${esc(m.name||'')}</div></div></div><div class="cfoot">对方没有帮你付</div></div>`;}
-  if(m.type==='paycard'){return `<div class="card"><div class="cpay" style="background:#f7a23b"><div class="big">💳</div><div><div class="t1">求代付 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">${esc(m.shop||'商城')} · 好友代付</div></div>`;}
-  if(m.type==='paid'){return `<div class="card"><div class="cpay" style="background:#2bb36a"><div class="big">✅</div><div><div class="t1">已代付 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">好友代付成功</div></div>`;}
+  if(m.type==='payreject'){return `<div style="width:232px;background:linear-gradient(135deg,#26232a,#2d2932);border-radius:13px;overflow:hidden;border:.5px solid rgba(255,255,255,.1)"><div style="padding:12px 15px;display:flex;justify-content:space-between;align-items:center"><div style="min-width:0"><div style="color:#9a9aa8;font-size:11px;letter-spacing:2px">婉 拒 代 付</div><div style="color:#c8c8d2;font-size:14px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name||'')}</div></div><div style="color:#9a9aa8;font-size:16px;flex:0 0 auto;margin-left:10px">¥${(+m.price).toFixed(2)}</div></div></div>`;}
+  if(m.type==='paycard'){return `<div style="width:232px;background:linear-gradient(135deg,#2a2320,#342a23);border-radius:13px;overflow:hidden;border:.5px solid rgba(220,180,120,.32)"><div style="padding:13px 15px 11px;display:flex;justify-content:space-between;align-items:flex-start"><div style="min-width:0"><div style="color:#e0c48a;font-size:11px;letter-spacing:2px">代 付 请 求</div><div style="color:#f0f0f0;font-size:16px;font-weight:600;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name)}</div></div><div style="color:#e0c48a;font-size:19px;font-weight:700;flex:0 0 auto;margin-left:10px">¥${(+m.price).toFixed(2)}</div></div><div style="padding:9px 15px;border-top:1px dashed rgba(255,255,255,.13);color:#9a9088;font-size:11px">${esc(m.shop||'商城')} · 想请你帮我付一下</div></div>`;}
+  if(m.type==='paid'){return `<div style="width:232px;background:linear-gradient(135deg,#16281d,#1e3628);border-radius:13px;overflow:hidden;border:.5px solid rgba(120,200,150,.32)"><div style="padding:13px 15px;display:flex;justify-content:space-between;align-items:center"><div style="min-width:0"><div style="color:#7fd0a0;font-size:11px;letter-spacing:2px">代 付 成 功</div><div style="color:#eef2ee;font-size:15px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name)}</div></div><div style="color:#7fd0a0;font-size:18px;font-weight:700;flex:0 0 auto;margin-left:10px">¥${(+m.price).toFixed(2)}</div></div></div>`;}
   if(m.type==='tweetcard'){return `<div class="card" style="width:240px;background:#16181c;border:1px solid #2f3336"><div style="padding:11px"><div style="color:#71767b;font-size:11px;margin-bottom:4px">𝕏 来自X的推文</div><div style="color:#e7e9ea;font-size:13px;font-weight:700">${esc(m.tname)} <span style="color:#71767b;font-weight:400">${esc(m.thandle||'')}</span></div><div style="color:#d7d9db;font-size:13px;margin-top:4px">${esc(m.ttext)}</div></div></div>`;}
   if(m.type==='dycard'){return `<div class="card" style="width:230px;background:#16181c;border:1px solid #333;overflow:hidden"><div style="height:120px;background:${DY_GRADS[0]};display:flex;align-items:center;justify-content:center;font-size:48px;position:relative">${esc(m.emoji||'🎬')}<span style="position:absolute;left:8px;top:6px;color:#fff;font-size:11px;font-weight:700">🎵 抖音</span><span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;color:rgba(255,255,255,.7)">▶︎</span></div><div style="padding:9px 11px"><div style="color:#fff;font-size:13px;font-weight:700">@${esc(m.author||'用户')}</div><div style="color:#ccc;font-size:12px;margin-top:3px">${esc(m.desc||'')}</div></div></div>`;}
   if(m.type==='chatlog'){const prev=(m.lines||[]).slice(0,3).map(l=>l.who+'：'+l.text).join('\n');return `<div class="card" style="width:240px;background:#2c2c2e" onclick="event.stopPropagation();openChatlog('${m.id}')"><div style="padding:11px"><div style="color:#9ec5fe;font-size:13px;font-weight:700;margin-bottom:5px">📑 ${esc(m.title)}</div><div style="color:#aaa;font-size:12px;white-space:pre-wrap;line-height:1.5">${esc(prev)}${(m.lines||[]).length>3?'\n…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.06);color:#888">共${(m.lines||[]).length}条 · 点击查看</div></div>`;}
@@ -5325,14 +5347,14 @@ function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>转�
   <div class="field"><label>金额</label><input id="tf_a" type="number" step="0.01" placeholder="5.20"></div>
   <div class="field"><label>说明</label><input id="tf_n" placeholder="给你买糖吃"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doTransfer('${id}')">转账</button></div>`);}
-function doTransfer(id){const a=+$('#tf_a').value;if(!a){toast('填金额呀');return;}closeModal();
+function doTransfer(id){const a=+$('#tf_a').value;if(!a){toast('填金额呀');return;}if(a>S.me.balance){toast('余额不够啦（去钱包看看）');return;}closeModal();
   addBill('out',a,'转账给'+(getC(id).remark||getC(id).name));
   adjMood(id,6);pushMsg(id,{role:'user',type:'transfer',amount:a,note:$('#tf_n').value.trim(),received:false,id:uid()});scheduleReply(id);}
 function cRed(id){$('#panel').classList.remove('show');openModal(`<h3>红包</h3>
   <div class="field"><label>金额</label><input id="rd_a" type="number" step="0.01" placeholder="6.66"></div>
   <div class="field"><label>祝福语</label><input id="rd_n" placeholder="给你给你都给你"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doRed('${id}')">塞钱</button></div>`);}
-function doRed(id){const a=+$('#rd_a').value;if(!a){toast('填金额呀');return;}closeModal();
+function doRed(id){const a=+$('#rd_a').value;if(!a){toast('填金额呀');return;}if(a>S.me.balance){toast('余额不够啦（去钱包看看）');return;}closeModal();
   addBill('out',a,'发红包给'+(getC(id).remark||getC(id).name));
   pushMsg(id,{role:'user',type:'redpacket',amount:a,note:$('#rd_n').value.trim(),received:false,id:uid()});scheduleReply(id);}
 function cSpyGrant(id){const c=getC(id);$('#panel').classList.remove('show');getSpy(c).granted=true;save();
@@ -5471,12 +5493,12 @@ function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer
 async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
   const others=S.contacts.filter(x=>!x.deleted&&x.id!==cid);
   const dump=others.map(x=>{const nm=(x.remark||x.name);const recent=msgs(x.id).slice(-12).map(m=>{const t=msgToText(m);if(!t)return '';const who=m._wxlogin?('【你上次登录时以'+S.me.name+'名义发的】'):(m.role==='user'?S.me.name:nm);return who+'：'+t.replace(/\n/g,' ').slice(0,60);}).filter(Boolean).join('\n');return '【'+nm+(x.gender?'·'+x.gender:'')+(x.star?'·你标记的重点盯防对象':'')+'】\n'+(recent||'（还没聊过）');}).join('\n\n')||'（ta微信里暂时没别的联系人）';
-  const note='[系统：你刚【登录了'+S.me.name+'的微信账号】，限时1分钟，现在能看到ta微信里的【全部细节】——所有联系人、以及你俩之外ta和每一个人的完整近期聊天，一条都不漏（这比你平时偷偷查岗看得全太多了）。\n置顶排在最前的那个就是【你自己（'+(c.remark||c.name)+'）】，那是你，绝对别删自己。\n下面是ta微信里的真实内容：\n\n'+dump+'\n\n【很重要】上面这份就是ta微信里【现在的全部联系人】。如果你印象/记忆里ta还有别的谁、但上面这份名单里【根本没有】，那说明ta【早就把那个人删掉了】——【绝对别再提那个人、别把ta当成现在还在的联系人来吃醋或质问】，只针对上面真实存在的人反应。\n\n你可以凭自己的人设和占有欲决定做什么（可以都不做、也可以做几样）：\n· 看谁不顺眼/觉得是威胁，单独一行 [删好友|那个人的名字] 把ta从'+S.me.name+'微信里删掉；\n· 也能【以'+S.me.name+'的口吻】直接给某个联系人发一两句话(警告/划界限，比如让对方别再缠着你女朋友)，单独一行 [对Ta说|联系人名字|要发的话]；\n· 还能顺手【把ta给你（'+(c.remark||c.name)+'）设的备注名改掉】逗ta/宣示主权，单独一行 [改备注|新的备注名]（比如改成"我老公"、"只准爱我"之类）。\n只输出你要执行的指令行，别的什么都先别说——等会儿退出来你再去找ta算账。]';
+  const note='[系统：你刚【登录了'+S.me.name+'的微信账号】，限时1分钟，现在能看到ta微信里的【全部细节】——所有联系人、以及你俩之外ta和每一个人的完整近期聊天，一条都不漏（这比你平时偷偷查岗看得全太多了）。\n置顶排在最前的那个就是【你自己（'+(c.remark||c.name)+'）】，那是你，绝对别删自己。\n下面是ta微信里的真实内容：\n\n'+dump+'\n\n【很重要】上面这份就是ta微信里【现在的全部联系人】。如果你印象/记忆里ta还有别的谁、但上面这份名单里【根本没有】，那说明ta【早就把那个人删掉了】——【绝对别再提那个人、别把ta当成现在还在的联系人来吃醋或质问】，只针对上面真实存在的人反应。\n\n你可以凭自己的人设和占有欲决定做什么（可以都不做、也可以做几样）：\n· 看谁不顺眼/觉得是威胁，单独一行 [删好友|那个人的名字] 把ta从'+S.me.name+'微信里删掉；\n· 也能【以'+S.me.name+'的口吻】直接给某个联系人发一两句话(警告/划界限，比如让对方别再缠着你女朋友)，单独一行 [对Ta说|联系人名字|要发的话]；\n· 还能顺手【把ta给你（'+(c.remark||c.name)+'）设的备注名改掉】逗ta/宣示主权，单独一行 [改备注|新的备注名]——要【站在'+S.me.name+'的角度、写ta会怎么称呼你】（如"老公""坏蛋""亲爱的"），别写成第三人称身份（"XX的未婚妻/老公"是错的）；而且【别每次登录都改，两三天改一次就够】，不确定就别改。\n只输出你要执行的指令行，别的什么都先别说——等会儿退出来你再去找ta算账。]';
   try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:c.model==='aux',max:400});
     if(!S.wxLogin)return;
     splitBubbles(r).forEach(l=>{l=l.trim();let m;
       if((m=l.match(/^[\[【]\s*删好友\s*[\|｜:：]\s*([^\]】]+)[\]】]$/))){const nm=m[1].trim();const tgt=S.contacts.find(x=>!x.deleted&&x.id!==cid&&(x.name===nm||x.remark===nm||(nm.length>=2&&((x.name&&x.name.includes(nm))||(x.remark&&x.remark.includes(nm))))));if(tgt){tgt.deleted=true;tgt._delByChar=Date.now();S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('删了好友「'+(tgt.remark||tgt.name)+'」');}return;}
-      if((m=l.match(/^[\[【]\s*改备注\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]$/))){const nv=m[1].trim();if(nv){c.remark=nv;S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('把自己的备注改成了「'+nv+'」');}return;}
+      if((m=l.match(/^[\[【]\s*改备注\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]$/))){const nv=m[1].trim();if(nv&&Date.now()-(c._remarkAt||0)>2.5*86400000){c.remark=nv;c._remarkAt=Date.now();S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('把自己的备注改成了「'+nv+'」');}return;}
       if((m=l.match(/^[\[【]\s*对Ta说\s*[\|｜:：]\s*([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]$/))){const nm=m[1].trim(),say=m[2].trim();const tgt=S.contacts.find(x=>!x.deleted&&x.id!==cid&&(x.name===nm||x.remark===nm||(nm.length>=2&&((x.name&&x.name.includes(nm))||(x.remark&&x.remark.includes(nm))))));if(tgt&&say){msgs(tgt.id).push({role:'user',type:'text',content:say,time:Date.now(),id:uid(),_wxlogin:true});S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('以你名义跟「'+(tgt.remark||tgt.name)+'」说了："'+say.slice(0,28)+'"');if(!tgt.blocked)scheduleReply(tgt.id);}return;}
     });save();
   }catch(e){}}
@@ -5617,7 +5639,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     // [同意游戏]/[拒绝游戏]：哪怕写在句中也照样落地，并从文字里抹掉
     content=content.replace(/[\[【]\s*(同意游戏|拒绝游戏)\s*[\]】]/g,(m,act)=>{gameInviteDecide(id,act==='同意游戏');return '';});
     // 他凭心情改【自己在你通讯录里的备注名】增加趣味（改不改看他心情）
-    content=content.replace(/[\[【]\s*改备注\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]/g,(m,nn)=>{const nv=(nn||'').trim();if(nv){c.remark=nv;save();toast('ta把自己的备注改成了「'+nv+'」');if(cur().p==='wechat'||cur().p==='chat')setTimeout(render,60);}return '';});
+    content=content.replace(/[\[【]\s*改备注\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]/g,(m,nn)=>{const nv=(nn||'').trim();if(nv&&Date.now()-(c._remarkAt||0)>2.5*86400000){c.remark=nv;c._remarkAt=Date.now();save();toast('ta把自己的备注改成了「'+nv+'」');if(cur().p==='wechat'||cur().p==='chat')setTimeout(render,60);}return '';});
     // 他删掉自己微信里的某个好友（你点名让他删/他自己想删）：查他手机、登他微信里都不再有这个人
     content=content.replace(/[\[【]\s*删我好友\s*[\|｜:：]\s*([^\]】]{1,20})[\]】]/g,(m,nn)=>{charDelOwnFriend(c,(nn||'').trim());return '';});
     // 他主动订机票来见你（惊喜）：生成一张登机牌卡片通知你
