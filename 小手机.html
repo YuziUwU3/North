@@ -586,7 +586,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v305 · 一起逛街:购物App点「邀他一起逛」,他会自己逛/搜/看/想买(顶部实时显示他在干嘛),他想买的要你[同意/拒绝]、你想买的点「想要·问他」求他同意;敲定的都进购物车等结算,结算时自己买单或让他代付都行;频率关/慢/中/快可控·离开购物页就停;其余同v304';
+const APP_VER='v306 · 识图更精准:你发图给他时,识图会更具体如实地描述(性别/颜值/表情/是不是搞笑梗图等),不再只说是一个人这么笼统;其余同v305';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -733,8 +733,8 @@ async function visionAPI(dataURL,prompt){const a=S.settings.vision;
   if(!a.base||!a.key||!a.model)throw new Error('no-vision');
   const res=await fetchT(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
-    body:JSON.stringify({model:a.model,max_tokens:300,messages:[{role:'user',content:[
-      {type:'text',text:prompt||'用一句中文描述这张图片的内容，简洁点。'},
+    body:JSON.stringify({model:a.model,max_tokens:420,messages:[{role:'user',content:[
+      {type:'text',text:prompt||'仔细具体地用中文描述这张图片的内容，2到3句，抓住最有特点的细节，别太笼统。'},
       {type:'image_url',image_url:{url:dataURL}}]}]})},30000);
   const d=await res.json();
   if(!res.ok)throw new Error('vision-fail');
@@ -5455,7 +5455,8 @@ function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',asyn
   if(!src){try{src=await readAsDataURL(f);}catch(e){toast('图片读取失败，再试一次');return;}}
   const m={role:'user',type:'image',src,desc:'',id:uid()};pushMsg(id,m);
   let okv=false;
-  for(let tryi=0;tryi<2&&!okv;tryi++){try{const d=await visionAPI(src,'用一句中文简洁描述这张图');if(d){m.desc=d;okv=true;save();}}catch(e){if(e&&e.message==='no-vision')break;}}
+  const _vp='仔细、具体地用中文描述这张图，抓住最有特点/最好笑/最关键的细节：\n· 有人物：说清性别、年龄段、长相和颜值（好看/普通/丑/凶/搞笑/油腻等，如实直说别回避别客气）、表情神态、发型穿着、正在做什么、给人的感觉。\n· 是表情包/梗图/搞笑图/截图：点明是哪种、在表达什么梗或情绪。\n· 是物品/风景/动物/食物/自拍：说清是什么、什么样子、氛围。\n用2到3句白话说清楚，让没看过图的人也能脑补出画面，别只说"一个人""一张图"这种笼统的。';
+  for(let tryi=0;tryi<2&&!okv;tryi++){try{const d=await visionAPI(src,_vp);if(d){m.desc=d;okv=true;save();}}catch(e){if(e&&e.message==='no-vision')break;}}
   if(!okv&&S.settings.vision&&S.settings.vision.model)toast('这张图没识别成功，他可能看不清，再发一次试试');
   scheduleReply(id);});}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
