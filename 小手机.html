@@ -586,7 +586,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v307 · 一起逛街结算完自动退出:购物车买单或让他代付后,一起逛就自动结束(想再逛重新邀他);两人一起挑并买下的东西会记进角色记忆,微信和线下约会里他都知道你们一起买了啥;其余同v306';
+const APP_VER='v308 · 生图不露脸:角色发的AI照片改成不拍清晰正脸(背影/侧影/逆光剪影/遮挡等),更神秘好看,也避免每次脸都不一样;其余同v307';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -5716,13 +5716,14 @@ function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］�
   return t;}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
 const CARD_RE=/^\[(转账|红包|位置|图片|文件)\|([^\]]*)\]$/;
-/* 让生成的照片严格贴合角色人设（外貌/性别/气质），再叠加画面描述 */
+/* 让生成的照片贴合角色人设（身形/气质），但【不露脸】，更神秘也避免每次脸不一样 */
 function charImgPrompt(c,desc){
   const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,420):'';
   let p='';
-  if(per)p+='图中人物必须严格符合这个人物设定：'+per+'。';
+  if(per)p+='图中人物的身形、气质、穿衣风格符合这个人物设定：'+per+'。';
   p+='画面内容：'+(desc||'一张自然的生活照')+'。';
-  p+='要求：真实照片质感，人物的外貌、性别、气质与上面的人物设定完全一致，自然光线，构图自然，不要出现文字、水印或多余的人。';
+  p+='【重要·必须不露脸】不要拍到清晰的正脸五官：用背影、侧影、低头、逆光剪影、脸被头发/帽子/手臂/物品遮住、只拍脖子以下或半张脸模糊等方式，让脸看不清、留白神秘感。';
+  p+='要求：真实照片质感，自然光线，构图自然有氛围感，不要出现文字、水印或多余的人。';
   return p;
 }
 function lineToMsg(line,cch){
