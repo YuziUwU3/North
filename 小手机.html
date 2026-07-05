@@ -587,7 +587,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v318 · 移除多余手机应用并恢复原提示音';
+const APP_VER='v319 · 优化购物结束、隐藏词卡与物品照片';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2468,12 +2468,15 @@ function coPickedSummary(items,payerId){const co=S.shop.co||{};const c=getC(co.c
   if(mine.length)parts.push(S.me.name+'想买、'+nm+'同意买下：'+mine.join('、'));
   if(picks.length)parts.push('付款/下单：'+payer);
   return {text:parts.join('；'),names:picks.map(p=>p.name).join('、'),mine,his,payer,nm,picks};}
-function coExit(){const co=S.shop.co;if(co){if(co.on){co.endedAt=Date.now();co.endedCid=co.cid;co.endedItems='';co.endedDetail='';}co.on=false;co.hisPending=[];co.myPending=[];}save();if(cur().p==='shop')render();toast('结束一起逛街~ 敲定的东西在购物车里等你结算 🛒');}
+function coExit(){const co=S.shop.co;if(co){const cid=co.cid,c=getC(cid);if(co.on){const cart=(S.shop.cart||[]).filter(x=>x&&x._coBy);const sum=coPickedSummary(cart,cart.length?cid:'未付款');co.endedAt=Date.now();co.endedCid=cid;co.endedItems=sum.names||'';co.endedDetail=sum.text||(cart.length?'':'没有真正买下东西');
+    if(cart.length){cart.forEach(p=>parcelDeliver(cid,p.name,+p.price,'pay',{emoji:p.emoji||'🛍️',shop:p.shop||'购物车'}));S.shop.cart=S.shop.cart.filter(x=>!cart.includes(x));}
+    if(c&&!c.blocked)scheduleReply(cid,'[系统：你和'+S.me.name+'刚刚结束了一起逛购物App。'+(cart.length?'你已经替ta买单/下单，刚才敲定的小票是：'+sum.text+'。':'这次没有真正买下东西。')+'这只是刚发生的短期购物上下文，不是长期记忆。你第一时间自然发消息承接一下。必须分清谁想买、谁同意、谁付款；不要说成都是'+S.me.name+'买的，也不要把隐藏系统说明原样复述。]');}
+  co.on=false;co.hisPending=[];co.myPending=[];}save();if(cur().p==='shop')render();toast('结束一起逛街~ '+((S.shop.co&&S.shop.co.endedItems)?'对方已买单，订单在我的订单里':'这次没有下单'));}
 /* 结算完：只留下本次购物短期上下文，不写进长期记忆/总结 */
 function coFinalize(items,payerId){const co=S.shop.co;if(!co)return;
   const sum=coPickedSummary(items,payerId||'me'),picks=sum.picks;
   if(picks.length){const c=getC(co.cid);co.endedItems=sum.names;co.endedDetail=sum.text;
-    if(c)msgs(co.cid).push({role:'user',type:'sys',content:'你和'+S.me.name+'刚一起逛完购物App并结算了：'+sum.text+'。这是刚发生的购物上下文，不是长期记忆；接下来聊天时要分清谁想买、谁同意、谁付款。',time:Date.now(),id:uid()});}
+    if(c&&!c.blocked)scheduleReply(co.cid,'[系统：你和'+S.me.name+'刚一起逛完购物App并结算了：'+sum.text+'。这是刚发生的短期购物上下文，不是长期记忆。你第一时间自然发消息承接一下，明确分清：哪些是你自己想买、哪些是'+S.me.name+'想买、谁同意、谁付款。不要把所有东西都说成'+S.me.name+'买的，也不要装作不知道刚才一起逛过。]');}
   co.endedAt=Date.now();co.endedCid=co.cid;
   if(co.on){co.on=false;co.hisPending=[];co.myPending=[];}
   save();if(cur().p==='shop')render();
@@ -3798,14 +3801,16 @@ function renderUC(){if(!_uc)return '';const me=_uc.players.find(p=>p.isMe);
       <div style="font-size:13px;color:#888;margin-top:10px">平民词：${esc(_uc.civWord)} ｜ 卧底词：${esc(_uc.ucWord)}</div>
       <div style="margin-top:8px;font-size:12px;color:#888">${_uc.players.map(p=>esc(p.name)+'('+(p.role==='undercover'?'卧底':'平民')+')').join('、')}</div>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px"><button class="btn p" style="max-width:120px" onclick="ucReplay()">再来一局</button><button class="btn g" style="max-width:120px" onclick="ucQuit()">退出</button></div></div>`;}
-  const wordBox=`<div style="margin:10px;padding:12px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;text-align:center">
-    <div style="font-size:12px;opacity:.9">你拿到的词（别告诉别人！）</div><div style="font-size:26px;font-weight:800;margin-top:2px">${esc(me.word||'…')}</div>
+  const show=!!_uc.showWord;
+  const wordBox=`<div onclick="ucToggleWord()" style="margin:10px;padding:12px;border-radius:14px;background:linear-gradient(135deg,#2d3344,#596273);color:#fff;text-align:center;cursor:pointer">
+    <div style="font-size:12px;opacity:.9">你的词卡（点一下${show?'隐藏':'查看'}）</div><div style="font-size:${show?'26':'18'}px;font-weight:800;margin-top:2px;letter-spacing:${show?'0':'4px'}">${show?esc(me.word||'…'):'••••'}</div>
     <div style="font-size:11px;opacity:.85;margin-top:3px">第 ${_uc.round} 轮 · 你不知道自己是不是卧底，自己判断哦</div></div>`;
   return `<div class="nav"><span class="l" onclick="ucQuit()">‹ 退出</span><span class="t">谁是卧底</span><span class="r" onclick="ucQuit()" style="color:#fa5151">结束</span></div>
     <div class="scroll" style="background:#000">${wordBox}
       <div style="display:flex;flex-direction:column;gap:6px;padding:0 10px">${_uc.players.map(ucPill).join('')}</div>
       <div style="margin-top:6px">${panel}</div><div style="height:20px"></div></div>`;}
 function ucReplay(){const lead=_uc.players.find(p=>!p.isMe&&p.id.indexOf('p_')===0);const cid=lead?lead.id.slice(2):(S.contacts.filter(c=>!c.deleted)[0]||{}).id;_uc=null;if(cid)ucConfig(cid);else home();}
+function ucToggleWord(){if(!_uc)return;_uc.showWord=!_uc.showWord;render();}
 function ucQuit(){_uc=null;home();}
 /* ===== 通话记录（可删改）===== */
 let _clTab='all';
@@ -4518,13 +4523,13 @@ function escStart(cid){const r=$('#esc_r').value.trim()||'屋里有线索，需�
   openGameSpace('escape',cid,'你来当游戏主持人（GM）：我被困在一间上锁的小黑屋，'+r+' 门一开就通关。你描述场景、根据我每一步行动推进剧情，只有我真正达成开门条件时才宣布「🔓门开了，通关！」，否则不能放我出去。先描述一下场景吧～','🚪 小黑屋');}
 /* ===== 你说我猜 ===== */
 let _wg=null;
-function startWG(cid){_wg={cid,round:1,score:{me:0,ta:0},phase:'idle',word:'',desc:'',guesses:[],t:0};go('wg');wgRound('ai');}
+function startWG(cid){_wg={cid,round:1,score:{me:0,ta:0},phase:'idle',word:'',desc:'',guesses:[],t:0,showWord:false};go('wg');wgRound('ai');}
 async function wgRound(who){if(!_wg)return;const c=getC(_wg.cid);_wg.phase='loading';_wg.who=who;_wg.guesses=[];_wg.word='';_wg.desc='';wgRender();
   try{if(who==='ai'){const r=await chatAPI([{role:'system',content:'你在玩"你描述我猜词"。请你选一个常见、好描述的中文词语(2到4个字)，然后用一两句话描述它但绝对不能出现这个词或它包含的任何一个字。严格用格式：词语:::字数:::描述。只输出这一行。'},{role:'user',content:'出一个词来描述'}],{max:200});
     const p=(r||'').split(/:::|：：：/).map(x=>x.trim());_wg.word=p[0]||'苹果';_wg.len=_wg.word.length;_wg.desc=p[2]||p[1]||'一种东西';
   }else{const r=await chatAPI([{role:'system',content:'给我一个适合"描述猜词"游戏的常见中文词语(2到4个字)，只输出这个词，别的不要。'},{role:'user',content:'出一个词'}],{max:30});_wg.word=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,4)||'西瓜';_wg.len=_wg.word.length;}
   if(!_wg||cur().p!=='wg')return;
-  _wg.phase=who==='ai'?'meGuess':'meDesc';wgStartTimer(40);wgRender();
+  _wg.phase=who==='ai'?'meGuess':'meDesc';_wg.showWord=false;wgStartTimer(40);wgRender();
   }catch(e){if(_wg)_wg.phase='error';wgRender();}}
 function wgRetry(){if(_wg)wgRound(_wg.who||'ai');}
 function wgStartTimer(sec){if(!_wg)return;clearInterval(_wg._tm);_wg.t=sec;const tm=setInterval(()=>{if(!_wg||cur().p!=='wg'){clearInterval(tm);return;}_wg.t--;const e=document.getElementById('wgtime');if(e)e.textContent=_wg.t+'s';if(_wg.t<=0){clearInterval(tm);wgTimeout();}},1000);_wg._tm=tm;}
@@ -4534,7 +4539,7 @@ function renderWG(){if(!_wg)return '';const c=getC(_wg.cid);
   if(_wg.phase==='loading')mid='<div class="empty" style="padding:40px">出题中…</div>';
   else if(_wg.phase==='error')mid=`<div class="empty" style="padding:36px;line-height:1.8">出题失败了😣<br>可能是网络或接口不稳<div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn p" style="max-width:120px" onclick="wgRetry()">重新出题</button><button class="btn g" style="max-width:120px" onclick="wgQuit()">退出</button></div></div>`;
   else if(_wg.phase==='meGuess')mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">${esc(c?c.name:'ta')} 描述（${_wg.len}个字）</div><div style="font-size:17px;color:#eee;margin:10px 0;line-height:1.6">「${esc(_wg.desc)}」</div><div style="font-size:13px;color:#888">你来猜👇</div></div>${_wg.guesses.map(g=>`<div style="text-align:center;color:#aaa;font-size:14px">${esc(g)} ❌</div>`).join('')}`;
-  else if(_wg.phase==='meDesc')mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">轮到你描述这个词（${esc(c?c.name:'ta')}来猜）：</div><div style="font-size:24px;color:#ffd6e8;margin:10px 0;font-weight:700">${esc(_wg.word)}</div><div style="font-size:12px;color:#888">描述它，别说出这个字～</div></div>${_wg.guesses.map(g=>`<div style="text-align:center;color:#9ec5fe;font-size:14px">ta猜：${esc(g)} <span onclick="wgJudge(true)" style="color:#2bd66a;cursor:pointer">对✓</span> <span onclick="wgJudge(false)" style="color:#fa5151;cursor:pointer">错✗</span></div>`).join('')}`;
+  else if(_wg.phase==='meDesc'){const show=!!_wg.showWord;mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">轮到你描述这个词（${esc(c?c.name:'ta')}来猜）：</div><div onclick="wgToggleWord()" style="display:inline-block;min-width:120px;margin:10px 0;padding:10px 16px;border-radius:14px;background:#20242d;color:${show?'#ffd6e8':'#bfc6d2'};font-size:${show?'24':'18'}px;font-weight:800;letter-spacing:${show?'0':'4px'};cursor:pointer">${show?esc(_wg.word):'••••'}</div><div style="font-size:12px;color:#888">点词卡查看/隐藏，描述时别说出这个字～</div></div>${_wg.guesses.map(g=>`<div style="text-align:center;color:#9ec5fe;font-size:14px">ta猜：${esc(g)} <span onclick="wgJudge(true)" style="color:#2bd66a;cursor:pointer">对✓</span> <span onclick="wgJudge(false)" style="color:#fa5151;cursor:pointer">错✗</span></div>`).join('')}`;}
   return `<div class="nav"><span class="l" onclick="wgQuit()">‹</span><span class="t">🤐 你说我猜 <span id="wgtime" style="color:#fa5151">${_wg.t}s</span></span><span class="r">你${_wg.score.me}:${_wg.score.ta}ta</span></div>
     <div class="scroll" style="background:#000">${mid}</div>
     <div class="inputbar"><textarea id="wg_in" rows="1" placeholder="${_wg.phase==='meGuess'?'输入你猜的词…':_wg.phase==='meDesc'?'描述这个词…':'…'}"></textarea><button class="send" onclick="wgInput()">${_wg.phase==='meGuess'?'猜':'发'}</button></div>`;}
@@ -4544,6 +4549,7 @@ function wgInput(){if(!_wg)return;const ta=$('#wg_in');const v=ta.value.trim();i
   else if(_wg.phase==='meDesc'){wgAIGuess(v);}}
 async function wgAIGuess(myDesc){if(!_wg)return;try{const r=await chatAPI([{role:'system',content:'我们在玩猜词，对方描述一个'+_wg.len+'个字的词，你来猜，只回答你猜的那一个词，别的不要。'},{role:'user',content:'描述：'+myDesc}],{max:30});const g=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,6);_wg.guesses.push(g);wgRender();}catch(e){}}
 function wgJudge(ok){if(!_wg)return;clearInterval(_wg._tm);if(ok){_wg.score.ta++;toast('ta猜对啦🎉');}else{toast('那继续描述呗～');wgStartTimer(_wg.t>0?_wg.t:30);return;}_wg.round++;wgRound('ai');}
+function wgToggleWord(){if(!_wg)return;_wg.showWord=!_wg.showWord;wgRender();}
 function wgQuit(){const cid=_wg&&_wg.cid;if(_wg){clearInterval(_wg._tm);}_wg=null;if(cid&&getC(cid))openChat(cid);else home();}
 let _couTab=1;
 function couTab(n){_couTab=n;const p1=$('#coupage1'),p2=$('#coupage2'),t1=$('#coutab1'),t2=$('#coutab2');if(!p1||!p2)return;
@@ -5919,15 +5925,22 @@ function charImgPrompt(c,desc){
   const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,80):'';
   const lk=(c&&c.imgLock)||buildImgLock(c||{});
   const scene=(desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180);
+  const wantsSelf=/(自拍|本人|自己|我自己|我的样子|拍我|露脸|侧脸|背影|手|半身|全身|穿着|衣服|身材|肌肉|腹肌|低头|侧影|镜子|镜中|男友视角|给你看看我|我在)/.test(scene);
+  const objectOnly=/(物品|东西|礼物|商品|摆件|戒尺|衣服|裙子|鞋|包|书|文件|杯子|饭|菜|咖啡|猫|狗|风景|窗外|房间|桌面|工具|器具|拍一下|拍一张|给我看看)/.test(scene)&&!wantsSelf;
   let p='真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
-  p+='主体是同一个年轻帅气的成年男子，固定视觉锚点：'+lk.age+'，'+lk.build+'，'+lk.hair+'，常见穿着像'+lk.wear+'，细节常带'+lk.detail+'，整体气质'+lk.mood+'。';
-  if(per)p+='人物气质参考：'+per+'。';
   p+='这次拍到的是：'+scene+'。';
-  p+='拍摄方式像他本人拿手机随手拍给恋人看，近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮他拍。';
-  p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
-  p+='不要露清晰正脸，只能侧脸、低头、背影、手机遮挡、镜中被挡住、俯拍手部或半身，让人能感觉是他，但看不清完整五官。';
-  p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清楚，无文字水印。';
-  return p.slice(0,600);
+  if(objectOnly){
+    p+='拍摄方式像他本人拿手机给恋人拍眼前的物品或场景，第一人称视角，近距离，轻微手持感，构图自然。';
+    p+='画面主体必须是物品或场景本身，不要出现他本人、脸、头发、身体、手、镜中自拍、手机遮脸的人影，也不要为了“不露脸”硬塞一个被遮挡的人。';
+  }else{
+    p+='主体是同一个年轻帅气的成年男子，固定视觉锚点：'+lk.age+'，'+lk.build+'，'+lk.hair+'，常见穿着像'+lk.wear+'，细节常带'+lk.detail+'，整体气质'+lk.mood+'。';
+    if(per)p+='人物气质参考：'+per+'。';
+    p+='拍摄方式像他本人拿手机随手拍给恋人看，近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮他拍。';
+    p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
+    p+='不要露清晰正脸，只能侧脸、低头、背影、手机遮挡、镜中被挡住、俯拍手部或半身，让人能感觉是他，但看不清完整五官。';
+  }
+  p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清晰，无文字水印。';
+  return p.slice(0,720);
 }
 function lineToMsg(line,cch){
   const dm=line.match(/^\[骰子(?:\|([1-6]))?\]$/);
