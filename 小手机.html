@@ -587,7 +587,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v317 · 小手机新增通知中心、相册、动态记录与提示音';
+const APP_VER='v316 · 角色扮演支持多人剧情房间与快捷动作后继续';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -605,7 +605,6 @@ function defState(){return{
   alarms:[],
   groups:[],
   couple:null,
-  phone:{notices:[],activity:[],unread:0},
   weather:null,
   spy:{},
   offline:{},
@@ -1192,9 +1191,6 @@ function render(){
   else if(c.p==='shopcs')html=renderShopCS();
   else if(c.p==='food')html=renderFood();
   else if(c.p==='travel')html=renderTravel();
-  else if(c.p==='notify')html=renderNotifyApp();
-  else if(c.p==='album')html=renderAlbumApp();
-  else if(c.p==='activity')html=renderActivityApp();
   else if(c.p==='calendar')html=renderCalendar();
   else if(c.p==='x')html=renderX();
   else if(c.p==='xtweet')html=renderXTweet(c.id);
@@ -1444,7 +1440,6 @@ function renderHome(){
   const hr=d.getHours();const greet=hr<6?'夜深了，早点睡':hr<11?'早安呀小猫':hr<14?'中午好，吃饭了吗':hr<18?'下午好～':hr<23?'晚上好呀':'还不睡吗';
   return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
     ${homeWidgets()}
-    ${phoneHeadsUp()}
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)">${homeAppsHtml()}</div>
     <div class="pgdots">${(S.me.appLayout||APP_DEFLAYOUT).map((_,i)=>'<span class="pgdot'+(i===0?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
     <div class="dock">
@@ -1455,20 +1450,6 @@ function renderHome(){
     </div></div>`;
 }
 function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);for(let i=0;i<APP_PAGES;i++){const d=document.getElementById('pgdot'+i);if(d)d.className='pgdot'+(i===p?' on':'');}}
-function phoneState(){if(!S.phone||typeof S.phone!=='object')S.phone={notices:[],activity:[],unread:0};if(!Array.isArray(S.phone.notices))S.phone.notices=[];if(!Array.isArray(S.phone.activity))S.phone.activity=[];if(!Number.isFinite(S.phone.unread))S.phone.unread=0;return S.phone;}
-function phoneUnreadCount(){return Math.max(0,(phoneState().unread||0));}
-function phoneFmtTime(t){if(!t)return '';const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-function phonePushNotice(o){const p=phoneState();const x=Object.assign({id:uid(),time:Date.now(),title:'通知',body:'',app:'',cid:'',type:'notice',silent:false},o||{});p.notices.unshift(x);if(p.notices.length>80)p.notices=p.notices.slice(0,80);if(!x.silent)p.unread=Math.min(999,(p.unread||0)+1);return x;}
-function phoneLog(kind,title,meta){const p=phoneState();const x={id:uid(),time:Date.now(),kind:kind||'event',title:title||'',meta:meta||''};p.activity.unshift(x);if(p.activity.length>120)p.activity=p.activity.slice(0,120);return x;}
-function phoneMarkRead(){const p=phoneState();if(p.unread){p.unread=0;save();}}
-function phoneHeadsUp(){const p=phoneState();const n=(p.notices||[])[0];if(!n)return '';const app=(APPDEFS[n.app]&&APPDEFS[n.app].t)||'手机';const more=p.unread>1?`<span style="margin-left:6px;color:#8ea2d8">+${p.unread-1}</span>`:'';return `<div class="hnote" onclick="go('notify')" style="cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9px;background:rgba(94,118,255,.16)">${svgIc('bell',14,'#6d84ff')}</span><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><b style="font-size:13px;color:#f6f7fb">${esc(n.title||app)}</b><span style="font-size:11px;color:#99a1b3">${phoneFmtTime(n.time)}</span></div><div style="font-size:12px;color:#b5bccb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.body||app)}${more}</div></div></div></div>`;}
-function renderNotifyApp(){const p=phoneState();if(p.unread)setTimeout(phoneMarkRead,0);const list=p.notices||[];return `<div class="nav"><span class="l" onclick="home()">←</span><span class="t">通知中心</span><span class="r" onclick="phoneClearNotices()">清空</span></div><div class="scroll" style="background:#000;padding:12px">${list.length?list.map(n=>`<div class="section" style="padding:12px 14px;margin-bottom:10px;background:#141416;border-radius:16px" ${n.cid?`onclick="phoneOpenNotice('${n.cid}','${n.app||''}')"`:''}><div style="display:flex;align-items:center;gap:10px"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;background:rgba(94,118,255,.16)">${svgIc(n.app==='wechat'?'chat':n.app==='album'?'image':n.app==='shop'?'bag':'bell',17,'#90a4ff')}</span><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-size:14px;color:#f5f6fa">${esc(n.title||'通知')}</b><span style="font-size:12px;color:#7f8696">${phoneFmtTime(n.time)}</span></div><div style="font-size:12px;color:#8e95a4;margin-top:2px">${esc((APPDEFS[n.app]&&APPDEFS[n.app].t)||'手机')}</div><div style="font-size:13px;color:#d6d8e0;line-height:1.6;margin-top:8px">${esc(n.body||'')}</div></div></div></div>`).join(''):'<div class="empty" style="padding:56px 24px">暂时没有新通知</div>'}</div>`;}
-function phoneOpenNotice(cid,app){if(cid&&app==='wechat'){openChat(cid);return;}if(app&&APPRUN[app]){APPRUN[app]();return;}go('notify');}
-function phoneClearNotices(){phoneState().notices=[];phoneState().unread=0;save();render();}
-function collectAlbumItems(){const out=[];const seen={};for(const c of (S.contacts||[])){for(const m of msgs(c.id)||[]){if(m&&m.type==='image'&&m.src&&!seen[m.id||m.src]){seen[m.id||m.src]=1;out.push({id:m.id||uid(),src:m.src,time:m.time||0,who:c.remark||c.name,desc:m.desc||m.genPrompt||'',mine:m.role==='user'});}}}return out.sort((a,b)=>(b.time||0)-(a.time||0));}
-function renderAlbumApp(){const items=collectAlbumItems();return `<div class="nav"><span class="l" onclick="home()">←</span><span class="t">相册</span><span class="r">${items.length} 张</span></div><div class="scroll" style="background:#000;padding:10px 10px 18px"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">${items.length?items.map(x=>`<div onclick="viewImg('${x.src}')" style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;position:relative;background:#151515"><img src="${x.src}" style="width:100%;height:100%;object-fit:cover;display:block"><div style="position:absolute;left:0;right:0;bottom:0;padding:16px 6px 5px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72));font-size:10px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.mine?'我':x.who)}</div></div>`).join(''):'<div class="empty" style="grid-column:1/-1;padding:56px 24px">还没有可看的照片</div>'}</div>${items[0]?`<div class="section" style="margin-top:12px;padding:12px 14px;background:#141416;border-radius:16px"><div style="font-size:12px;color:#8e95a4">最近一张</div><div style="font-size:14px;color:#f0f1f5;margin-top:6px">${esc(items[0].mine?'你发出的照片':items[0].who+' 的照片')}</div><div style="font-size:12px;color:#a9afbd;line-height:1.7;margin-top:6px">${esc((items[0].desc||'').slice(0,120)||'已保存到相册')}</div></div>`:''}</div>`;}
-function renderActivityApp(){const list=phoneState().activity||[];return `<div class="nav"><span class="l" onclick="home()">←</span><span class="t">手机动态</span><span class="r" onclick="phoneClearActivity()">清空</span></div><div class="scroll" style="background:#000;padding:12px">${list.length?list.map(x=>`<div class="section" style="padding:12px 14px;margin-bottom:10px;background:#141416;border-radius:16px"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><b style="font-size:14px;color:#f4f5f9">${esc(x.title||'动态')}</b><span style="font-size:12px;color:#7f8696">${phoneFmtTime(x.time)}</span></div><div style="font-size:13px;color:#c8ccd5;line-height:1.7;margin-top:8px">${esc(x.meta||'')}</div></div>`).join(''):'<div class="empty" style="padding:56px 24px">这里会慢慢记住手机里发生过的事</div>'}</div>`;}
-function phoneClearActivity(){phoneState().activity=[];save();render();}
 // ===== 主屏 App（数据驱动 + 长按拖拽换位/换页）=====
 const APPDEFS={
   wechat:{e:'💬',c:'#07c160',t:'微信'},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
@@ -1477,15 +1458,12 @@ const APPDEFS={
   douyin:{e:'🎵',c:'#1a1a1f',t:'抖音',lk:1},food:{e:'🍔',c:'#ffb83b',t:'外卖',lk:1},couple:{e:'💞',c:'#ff8fab',t:'情侣空间'},
   tasks:{e:'📋',c:'#f59e0b',t:'任务便签'},games:{e:'🎮',c:'#6c5ce7',t:'游戏大厅',lk:1},mail:{e:'📮',c:'#f4a93b',t:'信箱',lk:1,badge:1},
   offline:{e:'🌹',c:'#e84d6f',t:'线下约会',lk:1},music:{e:'🎵',c:'linear-gradient(135deg,#ff8fab,#b8a4e3)',t:'音乐'},roleplay:{e:'',c:'linear-gradient(135deg,#1b2330,#55657d)',t:'角色扮演',icon:'roleplay'},
-  notify:{e:'',c:'linear-gradient(135deg,#4e6dff,#87a4ff)',t:'通知中心',icon:'bell'},
-  album:{e:'',c:'linear-gradient(135deg,#f29f67,#f4c49d)',t:'相册',icon:'image'},
-  activity:{e:'',c:'linear-gradient(135deg,#166f66,#59c8b5)',t:'手机动态',icon:'clock'},
   cozy:{e:'🏡',c:'linear-gradient(135deg,#b07be0,#ff8fab)',t:'像素小家',icon:'cozyhome'},
   tale:{e:'🕯️',c:'linear-gradient(135deg,#3a0010,#1a1a1f)',t:'规则怪谈'},dread:{e:'🩸',c:'linear-gradient(135deg,#5a0012,#23000a)',t:'惊悚抉择'},
   travel:{e:'✈',c:'linear-gradient(135deg,#26324a,#5a6b8c)',t:'云程',lk:1}};
-const APPRUN={wechat:()=>openWeChat(),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openMusic(),roleplay:()=>go('rphub'),notify:()=>go('notify'),album:()=>go('album'),activity:()=>go('activity'),cozy:()=>go('cozy'),tale:()=>taleStart(),dread:()=>dreadStart(),travel:()=>openApp('travel')};
+const APPRUN={wechat:()=>openWeChat(),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openMusic(),roleplay:()=>go('rphub'),cozy:()=>go('cozy'),tale:()=>taleStart(),dread:()=>dreadStart(),travel:()=>openApp('travel')};
 const APP_PAGES=3;
-const APP_DEFLAYOUT=[['wechat','settings','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail','offline'],['roleplay','travel','music','notify','album','activity'],['cozy','tale','dread']];
+const APP_DEFLAYOUT=[['wechat','settings','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail','offline'],['roleplay','travel','music','cozy','tale','dread'],[]];
 function appLayoutInit(){let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
@@ -1494,9 +1472,7 @@ function appLayoutInit(){let L=S.me.appLayout;
   Object.keys(APPDEFS).forEach(k=>{if(!seen[k]){L[0].push(k);seen[k]=1;}});
   S.me.appLayout=L;}
 function appCell(k){const a=APPDEFS[k];if(!a)return '';
-  const mailUnread=(S.mail||[]).some(m=>!m.read);
-  const noticeUnread=phoneUnreadCount();
-  const badge=(k==='mail'&&mailUnread)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':((k==='notify'&&noticeUnread)?'<span style="position:absolute;top:-8px;right:-8px;min-width:18px;height:18px;padding:0 4px;border-radius:12px;background:#ff5f77;border:2px solid #fff;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">'+(noticeUnread>99?'99+':noticeUnread)+'</span>':'');
+  const badge=(k==='mail'&&(S.mail||[]).some(m=>!m.read))?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':'';
   const lk=a.lk?appLk(k):'';
   return '<div class="app" data-k="'+k+'" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge)+'<span>'+lk+a.t+'</span></div>';}
 function homeAppsHtml(){appLayoutInit();return S.me.appLayout.map((pg,pi)=>'<div class="apppage" data-pg="'+pi+'">'+pg.map(appCell).join('')+'</div>').join('');}
@@ -1791,7 +1767,7 @@ const ICONS={
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
-const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['roleplay','','角色扮演'],['notify','','通知中心'],['album','','相册'],['activity','','手机动态'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
@@ -1801,8 +1777,6 @@ const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
-  phoneLog('app','打开了 '+((APPDEFS[key]&&APPDEFS[key].t)||key),'刚刚进入了这个软件');
-  save();
   ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu,travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
@@ -5634,9 +5608,7 @@ function afterChat(id){const cb=$('#chatbg');if(cb)cb.scrollTop=cb.scrollHeight;
     ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(id);}});}
   maybeProactive(id);maybeSpyIdle(id);}
 
-function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();msgs(id).push(m);
-  const c=getC(id);if(c&&m.role==='user'&&!m._call){const who=c.remark||c.name||'对方';const meta=m.type==='image'?'发出了一张照片':m.type==='voice'?'发出了一条语音':m.type==='sticker'?'发出了一个表情':m.type==='location'?'分享了一个位置':previewOf(m);phoneLog('send','发消息给 '+who,meta);if(m.type==='image'&&m.src)phonePushNotice({title:'相册已更新',body:'你和 '+who+' 的照片已保存',app:'album',cid:id,type:'album',silent:true});}
-  save();
+function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();msgs(id).push(m);save();
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const c=getC(id);cb.insertAdjacentHTML('beforeend',bubbleRow(c,m));cb.scrollTop=cb.scrollHeight;}}}
 
 let _voiceMode=false;let _panelPage='fn';
@@ -6139,18 +6111,15 @@ function audioUnlock(){try{ensureAudio();if(_audio&&_audio.state!=='running'){co
 function audioKick(){audioUnlock();try{if(_ma&&_mWantPlay&&_ma.paused&&(!_ma.duration||_ma.currentTime<_ma.duration-0.3))_ma.play().catch(()=>{});}catch(e){}}
 ['touchend','pointerdown','click'].forEach(ev=>document.addEventListener(ev,audioKick,{passive:true}));
 document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some(c=>!c.deleted&&getSpy(c).loc);if(!S.weather||Date.now()-S.weather.time>(liveLoc?600000:72000000))fetchWeather();},{once:true});
-function playTone(kind){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;const tones={msg:[[880,.06,.12],[660,.18,.16]],image:[[740,.08,.12],[988,.18,.18]],voice:[[620,.09,.12],[740,.2,.14]],call:[[520,.08,.16],[660,.22,.18]],alert:[[760,.05,.12],[520,.12,.11],[880,.22,.16]]};const seq=tones[kind]||tones.msg;try{seq.forEach((it,i)=>{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=it[0];o.type=i===0?'sine':'triangle';const st=_audio.currentTime+it[1];g.gain.setValueAtTime(.001,st);g.gain.exponentialRampToValueAtTime(Math.min(1,.22*volMul()),st+.02);g.gain.exponentialRampToValueAtTime(.001,st+it[2]);o.start(st);o.stop(st+it[2]+.02);});}catch(e){}}
-function playDing(){playTone('msg');}
+function playDing(){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
+  o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(Math.min(1,.25*volMul()),_audio.currentTime+.02);
+  g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
 function notifyIncoming(c,msg){
   // 语音消息：不再自动播放，改成点一下语音条才播（点开能重复听）
   if(c.muted)return;
   const viewing=cur().p==='chat'&&cur().id===c.id;
   if(!viewing&&!_call)showMsgBanner(c,msg);
-  const body=previewOf(msg);
-  phonePushNotice({title:c.remark||c.name,body,app:'wechat',cid:c.id,type:msg.type||'text'});
-  phoneLog('receive','收到 '+(c.remark||c.name)+' 的新消息',body);
-  if(msg.type==='image')phonePushNotice({title:'相册已更新',body:(c.remark||c.name)+' 发来了一张照片',app:'album',cid:c.id,type:'album'});
-  playTone(msg.type==='image'?'image':msg.type==='voice'?'voice':'msg');
+  playDing();
   if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(c.remark||c.name,{body:previewOf(msg)});}catch(e){}}}
 /* 撤回 / 编辑消息 */
 function msgMenu(cid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=去引用了，别再弹菜单 */
@@ -6289,10 +6258,6 @@ function ringStop(){if(_ring){clearInterval(_ring);_ring=null;}if(navigator.vibr
 function blip(freq,dur){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(Math.min(1,.2*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
 function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
   _call={id,kind,state:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};initAudio();ringStart();showCallBanner(c);
-  phonePushNotice({title:c.remark||c.name,body:'邀请你'+(kind==='video'?'视频':'语音')+'通话',app:'wechat',cid:id,type:'call'});
-  phoneLog('call','有新的来电',c.remark||c.name+' 发来了'+(kind==='video'?'视频':'语音')+'通话邀请');
-  save();
-  playTone('call');
   clearTimeout(_callMissT);_callMissT=setTimeout(()=>callMissed(id),15000);}// 来电只先弹横幅；15秒没接=未接
 function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const label=_call.kind==='video'?'视频':'语音';
   b.innerHTML=`<div onclick="openIncoming()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm" style="display:flex;align-items:center;gap:5px">${svgIc(label==='视频'?'video':'phonecall',13,'#9a9')}邀请你${label}通话…</div></div></div><span class="cbtn red" style="width:30px;height:30px;margin-left:4px" onclick="event.stopPropagation();declineCall()">${svgIc('hangup',15,'#fff')}</span><span class="cbtn green" style="width:30px;height:30px" onclick="event.stopPropagation();answerCall()">${svgIc('phonecall',15,'#fff')}</span>`;
