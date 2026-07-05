@@ -587,7 +587,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v319 · 优化购物结束、隐藏词卡与物品照片';
+const APP_VER='v320 · 修复聊天输入卡顿';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -5610,8 +5610,10 @@ function markTransfer(id,mode){const m=[...msgs(id)].reverse().find(x=>x.role===
 function markPay(id,mode){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='paycard'&&!x._paid&&!x._rejected);if(m){if(mode==='reject')m._rejected=true;else m._paid=true;}return m||null;}
 
 function afterChat(id){const cb=$('#chatbg');if(cb)cb.scrollTop=cb.scrollHeight;
-  const ta=$('#cinput');if(ta){ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,84)+'px';});
-    ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(id);}});}
+  const ta=$('#cinput');if(ta&&!ta._chatBound){ta._chatBound=1;ta._chatId=id;let raf=0;
+    ta.addEventListener('input',function(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;this.style.height='auto';this.style.height=Math.min(this.scrollHeight,84)+'px';});});
+    ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(ta._chatId||id);}});}
+  if(ta)ta._chatId=id;
   maybeProactive(id);maybeSpyIdle(id);}
 
 function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();msgs(id).push(m);save();
