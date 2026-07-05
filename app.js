@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v325 · Pages发布修复';
+const APP_VER='v326 · AI账户模块拆分';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1314,45 +1314,6 @@ function notifyX(c,text){if(c.muted)return;playDing();const b=$('#msgBanner');if
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openX();};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
 setInterval(scanAutoPost,240000);setTimeout(scanAutoPost,8000);
-
-/* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false;
-function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
-function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:2,vision:10,image:120,tts:10,summary:2};return p[k]||0;}
-function aiLedgerRows(){const rows=(_aiAcct&&_aiAcct.ledger)||[];return rows.length?rows.map(x=>`<div class="bill"><div><b>${esc(({chat:'聊天',vision:'识图',image:'生图',tts:'语音',summary:'总结',manual:'手动加点',free:'赠送'}[x.feature])||x.feature)}</b><small>${esc((x.created_at||'').replace('T',' ').slice(0,16))} · ${esc(x.status||'')}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`).join(''):'<div class="empty">还没有流水</div>';}
-function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy)aiAccountRefresh(true,true);},80);
-  const bal=_aiAcct&&_aiAcct.account?(_aiAcct.account.points||0):'--';
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" onclick="aiAccountRefresh()">刷新</span></div>
-  <div class="scroll" style="background:#0f1117;color:#e8eaf0;padding:12px">
-    <div style="background:linear-gradient(135deg,#1f2937,#4f46e5);border-radius:16px;padding:18px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.12)">
-      <div style="font-size:12px;color:#c7d2fe">小手机内置AI点数</div>
-      <div style="font-size:38px;font-weight:700;margin:6px 0">${bal}</div>
-      <div style="font-size:12px;color:#cbd5e1;word-break:break-all">用户ID：${esc(id)} <button class="minibtn" onclick="aiCopyId()" style="margin-left:6px">复制</button></div>
-    </div>
-    <div class="section">
-      <div class="it"><span>使用内置AI<br><small style="color:#888">开：聊天/识图/生图走统一后台并扣点；关：使用设置里的自填API</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
-      <details style="padding:0 14px 10px;color:#aaa"><summary style="font-size:13px;padding:8px 0;cursor:pointer">后台连接</summary>
-        <div class="field" style="margin-bottom:8px"><label>内置AI后台地址</label><input id="ai_url" value="${esc(ac.url||'')}" placeholder="${GATE_URL}/functions/v1/phone-ai"></div>
-        <div class="btns"><button class="btn g" onclick="aiSaveUrl()">保存后台地址</button><button class="btn p" onclick="aiAccountRefresh(false,true)">测试连接</button></div>
-      </details>
-    </div>
-    <div class="section">
-      <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">扣费表</div>
-      <div class="it"><span>文字聊天</span><span class="v">${aiPrice('chat')} 点 / 次</span></div>
-      <div class="it"><span>识图</span><span class="v">${aiPrice('vision')} 点 / 次</span></div>
-      <div class="it"><span>生成图片</span><span class="v">${aiPrice('image')} 点 / 张</span></div>
-      <div class="it"><span>语音生成</span><span class="v">${aiPrice('tts')} 点 / 次</span></div>
-    </div>
-    <div class="section">
-      <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">最近流水</div>
-      <div id="ai_ledger">${aiLedgerRows()}</div>
-    </div>
-    <div class="hint">测试阶段余额默认0。用户ID每台设备不同；后台地址默认走你的统一后台。</div>
-  </div>`;}
-function aiToggleCore(){const ac=aiCoreInit();ac.enabled=!ac.enabled;save();render();toast(ac.enabled?'已启用内置AI':'已改回自填API');}
-function aiSaveUrl(){const ac=aiCoreInit();ac.url=(($('#ai_url')||{}).value||'').trim();save();toast('已保存');render();}
-function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
-async function aiAccountRefresh(silent,preserveScroll){if(_aiAcctBusy)return;_aiAcctBusy=true;const sc=$('.scroll'),top=sc?sc.scrollTop:0;try{_aiAcct=await aiRelay('account',{});if(!silent)toast('AI账户已刷新');}catch(e){if(!silent)toast('连接失败：'+e.message);}finally{_aiAcctBusy=false;if(cur().p==='aiaccount'){render();if(preserveScroll)setTimeout(()=>{const n=$('.scroll');if(n)n.scrollTop=top;},0);}}}
 
 /* ---------- 设置 ---------- */
 let _setTab=1;
