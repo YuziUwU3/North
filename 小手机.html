@@ -30,6 +30,7 @@
 </script>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+button,.btn,.minibtn,.send,.plus,.app,.list .row,.tabbar .tb,.nav .l,.nav .r,.panel .it,.card,.sw,.it{touch-action:manipulation;}
 html,body{height:100%;}
 body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   background:linear-gradient(135deg,#ffd6e8,#d6e4ff 50%,#e3d6ff);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:12px;}
@@ -61,7 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .pgdot.on{background:#fff}
 .app{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
 .app .ic{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 6px 14px rgba(0,0,0,.12);background:#fff;}
-.appswipe.aedit .app{animation:ajig .34s ease-in-out infinite;}
+.appswipe.aedit .app{animation:ajig .34s ease-in-out infinite;touch-action:none;}
 .appswipe.aedit .app:hover{animation:none;}
 @keyframes ajig{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.6deg)}}
 .appghost .ic{box-shadow:0 12px 24px rgba(0,0,0,.32);}
@@ -587,7 +588,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v320 · 修复聊天输入卡顿';
+const APP_VER='v321 · 优化手机卡顿和长聊天渲染';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -622,7 +623,11 @@ let S=load();
 // 把旧的默认绘图模型切到更适合日常照片的新默认；如果用户自己填了别的名字，就尊重原设置
 try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return Object.assign(defState(),v);}catch(e){}return seed();}
-function save(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));}catch(e){toast('存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
+let _saveTimer=null,_savePending=false,_saveLast=0;
+function saveNow(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}
+  if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;
+  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();}catch(e){toast('存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
+function save(delay){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
 let _imgCache={},_imgRev=new Map(),_imgReady=new Set(),_imgSeq=0,_heavy={},_heavyReady=new Set();
 function imgDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiImg',1);r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('img');}catch(_){}};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej();});}
@@ -5456,13 +5461,19 @@ function openChatlog(mid){let m;for(const k in S.messages){m=S.messages[k].find(
   openModal(`<h3>${esc(m.title)}</h3><div style="max-height:60vh;overflow-y:auto">${(m.lines||[]).map(l=>`<div style="padding:6px 2px;border-bottom:.5px solid #2a2a2c;font-size:14px"><b style="color:#9ec5fe">${esc(l.who)}：</b>${esc(l.text)}</div>`).join('')}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 
 /* ---------- 聊天页 ---------- */
+const CHAT_RENDER_LIMIT=180;
+let _chatRenderExtra={};
+function showOlderChat(id){_chatRenderExtra[id]=(_chatRenderExtra[id]||0)+CHAT_RENDER_LIMIT;render();}
 function renderChat(id){const c=getC(id);if(!c)return '';
   if(S.wxLogin){if(Date.now()>=S.wxLogin.until)setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
   const bg=c.chatBg?`background:url(${c.chatBg}) center/cover`:'';
-  const list=msgs(id).filter(m=>!m._call);
-  list.forEach(m=>{if(!m.id)m.id=uid();});
-  let body='';
-  list.forEach((m,i)=>{if(i===0||m.time-list[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
+  const all=msgs(id).filter(m=>!m._call);
+  all.forEach(m=>{if(!m.id)m.id=uid();});
+  const renderLimit=CHAT_RENDER_LIMIT+(_chatRenderExtra[id]||0);
+  const skipped=Math.max(0,all.length-renderLimit);
+  const list=skipped?all.slice(skipped):all;
+  let body=skipped?`<div class="tstamp"><span onclick="showOlderChat('${id}')" style="cursor:pointer">加载更早 ${Math.min(CHAT_RENDER_LIMIT,skipped)} 条 · 还剩 ${skipped} 条</span></div>`:'';
+  list.forEach((m,i)=>{const prev=i?list[i-1]:all[skipped-1];if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
   const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#b9a6e0')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
@@ -6877,7 +6888,9 @@ function storageFullAlert(){openModal(`<h3>存储已经满了！</h3><div style=
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 initBattery();
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{audioKick();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pagehide',()=>{if(_savePending)saveNow();});
+window.addEventListener('beforeunload',()=>{if(_savePending)saveNow();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;if(_savePending)saveNow();}else{audioKick();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 render();/* 先立刻渲染，UI 一定出来 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
