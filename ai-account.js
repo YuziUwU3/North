@@ -1,5 +1,11 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiConnOpen=false;
+let _aiAcct=null,_aiAcctBusy=false,_aiConnOpen=false,_aiUnlocked=false;
+function openAIAccount(){if(_aiUnlocked){go('aiaccount');return;}
+  openModal(`<h3>AI账户密码</h3><div class="hint">这里是后台测试入口，输入密码后进入。</div>
+    <div class="field"><input id="ai_pin" type="password" inputmode="numeric" maxlength="8" placeholder="输入密码"></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="aiUnlock()">进入</button></div>`);
+  setTimeout(()=>{const el=$('#ai_pin');if(el){el.focus();el.onkeydown=e=>{if(e.key==='Enter')aiUnlock();};}},60);}
+function aiUnlock(){const v=(($('#ai_pin')||{}).value||'').trim();if(v!=='0414'){toast('密码不对');return;}_aiUnlocked=true;closeModal();go('aiaccount');}
 function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
 function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:2,vision:10,image:120,tts:10,summary:2};return p[k]||0;}
 function aiLedgerRows(){const rows=(_aiAcct&&_aiAcct.ledger)||[];return rows.length?rows.map(x=>`<div class="bill"><div><b>${esc(({chat:'聊天',vision:'识图',image:'生图',tts:'语音',summary:'总结',manual:'手动加点',free:'赠送'}[x.feature])||x.feature)}</b><small>${esc((x.created_at||'').replace('T',' ').slice(0,16))} · ${esc(x.status||'')}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`).join(''):'<div class="empty">还没有流水</div>';}
