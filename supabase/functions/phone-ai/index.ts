@@ -302,7 +302,7 @@ Deno.serve(async (req) => {
         .select("kind,feature,points,balance_after,status,created_at,meta")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(80);
       return json({ ok: true, account: publicAccount(acct), pricing: PRICE, plans: PLANS, ledger: ledger || [] });
     }
 
