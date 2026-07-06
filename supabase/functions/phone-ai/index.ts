@@ -386,11 +386,8 @@ Deno.serve(async (req) => {
         });
         return json({ ok: true, data, charged: c.cost, balance: c.balance, chars });
       } catch (e) {
-        if (errText(e).includes("missing-minimax-key") || errText(e).includes("invalid-voice-id")) {
-          await refund(userId, clientSecret, "tts", c.cost, c.ledgerId, errText(e));
-          throw e;
-        }
-        return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
+        await refund(userId, clientSecret, "tts", c.cost, c.ledgerId, errText(e));
+        throw e;
       }
     }
 
