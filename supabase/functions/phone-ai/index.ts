@@ -157,6 +157,12 @@ async function refund(userId: string, clientSecret: string, feature: string, poi
   await finishCharge(ledgerId, false, { refunded: true, reason });
 }
 
+async function failCharged(ledgerId: string, cost: number, balance: number, model: string, e: unknown) {
+  const reason = errText(e);
+  await finishCharge(ledgerId, false, { charged: true, model, reason });
+  return json({ ok: false, error: "model-failed-charged: " + reason, charged: cost, balance }, 502);
+}
+
 async function openai(path: string, body: unknown) {
   const base = (Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/+$/, "");
   const key = Deno.env.get("OPENAI_API_KEY") || "";
@@ -194,8 +200,9 @@ Deno.serve(async (req) => {
 
     if (action === "chat") {
       const c = await charge(userId, clientSecret, "chat");
+      let model = "";
       try {
-        const model = body.model || Deno.env.get("CHAT_MODEL") || "gpt-4o-mini";
+        model = body.model || Deno.env.get("CHAT_MODEL") || "gpt-4o-mini";
         const data = await openai("/chat/completions", {
           model,
           temperature: body.temperature ?? 0.8,
@@ -205,15 +212,19 @@ Deno.serve(async (req) => {
         await finishCharge(c.ledgerId, true, { model });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
-        await refund(userId, clientSecret, "chat", c.cost, c.ledgerId, errText(e));
-        throw e;
+        if (errText(e).includes("missing-openai-key")) {
+          await refund(userId, clientSecret, "chat", c.cost, c.ledgerId, errText(e));
+          throw e;
+        }
+        return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
       }
     }
 
     if (action === "vision") {
       const c = await charge(userId, clientSecret, "vision");
+      let model = "";
       try {
-        const model = body.model || Deno.env.get("VISION_MODEL") || "gpt-4o-mini";
+        model = body.model || Deno.env.get("VISION_MODEL") || "gpt-4o-mini";
         const data = await openai("/chat/completions", {
           model,
           max_tokens: 420,
@@ -228,15 +239,19 @@ Deno.serve(async (req) => {
         await finishCharge(c.ledgerId, true, { model });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
-        await refund(userId, clientSecret, "vision", c.cost, c.ledgerId, errText(e));
-        throw e;
+        if (errText(e).includes("missing-openai-key")) {
+          await refund(userId, clientSecret, "vision", c.cost, c.ledgerId, errText(e));
+          throw e;
+        }
+        return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
       }
     }
 
     if (action === "image") {
       const c = await charge(userId, clientSecret, "image");
+      let model = "";
       try {
-        const model = body.model || Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
+        model = body.model || Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
         const data = await openai("/images/generations", {
           model,
           prompt: String(body.prompt || "一张生活照片").slice(0, 1200),
@@ -248,8 +263,11 @@ Deno.serve(async (req) => {
         await finishCharge(c.ledgerId, true, { model });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
-        await refund(userId, clientSecret, "image", c.cost, c.ledgerId, errText(e));
-        throw e;
+        if (errText(e).includes("missing-openai-key")) {
+          await refund(userId, clientSecret, "image", c.cost, c.ledgerId, errText(e));
+          throw e;
+        }
+        return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
       }
     }
 
