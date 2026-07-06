@@ -15,16 +15,12 @@
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
 <script>
-/* PWA：运行时画个粉色图标、生成 manifest —— 全内嵌、不依赖任何外部文件，安卓可"安装"、iPhone可"添加到主屏幕" */
+/* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
-  var C=document.createElement('canvas');C.width=C.height=192;var x=C.getContext('2d');
-  var g=x.createLinearGradient(0,0,192,192);g.addColorStop(0,'#ff8fab');g.addColorStop(1,'#b8a4e3');
-  var r=42;x.fillStyle=g;x.beginPath();x.moveTo(r,0);x.arcTo(192,0,192,192,r);x.arcTo(192,192,0,192,r);x.arcTo(0,192,0,0,r);x.arcTo(0,0,192,0,r);x.closePath();x.fill();
-  x.font='112px "Apple Color Emoji","Segoe UI Emoji",serif';x.textAlign='center';x.textBaseline='middle';x.fillText('📱',96,102);
-  var png=C.toDataURL('image/png');
-  var al=document.getElementById('pwaAppleIcon');if(al)al.href=png;
   var base=location.href.replace(/[?#].*$/,'');var dir=base.replace(/[^\/]*$/,'');
-  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:png,sizes:'192x192',type:'image/png',purpose:'any'},{src:png,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+  var icon=dir+'icon.png?v=336';
+  var al=document.getElementById('pwaAppleIcon');if(al)al.href=icon;
+  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
   var b=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});var ml=document.getElementById('pwaManifest');if(ml)ml.href=URL.createObjectURL(b);
 }catch(e){}})();
 </script>
