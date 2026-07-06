@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v339 · 海螺音色后台';
+const APP_VER='v340 · 修复语音测试';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -414,7 +414,7 @@ async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const 
   if(!(v&&v.engine==='api'&&(aiCoreOn()||(tts&&tts.base&&tts.key))))return null;const vid=v.ttsVoice||(tts&&tts.voice)||'';
   let lastErr='';
   for(let i=0;i<3;i++){if(i>0)await new Promise(r=>setTimeout(r,i*600));/* 退避：0 → 0.6s → 1.2s */
-    try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;lastErr=(res&&res.err)||'无音频';}catch(e){lastErr='网络';}}
+    try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;lastErr=(res&&res.err)||'无音频';}catch(e){lastErr=(e&&e.message)||'网络';}}
   toast('语音API错误 '+lastErr+'（已自动重试）');return null;}
 async function decodeBuf(ab){if(!_audio||!ab)return null;try{initAudio();return await _audio.decodeAudioData(ab.slice(0));}catch(e){return null;}}
 async function speak(text,o){const v=o?getVoice(o):null;
@@ -1540,7 +1540,7 @@ async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999
 async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(iOS必须如此),否则第二次测试时上下文已挂起、网络回来再播就没声 */
   const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
   const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
-  if(!base||!key){o.style.color='#e85';o.textContent='先填语音地址和Key';return;}
+  if(!aiCoreOn()&&(!base||!key)){o.style.color='#e85';o.textContent='先填语音地址和Key，或去AI账户打开“使用内置AI”';return;}
   const saved=S.settings.tts;S.settings.tts={base,key,model,voice,group};
   try{initAudio();const ab=await Promise.race([ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(ab==='__T_O__'){o.style.color='#e85';o.textContent='❌ 超时（25秒没响应，检查地址/Key/音色）';}

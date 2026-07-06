@@ -184,6 +184,16 @@ function hexToBase64(hex: string) {
   return btoa(bin);
 }
 
+function audioToDataUrl(audio: string) {
+  const value = audio.trim();
+  if (value.startsWith("data:audio/")) return value;
+  const compact = value.replace(/\s+/g, "");
+  if (/^[0-9a-f]+$/i.test(compact) && compact.length % 2 === 0) {
+    return "data:audio/mpeg;base64," + hexToBase64(compact);
+  }
+  return "data:audio/mpeg;base64," + compact;
+}
+
 async function minimaxTTS(text: string, voiceId: string, model: string) {
   const base = (Deno.env.get("MINIMAX_BASE_URL") || "https://api.minimaxi.com").replace(/\/+$/, "");
   const key = Deno.env.get("MINIMAX_API_KEY") || "";
@@ -208,7 +218,7 @@ async function minimaxTTS(text: string, voiceId: string, model: string) {
   }
   const hex = data?.data?.audio;
   if (!hex) throw new Error(data?.base_resp?.status_msg || "minimax-no-audio");
-  return { audio: "data:audio/mpeg;base64," + hexToBase64(String(hex)), raw: data };
+  return { audio: audioToDataUrl(String(hex)), raw: data };
 }
 
 async function minimaxVoices() {
