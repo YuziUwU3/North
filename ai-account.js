@@ -20,12 +20,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();setTimeout(
       <div style="font-size:12px;color:#cbd5e1;word-break:break-all">用户ID：${esc(id)} <button class="minibtn" onclick="aiCopyId()" style="margin-left:6px">复制</button></div>
     </div>
     <div class="section">
-      <div class="it"><span>使用内置AI<br><small style="color:#888">开：聊天/识图/生图走统一后台并扣点；关：使用设置里的自填API</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
-      <details ${_aiConnOpen?'open':''} ontoggle="_aiConnOpen=this.open" style="padding:0 14px 10px;color:#aaa"><summary style="font-size:13px;padding:8px 0;cursor:pointer">后台连接</summary>
-        <div class="hint">正式发布后这里会统一指向你的后台，普通用户不需要改。用户ID每台设备不同，后台地址默认相同。</div>
-        <div class="field" style="margin-bottom:8px"><label>内置AI后台地址</label><input id="ai_url" value="${esc(ac.url||'')}" placeholder="${GATE_URL}/functions/v1/phone-ai"></div>
-        <div class="btns"><button class="btn g" onclick="aiSaveUrl()">保存后台地址</button><button class="btn p" onclick="aiAccountRefresh(false,true)">测试连接</button></div>
-      </details>
+      <div class="it"><span>使用内置AI<br><small style="color:#888">开：聊天/识图/生图/语音走统一后台并扣点；关：使用设置里的自填API</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">扣费表</div>
@@ -48,7 +43,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();setTimeout(
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">最近流水</div>
       <div id="ai_ledger">${aiLedgerRows()}</div>
     </div>
-    <div class="hint">测试阶段余额默认0。用户ID每台设备不同；后台地址默认走你的统一后台。</div>
+    <div class="hint">测试阶段余额默认0。用户ID每台设备不同；后台由你统一管理。</div>
   </div>`;}
 function aiToggleCore(){const ac=aiCoreInit();ac.enabled=!ac.enabled;save();render();toast(ac.enabled?'已启用内置AI':'已改回自填API');}
 function aiSaveUrl(){const ac=aiCoreInit();ac.url=(($('#ai_url')||{}).value||'').trim();save();toast('已保存');}
