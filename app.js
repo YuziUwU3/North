@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v334 · 角色扮演稳人设';
+const APP_VER='v335 · 音乐文件可迁移';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -706,6 +706,8 @@ function mIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiMusi
 function mPut(k,b){return mIDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').put(b,k);tx.oncomplete=()=>res();tx.onerror=()=>rej();}));}
 function mGet(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readonly');const q=tx.objectStore('audio').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);}));}
 function mDelIDB(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').delete(k);tx.oncomplete=()=>res();tx.onerror=()=>res();})).catch(()=>{});}
+function mBlobDataURL(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result||'');r.onerror=()=>res('');r.readAsDataURL(b);});}
+function mDataURLBlob(s){try{const a=String(s||'').split(','),m=(a[0]||'').match(/data:([^;]+)/),bin=atob(a[1]||''),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:(m&&m[1])||'application/octet-stream'});}catch(e){return null;}}
 function openMusic(){musicInit();go('music');}
 function musicAdd(){musicInit();window._muBlob=null;openModal(`<h3>添加歌曲</h3>
   <div class="field"><label>歌名</label><input id="mu_t" placeholder="歌名"></div>
@@ -796,12 +798,23 @@ function editMusicDistance(){musicInit();const v=prompt('相距多少公里？',
 function musicMenu(){musicInit();openModal(`<h3>一起听</h3>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicAdd()">＋ 添加歌曲</button>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicListModal()">歌单（${(S.music.songs||[]).length}）</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="musicExportPack()">导出歌单文件</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="musicImportPack()">导入歌单文件</button>
   <button class="btn g" style="margin-bottom:8px" onclick="setMusicBg()">换背景图</button>
   ${S.music.bg?`<button class="btn g" style="margin-bottom:8px" onclick="S.music.bg='';save();closeModal();render();toast('已恢复默认背景')">↩️ 恢复默认背景</button>`:''}
   ${S.music.session?`<button class="btn d" style="margin-bottom:8px" onclick="closeModal();musicEndSession()">结束一起听</button>`:`<button class="btn p" style="margin-bottom:8px" onclick="closeModal();musicInvite()">邀请一起听</button>`}
   <button class="btn g" style="margin-bottom:8px" onclick="musicClearChat()">清空一起听聊天记录（${(S.music.chat||[]).length}条）</button>
   <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像、点「相距…」那行改距离。一起听聊天他记得最近的对话，想让他忘掉就点上面清空。</div>
   <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
+async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!songs.length){toast('还没有歌单');return;}toast('正在打包歌单…');
+  try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance||1400,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
+    for(const s of songs){const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}pack.music.songs.push(x);}
+    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('歌单已导出');
+  }catch(e){toast('导出失败，文件可能太大');}}
+function musicImportPack(){pickFile('.json',f=>{const r=new FileReader();r.onload=async()=>{try{const p=JSON.parse(r.result);if(!p||p.type!=='yibei-music-pack'||!p.music)throw 0;musicInit();const incoming=p.music.songs||[];let n=0;
+      for(const raw of incoming){const s=Object.assign({},raw);if(S.music.songs.some(x=>x.id===s.id))s.id='m'+uid();if(s.file){const b=mDataURLBlob(s.file);delete s.file;if(b){s.src={t:'idb'};await mPut(s.id,b);}}S.music.songs.unshift(s);n++;}
+      S.music.loop=!!p.music.loop;if(p.music.distance!=null)S.music.distance=p.music.distance;if(p.music.meAvatar)S.music.meAvatar=p.music.meAvatar;if(p.music.taAvatar)S.music.taAvatar=p.music.taAvatar;if(p.music.bg)S.music.bg=p.music.bg;save();closeModal();render();toast('已导入 '+n+' 首');
+    }catch(e){toast('导入失败，文件不对或太大');}};r.readAsText(f);});}
 async function musicClearChat(){musicInit();const sess=S.music.session;const n=(S.music.chat||[]).length;if(!n){toast('还没有一起听聊天记录');return;}
   if(!await uiConfirm('清空一起听的聊天记录？\n（'+(sess?'只清你和当前一起听对象的':'清全部一起听聊天')+'，不影响微信聊天和记忆）'))return;
   if(sess)S.music.chat=(S.music.chat||[]).filter(m=>m.cid!==sess.cid);else S.music.chat=[];
