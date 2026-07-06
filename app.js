@@ -5,12 +5,11 @@ const KEY='yibei_phone_v2';
    你和每个网友各填各的 Supabase，数据各进各的云、互不相干 */
 function cloudUrl(){return (((S.settings&&S.settings.cloudUrl)||'').trim()).replace(/\/+$/,'');}
 function cloudKey(){return ((S.settings&&S.settings.cloudKey)||'').trim();}
-/* ================= 改密码看这里（搜「改密码」就能跳到） =================
-   想换访问口令：把下面单引号里的 1225206 改成你想要的新口令，保存/提交即可。
-   true 改成 false 就是【完全关掉口令门】(谁打开都不用输)。
-   已经进来过的人不受影响；你自己本机有存档也不会被拦。
-   ====================================================================== */
-const SHARE_GATE=true, SHARE_PW='Claudeopus4.6';
+/* ================= 邀请码门禁 =================
+   true 改成 false 就是【完全关掉门禁】(谁打开都不用输)。
+   不在前端写死通用口令；主邀请码在云端 invites 表里维护。
+   ============================================== */
+const SHARE_GATE=true, SHARE_PW='';
 /* 🎟️ 邀请码验证（menkou 项目·只放邀请码、不含隐私）。谁输码进来 → 云端核销、用过即废；
    你自己用云端"主码"(可反复用)进，代码里不留后门。 */
 const GATE_URL='https://lkhlyfpssmrjkkzhuzag.supabase.co';
@@ -20,12 +19,10 @@ async function redeemInvite(code){try{
   if(!r.ok)return {ok:false,err:'验证服务出错('+r.status+')，稍后再试'};
   const v=await r.json();return {ok:v===true};
 }catch(e){return {ok:false,err:'连不上验证服务器，检查下网络'};}}
-/* 一键踢人：想清场时把 SHARE_EPOCH 加 1（1→2→3…），所有老设备下次打开都要重新输新口令。
-   她自己的设备因为有本地存档(_bootHadSave)永远不会被踢。 */
-const SHARE_EPOCH=1;
-let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
-function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v353 · 修正AI流水时间';
+/* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
+const SHARE_EPOCH=2;
+function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
+const APP_VER='v354 · 修复邀请码门禁';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2909,7 +2906,7 @@ function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   const unlock=()=>{try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);};
   let _busy=false;
   const tryIn=async()=>{if(_busy)return;const v=(inp.value||'').trim();if(!v){err.textContent='请输入邀请码';inp.focus();return;}
-    if(v===SHARE_PW){unlock();return;}
+    if(SHARE_PW&&v===SHARE_PW){unlock();return;}
     _busy=true;btn.disabled=true;btn.textContent='验证中…';err.textContent='';
     const res=await redeemInvite(v);
     _busy=false;btn.disabled=false;btn.textContent='进入';
