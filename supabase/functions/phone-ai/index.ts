@@ -102,31 +102,39 @@ async function ensureAccount(userId: string, clientSecret: string) {
 
 async function charge(userId: string, clientSecret: string, feature: string) {
   const cost = PRICE[feature] || 1;
-  const acct = await ensureAccount(userId, clientSecret);
-  if (acct.disabled) throw new Error("account-disabled");
-  if ((acct.points || 0) < cost) throw new Error("no-balance");
+  let lastBalance = 0;
+  for (let i = 0; i < 4; i++) {
+    const acct = await ensureAccount(userId, clientSecret);
+    if (acct.disabled) throw new Error("account-disabled");
+    lastBalance = acct.points || 0;
+    if (lastBalance < cost) throw new Error("no-balance");
 
-  const next = acct.points - cost;
-  const { data: updated, error } = await supabase
-    .from("phone_ai_accounts")
-    .update({ points: next })
-    .eq("user_id", userId)
-    .eq("points", acct.points)
-    .select("points")
-    .maybeSingle();
-  if (error) throw error;
-  if (!updated) throw new Error("balance-changed-retry");
+    const next = lastBalance - cost;
+    const { data: updated, error } = await supabase
+      .from("phone_ai_accounts")
+      .update({ points: next })
+      .eq("user_id", userId)
+      .eq("points", lastBalance)
+      .select("points")
+      .maybeSingle();
+    if (error) throw error;
+    if (!updated) {
+      await new Promise((r) => setTimeout(r, 80 + i * 90));
+      continue;
+    }
 
-  const { data: row, error: le } = await supabase.from("phone_ai_ledger").insert({
-    user_id: userId,
-    kind: "charge",
-    feature,
-    points: -cost,
-    balance_after: next,
-    status: "pending",
-  }).select("id").single();
-  if (le) throw le;
-  return { cost, balance: next, ledgerId: row.id as string };
+    const { data: row, error: le } = await supabase.from("phone_ai_ledger").insert({
+      user_id: userId,
+      kind: "charge",
+      feature,
+      points: -cost,
+      balance_after: next,
+      status: "pending",
+    }).select("id").single();
+    if (le) throw le;
+    return { cost, balance: next, ledgerId: row.id as string };
+  }
+  throw new Error("balance-busy-retry-later");
 }
 
 async function finishCharge(ledgerId: string, ok: boolean, meta: Record<string, unknown> = {}) {
