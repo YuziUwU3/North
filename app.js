@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v354 · 修复邀请码门禁';
+const APP_VER='v355 · 修复语音直连';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -183,8 +183,8 @@ function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/10
 function aiCoreOn(){return !!(S.settings&&S.settings.aiCore&&S.settings.aiCore.enabled);}
 function aiCoreUrl(){return (((S.settings&&S.settings.aiCore&&S.settings.aiCore.url)||'').trim()).replace(/\/+$/,'');}
 function ttsCfg(){S.settings=S.settings||{};S.settings.tts=S.settings.tts||{};return S.settings.tts;}
-function ttsApiOn(){const t=ttsCfg();return !!(t.enabled&&(aiCoreUrl()||(t.base&&t.key)));}
-function ttsUseRelay(){return !!(ttsCfg().enabled&&aiCoreUrl());}
+function ttsApiOn(){const t=ttsCfg();return !!(t.enabled&&((aiCoreOn()&&aiCoreUrl())||(t.base&&t.key)));}
+function ttsUseRelay(){return !!(ttsCfg().enabled&&aiCoreOn()&&aiCoreUrl());}
 function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}catch(_){}if(!id){id='ph_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('yibei_ai_uid',id);}catch(_){}}return id;}
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
@@ -1267,7 +1267,7 @@ const ICONS={
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
-const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['music','🎵','音乐'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
@@ -1466,7 +1466,8 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel')};
   S.settings.search={mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
   S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
-  S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():((S.settings.tts||{}).group||''))};
+  const oldTts=S.settings.tts||{};
+  S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():(oldTts.group||'')),enabled:!!oldTts.enabled};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
@@ -1545,7 +1546,7 @@ async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(i
   const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
   const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
   if(!aiCoreOn()&&(!base||!key)){o.style.color='#e85';o.textContent='先填语音地址和Key，或去AI账户打开“使用内置AI”';return;}
-  const saved=S.settings.tts;S.settings.tts={base,key,model,voice,group};
+  const saved=S.settings.tts;S.settings.tts={base,key,model,voice,group,enabled:true};
   try{initAudio();const ab=await Promise.race([ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(ab==='__T_O__'){o.style.color='#e85';o.textContent='❌ 超时（25秒没响应，检查地址/Key/音色）';}
     else if(ab){const buf=await decodeBuf(ab);if(buf){playBuf(buf);o.style.color='#19a463';o.textContent='✅ 语音生成成功（已播放）';}else{o.style.color='#19a463';o.textContent='✅ 接口通了（拿到语音数据）';}}
