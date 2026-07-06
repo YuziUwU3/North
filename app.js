@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v335 · 音乐文件可迁移';
+const APP_VER='v336 · 相册兼容修复';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1659,6 +1659,18 @@ function spyWxList(id,c,d){const items=[];const seen={};
   (d.groups||[]).forEach((gp,i)=>items.push({k:'wxg_'+i,name:(gp.name||'群聊'),avatar:'👥',prev:(gp.lines&&gp.lines[gp.lines.length-1])||'',grp:true}));
   return items;}
 function spyLastPrev(id){const m=msgs(id).filter(x=>!x._call);const lm=m[m.length-1];return lm?previewOf(lm):'';}
+function spyAlbumHTML(d){let arr=d&&d.album;if(!arr)return '<div class="empty" style="padding:34px">相册是空的</div>';
+  if(typeof arr==='string')arr=arr.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  else if(!Array.isArray(arr))arr=Object.keys(arr||{}).map(k=>arr[k]);
+  const rows=(arr||[]).map(a=>{if(a==null)return '';let img='',txt='';
+    if(typeof a==='string'){txt=a;}
+    else if(typeof a==='object'){img=a.url||a.src||a.image||a.img||a.photo||'';txt=a.text||a.desc||a.caption||a.title||a.name||a.content||'';}
+    else txt=String(a);
+    const pic=img&&isImg(img)?`<img src="${img}" style="width:100%;max-height:220px;object-fit:cover;border-radius:9px;margin-bottom:${txt?'8px':'0'}" onerror="this.style.display='none'">`:'';
+    const line=txt?`<div style="color:#ccc;font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(txt)}</div>`:'';
+    if(!pic&&!line)return '';
+    return `<div style="background:#1c1c1e;border-radius:10px;padding:10px;margin-bottom:8px">${pic}${line}</div>`;}).filter(Boolean).join('');
+  return rows?'<div style="padding:12px">'+rows+'</div>':'<div class="empty" style="padding:34px">相册是空的</div>';}
 function spyAppView(id,c,app){const d=S.spy[id]||{};
   const sec=(t,col,inner)=>`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:${col}">${t}</div>${inner}</div>`;
   const itlist=arr=>(arr&&arr.length)?arr.map(b=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(typeof b==='string'?b:(b.item||b.who||''))}</span></div>`).join(''):'<div class="it"><span class="v">无</span></div>';
@@ -1709,7 +1721,7 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
       </div>`;}
 
   let title='',body='';
-  if(app==='album'){title='相册';body=(d.album&&d.album.length)?'<div style="padding:12px">'+d.album.map(a=>`<div style="background:#1c1c1e;border-radius:10px;padding:14px;margin-bottom:8px;color:#ccc;font-size:13px">${esc(a)}</div>`).join('')+'</div>':'<div class="empty" style="padding:34px">相册是空的</div>';}
+  if(app==='album'){title='相册';body=spyAlbumHTML(d);}
   else if(app==='bank'){const bal=(c&&c.wallet!=null)?+c.wallet:((d.balance!=null)?+d.balance:(d.wallet||[]).reduce((s,w)=>s+(+w.amount||0),0));title='银行 / 钱包';body=`<div style="margin:12px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff"><div style="font-size:12px;opacity:.85">当前余额</div><div style="font-size:30px;font-weight:700">¥${bal.toFixed(2)}</div></div>`+sec('近期收支','#2bb36a',(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>');}
   else if(app==='diary'){title='日记';const log=(d.diaryLog&&d.diaryLog.length)?d.diaryLog:(d.diary?[{date:ymd(d.time||Date.now()),text:d.diary}]:[]);
     body=log.length?log.map(e=>`<div style="margin:12px;padding:14px;background:#16161a;border-radius:12px"><div style="color:#feca57;font-size:12px;margin-bottom:6px">📅 ${esc(e.date)}${e.time?' '+esc(e.time):''}</div><div style="font-size:14px;color:#ddd;line-height:1.8;white-space:pre-wrap">${esc(e.text)}</div></div>`).join(''):'<div class="empty" style="padding:34px">还没写日记</div>';}
