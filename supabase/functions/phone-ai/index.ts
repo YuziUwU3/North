@@ -214,6 +214,11 @@ async function minimaxTTS(text: string, voiceId: string, model: string) {
   });
   const data = await r.json().catch(() => null);
   if (!r.ok || (data?.base_resp && data.base_resp.status_code !== 0)) {
+    const code = data?.base_resp?.status_code;
+    const statusMsg = String(data?.base_resp?.status_msg || "");
+    if (code === 2042 || /voice_id/i.test(statusMsg)) {
+      throw new Error(`invalid-voice-id: ${statusMsg || "you don't have access to this voice_id"}`);
+    }
     throw new Error(`minimax-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
   }
   const hex = data?.data?.audio;
@@ -362,7 +367,7 @@ Deno.serve(async (req) => {
         });
         return json({ ok: true, data, charged: c.cost, balance: c.balance, chars });
       } catch (e) {
-        if (errText(e).includes("missing-minimax-key")) {
+        if (errText(e).includes("missing-minimax-key") || errText(e).includes("invalid-voice-id")) {
           await refund(userId, clientSecret, "tts", c.cost, c.ledgerId, errText(e));
           throw e;
         }

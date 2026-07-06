@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v340 · 修复语音测试';
+const APP_VER='v341 · 语音防重复扣点';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -412,6 +412,10 @@ async function _ttsOnce(t,vid,tts){let r;
 // 语音自动重试：偶发的 401/429/网络抖动(尤其 ElevenLabs 免费版)会让头一两条没声，这里悄悄退避重试，最多3次都失败才弹提示
 async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=S.settings.tts;
   if(!(v&&v.engine==='api'&&(aiCoreOn()||(tts&&tts.base&&tts.key))))return null;const vid=v.ttsVoice||(tts&&tts.voice)||'';
+  if(aiCoreOn()){
+    try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;toast('语音API错误 '+((res&&res.err)||'无音频'));return null;}
+    catch(e){toast('语音API错误 '+(((e&&e.message)||'网络').replace(/^内置AI失败：/,'')));return null;}
+  }
   let lastErr='';
   for(let i=0;i<3;i++){if(i>0)await new Promise(r=>setTimeout(r,i*600));/* 退避：0 → 0.6s → 1.2s */
     try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;lastErr=(res&&res.err)||'无音频';}catch(e){lastErr=(e&&e.message)||'网络';}}
