@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v349 · 图片入镜规则';
+const APP_VER='v350 · 语音API开关';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -185,6 +185,9 @@ function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/10
 /* =================== API =================== */
 function aiCoreOn(){return !!(S.settings&&S.settings.aiCore&&S.settings.aiCore.enabled);}
 function aiCoreUrl(){return (((S.settings&&S.settings.aiCore&&S.settings.aiCore.url)||'').trim()).replace(/\/+$/,'');}
+function ttsCfg(){S.settings=S.settings||{};S.settings.tts=S.settings.tts||{};return S.settings.tts;}
+function ttsApiOn(){const t=ttsCfg();return !!(t.enabled&&(aiCoreUrl()||(t.base&&t.key)));}
+function ttsUseRelay(){return !!(ttsCfg().enabled&&aiCoreUrl());}
 function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}catch(_){}if(!id){id='ph_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('yibei_ai_uid',id);}catch(_){}}return id;}
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
@@ -393,7 +396,7 @@ function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=
   _curAudio.play().catch(()=>{});}
 async function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;}catch(e){}}
 async function _ttsOnce(t,vid,tts){let r;
-  if(aiCoreOn()){const d=await aiRelay('tts',{text:t,voice_id:vid||'',model:(tts&&tts.model)||''});const audio=d&&d.data&&d.data.audio;if(!audio)return {err:'内置AI无音频'};const ab=await fetch(audio).then(x=>x.arrayBuffer());return {buf:ab};}
+  if(ttsUseRelay()){const d=await aiRelay('tts',{text:t,voice_id:vid||'',model:(tts&&tts.model)||''});const audio=d&&d.data&&d.data.audio;if(!audio)return {err:'内置AI无音频'};const ab=await fetch(audio).then(x=>x.arrayBuffer());return {buf:ab};}
   if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
     r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
   else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
@@ -410,9 +413,9 @@ async function _ttsOnce(t,vid,tts){let r;
   let detail='';try{const j=await r.clone().json();const d=j&&j.detail;detail=(d&&(d.status||d.message))||(typeof d==='string'?d:'')||(j&&j.message)||'';}catch(e){try{detail=(await r.text()||'').slice(0,80);}catch(_){}}
   return {err:r.status+(detail?(' · '+detail):'')};}
 // 语音自动重试：偶发的 401/429/网络抖动(尤其 ElevenLabs 免费版)会让头一两条没声，这里悄悄退避重试，最多3次都失败才弹提示
-async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=S.settings.tts;
-  if(!(v&&v.engine==='api'&&(aiCoreOn()||(tts&&tts.base&&tts.key))))return null;const vid=v.ttsVoice||(tts&&tts.voice)||'';
-  if(aiCoreOn()){
+async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=ttsCfg();
+  if(!ttsApiOn())return null;const vid=(v&&v.ttsVoice)||(tts&&tts.voice)||'';
+  if(ttsUseRelay()){
     try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;toast('语音API错误 '+((res&&res.err)||'无音频'));return null;}
     catch(e){toast('语音API错误 '+(((e&&e.message)||'网络').replace(/^内置AI失败：/,'')));return null;}
   }
@@ -422,15 +425,15 @@ async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const 
   toast('语音API错误 '+lastErr+'（已自动重试）');return null;}
 async function decodeBuf(ab){if(!_audio||!ab)return null;try{initAudio();return await _audio.decodeAudioData(ab.slice(0));}catch(e){return null;}}
 async function speak(text,o){const v=o?getVoice(o):null;
-  if(v&&v.engine==='api'&&(aiCoreOn()||(S.settings.tts&&S.settings.tts.key))){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}
+  if(ttsApiOn()){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);}return;}
   const t=stripSpoken(text);if(!t||!('speechSynthesis'in window))return;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(m._aurl){playUrl(m._aurl);return;}
   if(m.audio){playUrl(m.audio);return;}
-  if(v&&v.engine==='api'&&(aiCoreOn()||(S.settings.tts&&S.settings.tts.key))){const ab=await ttsArr(m.content,o);
-    if(ab){try{m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));playUrl(m._aurl);return;}catch(e){const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}}}
+  if(ttsApiOn()){const ab=await ttsArr(m.content,o);
+    if(ab){try{m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));playUrl(m._aurl);return;}catch(e){const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}}return;}
   speak(m.content,o);}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}
@@ -5927,7 +5930,7 @@ function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_re
 function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
 async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(text);
   if(!t)return new Promise(r=>setTimeout(r,1100));
-  if(v&&v.engine==='api'&&(aiCoreOn()||(S.settings.tts&&S.settings.tts.key))){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);return;}}
+  if(ttsApiOn()){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);}return;}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(res,Math.max(2500,t.length*200));}catch(e){res();}});}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();_call.sub={who:'me',text:t};updateCallSub();

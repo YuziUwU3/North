@@ -11,9 +11,9 @@ function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GA
 function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:120,tts:10,summary:2};return p[k]||0;}
 function aiLedgerRows(){const rows=(_aiAcct&&_aiAcct.ledger)||[],names={chat:'聊天',vision:'识图',image:'生图',tts:'语音',summary:'总结',manual:'手动加点',free:'赠送'};return rows.length?rows.map(x=>{const meta=x.meta||{},failed=x.status==='failed',billed=failed&&(meta.charged||x.billed),title=(names[x.feature]||x.feature)+(failed?(billed?' · 失败已计费':' · 失败已退点'):'');const note=meta.note||x.note||(failed?(meta.reason||'模型返回失败'):'');return `<div class="bill"><div><b>${esc(title)}</b><small>${esc((x.created_at||'').replace('T',' ').slice(0,16))}${note?' · '+esc(String(note).slice(0,80)):''}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`;}).join(''):'<div class="empty">还没有流水</div>';}
 
-function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);},80);
+function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);},80);
   const bal=_aiAcct&&_aiAcct.account?(_aiAcct.account.points||0):'--';
-  const voice=((S.settings.tts||{}).voice)||'未选择';
+  const voice=(tts.voice)||'未选择';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" onclick="aiAccountRefresh()">刷新</span></div>
   <div class="scroll" style="background:#0f1117;color:#e8eaf0;padding:12px">
     <div style="background:linear-gradient(135deg,#1f2937,#4f46e5);border-radius:16px;padding:18px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.12)">
@@ -22,7 +22,8 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();setTimeout(
       <div style="font-size:12px;color:#cbd5e1;word-break:break-all">用户ID：${esc(id)} <button class="minibtn" onclick="aiCopyId()" style="margin-left:6px">复制</button></div>
     </div>
     <div class="section">
-      <div class="it"><span>使用内置AI<br><small style="color:#888">聊天/识图/生图主通道暂不开放；开启需要管理密码。语音音色和语音测试不需要打开它。</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
+      <div class="it"><span>使用内置AI<br><small style="color:#888">聊天/识图/生图主通道暂不开放；开启需要管理密码。语音API有单独开关。</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
+      <div class="it"><span>语音API<br><small style="color:#888">开：角色语音条和语音电话走内置语音；关：使用手机系统音。</small></span><span class="sw ${tts.enabled?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音计费表</div>
@@ -33,10 +34,9 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();setTimeout(
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音音色</div>
-      <div class="hint" style="padding:0 14px 8px">这里单独测试语音，不需要打开“使用内置AI”。选中的音色会作为小手机默认语音音色。</div>
+      <div class="hint" style="padding:0 14px 8px">选中的音色会作为小手机默认语音音色。</div>
       <div class="it"><span>默认音色<small>${esc(voice)}</small></span><span class="v"><button class="minibtn" onclick="aiPullVoices()">拉取音色</button></span></div>
-      <div class="field" style="padding:0 14px"><label>语音专项测试</label><textarea id="ai_tts_text" rows="3" placeholder="输入一段只用于测试语音花销的话">我在测试这条语音的花销和声音效果。</textarea></div>
-      <div class="btns" style="padding:0 14px 10px"><button class="btn g" onclick="aiClearVoice()">清空音色</button><button class="btn p" onclick="aiTestVoice()">生成语音</button></div>
+      <div class="btns" style="padding:0 14px 10px"><button class="btn g" onclick="aiClearVoice()">清空音色</button><button class="btn p" onclick="aiTestVoice()">测试语音</button></div>
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">最近流水</div>
@@ -51,6 +51,7 @@ function aiToggleCore(){const ac=aiCoreInit();if(ac.enabled){ac.enabled=false;sa
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="aiCoreUnlock()">开启</button></div>`);
   setTimeout(()=>{const el=$('#ai_core_pin');if(el){el.focus();el.onkeydown=e=>{if(e.key==='Enter')aiCoreUnlock();};}},60);}
 function aiCoreUnlock(){const v=(($('#ai_core_pin')||{}).value||'').trim();if(v!=='206414'){toast('管理密码不对');return;}const ac=aiCoreInit();ac.enabled=true;save();closeModal();render();toast('已开启内置AI');}
+function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.enabled=!S.settings.tts.enabled;save();render();toast(S.settings.tts.enabled?'语音API已开启':'语音API已关闭');}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
 async function aiPullVoices(){toast('正在拉取音色…');
@@ -67,8 +68,8 @@ function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=id;save();closeModal();toast('已设为默认音色');if(cur().p==='aiaccount')render();}
 function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='';save();toast('已清空默认音色');render();}
-async function aiTestVoice(){const text=((document.getElementById('ai_tts_text')||{}).value||'我在测试这条语音的花销和声音效果。').trim().slice(0,500);
-  if(!text){toast('先输入测试语音文字');return;}
+async function aiTestVoice(){const text='我在测试这条语音的花销和声音效果。';
+  if(!((S.settings.tts||{}).enabled)){toast('先打开语音API');return;}
   toast('正在生成语音…');
   try{initAudio();const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||'',model:((S.settings.tts||{}).model)||''}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(d==='__T_O__'){toast('语音测试超时');return;}
