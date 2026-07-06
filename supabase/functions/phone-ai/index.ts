@@ -41,6 +41,18 @@ function guardedMessages(messages: unknown) {
   return [{ role: "system", content: CHAT_GUARD }, ...arr];
 }
 
+const IMAGE_GUARD = `Photo rules for this phone app:
+- The image must look like a casual first-person phone photo taken by the character, not a third-person staged photo.
+- Never show a clear front face. If the character is explicitly requested, use back view, side shadow, looking down, partial body, hand detail, or natural occlusion only.
+- If the user asks for a cat, pet, object, food, room, desk, document, scenery, gift, or any specific item, the subject must be only that thing. Do not include the character, face, hair, body, hands, mirror selfie, phone-covering person, or any human figure.
+- If the user asks what the character is doing, show the character's point of view: desk, tools, book, computer, work surface, or surroundings. Do not show face or half-body.
+- Only include the character himself when the user clearly asks for selfie, the character in frame, outfit, body, back view, side view, or a photo of him.
+- When the character is included, he is a young handsome adult male, visually consistent with previous photos.`;
+
+function guardedImagePrompt(prompt: unknown) {
+  return `${IMAGE_GUARD}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 1000)}`;
+}
+
 const PLANS = [
   { id: "p_990", name: "体验包", amount_cny: 9.9, points: 1000 },
   { id: "p_1990", name: "标准包", amount_cny: 19.9, points: 2300 },
@@ -350,7 +362,7 @@ Deno.serve(async (req) => {
         model = body.model || Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
         const data = await openai("/images/generations", {
           model,
-          prompt: String(body.prompt || "一张生活照片").slice(0, 1200),
+          prompt: guardedImagePrompt(body.prompt).slice(0, 1600),
           n: 1,
           size: body.size || "1024x1536",
           quality: body.quality || "medium",
