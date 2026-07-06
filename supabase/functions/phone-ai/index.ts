@@ -1,6 +1,6 @@
 // 小手机内置 AI · Supabase Edge Function
 // 环境变量：
-// SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// PHONE_SUPABASE_URL, PHONE_SERVICE_ROLE_KEY
 // OPENAI_API_KEY
 // 可选：OPENAI_BASE_URL=https://api.openai.com/v1
 // 可选：CHAT_MODEL=gpt-4o-mini, VISION_MODEL=gpt-4o-mini, IMAGE_MODEL=gpt-image-2
@@ -15,8 +15,8 @@ const cors = {
 };
 
 const PRICE: Record<string, number> = {
-  chat: 2,
-  vision: 10,
+  chat: 10,
+  vision: 25,
   image: 120,
   tts: 10,
   summary: 2,
@@ -29,8 +29,8 @@ const PLANS = [
 ];
 
 const supabase = createClient(
-  Deno.env.get("SUPABASE_URL") || "",
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+  Deno.env.get("PHONE_SUPABASE_URL") || "",
+  Deno.env.get("PHONE_SERVICE_ROLE_KEY") || "",
 );
 
 function json(data: unknown, status = 200) {
