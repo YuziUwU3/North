@@ -8,6 +8,9 @@ function openAIAccount(){if(_aiUnlocked){go('aiaccount');return;}
   setTimeout(()=>{const el=$('#ai_pin');if(el){el.focus();el.onkeydown=e=>{if(e.key==='Enter')aiUnlock();};}},60);}
 function aiUnlock(){const v=(($('#ai_pin')||{}).value||'').trim();if(v!=='0414'){toast('密码不对');return;}_aiUnlocked=true;closeModal();go('aiaccount');}
 function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
+function aiVoiceEnabled(){return typeof ttsEnabled==='function'?ttsEnabled(S.settings.tts||{}):!!((S.settings.tts||{}).enabled);}
+function aiVoiceRelayOn(){return !!((S.settings.tts||{}).relay&&aiCoreUrl());}
+function aiExternalTts(){const t=(typeof ttsCfg==='function'?ttsCfg():(S.settings.tts||{}));return t&&t.base&&t.key?t:null;}
 function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:120,tts:10,summary:2};return p[k]||0;}
 function aiLedgerTime(v){if(!v)return '';const d=new Date(v);if(isNaN(d))return String(v).replace('T',' ').slice(0,16);return d.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}
 function aiLedgerRows(){const rows=((_aiAcct&&_aiAcct.ledger)||[]).slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)),names={chat:'聊天',vision:'识图',image:'生图',tts:'语音',summary:'总结',manual:'手动加点',free:'赠送'};return rows.length?rows.map(x=>{const meta=x.meta||{},failed=x.status==='failed',billed=failed&&(meta.charged||x.billed),title=(names[x.feature]||x.feature)+(failed?(billed?' · 失败已计费':' · 失败已退点'):'');const note=meta.note||x.note||(failed?(meta.reason||'模型返回失败'):'');return `<div class="bill"><div><b>${esc(title)}</b><small>${esc(aiLedgerTime(x.created_at))}${note?' · '+esc(String(note).slice(0,80)):''}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`;}).join(''):'<div class="empty">还没有流水</div>';}
@@ -24,7 +27,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     </div>
     <div class="section">
       <div class="it"><span>使用内置AI<br><small style="color:#888">聊天/识图/生图主通道暂不开放；开启需要管理密码。语音API有单独开关。</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
-      <div class="it"><span>语音API<br><small style="color:#888">开：角色语音条和语音电话走内置语音；关：使用手机系统音。</small></span><span class="sw ${tts.enabled?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
+      <div class="it"><span>内置语音<br><small style="color:#888">开：角色语音条和语音电话走部署后台；关：若设置里填了外置海螺，则走外置海螺。</small></span><span class="sw ${aiVoiceRelayOn()?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音计费表</div>
@@ -52,11 +55,23 @@ function aiToggleCore(){const ac=aiCoreInit();if(ac.enabled){ac.enabled=false;sa
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="aiCoreUnlock()">开启</button></div>`);
   setTimeout(()=>{const el=$('#ai_core_pin');if(el){el.focus();el.onkeydown=e=>{if(e.key==='Enter')aiCoreUnlock();};}},60);}
 function aiCoreUnlock(){const v=(($('#ai_core_pin')||{}).value||'').trim();if(v!=='206414'){toast('管理密码不对');return;}const ac=aiCoreInit();ac.enabled=true;save();closeModal();render();toast('已开启内置AI');}
-function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.enabled=!S.settings.tts.enabled;save();render();toast(S.settings.tts.enabled?'语音API已开启':'语音API已关闭');}
+function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();render();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
 async function aiPullVoices(){toast('正在拉取音色…');
-  try{const d=await aiRelay('tts_voices',{});_aiVoiceList=(d&&d.voices)||[];_aiVoiceQ='';
+  try{const ext=aiExternalTts();
+    if(!aiVoiceRelayOn()&&ext&&/minimax/i.test(ext.base||'')){
+      const base=(ext.base||'').replace(/\/+$/,'');
+      const r=await fetch(base+'/v1/get_voice',{method:'POST',headers:{'Authorization':'Bearer '+ext.key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
+      const d=await r.json().catch(()=>null);
+      if(!d||(d.base_resp&&d.base_resp.status_code!==0)){toast('拉取失败：'+((d&&d.base_resp&&d.base_resp.status_msg)||r.status));return;}
+      const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
+      const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
+      _aiVoiceList=clones.concat(sys);_aiVoiceQ='';
+      if(!_aiVoiceList.length){toast('没有拉到音色，检查 MiniMax Key / GroupId');return;}
+      aiShowVoicePicker();return;
+    }
+    const d=await aiRelay('tts_voices',{});_aiVoiceList=(d&&d.voices)||[];_aiVoiceQ='';
     if(!_aiVoiceList.length){toast('没有拉到音色，检查 MiniMax Key / GroupId');return;}
     aiShowVoicePicker();
   }catch(e){toast('拉取失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}}
@@ -70,9 +85,16 @@ function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.
 function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=id;save();closeModal();toast('已设为默认音色');if(cur().p==='aiaccount')render();}
 function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='';save();toast('已清空默认音色');render();}
 async function aiTestVoice(){const text='我在测试这条语音的花销和声音效果。';
-  if(!((S.settings.tts||{}).enabled)){toast('先打开语音API');return;}
+  if(!aiVoiceEnabled()){toast('先打开语音API');return;}
   toast('正在生成语音…');
-  try{initAudio();const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||'',model:((S.settings.tts||{}).model)||''}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
+  try{initAudio();
+    if(!aiVoiceRelayOn()&&typeof ttsArr==='function'){
+      const ab=await Promise.race([ttsArr(text,{voice:{engine:'api',ttsVoice:((S.settings.tts||{}).voice)||''}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
+      if(ab==='__T_O__'){toast('语音测试超时');return;}
+      if(!ab){toast('没有拿到语音');return;}
+      const buf=await decodeBuf(ab);if(buf){playBuf(buf);toast('外置语音测试成功');}else toast('拿到语音数据，但播放失败');return;
+    }
+    const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||'',model:((S.settings.tts||{}).model)||''}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(d==='__T_O__'){toast('语音测试超时');return;}
     const audio=d&&d.data&&d.data.audio;if(!audio){toast('没有拿到语音');setTimeout(()=>aiAccountRefresh(true,true),600);return;}
     const ab=await fetch(audio).then(x=>x.arrayBuffer());const buf=await decodeBuf(ab);
