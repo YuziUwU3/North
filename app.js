@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v328 · AI账户滚动稳定';
+const APP_VER='v329 · AI余额自动同步';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -190,7 +190,9 @@ function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
   const uid=aiUserId(),sec=aiUserSecret();
   const r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},190000);
-  const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){const msg=(d&&d.error)||('HTTP '+r.status);if(r.status===402||/no-balance/i.test(msg))throw new Error('AI点数不足，请去「AI账户」充值或让管理员加点');throw new Error('内置AI失败：'+String(msg).slice(0,140));}return d;}
+  const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){const msg=(d&&d.error)||('HTTP '+r.status);if(r.status===402||/no-balance/i.test(msg))throw new Error('AI点数不足，请去「AI账户」充值或让管理员加点');throw new Error('内置AI失败：'+String(msg).slice(0,140));}
+  if(typeof aiAccountApplyResult==='function')aiAccountApplyResult(d);
+  return d;}
 async function chatAPI(messages,opt){opt=opt||{};let a=S.settings.chat;
   if(aiCoreOn()&&!opt.noRelay){const d=await aiRelay('chat',{messages,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,model:opt.model||''});return (d.data&&d.data.choices&&d.data.choices[0]&&d.data.choices[0].message&&d.data.choices[0].message.content||'').trim();}
   if(opt.aux&&S.settings.aux&&S.settings.aux.model){const x=S.settings.aux;a={base:x.base||a.base,key:x.key||a.key,model:x.model,temp:a.temp,maxTokens:a.maxTokens};}
