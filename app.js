@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v336 · 相册兼容修复';
+const APP_VER='v337 · 音乐分首迁移';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -798,7 +798,8 @@ function editMusicDistance(){musicInit();const v=prompt('相距多少公里？',
 function musicMenu(){musicInit();openModal(`<h3>一起听</h3>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicAdd()">＋ 添加歌曲</button>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicListModal()">歌单（${(S.music.songs||[]).length}）</button>
-  <button class="btn g" style="margin-bottom:8px" onclick="musicExportPack()">导出歌单文件</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="musicExportPack()">导出全部歌单</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicExportOneModal()">分首导出</button>
   <button class="btn g" style="margin-bottom:8px" onclick="musicImportPack()">导入歌单文件</button>
   <button class="btn g" style="margin-bottom:8px" onclick="setMusicBg()">换背景图</button>
   ${S.music.bg?`<button class="btn g" style="margin-bottom:8px" onclick="S.music.bg='';save();closeModal();render();toast('已恢复默认背景')">↩️ 恢复默认背景</button>`:''}
@@ -810,7 +811,15 @@ async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!s
   try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance||1400,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
     for(const s of songs){const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}pack.music.songs.push(x);}
     const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('歌单已导出');
-  }catch(e){toast('导出失败，文件可能太大');}}
+  }catch(e){toast('导出失败，文件太大；请用“分首导出”');}}
+function musicSafeName(s){return String(s||'未命名').replace(/[\\/:*?"<>|]/g,'_').slice(0,40)||'未命名';}
+async function musicExportOne(id){musicInit();const s=(S.music.songs||[]).find(x=>x.id===id);if(!s){toast('没找到这首');return;}toast('正在导出…');
+  try{const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}
+    const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[x],loop:false,distance:S.music.distance||1400,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:''}};
+    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机单曲_'+musicSafeName(s.title)+'.json';a.click();toast('已导出 '+(s.title||'这首歌'));
+  }catch(e){toast('这首也太大了，建议重新上传音频版');}}
+function musicExportOneModal(){musicInit();const songs=S.music.songs||[];const list=songs.length?songs.map(s=>`<div class="it"><span style="flex:1;color:#eee">${esc(s.title||'未命名')}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><button class="minibtn" onclick="musicExportOne('${s.id}')">导出</button></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌</div>';
+  openModal(`<h3>分首导出</h3><div class="hint">录屏/大文件不要一次性导出全部，点每首右边的“导出”，到主屏幕版再逐个导入。</div><div class="section" style="max-height:54vh;overflow:auto">${list}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function musicImportPack(){pickFile('.json',f=>{const r=new FileReader();r.onload=async()=>{try{const p=JSON.parse(r.result);if(!p||p.type!=='yibei-music-pack'||!p.music)throw 0;musicInit();const incoming=p.music.songs||[];let n=0;
       for(const raw of incoming){const s=Object.assign({},raw);if(S.music.songs.some(x=>x.id===s.id))s.id='m'+uid();if(s.file){const b=mDataURLBlob(s.file);delete s.file;if(b){s.src={t:'idb'};await mPut(s.id,b);}}S.music.songs.unshift(s);n++;}
       S.music.loop=!!p.music.loop;if(p.music.distance!=null)S.music.distance=p.music.distance;if(p.music.meAvatar)S.music.meAvatar=p.music.meAvatar;if(p.music.taAvatar)S.music.taAvatar=p.music.taAvatar;if(p.music.bg)S.music.bg=p.music.bg;save();closeModal();render();toast('已导入 '+n+' 首');
