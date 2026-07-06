@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v356 · 稳定外置语音';
+const APP_VER='v357 · 语音预加载';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -440,9 +440,16 @@ async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(m._aurl){playUrl(m._aurl);return;}
   if(m.audio){playUrl(m.audio);return;}
-  if(ttsApiOn()){const ab=await ttsArr(m.content,o);
-    if(ab){try{m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));playUrl(m._aurl);return;}catch(e){const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}}return;}
+  if(ttsApiOn()){const url=await warmVoiceMsg(m,o);if(url){playUrl(url);return;}return;}
   speak(m.content,o);}
+function warmVoiceMsg(m,o){
+  if(!m||m.role==='user'||m.type!=='voice'||m.audio||m._aurl||!ttsApiOn())return m&&m._aurl;
+  if(m._ttsTask)return m._ttsTask;
+  if(m._ttsFailAt&&Date.now()-m._ttsFailAt<15000)return null;
+  m._ttsTask=(async()=>{try{const ab=await ttsArr(m.content,o);
+    if(ab){try{m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));delete m._ttsFailAt;return m._aurl;}catch(e){}}
+    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(x=>{m._ttsTask=null;return x;});
+  return m._ttsTask;}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}
   speakMsg(m,m.role==='user'?S.me:getC(owner));}
@@ -5572,7 +5579,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
-      mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq);const vm=(vf0===0)?{role:'assistant',type:'text',content:mm[1]||'',time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:mm[1]||'',trans:mm[2]||'',time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}}continue;}
+      mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq);const vm=(vf0===0)?{role:'assistant',type:'text',content:mm[1]||'',time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:mm[1]||'',trans:mm[2]||'',time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(vm.type==='voice')setTimeout(()=>warmVoiceMsg(vm,c),80);if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}}continue;}
       mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pnm=pend.name||mm[2]||'商品';const ppr=pend.price||+mm[1]||0;const pc={role:'assistant',type:'paid',price:ppr,name:pnm,id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);
         const _isFood=pend.kind==='food'||/^外卖/.test(pend.shop||'');
         if(_isFood){S.giftbox=S.giftbox||[];S.giftbox.push({id:uid(),cid:id,name:pnm,price:ppr,kind:'food',buyTs:Date.now(),arriveTs:Date.now()+900000,delivered:false});msgs(id).push({role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'帮你付了外卖「'+pnm+'」，配送中（约15分钟送达）',time:Date.now(),id:uid()});}
