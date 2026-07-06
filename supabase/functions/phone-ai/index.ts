@@ -178,6 +178,67 @@ async function openai(path: string, body: unknown) {
   return data;
 }
 
+function hexToBase64(hex: string) {
+  let bin = "";
+  for (let i = 0; i < hex.length; i += 2) bin += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
+  return btoa(bin);
+}
+
+async function minimaxTTS(text: string, voiceId: string, model: string) {
+  const base = (Deno.env.get("MINIMAX_BASE_URL") || "https://api.minimaxi.com").replace(/\/+$/, "");
+  const key = Deno.env.get("MINIMAX_API_KEY") || "";
+  const groupId = Deno.env.get("MINIMAX_GROUP_ID") || "";
+  if (!key) throw new Error("missing-minimax-key");
+  const url = base + "/v1/t2a_v2" + (groupId ? ("?GroupId=" + encodeURIComponent(groupId)) : "");
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model,
+      text,
+      stream: false,
+      language_boost: "auto",
+      voice_setting: { voice_id: voiceId, speed: 1, vol: 1, pitch: 0 },
+      audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
+    }),
+  });
+  const data = await r.json().catch(() => null);
+  if (!r.ok || (data?.base_resp && data.base_resp.status_code !== 0)) {
+    throw new Error(`minimax-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
+  }
+  const hex = data?.data?.audio;
+  if (!hex) throw new Error(data?.base_resp?.status_msg || "minimax-no-audio");
+  return { audio: "data:audio/mpeg;base64," + hexToBase64(String(hex)), raw: data };
+}
+
+async function minimaxVoices() {
+  const base = (Deno.env.get("MINIMAX_BASE_URL") || "https://api.minimaxi.com").replace(/\/+$/, "");
+  const key = Deno.env.get("MINIMAX_API_KEY") || "";
+  const groupId = Deno.env.get("MINIMAX_GROUP_ID") || "";
+  if (!key) throw new Error("missing-minimax-key");
+  const url = base + "/v1/get_voice" + (groupId ? ("?GroupId=" + encodeURIComponent(groupId)) : "");
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ voice_type: "all" }),
+  });
+  const data = await r.json().catch(() => null);
+  if (!r.ok || (data?.base_resp && data.base_resp.status_code !== 0)) {
+    throw new Error(`minimax-voices-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
+  }
+  const clones = (data?.voice_cloning || []).map((v: Record<string, unknown>) => ({
+    id: String(v.voice_id || ""),
+    name: String(v.voice_name || v.voice_id || "我的克隆"),
+    clone: true,
+  })).filter((v: { id: string }) => v.id);
+  const system = (data?.system_voice || []).map((v: Record<string, unknown>) => ({
+    id: String(v.voice_id || ""),
+    name: String(v.voice_name || v.voice_id || "系统音色"),
+    clone: false,
+  })).filter((v: { id: string }) => v.id);
+  return clones.concat(system);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -270,6 +331,38 @@ Deno.serve(async (req) => {
         }
         return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
       }
+    }
+
+    if (action === "tts") {
+      const c = await charge(userId, clientSecret, "tts");
+      let model = "";
+      try {
+        const text = String(body.text || "").trim().slice(0, 1200);
+        if (!text) throw new Error("missing-tts-text");
+        model = body.model || Deno.env.get("TTS_MODEL") || "speech-02-turbo";
+        const voiceId = body.voice_id || Deno.env.get("TTS_VOICE_ID") || "male-qn-qingse";
+        const data = await minimaxTTS(text, voiceId, model);
+        const chars = [...text].length;
+        const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
+        await finishCharge(c.ledgerId, true, {
+          model,
+          voice_id: voiceId,
+          char_count: chars,
+          estimated_cny: Number((chars * cnyPerChar).toFixed(4)),
+        });
+        return json({ ok: true, data, charged: c.cost, balance: c.balance, chars });
+      } catch (e) {
+        if (errText(e).includes("missing-minimax-key")) {
+          await refund(userId, clientSecret, "tts", c.cost, c.ledgerId, errText(e));
+          throw e;
+        }
+        return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
+      }
+    }
+
+    if (action === "tts_voices") {
+      const voices = await minimaxVoices();
+      return json({ ok: true, voices });
     }
 
     return json({ ok: false, error: "unknown-action" }, 404);

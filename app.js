@@ -25,7 +25,7 @@ async function redeemInvite(code){try{
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v337 · 音乐分首迁移';
+const APP_VER='v339 · 海螺音色后台';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -393,6 +393,7 @@ function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=
   _curAudio.play().catch(()=>{});}
 async function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;}catch(e){}}
 async function _ttsOnce(t,vid,tts){let r;
+  if(aiCoreOn()){const d=await aiRelay('tts',{text:t,voice_id:vid||'',model:(tts&&tts.model)||''});const audio=d&&d.data&&d.data.audio;if(!audio)return {err:'内置AI无音频'};const ab=await fetch(audio).then(x=>x.arrayBuffer());return {buf:ab};}
   if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
     r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
   else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
@@ -410,21 +411,21 @@ async function _ttsOnce(t,vid,tts){let r;
   return {err:r.status+(detail?(' · '+detail):'')};}
 // 语音自动重试：偶发的 401/429/网络抖动(尤其 ElevenLabs 免费版)会让头一两条没声，这里悄悄退避重试，最多3次都失败才弹提示
 async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=S.settings.tts;
-  if(!(v&&v.engine==='api'&&tts&&tts.base&&tts.key))return null;const vid=v.ttsVoice||tts.voice||'';
+  if(!(v&&v.engine==='api'&&(aiCoreOn()||(tts&&tts.base&&tts.key))))return null;const vid=v.ttsVoice||(tts&&tts.voice)||'';
   let lastErr='';
   for(let i=0;i<3;i++){if(i>0)await new Promise(r=>setTimeout(r,i*600));/* 退避：0 → 0.6s → 1.2s */
     try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;lastErr=(res&&res.err)||'无音频';}catch(e){lastErr='网络';}}
   toast('语音API错误 '+lastErr+'（已自动重试）');return null;}
 async function decodeBuf(ab){if(!_audio||!ab)return null;try{initAudio();return await _audio.decodeAudioData(ab.slice(0));}catch(e){return null;}}
 async function speak(text,o){const v=o?getVoice(o):null;
-  if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}
+  if(v&&v.engine==='api'&&(aiCoreOn()||(S.settings.tts&&S.settings.tts.key))){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}
   const t=stripSpoken(text);if(!t||!('speechSynthesis'in window))return;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(m._aurl){playUrl(m._aurl);return;}
   if(m.audio){playUrl(m.audio);return;}
-  if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){const ab=await ttsArr(m.content,o);
+  if(v&&v.engine==='api'&&(aiCoreOn()||(S.settings.tts&&S.settings.tts.key))){const ab=await ttsArr(m.content,o);
     if(ab){try{m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));playUrl(m._aurl);return;}catch(e){const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}}}
   speak(m.content,o);}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
@@ -1384,7 +1385,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testVision()">测试识图</button></div><div id="testV" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
-      <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，按下面任一种填好，再把角色「语音音色」引擎切成 API：<br>· <b>MiniMax 海螺（推荐·国内·便宜·克隆很真）</b>：地址填 https://api.minimaxi.com、Key填你的、模型 speech-02-turbo、音色填 voice_id（系统音色见下面，或你克隆出来的ID）。<br>· <b>ElevenLabs</b>：地址 https://api.elevenlabs.io、模型 eleven_multilingual_v2、音色填 voice id。<b style="color:#7bd38d">想省额度</b>就把模型改成 <b>eleven_turbo_v2_5</b> 或 <b>eleven_flash_v2_5</b>（便宜约一半、日常听几乎没差）。</div>
+      <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，把角色「语音音色」引擎切成 API：<br>· <b>MiniMax 海螺（推荐·国内·便宜·克隆很真）</b>：开了内置AI后不用在这里填Key，模型默认 speech-02-turbo；每个角色可填不同 voice_id，点“拉取我的全部音色”可选系统音色和已克隆音色。<br>· <b>旧直连模式</b>：不开内置AI时，才需要在这里填接口地址和Key。</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.minimaxi.com 或 api.elevenlabs.io"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
       <div class="two" style="padding:0 14px 2px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-02-turbo / eleven_flash_v2_5"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="male-qn-qingse / voice id / 克隆ID"></div></div>
@@ -1550,10 +1551,11 @@ async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(i
 // 拉取海螺账号下的可用音色（系统音色 + 你克隆的），点一下填入「默认音色」
 let _voiceList=[],_voiceQ='';
 async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
-  if(!/minimax/i.test(base)){toast('这个只支持海螺(MiniMax)，地址要填 api.minimaxi.com');return;}
-  if(!key){toast('先填上面的 API Key');return;}
   toast('正在拉取音色…');
-  try{const r=await fetch(base+'/v1/get_voice',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
+  try{if(aiCoreOn()){const d=await aiRelay('tts_voices',{});_voiceList=(d&&d.voices)||[];_voiceQ='';showVoicePicker();return;}
+    if(!/minimax/i.test(base)){toast('这个只支持海螺(MiniMax)，地址要填 api.minimaxi.com');return;}
+    if(!key){toast('先填上面的 API Key，或打开 AI账户里的“使用内置AI”');return;}
+    const r=await fetch(base+'/v1/get_voice',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
     const d=await r.json();if(!d||(d.base_resp&&d.base_resp.status_code!==0)){toast('拉取失败：'+((d&&d.base_resp&&d.base_resp.status_msg)||r.status));return;}
     const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
     const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
@@ -5918,7 +5920,7 @@ function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_re
 function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
 async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(text);
   if(!t)return new Promise(r=>setTimeout(r,1100));
-  if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);return;}}
+  if(v&&v.engine==='api'&&(aiCoreOn()||(S.settings.tts&&S.settings.tts.key))){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);return;}}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(res,Math.max(2500,t.length*200));}catch(e){res();}});}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();_call.sub={who:'me',text:t};updateCallSub();
