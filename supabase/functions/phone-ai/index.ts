@@ -45,6 +45,8 @@ const IMAGE_GUARD = `Photo rules for this phone app:
 - The image must look like a casual first-person phone photo taken by the character, not a third-person staged photo.
 - Never show a clear front face. If the character is explicitly requested, use back view, side shadow, looking down, partial body, hand detail, or natural occlusion only.
 - If the user asks for a cat, pet, object, food, room, desk, document, scenery, gift, or any specific item, the subject must be only that thing. Do not include the character, face, hair, body, hands, mirror selfie, phone-covering person, or any human figure.
+- Clothing/outfit requests are different from object requests. If the request says the character should wear, put on, change into, show himself wearing, suit, formal wear, shirt, uniform, coat, or "what are you wearing", the image must include the same young male character wearing that outfit. Do not output only clothes, a hanger, a bed, a desk, or an empty room.
+- Only treat clothing as an object when the request clearly asks for the clothing itself, such as clothes on a hanger, folded clothes, or "just the clothes".
 - If the user asks what the character is doing, show the character's point of view: desk, tools, book, computer, work surface, or surroundings. Do not show face or half-body.
 - Only include the character himself when the user clearly asks for selfie, the character in frame, outfit, body, back view, side view, or a photo of him.
 - When the character is included, he is a young handsome adult male, visually consistent with previous photos.`;
