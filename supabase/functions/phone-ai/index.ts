@@ -159,8 +159,9 @@ async function refund(userId: string, clientSecret: string, feature: string, poi
 
 async function failCharged(ledgerId: string, cost: number, balance: number, model: string, e: unknown) {
   const reason = errText(e);
-  await finishCharge(ledgerId, false, { charged: true, model, reason });
-  return json({ ok: false, error: "model-failed-charged: " + reason, charged: cost, balance }, 502);
+  const note = "模型请求已经发出，按一次成本计费；失败原因：" + reason;
+  await finishCharge(ledgerId, false, { charged: true, model, reason, note });
+  return json({ ok: false, error: "model-failed-charged: " + reason, charged: cost, balance, billed: true, note }, 502);
 }
 
 async function openai(path: string, body: unknown) {
@@ -191,7 +192,7 @@ Deno.serve(async (req) => {
       const acct = await ensureAccount(userId, clientSecret);
       const { data: ledger } = await supabase
         .from("phone_ai_ledger")
-        .select("kind,feature,points,balance_after,status,created_at")
+        .select("kind,feature,points,balance_after,status,created_at,meta")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(20);
