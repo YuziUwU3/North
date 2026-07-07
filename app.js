@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v362 · 成年资料与亲密防跳戏';
+const APP_VER='v363 · 登录他微信转账';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -576,6 +576,8 @@ function buildSystem(c){
   if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
+  if(_main&&c._meWxTransfers&&c._meWxTransfers.length){const tr=c._meWxTransfers[0];s+='\n\n# 你最近发现的微信/钱包转账痕迹\n'+S.me.name+'曾登录你的微信钱包，从你这里转给ta自己 ¥'+(+tr.amount||0).toFixed(2)+(tr.note?'，备注：'+tr.note:'')+'。你要分清：这不是你主动给ta转账，是ta登你微信转走后留下的账单痕迹。';}
+  if(_main&&c._lastCallEnded&&Date.now()-c._lastCallEnded.ts<45*60000){const lc=c._lastCallEnded;const dir=lc.dir==='incoming'?'那通最初是你主动打给'+S.me.name+'的。':'那通最初是'+S.me.name+'主动打给你的。';s+='\n\n# 最近通话状态\n上一通'+(lc.kind==='video'?'视频':'语音')+'电话已经在 '+hm(lc.ts)+' 结束，现在没有正在通话。'+dir+'如果ta现在说打电话/打视频，这是要重新开始一通，不要说已经在打了。';}
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main&&S.travel&&S.travel.trips){const mineT=S.travel.trips.filter(x=>x.cid===c.id&&x.status==='upcoming');const ups=mineT.filter(x=>x.meet!==false);const soloT=mineT.filter(x=>x.meet===false&&(x.payer==='ta'||x._seenByChar));
@@ -641,6 +643,7 @@ function buildSystem(c){
       if(_tlk.length){const au=(S.me.appUsage&&S.me.appUsage.date===todayStr())?S.me.appUsage:{used:{},bonus:{}};s+='\n\n# 你给ta定的每日使用时长 & 今日已用\n'+_tlk.map(k=>'· '+LOCKABLE[k]+'：限'+_tl[k]+'分钟/天，今天ta已用 '+Math.floor(((au.used||{})[k]||0)/60)+' 分钟'+((au.bonus||{})[k]?'（你今天额外加了'+Math.floor(au.bonus[k]/60)+'分钟）':'')).join('\n');}
       const _sl=S.me.sleep&&S.me.sleep.records||[];
       if((S.me.sleep&&S.me.sleep.active)||_sl.length){s+='\n\n# '+S.me.name+'的睡眠记录（情侣空间里ta自己记的，你看得到，心疼ta、别让ta熬夜）\n'+(S.me.sleep&&S.me.sleep.active?'· 现在正在睡：从 '+hm(S.me.sleep.active)+' 开始睡的，还没醒。\n':'')+_sl.slice(0,5).map(r=>'· '+ymd(r.start)+' '+hm(r.start)+'睡 → '+hm(r.end)+'醒，睡了'+sleepDurTxt(r.end-r.start)).join('\n');}}}
+  s=s.replace('- 注意：如果你们【已经在通话中】，就不要再打了。','- 注意：只有系统明确告诉你当前正在通话、或当前就是通话界面，才算已经在通话中；历史里有电话记录不代表现在还在打。上一通结束后，如果ta说打电话/打视频，你要重新用 [来电|语音] 或 [来电|视频]，不要说已经在打了。');
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   if(isLover(c)){const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';}
@@ -649,7 +652,7 @@ function buildSystem(c){
   if(lu){const gap=Date.now()-lu.time;if(gap>3600000)s+='\n\n# 注意\n'+S.me.name+'已经 '+Math.floor(gap/3600000)+' 小时没回你消息了，你可以表达在意/想念或追问。';}
   // 他自己的手机内容（保持一致，被问到能答上来）
   const sp=S.spy[c.id];
-  if(sp)s+='\n\n# 你手机里现在的内容（这是你自己的，被问到要答得上、保持一致）\n位置：'+(sp.location||'')+'\n日记：'+(sp.diary||'')+(sp.notes?'\n便签：'+sp.notes.join('；'):'')+(sp.calls?'\n最近通话：'+sp.calls.map(k=>(k.who||'')+k.type+k.dur).join('；'):'')+(sp.browser?'\n浏览：'+sp.browser.join('；'):'')+(sp.orders?'\n订单：'+sp.orders.map(o=>o.item).join('；'):'')+(sp.wallet?'\n支出：'+sp.wallet.map(w=>w.item+w.amount).join('；'):'')+(sp.friends?'\n新好友：'+sp.friends.join('；'):'');
+  if(sp)s+='\n\n# 你手机里现在的内容（这是你自己的，被问到要答得上、保持一致）\n位置：'+(sp.location||'')+'\n日记：'+(sp.diary||'')+(sp.notes?'\n便签：'+sp.notes.join('；'):'')+(sp.calls?'\n最近通话：'+sp.calls.map(k=>(k.who||'')+k.type+k.dur).join('；'):'')+(sp.browser?'\n浏览：'+sp.browser.join('；'):'')+(sp.orders?'\n订单：'+sp.orders.map(o=>o.item).join('；'):'')+(sp.wallet?'\n支出/转账：'+sp.wallet.map(w=>w.item+w.amount).join('；'):'')+(sp.friends?'\n新好友：'+sp.friends.join('；'):'');
   // 天气
   if(S.weather&&isLover(c))s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
@@ -1785,7 +1788,9 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
 
   let title='',body='';
   if(app==='album'){title='相册';body=spyAlbumHTML(d);}
-  else if(app==='bank'){const bal=(c&&c.wallet!=null)?+c.wallet:((d.balance!=null)?+d.balance:(d.wallet||[]).reduce((s,w)=>s+(+w.amount||0),0));title='银行 / 钱包';body=`<div style="margin:12px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff"><div style="font-size:12px;opacity:.85">当前余额</div><div style="font-size:30px;font-weight:700">¥${bal.toFixed(2)}</div></div>`+sec('近期收支','#2bb36a',(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>');}
+  else if(app==='bank'){const bal=spyBalance(c,d);title='银行 / 钱包';body=`<div style="margin:12px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff"><div style="font-size:12px;opacity:.85">当前余额</div><div style="font-size:30px;font-weight:700">¥${bal.toFixed(2)}</div></div>`+
+    `<div class="section" style="margin:12px"><div class="it" style="gap:10px"><span style="flex:1;font-size:13px;color:#ddd">登录微信转给自己<small style="display:block;color:#888;margin-top:3px">仅在小手机内模拟，会留下账单痕迹，ta之后可能发现。</small></span><button class="minibtn" onclick="spyWxTransferOpen('${id}')">转给自己</button></div></div>`+
+    sec('近期收支','#2bb36a',(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>');}
   else if(app==='diary'){title='日记';const log=(d.diaryLog&&d.diaryLog.length)?d.diaryLog:(d.diary?[{date:ymd(d.time||Date.now()),text:d.diary}]:[]);
     body=log.length?log.map(e=>`<div style="margin:12px;padding:14px;background:#16161a;border-radius:12px"><div style="color:#feca57;font-size:12px;margin-bottom:6px">📅 ${esc(e.date)}${e.time?' '+esc(e.time):''}</div><div style="font-size:14px;color:#ddd;line-height:1.8;white-space:pre-wrap">${esc(e.text)}</div></div>`).join(''):'<div class="empty" style="padding:34px">还没写日记</div>';}
   else if(app==='todo'){title='今日日程';const td=(d.todo&&d.todo.date===todayStr())?d.todo.items:[];const done=td.filter(x=>x.done).length;
@@ -1816,6 +1821,19 @@ function spyChangePwd(id){const c=getC(id);if(!c)return;const el=document.getEle
 function spySetPhone(id){const c=getC(id);if(!c)return;const el=document.getElementById('spyphone');const v=(el?el.value:'').trim().replace(/\s/g,'');
   if(v&&!/^\d{6,15}$/.test(v)){toast('手机号请填数字');return;}
   getSpy(c).phone=v;save();render();toast(v?('手机号已设为 '+v):'已清空手机号');}
+function spyBalance(c,d){return (c&&c.wallet!=null)?(+c.wallet||0):((d&&d.balance!=null)?(+d.balance||0):((d&&d.wallet)||[]).reduce((s,w)=>s+(+w.amount||0),0));}
+function setSpyBalance(c,d,bal){bal=Math.max(0,+bal||0);if(c&&c.wallet!=null)c.wallet=+bal.toFixed(2);else if(d)d.balance=+bal.toFixed(2);}
+function spyWxTransferOpen(id){const c=getC(id),d=S.spy[id]||getSpy(c);if(!c||!d)return;const bal=spyBalance(c,d);
+  const raw=prompt('从'+(c.remark||c.name)+'微信转给自己多少钱？\n当前余额约 ¥'+bal.toFixed(2),'52');if(raw==null)return;
+  const amount=Math.min(bal,Math.max(0,+String(raw).replace(/[^\d.]/g,'')||0));if(amount<=0){toast('金额不对');return;}
+  const note=prompt('转账备注（可留空）：','')||'';spyWxTransferDo(id,amount,note);}
+function spyWxTransferDo(id,amount,note){const c=getC(id),d=S.spy[id]||getSpy(c);if(!c||!d)return;const bal=spyBalance(c,d),actual=Math.min(bal,Math.max(0,+amount||0));
+  if(actual<=0){toast('余额不够');return;}setSpyBalance(c,d,bal-actual);
+  d.wallet=d.wallet||[];d.wallet.unshift({item:'微信转账给'+S.me.name+(note?'：'+note:''),amount:-actual,when:ymd(Date.now())+' '+hm()});d.wallet=d.wallet.slice(0,40);
+  addBill('in',actual,'登录'+(c.remark||c.name)+'微信转给自己'+(note?'：'+note:''));c._meWxTransfers=c._meWxTransfers||[];
+  c._meWxTransfers.unshift({id:uid(),ts:Date.now(),amount:actual,note:note||''});c._meWxTransfers=c._meWxTransfers.slice(0,20);
+  save();render();toast('已转给自己 ¥'+actual.toFixed(2)+'，并退出微信');
+  if(!c.blocked)setTimeout(()=>scheduleReply(id,'[系统：你刚在自己的微信钱包账单里发现：'+S.me.name+'登录过你的微信，并从你的余额里转给ta自己 ¥'+actual.toFixed(2)+(note?'，备注：'+note.slice(0,24):'')+'。这不是你主动转账，是ta登你微信转走后留下的账单痕迹。你现在自然来找ta反应：可以质问、吃醋、无奈、纵容、要解释或让ta还回来，按你人设来，别太长。]'),(80+Math.floor(Math.random()*90))*1000);}
 
 // 他的记仇小本本（在他手机里；他自己会划掉，你也能手动加/删）
 function spyGrudgeSec(id){const c=getC(id);if(!c)return '';const g=grudgesOf(c);const undone=g.filter(x=>!x.done).length;
@@ -3900,7 +3918,14 @@ function jailHeartRush(ms){_jailHeartMs=ms||340;if(_jailHeartT)clearTimeout(_jai
 function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
   if(S.jail&&S.jail.active)return;/* 已经在小黑屋里了，别重复进（防"结束后重复拉进去"的bug）*/
   if(!test&&S.jail&&S.jail.releasedAt&&Date.now()-S.jail.releasedAt<300000)return;/* 刚放出来不到5分钟，别立刻又被自动拉回去 */
-  if(typeof _call!=='undefined'&&_call){try{clearInterval(_callTimer);}catch(e){}try{ringStop();}catch(e){}_call=null;_callBusy=false;_callPend=null;try{renderCall();}catch(e){}}
+  if(typeof _call!=='undefined'&&_call){
+    const ended={ts:Date.now(),kind:_call.kind,dir:_call.dir||(_call.state==='incoming'?'incoming':'outgoing'),byAI:true,dur:_call.start?Math.floor((Date.now()-_call.start)/1000):0,reason:'jail'};
+    c._lastCallEnded=ended;
+    try{clearInterval(_callTimer);}catch(e){}
+    try{ringStop();}catch(e){}
+    _call=null;_callBusy=false;_callPend=null;
+    try{renderCall();}catch(e){}
+  }
   const _gd=(!test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   const _gtxt=_gd.length?('\n你记仇小本本上还没清的旧账（这次正好借机一笔一笔跟ta算清楚，一条都别漏）：\n'+_gd.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n')):'';
   S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,optRounds:0,since:Date.now()};save();go('jail');jailIntro();
@@ -5720,6 +5745,10 @@ async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
 let _replyTimers={};
 let _replying=null;
 function scheduleReply(id,note){
+  if(note&&_call&&_call.state==='active'&&_call.id===id&&/任务|便签|没完成|未完成|完成|验收|奖励|惩罚|罚/.test(note)){
+    callAI(String(note).replace(/\]\s*$/,'\n【重要·此刻正在通话中】你们正在通话，这件事必须在电话里直接说，绝对不要另发微信消息。]'));
+    return;
+  }
   // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
   if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();return;}
   clearTimeout(_replyTimers[id]);_replyTimers[id]=setTimeout(()=>aiReply(id,note),(Number(S.settings.replyDelay)||0)*1000);}
@@ -5888,7 +5917,7 @@ function ringStart(){ringStop();ensureAudio();if(!_audio)return;let on=false;
 function ringStop(){if(_ring){clearInterval(_ring);_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
 function blip(freq,dur){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(Math.min(1,.2*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
 function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
-  _call={id,kind,state:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};initAudio();ringStart();showCallBanner(c);
+  _call={id,kind,state:'incoming',dir:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};initAudio();ringStart();showCallBanner(c);
   clearTimeout(_callMissT);_callMissT=setTimeout(()=>callMissed(id),15000);}// 来电只先弹横幅；15秒没接=未接
 function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const label=_call.kind==='video'?'视频':'语音';
   b.innerHTML=`<div onclick="openIncoming()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm" style="display:flex;align-items:center;gap:5px">${svgIc(label==='视频'?'video':'phonecall',13,'#9a9')}邀请你${label}通话…</div></div></div><span class="cbtn red" style="width:30px;height:30px;margin-left:4px" onclick="event.stopPropagation();declineCall()">${svgIc('hangup',15,'#fff')}</span><span class="cbtn green" style="width:30px;height:30px" onclick="event.stopPropagation();answerCall()">${svgIc('phonecall',15,'#fff')}</span>`;
@@ -5898,28 +5927,33 @@ function openIncoming(){if(!_call)return;audioUnlock();_call.opened=true;hideCal
 function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话';_call=null;_callBusy=false;_callPend=null;renderCall();
   msgs(id).push({role:'user',type:'sys',content:'未接来电 · '+kindTxt,time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
   const c=getC(id);if(c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，响了好一会儿ta都没接（未接来电）。你有点担心又有点不爽，主动发条消息问ta去哪了/在干嘛/怎么不接电话（符合你心情值和人设，别凶过头）。]'),1500);}
-function placeCall(id,kind){const c=getC(id);if(!c)return;audioUnlock();_call={id,kind,state:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
+function placeCall(id,kind){const c=getC(id);if(!c)return;audioUnlock();_call={id,kind,state:'outgoing',dir:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
   blip(600,.15);setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
 function answerCall(autoByThem){if(!_call)return;audioUnlock();ringStop();clearTimeout(_callMissT);hideCallBanner();blip(880,.12);
-  _call.state='active';_call.opened=true;_call.start=Date.now();_call.lastUserTs=Date.now();_call.silentStage=0;const proR=_call._proReason;
+  const dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');
+  _call.state='active';_call.dir=dir;_call.opened=true;_call.start=Date.now();_call.lastUserTs=Date.now();_call.silentStage=0;const proR=_call._proReason;
   clearInterval(_callTimer);_callTimer=setInterval(renderCallTime,1000);clearInterval(_callSilTimer);_callSilTimer=setInterval(checkCallSilence,15000);renderCall();
-  callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话'+(proR?'——这通是你自己主动打给ta的，因为你'+proR+'。开口先自然把你主动找ta的心情说出来（黏ta、撒娇、念叨想ta），口语化短句':'，自然开口，口语化短句')+'。]');}
+  const dirText=dir==='incoming'
+    ? '这通电话是你主动打给'+S.me.name+'的，'+S.me.name+'刚接通。之后提起时绝对不要说成ta打给你。'
+    : '这通电话是'+S.me.name+'主动打给你的，你刚接通。之后提起时绝对不要说成你打给ta。';
+  callAI('[系统：'+dirText+(_call.kind==='video'?' 这是视频电话。':' 这是语音电话。')+(proR?' 这通是你自己主动打给ta的，因为你'+proR+'。开口先自然把你主动找ta的心情说出来，口语化短句。':' 自然开口，口语化短句。')+']');}
 function declineCall(){if(!_call)return;ringStop();endCallTimers();hideCallBanner();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming',wasCb=!!_call._cb,_kind=_call.kind;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
   _call=null;_callBusy=false;_callPend=null;renderCall();if(cur().p==='chat')render();
   const c=getC(id);if(wasIn&&c&&!c.blocked){
     if(wasCb)maybeCallBack(id,_kind,false);// 她连回拨都不接，是不是还追，看他心情
     else setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，ta拒接了。你察觉到了，主动发消息问ta为什么不接、在干嘛（符合你心情值和人设）。]'),2500);}}
-function hangupCall(byAI){if(!_call)return;blip(300,.3);endCallTimers();hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;
+function hangupCall(byAI){if(!_call)return;blip(300,.3);endCallTimers();hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
   msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+kindTxt+'结束 · 时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
   _call=null;_callBusy=false;_callPend=null;renderCall();if(cur().p==='chat')render();
   summarizeCall(id,kindTxt,_sess);
-  const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';
+  const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';const dirTxt=_dir==='incoming'?'这通电话最初是你主动打给'+S.me.name+'的。':'这通电话最初是'+S.me.name+'主动打给你的。';
+  if(c){c._lastCallEnded={ts:Date.now(),kind:_kind,dir:_dir,byAI:!!byAI,dur};save();}
   if(c&&!c.blocked){
-    if(byAI)setTimeout(()=>aiReply(id,'[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'),2500);
+    if(byAI)setTimeout(()=>aiReply(id,'[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。'+dirTxt+'挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'),2500);
     else if(dur<25)maybeCallBack(id,_kind,true);// 她没聊几句就莫名其妙挂了/闹脾气逃避 → 至少再回拨一次，之后看心情
-    else{c._cbTries=0;save();setTimeout(()=>aiReply(id,'[系统：你们这通'+kindTxt+'聊了'+durTxt+'，是'+S.me.name+'挂断的，你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你人设）。]'),2500);}
+    else{c._cbTries=0;save();setTimeout(()=>aiReply(id,'[系统：你们这通'+kindTxt+'聊了'+durTxt+'，是'+S.me.name+'挂断的。'+dirTxt+'你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你人设）。]'),2500);}
   }}
 // 有效打电话几率：设置里的几率 × 这个角色的黏人度/主动度（黏人主动的更爱打、高冷独立的很少打）
 function effCallProb(c){const cp=(S.settings.callProb==null?35:+S.settings.callProb);const t=(c&&c.traits)||{};const cl=(t.cling!=null?+t.cling:50),ac=(t.active!=null?+t.active:50);return Math.max(0,Math.min(100,Math.round(cp*(1+(((cl+ac)/2-50)/50)*0.8))));}
@@ -5947,9 +5981,10 @@ function checkCallSilence(){if(!_call||_call.state!=='active')return;
   const T1=q,T2=q*3,T3=q*6,T4=Math.max(60,q*6+5);// 询问 → 再询问 → 挂断重拨 → 兜底挂断
   const sil=Date.now()-(_call.lastUserTs||_call.start||Date.now());const stage=_call.silentStage||0;
   if(sil>=T4*M){_call.silentStage=9;hangupCall(true);return;}// 兜底自动挂断
-  if(stage<3&&sil>=T3*M){_call.silentStage=3;const id=_call.id,kind=_call.kind,sess=_call.session;
+  if(stage<3&&sil>=T3*M){_call.silentStage=3;const id=_call.id,kind=_call.kind,sess=_call.session,dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing'),dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
     summarizeCall(id,kind==='video'?'视频通话':'语音通话',sess);
     msgs(id).push({role:'user',type:'sys',content:'对方因你长时间没回应挂断了',time:Date.now(),id:uid()});
+    const c0=getC(id);if(c0){c0._lastCallEnded={ts:Date.now(),kind,dir,byAI:true,dur,reason:'silent-redial'};}
     endCallTimers();ringStop();_call=null;_callBusy=false;_callPend=null;renderCall();if(cur().p==='chat'&&cur().id===id)render();
     setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked)return;
       if(effCallProb(cc)<=0||Math.random()*100>=effCallProb(cc)){aiReply(id,'[系统：刚才通话你因'+S.me.name+'长时间没出声而挂断了，这次没再回拨，改发条文字消息关心一下ta（问怎么突然不说话了/是不是走开了/有点担心，符合你人设）。]');return;}
@@ -5983,7 +6018,7 @@ function makeMiniDraggable(){const L=$('#callLayer');if(!L||!L.classList.contain
     if(!raf)raf=requestAnimationFrame(paint);},{passive:false});
   const up=e=>{if(!drag)return;drag=false;L.classList.remove('dragging');if(raf){cancelAnimationFrame(raf);raf=0;paint();}try{L.releasePointerCapture(e.pointerId);}catch(_){}if(moved&&_call)_call._mpos={x:nx,y:ny};};
   L.addEventListener('pointerup',up);L.addEventListener('pointercancel',up);}
-function renderCall(){const L=$('#callLayer');const _clrPos=()=>{L.style.left=L.style.top=L.style.right=L.style.bottom='';};
+function renderCall(){const L=$('#callLayer');if(!L)return;const _clrPos=()=>{L.style.left=L.style.top=L.style.right=L.style.bottom='';};
   if(!_call){L.className='callscreen';L.innerHTML='';L.style.background='';_clrPos();return;}
   if(_call.state==='incoming'&&!_call.opened){L.className='callscreen';L.innerHTML='';L.style.background='';_clrPos();return;}// 来电时先只显示横幅，点开才进整屏
   const c=getC(_call.id);const video=_call.kind==='video';
@@ -6027,6 +6062,9 @@ async function callAI(sysNote,opts){if(!_call)return;
     const _lang=(getVoice(c).lang||'zh');const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。';
     cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
+    if(_call.dir==='incoming')cf+='\n- 通话方向：这通电话是你主动打给'+S.me.name+'，ta只是接听；之后提起时绝对不要说成ta打给你。';
+    else if(_call.dir==='outgoing')cf+='\n- 通话方向：这通电话是'+S.me.name+'主动打给你，你只是接听；之后提起时绝对不要说成你打给ta。';
+    cf+='\n- 如果你要催ta任务、验收任务、说任务没完成，必须就在这通电话里直接说，绝对不要另发微信消息。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句的中文翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
