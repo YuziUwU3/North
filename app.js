@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v359 · 稳定照片意图';
+const APP_VER='v360 · 隐藏关系进度';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -122,7 +122,7 @@ function aiDone(){_aiLoadN=Math.max(0,_aiLoadN-1);if(_aiLoadN<=0){_aiLoadN=0;con
 // 生成内容带自动重试：parseFn 解析失败/空就重试，最多 tries 次，全失败返回 null
 async function aiGen(messages,opt,parseFn,tries){tries=tries||3;for(let i=0;i<tries;i++){try{const r=await chatAPI(messages,opt);const out=parseFn(r);if(out!=null&&(out.length===undefined||out.length>0))return out;}catch(e){}}return null;}
 function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
-function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c._blk)c._blk={main:!!c.blocked};if(!c.imgLock)c.imgLock=buildImgLock(c);}return c;}
+function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c._blk)c._blk={main:!!c.blocked};if(!c.imgLock)c.imgLock=buildImgLock(c);if(c.affection==null)c.affection=affBase(c);if(c.affectionLocked==null)c.affectionLocked=false;if(c.taskOff==null)c.taskOff=false;}return c;}
 function hashStr(s){s=''+(s||'');let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0);}
 function pickBySeed(arr,seed,shift){return arr[(Math.abs(seed+(shift||0))%arr.length)|0];}
 function buildImgLock(c){
@@ -141,6 +141,13 @@ function moodNow(c){if(!c)return 70;let v=(c.moodVal==null?70:c.moodVal);const a
   if(at&&v!==70){const hrs=(Date.now()-at)/3600000;const back=Math.min(Math.abs(70-v),hrs*4);v=v+(70>v?back:-back);}
   return Math.round(v);}
 function adjMood(id,d){const c=getC(id);if(!c)return;c.moodVal=Math.max(0,Math.min(100,moodNow(c)+d));c.moodAt=Date.now();save();}
+function affBase(c){const r=((c&&c.relation)||'')+' '+((c&&c.persona)||'');if(/恋人|男友|女友|男朋友|女朋友|老公|老婆|对象|未婚|爱人|情侣|伴侣|相恋|订婚|夫妻/.test(r))return 62;if(/朋友|好友|同学|同事|普通|陌生|网友/.test(r))return 18;return 28;}
+function affNow(c){if(!c)return 1;let v=c.affection==null?affBase(c):+c.affection;return Math.max(1,Math.min(100,Math.round(v)||1));}
+function affStage(v){return v>=86?'很亲密':v>=70?'亲密':v>=50?'熟悉':v>=30?'靠近中':v>=15?'普通':'疏离';}
+function affTone(c){const v=affNow(c),nm=S.me.name;if(v>=86)return '你和'+nm+'已经非常亲密，像长期稳定伴侣，关心、占有欲、管着ta都可以自然一点，但仍按你的人设拿捏分寸。';if(v>=70)return '你已经很在意'+nm+'，会主动关心、吃醋、想靠近，语气比普通朋友亲密。';if(v>=50)return '你对'+nm+'比较熟悉，有明显好感，会自然照顾ta，但还不到无条件黏人。';if(v>=30)return '你对'+nm+'正在慢慢靠近，可以温和回应、偶尔关心，别一下子太亲密或太管束。';if(v>=15)return '你和'+nm+'只是普通关系，保持礼貌和一点距离，别过度管ta、别像恋人一样安排ta。';return '你对'+nm+'还很疏离或有点冷淡，少主动管束，少说亲密称呼，先观察ta。';}
+function affInterestHit(text,c){text=''+(text||'');const p=((c&&c.persona)||'')+' '+((c&&c.signature)||'')+' '+((c&&c.job)||'');const hits=['喜欢','爱好','兴趣','在意','珍惜','工作','职业','梦想','猫','音乐','电影','书','吃饭','睡觉','想你','谢谢','辛苦','对不起','抱抱','陪你','好看','帅','厉害'].filter(k=>text.includes(k)&&(p.includes(k)||/谢谢|辛苦|对不起|抱抱|陪你|想你|好看|帅|厉害/.test(k)));return hits.length;}
+function affDeltaFor(text,c){text=''+(text||'');if(!text.trim())return 0;let d=0;if(/谢谢|辛苦|想你|喜欢你|爱你|陪你|抱抱|哄你|对不起|错了|好看|帅|厉害|在乎你|心疼/.test(text))d+=1+Math.min(2,affInterestHit(text,c));if(/滚|烦死|讨厌你|闭嘴|别管我|拉黑|删除|分手|恶心|废物|有病|不想理你/.test(text))d-=2;if(/骗你|不需要你|关你什么事|你谁啊/.test(text))d-=1;if(d>3)d=3;if(d<-3)d=-3;return d;}
+function maybeAffectionShift(id,c,lastUser,reply){if(!isMain()||!c||c.affectionLocked)return;const now=Date.now();if(now-(c._affAt||0)<180000)return;const txt=((lastUser&&msgToText(lastUser))||'')+'\n'+(reply||'');const d=affDeltaFor(txt,c);if(!d)return;c.affection=Math.max(1,Math.min(100,affNow(c)+d));c._affAt=now;save();}
 /* ===== 小号（多身份）===== */
 function actId(){return (S.me&&S.me.active)||'main';}
 function isMain(){return actId()==='main';}
@@ -523,6 +530,8 @@ function buildSystem(c){
   {const _sp2=getSpy(c);if(_sp2&&_sp2.phone)s+='\n\n# 你的手机号\n你的手机号是 '+_sp2.phone+'，你记得自己的号码。';}
   if(c._loginCode&&c._loginCode.exp>Date.now())s+='\n\n# 手机验证码（你自己拿主意要不要给）\n你手机刚收到一条短信验证码：'+c._loginCode.code+'。这是'+S.me.name+'想登录你的微信、点了"找回密码"才发到你手机的。ta大概会来跟你要这个验证码——要不要告诉ta、或者反问ta想干嘛/吃醋、或者故意逗ta不给，全看你的人设和当下心情。别主动报出来，除非ta问起。\n【铁律】如果你【决定把验证码告诉ta】，就【必须一字不差地报出上面这个真实的验证码「'+c._loginCode.code+'」】，绝对不能自己瞎编一个数字、也不能记错报错——报错了ta就登不进去。如果你不想给，就明说不给/逗ta/让ta哄你，但【别报一个假号糊弄】。';
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';
+  {const av=affNow(c);s+='\n\n# 你和'+S.me.name+'现在的关系分寸（隐藏设定，绝不能说出数值/好感度/攻略/进度条）\n当前阶段：'+affStage(av)+'。'+affTone(c)+'\n你只能把它表现成真实的人际距离：熟不熟、在不在意、会不会吃醋、愿不愿意主动关心。绝不要告诉ta这是系统数值，绝不要说"好感度增加/减少"。聊到你感兴趣、被认真对待、被哄好时可以慢慢软化；被冒犯、冷落、敷衍时可以自然变冷。';}
+  if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
   if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观都不变，身份不丢。但是：\n- 你人设里写的那个恋人/未婚妻/女朋友（不管叫什么名字），指的【不是】现在跟你聊天的这个人。哪怕名字相同，也要当成【完全不同的陌生人】，绝不要把对恋人的感情、回忆、亲密称呼（"宝贝"等）用到ta身上。\n- 你和ta【没有任何过往】，一切从这个聊天【从零开始】，就当是刚加上的陌生网友。要不要理ta、热情还是冷淡、慢慢熟还是保持距离，完全由你按人设和此刻感受决定。\n- 你心里其实是有恋人的人，对突然来搭讪的陌生人，本就该有分寸/警惕，别轻易交心。\n- 重要：你不能拉黑'+S.me.name+'，也不要输出[拉黑]。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
@@ -578,7 +587,7 @@ function buildSystem(c){
     const _gn=gund.length;
     if(_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
-    if(tt){const dn=tt.list.filter(x=>x.done).length;const _cap=c.taskN||3;const _nReal=tt.list.filter(x=>!x.truth).length;const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。'+(_nReal>=_cap?'\n【任务便签已满、到上限了】今天不能再往任务便签里加新任务条目了。你要是还想让ta做别的，只能在聊天里【口头】要求ta去做（说说而已，不会再生成新的任务条目）。':'');}}
+    if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=c.taskN||3;const _nReal=tt.list.filter(x=>!x.truth).length;const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。'+(_nReal>=_cap?'\n【任务便签已满、到上限了】今天不能再往任务便签里加新任务条目了。你要是还想让ta做别的，只能在聊天里【口头】要求ta去做（说说而已，不会再生成新的任务条目）。':'');}}
   // 作息 / 此刻在哪
   const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -2750,7 +2759,7 @@ function declineHome(mid){let m;for(const k in S.messages){const x=S.messages[k]
 
 /* ---------- 任务便签（他给我布置每日任务）---------- */
 let _taskBusy=false;
-function taskC(){return (S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked)||null;}
+function taskC(){const cc=S.couple&&getC(S.couple.cid);return (cc&&!cc.deleted&&!cc.blocked&&!cc.taskOff&&cc)||S.contacts.find(x=>!x.deleted&&!x.blocked&&!x.taskOff&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked&&!x.taskOff)||null;}
 function tasksToday(c){const t=c&&c.tasks;return (t&&t.date===todayStr())?t:null;}
 function _taskNorm(s){return (''+s).replace(/[\s，。、！!？?.~…：:；;「」『』""''（）()]/g,'');}
 // 判断 text 是否和 list 里已有任务重复：一模一样 / 子串 / 共享强关键字(检讨等) / 关键字高度重合
@@ -2771,7 +2780,7 @@ function postedSince(kind,since){since=since||0;
   if(kind==='douyin')return (S.dy&&S.dy.mine||[]).some(v=>(v.ts||0)>since);
   return false;}
 function renderTasks(){const c=taskC();
-  if(!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">任务便签</span><span class="r"></span></div><div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">还没有恋人角色～<br>先创建一个角色（最好在情侣空间绑定），ta就能给你布置任务啦</div></div>`;
+  if(!c){const off=S.contacts.some(x=>!x.deleted&&!x.blocked&&x.taskOff);return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">任务便签</span><span class="r"></span></div><div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">${off?'已关闭布置任务的角色不会再给你安排任务。':'还没有恋人角色～<br>先创建一个角色（最好在情侣空间绑定），ta就能给你布置任务啦'}</div></div>`;}
   checkTaskPenalty(c);const t=tasksToday(c);const n=c.taskN||3;
   let body;
   if(!t){body=`<div style="margin:14px;padding:20px;border-radius:16px;background:linear-gradient(145deg,#f59e0b,#b45309);color:#fff;text-align:center">
@@ -2794,7 +2803,7 @@ function renderTasks(){const c=taskC();
       <div class="hint" style="padding:6px 16px">手机任务会真的验证（作文要交给ta看、发布类要真发了、步数要够），别糊弄~ 现实任务靠你自觉，骗ta的话线下要罚的</div>`;}
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">任务便签</span><span class="r"></span></div>
     <div class="scroll" style="background:#000">${body}<div style="height:20px"></div></div>`;}
-async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');return;}if(tasksToday(c)){toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
+async function genTasks(){const c=taskC();if(!c){toast('没有可布置任务的角色');return;}if(c.taskOff){toast('这个角色已关闭布置任务');return;}if(tasksToday(c)){toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
   checkTaskPenalty(c);_taskBusy=true;render();toast('ta在琢磨今天怎么安排你…');
   const n=c.taskN||3;
   const hist=(c.taskHist||[]).map(s=>({text:s}));// 最近几天布置过的任务，用来防止重复
@@ -4408,6 +4417,11 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     <div class="two"><div class="field"><label>怎么称呼你</label><input id="c_call" value="${esc(c.callme||'')}" placeholder="宝宝/小猫/你的名字"></div><div class="field"><label>他的自称</label><input id="c_self" value="${esc(c.selfcall||'')}" placeholder="我/哥/为父"></div></div>
     <div class="field"><label>口头禅（可空）</label><input id="c_catch" value="${esc(c.catchphrase||'')}" placeholder="他爱说的话，如 乖/听话"></div>
     <div class="field"><label class="avline" style="font-weight:400">不让这个角色发表情包<span class="sw ${c.noSticker?'on':''}" id="c_nostk" onclick="this.classList.toggle('on')"></span></label></div>
+    <div class="section" style="margin:0 0 10px">
+      <div class="it"><span>关闭布置任务<br><small style="color:#888">关闭后ta不会自动或口头给你加任务</small></span><span class="sw ${c.taskOff?'on':''}" id="c_taskoff" onclick="this.classList.toggle('on')"></span></div>
+      <div class="field"><label>关系进度 <b id="c_affv" style="color:#ff8fab">${affNow(c)}</b><small style="color:#888">/100 · 隐藏</small></label><input type="range" min="1" max="100" step="1" value="${affNow(c)}" id="c_aff" oninput="var b=document.getElementById('c_affv');if(b)b.textContent=this.value" style="width:100%"></div>
+      <div class="it"><span>固定关系进度<br><small style="color:#888">固定后不会自动变化</small></span><span class="sw ${c.affectionLocked?'on':''}" id="c_afflock" onclick="this.classList.toggle('on')"></span></div>
+    </div>
     ${sliders}
     </div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveContact('${c.id}',${!!c._new})">保存</button></div>`);
@@ -4420,6 +4434,9 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   c.signature=$('#c_sig').value.trim();c.persona=$('#c_persona').value.trim();c.greeting=$('#c_greet').value.trim();
   c.msgMin=Math.max(1,+$('#c_mmin').value||1);c.msgMax=Math.max(c.msgMin,+$('#c_mmax').value||4);
   c.noSticker=!!($('#c_nostk')&&$('#c_nostk').classList.contains('on'));
+  c.taskOff=!!($('#c_taskoff')&&$('#c_taskoff').classList.contains('on'));
+  c.affection=Math.max(1,Math.min(100,+($('#c_aff')&&$('#c_aff').value)||affNow(c)));
+  c.affectionLocked=!!($('#c_afflock')&&$('#c_afflock').classList.contains('on'));
   c.gender=($('#c_gender')&&$('#c_gender').value)||'';c.star=$('#c_star')?$('#c_star').classList.contains('on'):!!c.star;
   c.callme=($('#c_call')&&$('#c_call').value.trim())||'';c.selfcall=($('#c_self')&&$('#c_self').value.trim())||'';c.catchphrase=($('#c_catch')&&$('#c_catch').value.trim())||'';
   c.traits=c.traits||{};C_TRAITS.forEach(([k])=>{const el=$('#ts_'+k);if(el)c.traits[k]=Math.max(0,Math.min(100,+el.value||0));});
@@ -4837,6 +4854,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it" onclick="setRemark('${id}')"><span>备注</span><span class="v">${esc(c.remark||'添加备注')}</span></div>
       <div class="it" onclick="editContact('${id}')"><span>人设</span><span class="v">点击修改</span></div>
       ${isMain()?`<div class="it" onclick="cToggleModel('${id}')"><span>聊天模型</span><span class="v">${c.model==='aux'?'副模型 ›':'主模型 ›'}</span></div>
+      <div class="it" onclick="affectionPanel('${id}')"><span>关系状态</span><span class="v">${affStage(affNow(c))} ›</span></div>
       <div class="it" onclick="editMemory('${id}')"><span>记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
       <div class="it" onclick="editSummary('${id}')"><span>对话总结</span><span class="v">${(c.summaries||[]).length}条 ›</span></div>
       <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>`:`<div class="it"><span style="color:#888">你正用小号「${esc(S.me.name)}」看ta（陌生人视角，看不到主号的记忆/关系）</span></div>`}
@@ -4893,6 +4911,14 @@ async function wipeContact(id){const c=getC(id);if(!c||!isMain())return;
   save();render();toast('已彻底清空和「'+(c.remark||c.name)+'」的全部记忆');}
 function setRemark(id){const c=getC(id);openModal(`<h3>备注</h3><div class="field"><input id="rmk" value="${esc(c.remark)}" placeholder="给ta起个备注名"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="getC('${id}').remark=$('#rmk').value.trim();save();closeModal();render()">保存</button></div>`);}
+function affectionPanel(id){const c=getC(id);if(!c)return;const v=affNow(c);openModal(`<h3>关系状态</h3>
+  <div class="hint">这里不会在聊天里显示，只影响ta对你的熟悉、关心和分寸。</div>
+  <div style="margin:12px 0 8px;height:8px;border-radius:8px;background:#2c2c2e;overflow:hidden"><i id="af_bar" style="display:block;height:100%;width:${v}%;background:linear-gradient(90deg,#8aa4ff,#ff8fab)"></i></div>
+  <div class="field"><label>进度 <b id="af_v" style="color:#ff8fab">${v}</b><small style="color:#888">/100 · ${affStage(v)}</small></label><input id="af_r" type="range" min="1" max="100" step="1" value="${v}" oninput="var n=+this.value;$('#af_v').textContent=n;$('#af_bar').style.width=n+'%'" style="width:100%"></div>
+  <div class="it"><span>固定关系进度<br><small style="color:#888">固定后不会自动变化</small></span><span class="sw ${c.affectionLocked?'on':''}" id="af_lock" onclick="this.classList.toggle('on')"></span></div>
+  <div class="it"><span>关闭布置任务<br><small style="color:#888">关闭后ta不会自动或口头给你加任务</small></span><span class="sw ${c.taskOff?'on':''}" id="af_taskoff" onclick="this.classList.toggle('on')"></span></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveAffectionPanel('${id}')">保存</button></div>`);}
+function saveAffectionPanel(id){const c=getC(id);if(!c)return;c.affection=Math.max(1,Math.min(100,+($('#af_r')&&$('#af_r').value)||affNow(c)));c.affectionLocked=!!($('#af_lock')&&$('#af_lock').classList.contains('on'));c.taskOff=!!($('#af_taskoff')&&$('#af_taskoff').classList.contains('on'));save();closeModal();render();toast('已保存');}
 function schedSet(id){const c=getC(id);const sc=c.sched||{on:false,work:'',home:'家',amS:'08:00',amE:'12:00',pmS:'14:00',pmE:'18:00'};
   openModal(`<h3>${esc(c.remark||c.name)} 的作息</h3>
    <div class="hint">设好后，查ta手机/聊天里ta的位置会跟着时间走：上班在单位、午休在吃饭、下班后到处跑、晚上回家——不会一天到晚都在办公室。</div>
@@ -5552,6 +5578,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,id,_lu);
+    maybeAffectionShift(id,c,_lu,content);
     maybeTaskIntent(content,c);maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,id);
     // [来电|语音/视频] 容错：哪怕模型把它写在句子中间(不是单独一行)，也照样触发来电、并从文字里抹掉，别漏成文字
     content=content.replace(/[\[【]\s*来电\s*[\|｜]\s*(语音|视频)\s*[\]】]/g,(m,k)=>{setTimeout(()=>incomingCall(c.id,k==='视频'?'video':'voice','ta打来的'),600);return '';});
@@ -6002,6 +6029,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,_call.id,_luc);
+    maybeAffectionShift(_call.id,c,_luc,content);
     maybeTaskIntent(content,c);maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;
@@ -6116,7 +6144,7 @@ function checkTasksDaily(){if(!isMain())return;const c=taskC();if(c){checkTaskPe
 setTimeout(checkTasksDaily,9000);setInterval(checkTasksDaily,300000);
 // 每天打开小手机就自动收到当天任务（当天只生成一次；当天23:59前完成，否则次日记仇）
 let _autoTaskTry=0;
-function autoAssignTasks(){if(!isMain())return;const c=taskC();if(!c||c.blocked)return;checkTaskPenalty(c);
+function autoAssignTasks(){if(!isMain())return;const c=taskC();if(!c||c.blocked||c.taskOff)return;checkTaskPenalty(c);
   if(tasksToday(c)||_taskBusy)return;const a=S.settings&&S.settings.chat;if(!a||!a.key)return;// 没配模型就不自动生成
   const tt=c.taskTime||'09:00';const now=new Date();const hhmm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');if(hhmm<tt)return;// 没到设定的布置时间不自动发（避免凌晨布置）
   if(Date.now()-_autoTaskTry<60000)return;_autoTaskTry=Date.now();genTasks();}
@@ -6133,7 +6161,7 @@ function fireEscalation(c,stage,hours){const onl=isOnline()?'（ta还显示在�
 function checkIgnore(){if(!isMain())return;if(!(S.couple&&S.couple.escalate))return;if(S.jail&&S.jail.active)return;
   if(typeof _call!=='undefined'&&_call)return;/* 正在通话中，由通话内的"沉默升级"接管，不走文字失踪升级 */
   if(S.me.sleep&&S.me.sleep.active)return;if(S.me.report&&S.me.report.active)return;/* 正当活动中不催 */
-  const c=escContact();if(!c||c.blocked)return;
+  const c=escContact();if(!c||c.blocked||affNow(c)<35)return;
   /* 遵守你设的"主动时段"：开了主动消息就只在时段内升级，不会半夜催你/来电 */
   if(c.proactive&&c.proactive.enabled){const nm=new Date().getHours()*60+new Date().getMinutes();const st=toMin(c.proactive.start),en=toMin(c.proactive.end);const inWin=st<=en?(nm>=st&&nm<en):(nm>=st||nm<en);if(!inWin)return;}
   /* 他刚催过(25分钟内发过消息)就先别叠，避免和"30分钟主动消息"撞一起 */
@@ -6259,7 +6287,7 @@ function maybeSpyIntent(reply,c,id,lu){const sp=getSpy(c);if(!sp.granted||c.bloc
   setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus}),900);}
 // 他口头额外布置任务/惩罚（聊天或通话里都行）：识别后真的加进任务便签
 let _taskIntentT={};
-async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||!isMain())return;const tm=taskC();if(!tm||tm.id!==c.id)return;
+async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||c.taskOff||!isMain())return;const tm=taskC();if(!tm||tm.id!==c.id)return;
   if(!/罚你|惩罚|罚抄|罚款|(加|布置|再来|多)(个|条|一个|一条)?任务|任务[:：]|今晚?.{0,4}(不准|不许|必须|得给我|要给我)|今天.{0,6}(不准|不许|必须|得给我|要给我)|写(篇|个|段|一篇|一段)?.{0,3}(检讨|小作文|保证书|情书)|不准(玩|刷|聊|睡)/.test(reply))return;
   const now=Date.now();if(now-(_taskIntentT[c.id]||0)<8000)return;_taskIntentT[c.id]=now;
   try{const sys='判断"'+(c.remark||c.name)+'"这句话是不是在给'+S.me.name+'【额外布置一个具体任务或惩罚】（要ta去做某件事）。是就提取成一条任务；只是普通调情/威胁/抱怨但没真布置具体任务，就当没有。\n只输出JSON：{"task":{"text":"任务描述(用ta的口吻,简短)","verify":"essay或moment或tweet或douyin或real","target":数字或0}} 或 {"task":null}。\nverify：essay=要她写东西(target填字数上限)；moment/tweet/douyin=要她发朋友圈/推/抖音；real=其它现实或暧昧小事。';
