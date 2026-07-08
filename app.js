@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v369 · 主屏事件唤醒';
+const APP_VER='v370 · 云端事件收件箱';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -502,6 +502,15 @@ function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,''
   if(cur().p==='chat'&&cur().id===c.id)render();else if(cur().p==='wechat')render();
   scheduleReply(c.id,'[系统：'+S.me.name+ev.tip+'你现在知道这件事。请严格按你自己的人设、性格和你们关系来反应，不要固定成一种"温柔关心"模板：温柔型可以哄ta休息，强势/控制欲强可以管束ta停下，嘴硬型可以别扭地吐槽，病娇/吃醋型可以更危险地盯紧一点，成熟型可以冷静提醒。核心是你真实在意ta刷太久了，让ta停下来、休息眼睛、喝水或换件事做。只发一两句自然微信，不要说自己是系统，不要机械播报。]');
   toast('已告诉 '+(c.remark||c.name));}
+let _extPollBusy=false,_extPollAt=0;
+async function pollExternalEvents(force){if(!gateOK()||_extPollBusy)return;const now=Date.now();if(!force&&now-_extPollAt<15000)return;_extPollAt=now;_extPollBusy=true;
+  try{const target=cloudId();let url=GATE_URL+'/rest/v1/phone_external_events?target=eq.'+encodeURIComponent(target)+'&select=id,event,created_at,payload&order=created_at.asc&limit=5';
+    const last=S.settings&&S.settings.extEventLastAt;if(last)url+='&created_at=gt.'+encodeURIComponent(last);
+    const r=await fetch(url,{headers:{'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY}});
+    if(!r.ok)return;const rows=await r.json();if(!rows||!rows.length)return;
+    for(const row of rows){if(row.created_at)S.settings.extEventLastAt=row.created_at;handleExternalEvent(row.event);}
+    save();
+  }catch(e){}finally{_extPollBusy=false;}}
 function appNotify(title,body,opt){if(!document.hidden)return;opt=opt||{};if(!('Notification'in window)||Notification.permission!=='granted')return;
   const data=opt.data||{},icon='icon.png';const nopt={body:body||'',icon,badge:icon,tag:opt.tag||('phone-'+Date.now()),renotify:!!opt.renotify,requireInteraction:!!opt.requireInteraction,data:data};
   if(opt.vibrate)nopt.vibrate=opt.vibrate;
@@ -6608,12 +6617,14 @@ function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>
 initBattery();
 window.addEventListener('pagehide',()=>{callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('pageshow',()=>setTimeout(callResumeHold,120));
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(routeHash,120);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(()=>pollExternalEvents(true),700);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-registerSW();window.addEventListener('hashchange',routeHash);window.addEventListener('focus',()=>setTimeout(routeHash,120));
+registerSW();window.addEventListener('hashchange',routeHash);window.addEventListener('focus',()=>{setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);});
 render();restoreActiveCall();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
+setTimeout(()=>pollExternalEvents(true),2600);
+setInterval(()=>pollExternalEvents(false),30000);
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
 showGate();
