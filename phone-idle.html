@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>小手机久未打开检查</title>
+<style>
+html,body{margin:0;height:100%;background:#000;color:#eee;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}
+.box{max-width:280px;line-height:1.8;font-size:15px;color:#aaa}
+.spin{width:28px;height:28px;border:3px solid #333;border-top-color:#8fb4ff;border-radius:50%;margin:0 auto 14px;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="box"><div class="spin"></div><div id="msg">正在检查小手机...</div></div>
+<script>
+(async function(){
+  var APP_URL='webapp://fenglina35-dotcom.github.io/phone/%E5%B0%8F%E6%89%8B%E6%9C%BA.html';
+  var FALLBACK='小手机.html';
+  var GATE_URL='https://lkhlyfpssmrjkkzhuzag.supabase.co/rest/v1/phone_external_events';
+  var GATE_KEY='sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
+  function go(){try{location.replace(APP_URL);}catch(e){location.href=FALLBACK;}setTimeout(function(){try{location.href=FALLBACK;}catch(e){}},1200);}
+  function text(t){var el=document.getElementById('msg');if(el)el.textContent=t;}
+  try{
+    var raw=localStorage.getItem('yibei_phone_v2')||'{}';
+    var data=JSON.parse(raw);
+    var target=data&&data.settings&&data.settings.cloudId;
+    if(!target){text('还没有云ID，正在返回小手机');go();return;}
+    await fetch(GATE_URL,{
+      method:'POST',
+      headers:{'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({target:target,event:'phone_idle',payload:{source:'phone-idle'}})
+    });
+    text('正在打开小手机');
+  }catch(e){
+    text('正在返回小手机');
+  }
+  go();
+})();
+</script>
+</body>
+</html>
