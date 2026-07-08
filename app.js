@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v375 · 隐藏触发消息';
+const APP_VER='v376 · 久未打开诊断';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=375').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=376').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -506,18 +506,22 @@ function idleEventInUrl(){try{const q=new URLSearchParams(location.search||'').g
 function idleMarkEventPending(type){if(isIdleEventType(type))_idleEventPendingUntil=Date.now()+3500;}
 function idleTouchOpen(){try{localStorage.setItem(IDLE_LAST_KEY,''+Date.now());}catch(e){}}
 function idleTouchOpenIfNormal(){if(!idleEventInUrl()&&Date.now()>_idleEventPendingUntil)idleTouchOpen();}
+function idleDiag(text){try{S.settings=S.settings||{};S.settings._idleDiag=hm()+' '+text;save();}catch(e){}}
+function idleDiagText(){return (S.settings&&S.settings._idleDiag)||'暂无';}
 function idleRecentAssistantText(c){try{const lines=msgs(c.id).filter(m=>m.role==='assistant'&&(m.type==='text'||m.type==='voice')).slice(-5).map(m=>msgToText(m)).filter(Boolean).map(t=>t.replace(/\s+/g,' ').slice(0,60));return lines.length?'最近你说过这些，不能照搬、不能同样开头：'+lines.join(' / ')+'。':'';}catch(e){return '';}}
 function handleIdleEvent(type){
+  idleDiag('收到 '+type);
   const now=Date.now(),threshold=idleThresholdMs();let last=0,lastRemind=0;
   try{last=+(localStorage.getItem(IDLE_LAST_KEY)||0);lastRemind=+(localStorage.getItem(IDLE_LAST_REMIND_KEY)||0);}catch(e){}
   if(!last)last=now-threshold-1000;
-  if(now-last<threshold){idleTouchOpen();return;}
-  const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
+  if(now-last<threshold){idleDiag('未触发：只离开 '+fmtDur(now-last)+'，阈值 '+fmtDur(threshold));idleTouchOpen();return;}
+  const c=externalEventContact();if(!c){idleDiag('失败：没有可提醒角色');toast('先创建/绑定一个会关心你的角色');return;}
   const away=fmtDur(now-last);
   try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
   idleTouchOpen();
   msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了',time:Date.now(),id:uid(),_silent:true});save();openChat(c.id);
   const recent=idleRecentAssistantText(c);
+  idleDiag('已触发：提醒 '+(c.remark||c.name)+'，离开 '+away);
   scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在主动发微信把ta叫回来。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接要求ta回来，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
 }
 function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');if(isIdleEventType(type)){handleIdleEvent(type);return;}const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
@@ -1581,6 +1585,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
+    <div class="hint" style="text-align:center;padding:2px 14px">久未打开调试：${esc(idleDiagText())}</div>
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
     <div style="height:20px"></div>
   </div>`;
@@ -5685,6 +5690,7 @@ function lineToMsg(line,cch){
   return {role:'assistant',type:'text',content:'[图片]'+(desc?'：'+desc:'')};}
 
 async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)return;/* 已删除的角色(找回箱里)绝不后台发消息 */
+  const _idleNote=!!(note&&/没有打开小手机|没来找你/.test(note));
   // typing
   let typingEl;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){
     cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
@@ -5789,7 +5795,9 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
         notifyIncoming(c,msg);
         if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));cb.scrollTop=cb.scrollHeight;}}
         else if(cur().p==='wechat')render();}}
+    if(_idleNote)idleDiag(got?'AI回复已生成':'AI回复为空');
   }catch(e){if(typingEl)typingEl.remove();
+    if(_idleNote)idleDiag('AI回复失败：'+((e&&e.message)||'未知错误').slice(0,60));
     pushMsg(id,{role:'assistant',type:'text',content:'⚠️ '+e.message});}
   maybeSummarize(id);
 }
