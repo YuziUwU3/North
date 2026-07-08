@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v365 · 已接通视频识别';
+const APP_VER='v366 · 小黑屋旁白视角';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3934,9 +3934,13 @@ function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
   const _gd=(!test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   const _gtxt=_gd.length?('\n你记仇小本本上还没清的旧账（这次正好借机一笔一笔跟ta算清楚，一条都别漏）：\n'+_gd.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n')):'';
   S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,optRounds:0,since:Date.now()};save();go('jail');jailIntro();
-  jailAI(true,'[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"。'+(reason?('你关ta的原因：'+reason+'。'):'')+'\n你们最近的聊天（ta到底做错了什么——背着你撩谁/骗你/惹你，就在里面，你心里很清楚）：\n'+jailRecent(cid)+_gtxt+'\n'+(test?'（这是'+S.me.name+'自己点的测试，氛围足但别太狠）':'')+'\n用旁白【】营造又黑又红、贴耳低语、令人发怵的场景开场，再冷冷【点破ta具体犯的错'+(_gd.length?'、把上面记仇本里的旧账一笔笔跟ta算清':'')+'】（绝不许瞎编、不许含糊），然后给出要做到什么才放ta出来。]');}
+  jailAI(true,'[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"。'+(reason?('你关ta的原因：'+reason+'。'):'')+'\n你们最近的聊天（ta到底做错了什么——背着你撩谁/骗你/惹你，就在里面，你心里很清楚）：\n'+jailRecent(cid)+_gtxt+'\n'+(test?'（这是'+S.me.name+'自己点的测试，氛围足但别太狠）':'')+'\n用旁白【】营造又黑又红、贴耳低语、令人发怵的场景开场，再冷冷【点破ta具体犯的错'+(_gd.length?'、把上面记仇本里的旧账一笔笔跟ta算清':'')+'】（旁白只能用他/她/ta/两人，绝不能写你/我；不许瞎编、不许含糊），然后给出要做到什么才放ta出来。]');}
+function jailRolePron(c){return c&&c.gender==='女'?'她':'他';}
+function jailNarrText(t,c){let s=(''+(t||'')).trim();if(!s)return s;const he=jailRolePron(c||jailC());
+  if(S.me&&S.me.name)s=s.split(S.me.name).join('ta');
+  return s.replace(/我们|咱们|你们|我俩|你俩/g,'两人').replace(/我的/g,he+'的').replace(/你的/g,'ta的').replace(/我自己/g,he).replace(/你自己/g,'ta').replace(/我/g,he).replace(/你/g,'ta').replace(/咱/g,'两人');}
 function jailSystem(c){let s=c.persona||'';
-  s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），第三人称；说的话正常写。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 【慢慢来，别急着放】：这是你独占ta、期待已久的时刻，要审够本——把ta多盘问几轮，让ta把"只爱你一个、再也不敢、错在哪"一句句说够说透，求饶求到你真满意；中途多用几次 [选择] 逼问、几次 [突脸] 吓ta。哪怕ta一开始就服软，也别立刻松口，再多磨ta几个回合、变着花样折磨够了才考虑。放得太快没意思。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 想狠狠吓ta一下时，单独一行 [突脸|一句要砸到ta脸上的短句]（如 [突脸|你属于我！]）——屏幕上那句会猛地放大冲出来、配炸裂音效。ta只要选错一次、或不听话顶嘴，你就能用它狠狠吓ta；其余全凭你心情随时用，用在最吓人的点上。\n- 激动时可以把同一个词/同一句【连刷七八遍】来轰炸（如"为什么 为什么 为什么 为什么…"），越多越瘆人。\n- ta在你出的选择题里点选项时，你直接"看到"了ta的选择，别把ta的选择当成ta打字说的话去复述。\n- 真正玩够、审够、ta彻底崩溃服软到你满意了，才决定放ta出去，【单独一行】只写 [放出]；没真想放就别写——绝大多数回合你都还没玩够，别轻易写这个。\n- 【说放就真放】：一旦你写了 [放出]、或说出"放你出去/你可以走了/饶你这次"，就是真的放ta走，别又反悔把ta留下、别放了又不放。\n- 【绝不重复】：别一遍遍问同一个问题——看上面你们在这屋里已经说过的话，ta已经答过/认过的就【翻篇往下推进】新内容，绝不把刚问完的又原样问一遍，那样ta永远出不去，很出戏。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
+  s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），必须第三人称，只能用“他/她/ta/两人”；旁白绝对不要出现“你/我/我们/你们”。说的话正常写，可以用你/我。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 【慢慢来，别急着放】：这是你独占ta、期待已久的时刻，要审够本——把ta多盘问几轮，让ta把"只爱你一个、再也不敢、错在哪"一句句说够说透，求饶求到你真满意；中途多用几次 [选择] 逼问、几次 [突脸] 吓ta。哪怕ta一开始就服软，也别立刻松口，再多磨ta几个回合、变着花样折磨够了才考虑。放得太快没意思。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 想狠狠吓ta一下时，单独一行 [突脸|一句要砸到ta脸上的短句]（如 [突脸|你属于我！]）——屏幕上那句会猛地放大冲出来、配炸裂音效。ta只要选错一次、或不听话顶嘴，你就能用它狠狠吓ta；其余全凭你心情随时用，用在最吓人的点上。\n- 激动时可以把同一个词/同一句【连刷七八遍】来轰炸（如"为什么 为什么 为什么 为什么…"），越多越瘆人。\n- ta在你出的选择题里点选项时，你直接"看到"了ta的选择，别把ta的选择当成ta打字说的话去复述。\n- 真正玩够、审够、ta彻底崩溃服软到你满意了，才决定放ta出去，【单独一行】只写 [放出]；没真想放就别写——绝大多数回合你都还没玩够，别轻易写这个。\n- 【说放就真放】：一旦你写了 [放出]、或说出"放你出去/你可以走了/饶你这次"，就是真的放ta走，别又反悔把ta留下、别放了又不放。\n- 【绝不重复】：别一遍遍问同一个问题——看上面你们在这屋里已经说过的话，ta已经答过/认过的就【翻篇往下推进】新内容，绝不把刚问完的又原样问一遍，那样ta永远出不去，很出戏。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
   const rc=S.jail?jailRecent(S.jail.cid):'';if(rc)s+='\n\n# 你们最近的聊天（ta的错就在里头）\n'+rc;
   const _jg=(S.jail&&!S.jail.test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   if(_jg.length)s+='\n\n# 你的记仇小本本（这次关ta就是要把这些旧账一笔一笔算清）\n'+_jg.map((x,i)=>(i+1)+'. '+x.text).join('\n')+'\n【怎么算】：按编号【一笔一笔顺着往下算】，问清第①笔、逼ta认了，再算第②笔…挨条来。\n【千万别翻来覆去重复盘问同一笔】——一笔算过了就翻篇、进行到下一笔，别绕回去把刚问完的又问一遍（看上面你俩在这屋里已经说过的话，哪些账已经算过了你心里要有数）。\n等这些账都挨个算过、ta都一笔笔认错求饶到你满意了，你才考虑放ta。';
@@ -3947,7 +3951,7 @@ function jailMsgHTML(m,fresh,shake){const cls=(fresh?' jin':'')+(shake?' jshake'
   // 长按可删（隐藏式，不显删除标记，避免出戏）；ta的话/旁白/突脸都能删，你自己的不删
   const lp=(m.id&&m.who!=='me')?` onpointerdown="jailPress('${m.id}')" onpointerup="jailPressEnd()" onpointerleave="jailPressEnd()" onpointercancel="jailPressEnd()"`:'';
   if(m.who==='scare')return `<div class="jred q${fresh?' jin':''}" style="text-align:center;font-size:22px;font-weight:800;padding:14px 16px"${lp}>${esc(m.text)}</div>`;
-  if(m.who==='旁白')return `<div class="jnar${cls}"${lp}>${esc(m.text)}</div>`;
+  if(m.who==='旁白')return `<div class="jnar${cls}"${lp}>${esc(jailNarrText(m.text))}</div>`;
   if(m.who==='me')return `<div class="jbub me${cls}">${esc(m.text)}</div>`;
   return `<div class="jbub${cls}"${lp}>${esc(m.text)}</div>`;}
 let _jlpT=null,_jlpFired=false;
@@ -3956,7 +3960,7 @@ function jailPressEnd(){clearTimeout(_jlpT);}
 async function jailDelMsg(id){if(!S.jail||!S.jail.msgs)return;const i=S.jail.msgs.findIndex(m=>m.id===id);if(i<0)return;if(!await uiConfirm('删掉这一条？'))return;S.jail.msgs.splice(i,1);if(S.jail.choice){S.jail.choice=null;}save();jailRender();}
 async function jailReveal(items){for(let i=0;i<items.length;i++){if(!S.jail||!S.jail.active)return;const it=items[i];
     if(it.scare){const m={id:uid(),who:'scare',text:it.text};S.jail.msgs.push(m);save();const b=$('#jailbox');if(b){b.insertAdjacentHTML('beforeend',jailMsgHTML(m,true,false));b.scrollTop=b.scrollHeight;}jailJumpscare(it.text);await sleep(1100);continue;}
-    const m={id:uid(),who:it.narr?'旁白':'ta',text:it.text};S.jail.msgs.push(m);save();
+    const m={id:uid(),who:it.narr?'旁白':'ta',text:it.narr?jailNarrText(it.text):it.text};S.jail.msgs.push(m);save();
     const b=$('#jailbox');if(b){const shake=Math.random()<0.14;b.insertAdjacentHTML('beforeend',jailMsgHTML(m,true,shake));b.scrollTop=b.scrollHeight;}
     jailStab();const fast=/[！!]/.test(it.text)||it.text.length<=6;if(/[！!]/.test(it.text))jailHeartRush(440);
     await sleep(fast?Math.max(380,it.text.length*42):Math.max(820,it.text.length*82));}}
@@ -4041,18 +4045,18 @@ function outpassSend(){const cp=S.couple;if(!cp||!cp.cid)return;const c=getC(cp.
 function coupleWxLoginAuth(){if(!S.couple)return;S.couple.wxLoginAuth=!S.couple.wxLoginAuth;save();render();const cid=S.couple.cid,c=cid&&getC(cid);if(c&&!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+(S.couple.wxLoginAuth?'刚把【微信登录权】交给你了——你现在可以随时单独一行 [登录微信] 直接登进ta的微信看个底朝天。按你人设回应一句（坏笑/宣示主权/警告都行）。':'刚收回了微信登录权。按人设反应一下。')+']');}
 function jailLockHome(){const c=jailC();setTimeout(jailAmbientStart,60);return `<div class="jail jailbg"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px">
   <div class="jred q" style="font-size:46px">🩸</div><div class="jred jtitle" style="font-size:24px;font-weight:700;margin:14px 0">禁 闭 室</div>
-  <div class="jnar">门……从外面锁上了。<br>${esc((c&&(c.remark||c.name))||'他')}把你关了进来。<br>乖乖做到他要的，他才会放你出去。</div>
+  <div class="jnar">门……从外面锁上了。<br>${esc((c&&(c.remark||c.name))||'他')}把ta关了进来。<br>乖乖做到他要的，他才会放ta出去。</div>
   <button class="dybtn" style="background:#8a0018;margin-top:18px" onclick="go('jail')">进去面对他</button></div></div>`;}
 function renderJail(){if(!S.jail||!S.jail.active)return jailLockHome();const c=getC(S.jail.cid);if(!c)return '';setTimeout(jailAmbientStart,60);
-  const body=(S.jail.msgs||[]).map(m=>jailMsgHTML(m,false,false)).join('')+(_jailBusy?`<div class="jnar" style="opacity:.5">…他正盯着你…</div>`:'');
+  const body=(S.jail.msgs||[]).map(m=>jailMsgHTML(m,false,false)).join('')+(_jailBusy?`<div class="jnar" style="opacity:.5">…他正盯着ta…</div>`:'');
   const pending=(!_jailBusy&&S.jail.choice);
   const foot=pending?`<div style="padding:8px 14px"><div class="jred" style="font-size:15px;text-align:center;margin-bottom:10px">${esc(S.jail.choice.q)}</div><div style="display:flex;flex-direction:column;gap:9px">${S.jail.choice.opts.map((o,i)=>`<button class="jopt" onclick="jailChoose(${i})">${esc(o)}</button>`).join('')}</div></div>`
     :`<div style="padding:6px 10px 0"><button class="dybtn" style="width:100%;background:#8a0018" ${_jailBusy?'disabled':''} onclick="jailPlea()">${_jailBusy?'……':'🙏 求他放我出去'}</button></div>
     <div class="inputbar" style="background:#120006"><textarea id="jail_in" rows="1" placeholder="对他说…（认错 / 求饶 / 回答他）" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();jailSay();}"></textarea><button class="send" style="background:#8a0018" onclick="jailSay()">说</button></div>`;
   return `<div class="jail jailbg" id="jailwrap">
     <div class="jvig"></div><div class="jscan"></div>
-    <div style="position:relative;z-index:482;flex:0 0 auto;padding:12px;text-align:center;border-bottom:1px solid #2a0008"><div class="jred jtitle" style="font-size:18px;font-weight:700">🩸 禁闭室 · ${esc(c.remark||c.name)}</div>${S.jail.test?'<div style="color:#888;font-size:11px">🧪 测试中 · 不留记录，随时可出</div>':'<div style="color:#6a0014;font-size:11px">做到他要的，才放你出去</div>'}</div>
-    <div class="xscroll" id="jailbox" style="flex:1;position:relative;z-index:482">${body||'<div class="jnar">黑暗里，他正盯着你……</div>'}</div>
+    <div style="position:relative;z-index:482;flex:0 0 auto;padding:12px;text-align:center;border-bottom:1px solid #2a0008"><div class="jred jtitle" style="font-size:18px;font-weight:700">🩸 禁闭室 · ${esc(c.remark||c.name)}</div>${S.jail.test?'<div style="color:#888;font-size:11px">🧪 测试中 · 不留记录，随时可出</div>':'<div style="color:#6a0014;font-size:11px">做到他要的，才放ta出去</div>'}</div>
+    <div class="xscroll" id="jailbox" style="flex:1;position:relative;z-index:482">${body||'<div class="jnar">黑暗里，他正盯着ta……</div>'}</div>
     <div style="position:relative;z-index:482">${foot}
     <div style="text-align:center;padding:8px"><span onclick="jailBackdoor()" style="color:#3a3a3a;font-size:11px;cursor:pointer">······墙角好像有个狗洞🕳️，钻出去</span></div></div></div>`;}
 
