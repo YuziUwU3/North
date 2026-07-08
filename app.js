@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v366 · 小黑屋旁白视角';
+const APP_VER='v367 · 后台消息通知';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -474,6 +474,29 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
   speakMsg(m,m.role==='user'?S.me:getC(owner));}
 /* ===== 顶部消息通知 ===== */
 let _bannerT;
+let _swReady=null;
+function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=367').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  return _swReady;}
+function appRouteFromNotify(d){if(!d||d.type!=='open')return;
+  try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
+  if(d.target==='chat'&&d.id){openChat(d.id);return;}
+  if(d.target==='group'&&d.id){go('group',{id:d.id});return;}
+  if(d.target==='call'){if(_call)openIncoming();else go('home');return;}
+  if(d.target==='mail'){go('mail');return;}
+  if(d.target==='x'){openX();return;}}
+function routeHash(){const h=(location.hash||'').replace(/^#/,'');if(!h)return;
+  const m=h.match(/^chat=([^&]+)/);if(m){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>openChat(decodeURIComponent(m[1])),300);return;}
+  const gm=h.match(/^group=([^&]+)/);if(gm){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>go('group',{id:decodeURIComponent(gm[1])}),300);return;}
+  if(h==='call'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>{if(_call)openIncoming();},300);return;}
+  if(h==='mail'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>go('mail'),300);return;}
+  if(h==='x'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>openX(),300);}}
+function appNotify(title,body,opt){if(!document.hidden)return;opt=opt||{};if(!('Notification'in window)||Notification.permission!=='granted')return;
+  const data=opt.data||{},icon='icon.png';const nopt={body:body||'',icon,badge:icon,tag:opt.tag||('phone-'+Date.now()),renotify:!!opt.renotify,requireInteraction:!!opt.requireInteraction,data:data};
+  if(opt.vibrate)nopt.vibrate=opt.vibrate;
+  try{if(navigator.setAppBadge)navigator.setAppBadge(1).catch(()=>{});}catch(e){}
+  const fallback=()=>{try{const n=new Notification(title,nopt);n.onclick=()=>{try{window.focus();appRouteFromNotify(Object.assign({type:'open'},data));n.close();}catch(e){}};}catch(e){}};
+  registerSW().then(reg=>{if(reg&&reg.showNotification)reg.showNotification(title,nopt).catch(fallback);else fallback();});}
 function showMsgBanner(c,msg){const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">${esc(previewOf(msg))}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openChat(c.id);};
@@ -1392,7 +1415,7 @@ async function doAutoMoment(id){const c=getC(id);try{const r=await chatAPI([{rol
 async function doAutoTweet(id){const c=getC(id);try{const _co=(typeof circleObj==='function')?circleObj(id):{};const note=_co.desc?'，贴合你的圈子定位「'+_co.desc+'」':'';
   const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条推特'+note+'，一两句，只输出推文内容，别带方括号。'}],{aux:true});
   const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:id});const _tw=cleanReply(r);S.x.tweets.unshift({id:uid(),who:id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:_tw,time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:0});save();if(cur().p==='x')render();notifyX(c,_tw);}catch(e){}}
-function notifyX(c,text){if(c.muted)return;playDing();const b=$('#msgBanner');if(!b)return;
+function notifyX(c,text){if(c.muted)return;playDing();appNotify((c.remark||c.name)+' 发了新动态',text,{tag:'x-'+c.id,data:{type:'open',target:'x'}});const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#000;border:1px solid #333;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px">𝕏</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 发了新动态</div><div class="bm">${esc(text)}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openX();};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
@@ -1546,7 +1569,7 @@ async function clearAllData(){
   try{home();}catch(_){render();}
   toast('已清空，只留下了人设和头像～');
 }
-function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许'));}
+function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}registerSW().finally(()=>Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许')));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
   const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
   if(!base||!key){o.style.color='#e85';o.textContent='先填地址和 Key';return;}
@@ -3091,7 +3114,7 @@ function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return `<div 
   return `<div class="msg ${me?'me':'them'}" ${click} style="cursor:pointer">${selecting&&me?tick:''}${av0}<div class="col">${nm}${inner}<div class="msgt">${hm(m.time)}</div></div>${selecting&&!me?tick:''}</div>`;}
 function gGrab(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;const m=g.msgs.find(x=>x.id===mid);if(!m||m.received||(m.type!=='transfer'&&m.type!=='redpacket'))return;
   m.received=true;const nm=getC(m.senderId)?getC(m.senderId).name:'群友';addBill('in',+m.amount||0,nm+(m.type==='redpacket'?'的群红包':'的群转账'));save();render();toast('已领取 ¥'+(+m.amount).toFixed(2)+' 💰');}
-function gNotify(g,c){if(cur().p==='group'&&cur().id===g.id)return;playDing();const b=$('#msgBanner');if(!b)return;const lm=g.msgs[g.msgs.length-1];
+function gNotify(g,c){if(cur().p==='group'&&cur().id===g.id)return;playDing();const lm=g.msgs[g.msgs.length-1];appNotify(g.name,gnm(g,c.id)+'：'+(lm?gmText(lm):''),{tag:'group-'+g.id,data:{type:'open',target:'group',id:g.id}});const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`${g.avatar?av(g.avatar,'sm'):'<div class="avatar sm" style="background:#7c6cc0">👥</div>'}<div style="flex:1;min-width:0"><div class="bn">${esc(g.name)}</div><div class="bm">${esc(gnm(g,c.id)+'：'+(lm?gmText(lm):''))}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('group',{id:g.id});};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
 function sendGroup(id){const g=S.groups.find(x=>x.id===id);const ta=$('#ginput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
@@ -4113,7 +4136,7 @@ async function genLetter(id){const c=getC(id);if(!c)return;
     S.mail.unshift(letter);if(S.mail.length>60)S.mail=S.mail.slice(0,60);save();notifyMail(c,letter);
     if(cur().p==='mail'||cur().p==='home')render();
   }catch(e){}}
-function notifyMail(c,letter){if(c.muted)return;playDing();const b=$('#msgBanner');if(!b)return;
+function notifyMail(c,letter){if(c.muted)return;playDing();appNotify((c.remark||c.name)+' 给你写了封信',letter.subject,{tag:'mail-'+c.id,data:{type:'open',target:'mail'}});const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#f4a93b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px">💌</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 给你写了封信</div><div class="bm">${esc(letter.subject)}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('mail');};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},5500);}
@@ -5789,7 +5812,7 @@ function notifyIncoming(c,msg){
   const viewing=cur().p==='chat'&&cur().id===c.id;
   if(!viewing&&!_call)showMsgBanner(c,msg);
   playDing();
-  if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(c.remark||c.name,{body:previewOf(msg)});}catch(e){}}}
+  appNotify(c.remark||c.name,previewOf(msg),{tag:'msg-'+c.id,data:{type:'open',target:'chat',id:c.id}});}
 /* 撤回 / 编辑消息 */
 function msgMenu(cid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=去引用了，别再弹菜单 */
   const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
@@ -5950,6 +5973,7 @@ function ringStop(){if(_ring){clearInterval(_ring);_ring=null;}if(navigator.vibr
 function blip(freq,dur){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(Math.min(1,.2*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
 function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
   _call={id,kind,state:'incoming',dir:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};initAudio();ringStart();showCallBanner(c);
+  appNotify(c.remark||c.name,(kind==='video'?'视频':'语音')+'通话邀请',{tag:'call-'+id,renotify:true,requireInteraction:true,vibrate:[400,200,400,200,400],data:{type:'open',target:'call',id:id}});
   clearTimeout(_callMissT);_callMissT=setTimeout(()=>callMissed(id),15000);}// 来电只先弹横幅；15秒没接=未接
 function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const label=_call.kind==='video'?'视频':'语音';
   b.innerHTML=`<div onclick="openIncoming()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm" style="display:flex;align-items:center;gap:5px">${svgIc(label==='视频'?'video':'phonecall',13,'#9a9')}邀请你${label}通话…</div></div></div><span class="cbtn red" style="width:30px;height:30px;margin-left:4px" onclick="event.stopPropagation();declineCall()">${svgIc('hangup',15,'#fff')}</span><span class="cbtn green" style="width:30px;height:30px" onclick="event.stopPropagation();answerCall()">${svgIc('phonecall',15,'#fff')}</span>`;
@@ -6574,9 +6598,10 @@ initBattery();
 window.addEventListener('pagehide',()=>{callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('pageshow',()=>setTimeout(callResumeHold,120));
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{audioKick();callResumeHold();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-render();restoreActiveCall();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
+registerSW();window.addEventListener('hashchange',routeHash);
+render();restoreActiveCall();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
