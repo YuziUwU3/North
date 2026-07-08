@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v368 · 外部事件入口';
+const APP_VER='v369 · 主屏事件唤醒';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -485,7 +485,8 @@ function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   if(d.target==='call'){if(_call)openIncoming();else go('home');return;}
   if(d.target==='mail'){go('mail');return;}
   if(d.target==='x'){openX();return;}}
-function routeHash(){const h=(location.hash||'').replace(/^#/,'');if(!h)return;
+function routeHash(){const qev=new URLSearchParams(location.search||'').get('event');if(qev){history.replaceState(null,'',location.pathname);setTimeout(()=>handleExternalEvent(decodeURIComponent(qev)),500);return;}
+  const h=(location.hash||'').replace(/^#/,'');if(!h)return;
   const m=h.match(/^chat=([^&]+)/);if(m){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>openChat(decodeURIComponent(m[1])),300);return;}
   const gm=h.match(/^group=([^&]+)/);if(gm){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>go('group',{id:decodeURIComponent(gm[1])}),300);return;}
   const ev=h.match(/^event=([^&]+)/);if(ev){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>handleExternalEvent(decodeURIComponent(ev[1])),500);return;}
@@ -6608,9 +6609,9 @@ initBattery();
 window.addEventListener('pagehide',()=>{callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('pageshow',()=>setTimeout(callResumeHold,120));
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(routeHash,120);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-registerSW();window.addEventListener('hashchange',routeHash);
+registerSW();window.addEventListener('hashchange',routeHash);window.addEventListener('focus',()=>setTimeout(routeHash,120));
 render();restoreActiveCall();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(imgGC,60000);
