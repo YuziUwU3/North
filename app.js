@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v376 · 久未打开诊断';
+const APP_VER='v377 · 移除抖音超时事件';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=376').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=377').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -499,6 +499,7 @@ const IDLE_LAST_KEY='phone_idle_last_open_at';
 const IDLE_LAST_REMIND_KEY='phone_idle_last_remind_at';
 const IDLE_THRESHOLD_KEY='phone_idle_threshold_ms';
 const IDLE_DEFAULT_MS=60000;
+const IGNORED_EXTERNAL_EVENT_TYPES={douyin_timeout:1,tiktok_timeout:1};
 let _idleEventPendingUntil=0;
 function isIdleEventType(t){return !!IDLE_EVENT_TYPES[(''+(t||'')).replace(/[^\w-]/g,'')];}
 function idleThresholdMs(){let n=0;try{n=+(localStorage.getItem(IDLE_THRESHOLD_KEY)||0);}catch(e){}if(!n)n=IDLE_DEFAULT_MS;return Math.max(60000,Math.min(24*60*60000,n));}
@@ -524,9 +525,8 @@ function handleIdleEvent(type){
   idleDiag('已触发：提醒 '+(c.remark||c.name)+'，离开 '+away);
   scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在主动发微信把ta叫回来。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接要求ta回来，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
 }
-function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');if(isIdleEventType(type)){handleIdleEvent(type);return;}const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
-  const map={douyin_timeout:{app:'抖音',label:'抖音使用超时',tip:'刚触发了 iPhone 屏幕使用时间的【抖音使用超时】提醒，说明ta今天刷抖音已经到设定限额了。'},tiktok_timeout:{app:'抖音',label:'抖音使用超时',tip:'刚触发了 iPhone 屏幕使用时间的【抖音使用超时】提醒，说明ta今天刷抖音已经到设定限额了。'}};
-  const ev=map[type]||{app:'手机',label:'外部提醒',tip:'刚触发了一个手机使用提醒。'};
+function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');if(isIdleEventType(type)){handleIdleEvent(type);return;}if(IGNORED_EXTERNAL_EVENT_TYPES[type])return;const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
+  const ev={app:'手机',label:'外部提醒',tip:'刚触发了一个手机使用提醒。'};
   S._extEvLast=S._extEvLast||{};if(Date.now()-(S._extEvLast[type]||0)<30000){toast('刚告诉过ta了');return;}S._extEvLast[type]=Date.now();
   msgs(c.id).push({role:'user',type:'sys',content:'📱 '+ev.label+'：'+S.me.name+'达到了设定的使用限额',time:Date.now(),id:uid()});save();
   if(cur().p==='chat'&&cur().id===c.id)render();else if(cur().p==='wechat')render();
