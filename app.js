@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v374 · 久未打开提醒免冷却';
+const APP_VER='v375 · 隐藏触发消息';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -326,7 +326,7 @@ function msgToText(m){
     case 'chatlog':return '[我转发给你一份聊天记录《'+m.title+'》，内容：'+(m.lines||[]).map(l=>l.who+'说'+l.text).join('；').slice(0,200)+']';
     case 'tcollect':return '[你收下了我的转账 ¥'+(+m.amount).toFixed(2)+']';
     case 'treject':return '[你拒收了我的转账，钱退回了]';
-    case 'sys':return null;
+    case 'sys':return m._silent?(m.content||''):null;
     default:return m.content||'';
   }
 }
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=374').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=375').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -516,7 +516,7 @@ function handleIdleEvent(type){
   const away=fmtDur(now-last);
   try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
   idleTouchOpen();
-  save();openChat(c.id);
+  msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了',time:Date.now(),id:uid(),_silent:true});save();openChat(c.id);
   const recent=idleRecentAssistantText(c);
   scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在主动发微信把ta叫回来。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接要求ta回来，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
 }
@@ -5173,7 +5173,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   const skipped=Math.max(0,all.length-renderLimit);
   const list=skipped?all.slice(skipped):all;
   let body=skipped?`<div class="tstamp"><span onclick="showOlderChat('${id}')" style="cursor:pointer">加载更早 ${Math.min(CHAT_RENDER_LIMIT,skipped)} 条 · 还剩 ${skipped} 条</span></div>`:'';
-  list.forEach((m,i)=>{const prev=i?list[i-1]:all[skipped-1];if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
+  list.forEach((m,i)=>{if(m._silent)return;const prev=i?list[i-1]:all[skipped-1];if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
   const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#b9a6e0')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
@@ -5204,6 +5204,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
     </div>`}`;}
 function bubbleRow(c,m){
   const me=m.role==='user';
+  if(m._silent)return '';
   if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
   if(!m.id)m.id=uid();
   let inner=buildPart(c,m,me);
