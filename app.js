@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v371 · 久未打开提醒测试';
+const APP_VER='v372 · 久未打开提醒修正';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=371').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=372').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -510,7 +510,7 @@ function idleRecentAssistantText(c){try{const lines=msgs(c.id).filter(m=>m.role=
 function handleIdleEvent(type){
   const now=Date.now(),threshold=idleThresholdMs();let last=0,lastRemind=0;
   try{last=+(localStorage.getItem(IDLE_LAST_KEY)||0);lastRemind=+(localStorage.getItem(IDLE_LAST_REMIND_KEY)||0);}catch(e){}
-  if(!last){idleTouchOpen();return;}
+  if(!last)last=now-threshold-1000;
   if(now-last<threshold){idleTouchOpen();return;}
   const cooldown=Math.max(60000,Math.min(threshold,55*60000));
   if(lastRemind&&now-lastRemind<cooldown){idleTouchOpen();return;}
@@ -518,7 +518,7 @@ function handleIdleEvent(type){
   const away=fmtDur(now-last);
   try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
   idleTouchOpen();
-  save();openChat(c.id);
+  msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了',time:Date.now(),id:uid()});save();openChat(c.id);
   const recent=idleRecentAssistantText(c);
   scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在主动发微信把ta叫回来。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接要求ta回来，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
 }
