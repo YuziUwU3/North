@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v377 · 移除抖音超时事件';
+const APP_VER='v378 · 一起听上下文增强';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=377').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=378').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -830,6 +830,26 @@ function mSessTick(){const el=document.getElementById('m_sesstime');const sess=S
   const live=((S.music&&S.music.totalSec)||0)+Math.floor((Date.now()-sess.startTs)/1000);
   if(el)el.textContent=fmtListen(live);}
 function musicInit(){if(!S.music)S.music={songs:[],session:null,loop:false,chat:[]};S.music.songs=S.music.songs||[];S.music.chat=S.music.chat||[];if(S.music.totalSec==null)S.music.totalSec=0;if(S.music.distance==null)S.music.distance=1400;}
+function musicKeyText(s){return String(s||'').toLowerCase().replace(/[ \t\r\n"'“”‘’《》<>【】\[\]（）(){}.,，。！？!?、:：;；~～…\-—_·]/g,'');}
+function musicFindSongByText(text){musicInit();const q=musicKeyText(text);if(!q)return null;let best=null,score=0,artistHit=[];
+  (S.music.songs||[]).forEach(s=>{const t=musicKeyText(s.title),a=musicKeyText(s.artist),mix=musicKeyText((s.title||'')+(s.artist||''));let sc=0;
+    if(t&&t.length>=2&&(q===t||q.includes(t)))sc=100+t.length;
+    else if(t&&t.length===1&&(q===t||q.includes('听'+t)||q.includes('放'+t)||q.includes('切'+t)))sc=70;
+    else if(mix&&mix.length>=3&&q.includes(mix))sc=80+mix.length;
+    if(a&&q.includes(a))artistHit.push(s);
+    if(sc>score){score=sc;best=s;}
+  });
+  if(best)return best;
+  if(artistHit.length===1&&/(听|放|来一首|换|切)/.test(text||''))return artistHit[0];
+  return null;}
+function musicMirrorToWechat(cid,role,text){const c=getC(cid);if(!c||!text)return;const who=role==='user'?S.me.name:(role==='assistant'?(c.remark||c.name):'系统');
+  msgs(cid).push({role:role==='assistant'?'assistant':'user',type:'sys',content:'🎧 一起听里，'+who+'：'+String(text).slice(0,160),time:Date.now(),id:uid(),_silent:true,_musicCtx:true});}
+function musicSwitchSongForSession(song,cid,spoken){musicInit();const sess=S.music.session;if(!song||!sess||sess.cid!==cid)return false;
+  if(sess.songId===song.id&&_mCur===song.id)return false;
+  sess.songId=song.id;const line='已切到「'+(song.title||'这首歌')+'」';
+  S.music.chat.push({cid,role:'sys',content:line,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);
+  musicMirrorToWechat(cid,'sys',line+(spoken?'，因为'+S.me.name+'说：'+spoken:''));
+  mShowBub('r','切到 '+(song.title||'这首歌'));musicPlay(song.id);return true;}
 function mIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiMusic',1);r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('audio');}catch(_){}};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej();});}
 function mPut(k,b){return mIDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').put(b,k);tx.oncomplete=()=>res();tx.onerror=()=>rej();}));}
 function mGet(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readonly');const q=tx.objectStore('audio').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);}));}
@@ -923,18 +943,24 @@ function setMusicAvatar(which){pickFile('image/*',async f=>{const img=await comp
 function setMusicCover(){musicInit();const s=S.music.songs.find(x=>x.id===_mCur);if(!s){toast('先放一首歌');return;}pickFile('image/*',async f=>{s.cover=await compress(f,520,.72);save();render();toast('封面换好了🎵');});}
 function setMusicBg(){pickFile('image/*',async f=>{musicInit();S.music.bg=await compress(f,1000,.7);save();closeModal();render();toast('背景换好了🖼️');});}
 function editMusicDistance(){musicInit();const v=prompt('相距多少公里？',(S.music.distance==null?1400:S.music.distance));if(v==null)return;const n=parseFloat(v);if(isNaN(n)){toast('填个数字哦');return;}S.music.distance=n;save();render();toast('已更新');}
-function musicMenu(){musicInit();openModal(`<h3>一起听</h3>
+function musicMenu(){musicInit();const chatCount=S.music.session?(S.music.chat||[]).filter(m=>m.cid===S.music.session.cid).length:(S.music.chat||[]).length;openModal(`<h3>一起听</h3>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicAdd()">＋ 添加歌曲</button>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicListModal()">歌单（${(S.music.songs||[]).length}）</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="musicChatHistoryModal()">一起听聊天记录（${chatCount}条）</button>
   <button class="btn g" style="margin-bottom:8px" onclick="musicExportPack()">导出全部歌单</button>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicExportOneModal()">分首导出</button>
   <button class="btn g" style="margin-bottom:8px" onclick="musicImportPack()">导入歌单文件</button>
   <button class="btn g" style="margin-bottom:8px" onclick="setMusicBg()">换背景图</button>
   ${S.music.bg?`<button class="btn g" style="margin-bottom:8px" onclick="S.music.bg='';save();closeModal();render();toast('已恢复默认背景')">↩️ 恢复默认背景</button>`:''}
   ${S.music.session?`<button class="btn d" style="margin-bottom:8px" onclick="closeModal();musicEndSession()">结束一起听</button>`:`<button class="btn p" style="margin-bottom:8px" onclick="closeModal();musicInvite()">邀请一起听</button>`}
-  <button class="btn g" style="margin-bottom:8px" onclick="musicClearChat()">清空一起听聊天记录（${(S.music.chat||[]).length}条）</button>
-  <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像、点「相距…」那行改距离。一起听聊天他记得最近的对话，想让他忘掉就点上面清空。</div>
+  <button class="btn g" style="margin-bottom:8px" onclick="musicClearChat()">清空一起听聊天记录（${chatCount}条）</button>
+  <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像、点「相距…」那行改距离。一起听里说过的话会同步进微信上下文，但不会刷到微信聊天界面。</div>
   <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
+function musicChatHistoryModal(){musicInit();const sess=S.music.session;let rows=(S.music.chat||[]).filter(m=>!sess||m.cid===sess.cid).slice(-120);const title=sess?((getC(sess.cid)||{}).remark||(getC(sess.cid)||{}).name||'ta'):'全部';
+  const body=rows.length?rows.map(m=>{const c=getC(m.cid);const nm=c?(c.remark||c.name):'ta';const who=m.role==='user'?S.me.name:(m.role==='assistant'?nm:'系统');const col=m.role==='user'?'#ff9ec4':(m.role==='assistant'?'#9ec5fe':'#9a9aa2');
+    return `<div style="padding:7px 2px;border-bottom:.5px solid #2a2a2c;font-size:13px;line-height:1.45"><div style="display:flex;gap:8px;align-items:center"><b style="color:${col};flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(who)}</b><span style="color:#777;font-size:11px">${hm(m.time)}</span></div><div style="color:#ddd;white-space:pre-wrap;margin-top:2px">${esc(m.content||'')}</div></div>`;}).join(''):'<div class="empty" style="padding:28px;color:#888">还没有一起听聊天记录</div>';
+  const chatBtn=sess?`<button class="btn p" style="margin-top:8px" onclick="closeModal();openChat('${sess.cid}')">打开和ta的微信聊天</button>`:'';
+  openModal(`<h3>一起听聊天记录 · ${esc(title)}</h3><div class="section" style="max-height:56vh;overflow:auto">${body}</div>${chatBtn}<button class="btn g" style="margin-top:8px" onclick="musicMenu()">返回设置</button>`);}
 async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!songs.length){toast('还没有歌单');return;}toast('正在打包歌单…');
   try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance||1400,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
     for(const s of songs){const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}pack.music.songs.push(x);}
@@ -952,9 +978,10 @@ function musicImportPack(){pickFile('.json',f=>{const r=new FileReader();r.onloa
       for(const raw of incoming){const s=Object.assign({},raw);if(S.music.songs.some(x=>x.id===s.id))s.id='m'+uid();if(s.file){const b=mDataURLBlob(s.file);delete s.file;if(b){s.src={t:'idb'};await mPut(s.id,b);}}S.music.songs.unshift(s);n++;}
       S.music.loop=!!p.music.loop;if(p.music.distance!=null)S.music.distance=p.music.distance;if(p.music.meAvatar)S.music.meAvatar=p.music.meAvatar;if(p.music.taAvatar)S.music.taAvatar=p.music.taAvatar;if(p.music.bg)S.music.bg=p.music.bg;save();closeModal();render();toast('已导入 '+n+' 首');
     }catch(e){toast('导入失败，文件不对或太大');}};r.readAsText(f);});}
-async function musicClearChat(){musicInit();const sess=S.music.session;const n=(S.music.chat||[]).length;if(!n){toast('还没有一起听聊天记录');return;}
-  if(!await uiConfirm('清空一起听的聊天记录？\n（'+(sess?'只清你和当前一起听对象的':'清全部一起听聊天')+'，不影响微信聊天和记忆）'))return;
-  if(sess)S.music.chat=(S.music.chat||[]).filter(m=>m.cid!==sess.cid);else S.music.chat=[];
+async function musicClearChat(){musicInit();const sess=S.music.session;const n=sess?(S.music.chat||[]).filter(m=>m.cid===sess.cid).length:(S.music.chat||[]).length;if(!n){toast('还没有一起听聊天记录');return;}
+  if(!await uiConfirm('清空一起听的聊天记录？\n（'+(sess?'只清你和当前一起听对象的':'清全部一起听聊天')+'，也会清掉同步进微信上下文的隐藏一起听记录）'))return;
+  if(sess){S.music.chat=(S.music.chat||[]).filter(m=>m.cid!==sess.cid);const arr=msgs(sess.cid);arr.splice(0,arr.length,...arr.filter(m=>!m._musicCtx));}
+  else{S.music.chat=[];Object.keys(S.messages||{}).forEach(k=>{S.messages[k]=(S.messages[k]||[]).filter(m=>!m._musicCtx);});}
   _mBub={l:null,r:null};save();closeModal();render();toast('已清空一起听聊天');}
 function musicListModal(){musicInit();const songs=S.music.songs;
   const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee;display:flex;align-items:center;gap:7px" onclick="closeModal();musicPlay('${s.id}')">${svgIc('note',15,s.id===_mCur&&_mPlaying?'#2bd66a':'#9a9aa2')}${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicSync('${s.id}')" style="color:#2bd66a;cursor:pointer;padding:0 7px;font-size:12.5px">打轴</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点下面 ＋ 添加</div>';
@@ -962,9 +989,9 @@ function musicListModal(){musicInit();const songs=S.music.songs;
 const SVG_LOOP='<svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 7h9v2.5L20 6l-4-3.5V5H5v6h2zm10 10H8v-2.5L4 18l4 3.5V19h11v-6h-2z" fill="#fff"/></svg>';
 async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||c.blocked)return;musicInit();_mReplyBusy=true;
   const s=S.music.songs.find(x=>x.id===(S.music.session&&S.music.session.songId));
-  try{const ctx=msgs(cid).filter(m=>!m._call).slice(-6).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
+  try{const ctx=msgs(cid).filter(m=>!m._call&&!m._musicCtx).slice(-6).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     const mc=(S.music.chat||[]).filter(m=>m.cid===cid).slice(-14).map(m=>({role:m.role==='user'?'user':'assistant',content:m.content}));
-    const sys=buildSystem(c)+'\n\n# 现在：你和ta在「一起听歌」的小窗里聊天\n你们正一起听「'+(s?s.title:'一首歌')+'」。这是听歌时的独立小聊天，轻松、暧昧、围绕这首歌和此刻心情聊。\n【说话方式·务必遵守】戴着耳机一起听歌时话要【极短极碎】，像随口在耳边呢喃：\n· 每次只发【一到几个字】的超短句，最多别超过一小句；\n· 想多说几句时，就【一行发一句、换行分开】，让它们像一条一条飘出来（例如：\n嗯…\n这句好戳\n想你了）；\n· 别写成一大段、别长篇，越简短越好。\n上面给的微信记录只是让你记得你俩的来龙去脉，别照搬。';
+    const sys=buildSystem(c)+'\n\n# 现在：你和ta在「一起听歌」的小窗里聊天\n你们正一起听「'+(s?s.title:'一首歌')+'」。这是听歌时的独立小聊天，轻松、暧昧、围绕这首歌和此刻心情聊。一起听小窗里说过的话也会进入微信上下文，所以你在微信里也要记得。\n如果'+S.me.name+'刚说想听某首歌，系统会先自动切到歌单里匹配到的歌；你只需要自然接话，不要解释系统。\n【说话方式·务必遵守】戴着耳机一起听歌时话要【极短极碎】，像随口在耳边呢喃：\n· 每次只发【一到几个字】的超短句，最多别超过一小句；\n· 想多说几句时，就【一行发一句、换行分开】，让它们像一条一条飘出来（例如：\n嗯…\n这句好戳\n想你了）；\n· 别写成一大段、别长篇，越简短越好。\n上面给的微信记录只是让你记得你俩的来龙去脉，别照搬。';
     const r=await chatAPI([{role:'system',content:sys},...ctx,{role:'system',content:'（以上是你俩微信上下文，仅供你记得；下面是你们正一起听歌时的对话）'},...mc],{max:200,aux:c.model==='aux'});
     let txt=cleanReply(r).trim();if(!txt)return;
     // 一行一行地飘：按换行/短句切成几条超短消息，逐条发出
@@ -973,7 +1000,7 @@ async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||
     if(!lines.length)lines=[txt];
     lines=lines.map(x=>x.slice(0,24)).slice(0,5);
     S.music.chat=S.music.chat||[];
-    lines.forEach((ln,i)=>setTimeout(()=>{const ss=S.music.session;if(!ss||ss.cid!==cid)return;S.music.chat.push({cid,role:'assistant',content:ln,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',ln);save();},i*850));
+    lines.forEach((ln,i)=>setTimeout(()=>{const ss=S.music.session;if(!ss||ss.cid!==cid)return;S.music.chat.push({cid,role:'assistant',content:ln,time:Date.now()});musicMirrorToWechat(cid,'assistant',ln);if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',ln);save();},i*850));
   }catch(e){}finally{_mReplyBusy=false;}}
 function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
   const bg=S.music.bg?`background:#000 url(${S.music.bg}) center/cover no-repeat`:'background:radial-gradient(ellipse at 50% 28%,#1d1733,#0a0a12 72%)';
@@ -1050,7 +1077,9 @@ function musicEndSession(){const sess=S.music&&S.music.session;
     if(c&&!c.blocked)scheduleReply(sess.cid,'[系统：你和'+S.me.name+'刚结束一起听歌，一共一起听了'+dtxt+'。自然地说句收尾的话——意犹未尽/谢谢ta陪你听/约下次再一起听，温柔一两句。]');}
   S.music.session=null;if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}save();render();}
 function musicChatSend(){const sess=S.music.session;if(!sess)return;if(_mReplyBusy)return;const now=Date.now();if(now-_mSendT<600)return;_mSendT=now;const inp=$('#m_chat');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
-  musicInit();S.music.chat.push({cid:sess.cid,role:'user',content:t,time:Date.now()});mShowBub('l',t);save();aiMusicReply(sess.cid);}
+  musicInit();S.music.chat.push({cid:sess.cid,role:'user',content:t,time:Date.now()});musicMirrorToWechat(sess.cid,'user',t);mShowBub('l',t);
+  const song=musicFindSongByText(t);if(song)musicSwitchSongForSession(song,sess.cid,t);
+  save();aiMusicReply(sess.cid);}
 function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);const ln=lines[i];if(!ln)return;
   if(ln.t!=null&&_ma){_ma.currentTime=ln.t;if(_ma.paused)_ma.play().catch(()=>{});}
   const box=document.getElementById('m_lyrics');if(box){box.querySelectorAll('.mlrc').forEach((el,k)=>{el.style.color=k===i?'#ffd6e8':'#7d7d88';el.style.fontWeight=k===i?'700':'400';el.style.transform=k===i?'scale(1.1)':'scale(1)';});}}
