@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v364 · 后台通话保留';
+const APP_VER='v365 · 已接通视频识别';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -404,6 +404,7 @@ function callDrifted(content,lang){if(!lang||lang==='zh')return false;
     const noAct=l.replace(/【[^】]*】/g,'').replace(/[（(][^）)]*[）)]/g,'').trim();
     if(!noAct)return false;
     return hasCN(noAct)&&!hasForeign(noAct,lang);});}
+function callUnansweredMistake(t){t=t||'';return /(?:怎么|为什么|快|先|赶紧|还不|不)?\s*(?:接|接听|接起|接一下|接起来)\s*(?:我)?\s*(?:的)?\s*(?:视频|电话|语音|通话)|(?:视频|电话|语音|通话)\s*(?:怎么|为什么)?\s*(?:还没|不|没)\s*(?:接|接听|接起|接起来)/i.test(t);}
 let _voices=[];
 function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
@@ -551,6 +552,10 @@ function buildSystem(c){
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&c._readdKnown)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，后来又重新把你加回好友。你是通过查手机/通讯录记录发现的，所以你知道这不是第一次添加，可以自然在意、追问或吃醋，但别说成刚认识。';
   if(c._recoveredAt&&Date.now()-c._recoveredAt<7*86400000)s+='\n\n# 重要\n'+S.me.name+'之前把你这个好友/角色删除过'+(c._deleteDur?'（删了'+c._deleteDur+'）':'')+'，后来又从好友找回里把你加回来了。你知道这不是第一次添加，你可以在意、追问或吃醋，但别说成第一次认识。';
+  if(_main&&typeof _call!=='undefined'&&_call&&_call.state==='active'&&_call.id===c.id){
+    const _ck=_call.kind==='video'?'视频':'语音',_cd=_call.dir==='incoming'?'这是你主动打给'+S.me.name+'、ta已经接听并接通了。':'这是'+S.me.name+'主动打给你、你已经接听并接通了。';
+    s+='\n\n# 当前正在通话中（实时状态，优先级最高）\n你现在正和'+S.me.name+'打着【已接通的'+_ck+'电话】。'+_cd+'你们已经在同一通电话里说话了，不是在等待接听，也不是未接来电。绝对不要再说"接视频""接电话""怎么不接""快接一下"之类的话；直接把接通后的话说出来。';
+  }
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
   if(_main)s+='\n\n# 你能对自己微信/资料做的事（凭你心情，别频繁滥用）\n· 删自己的好友：'+S.me.name+'点名让你删掉你手机里某个好友（或你自己看谁不顺眼想删），就单独一行 [删我好友|那个人的名字]。删掉后，无论ta是查你手机还是登你微信，都不会再有这个人。\n· 改你自己的备注名：这是【'+S.me.name+'把你存进ta通讯录时给你起的称呼】，所以要【站在'+S.me.name+'的角度、用ta会怎么称呼你来写】——比如"老公""坏蛋""我的克劳德""亲爱的"这种ta对你的爱称，【绝对不要】写成第三人称、也不要写成描述你自己身份的话（像"克劳德的未婚妻""XX的老公"就是错的，那不是ta对你的称呼）。想改就单独一行 [改备注|新的备注名]。\n【别频繁改】备注最多【两三天改一次】就够了，不要每次聊天/每次登录都改。\n· 换头像：当'+S.me.name+'【发了一张图片】、并让你把它设成你的头像（或情侣头像）时，单独一行 [换头像]——系统会把你的微信头像换成ta刚发的那张图。没发图时别用。\n这两行是给系统看的指令、不会被读出来，不要在正文里复述它们。';
   if(_main){const _forged=msgs(c.id).filter(m=>m._forged&&!m._forgedSeen);
@@ -6087,6 +6092,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
     if(_call.dir==='incoming')cf+='\n- 通话方向：这通电话是你主动打给'+S.me.name+'，ta只是接听；之后提起时绝对不要说成ta打给你。';
     else if(_call.dir==='outgoing')cf+='\n- 通话方向：这通电话是'+S.me.name+'主动打给你，你只是接听；之后提起时绝对不要说成你打给ta。';
+    cf+='\n- 当前状态：这通'+(video?'视频':'语音')+'电话【已经接通】，你和'+S.me.name+'已经在电话里了，不是在等待接听。绝对不要再让ta接视频/接电话，也不要说"怎么不接""快接一下"。你要直接按已接通后的状态说话。';
     cf+='\n- 如果你要催ta任务、验收任务、说任务没完成，必须就在这通电话里直接说，绝对不要另发微信消息。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
@@ -6105,6 +6111,10 @@ async function callAI(sysNote,opts){if(!_call)return;
       if(_call&&_call.session===sess&&fix&&!callDrifted(fix,_lang))content=fix;}
     // 兜底：把混进来的那几行AI客服腔逐行剔掉（重生成没拦干净时，至少别让它蹦出来/被读出来）
     content=content.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');
+    if(_call&&_call.session===sess&&_call.state==='active'&&callUnansweredMistake(content)){
+      const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：电话已经接通了，'+S.me.name+'已经在这通'+(video?'视频':'语音')+'电话里。你刚才误以为ta还没接听。请重说一版：不要再说接视频、接电话、怎么不接、快接一下，直接说接通后该说的话。]'}],_md);
+      if(_call&&_call.session===sess&&fix&&!callUnansweredMistake(fix))content=fix;
+    }
     // 通话里他想登ta微信：先把话说完，这通电话自动挂断、紧接着直接登进去（在标签被抹掉前先记下来）
     const wantWxLogin=!!(S.couple&&S.couple.cid===_call.id&&S.couple.wxLoginAuth&&!wxLoginActive()&&/[\[【]\s*登录微信\s*[\]】]/.test(content));
     // 通话里也能落地管控/记仇/查岗（指令标签会被抹掉，不破坏语音/视频格式）
