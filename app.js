@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v367 · 后台消息通知';
+const APP_VER='v368 · 外部事件入口';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -488,9 +488,19 @@ function appRouteFromNotify(d){if(!d||d.type!=='open')return;
 function routeHash(){const h=(location.hash||'').replace(/^#/,'');if(!h)return;
   const m=h.match(/^chat=([^&]+)/);if(m){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>openChat(decodeURIComponent(m[1])),300);return;}
   const gm=h.match(/^group=([^&]+)/);if(gm){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>go('group',{id:decodeURIComponent(gm[1])}),300);return;}
+  const ev=h.match(/^event=([^&]+)/);if(ev){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>handleExternalEvent(decodeURIComponent(ev[1])),500);return;}
   if(h==='call'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>{if(_call)openIncoming();},300);return;}
   if(h==='mail'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>go('mail'),300);return;}
   if(h==='x'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>openX(),300);}}
+function externalEventContact(){return (S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked);}
+function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
+  const map={douyin_timeout:{app:'抖音',label:'抖音使用超时',tip:'刚触发了 iPhone 屏幕使用时间的【抖音使用超时】提醒，说明ta今天刷抖音已经到设定限额了。'},tiktok_timeout:{app:'抖音',label:'抖音使用超时',tip:'刚触发了 iPhone 屏幕使用时间的【抖音使用超时】提醒，说明ta今天刷抖音已经到设定限额了。'}};
+  const ev=map[type]||{app:'手机',label:'外部提醒',tip:'刚触发了一个手机使用提醒。'};
+  S._extEvLast=S._extEvLast||{};if(Date.now()-(S._extEvLast[type]||0)<30000){toast('刚告诉过ta了');return;}S._extEvLast[type]=Date.now();
+  msgs(c.id).push({role:'user',type:'sys',content:'📱 '+ev.label+'：'+S.me.name+'达到了设定的使用限额',time:Date.now(),id:uid()});save();
+  if(cur().p==='chat'&&cur().id===c.id)render();else if(cur().p==='wechat')render();
+  scheduleReply(c.id,'[系统：'+S.me.name+ev.tip+'你现在知道这件事。请严格按你自己的人设、性格和你们关系来反应，不要固定成一种"温柔关心"模板：温柔型可以哄ta休息，强势/控制欲强可以管束ta停下，嘴硬型可以别扭地吐槽，病娇/吃醋型可以更危险地盯紧一点，成熟型可以冷静提醒。核心是你真实在意ta刷太久了，让ta停下来、休息眼睛、喝水或换件事做。只发一两句自然微信，不要说自己是系统，不要机械播报。]');
+  toast('已告诉 '+(c.remark||c.name));}
 function appNotify(title,body,opt){if(!document.hidden)return;opt=opt||{};if(!('Notification'in window)||Notification.permission!=='granted')return;
   const data=opt.data||{},icon='icon.png';const nopt={body:body||'',icon,badge:icon,tag:opt.tag||('phone-'+Date.now()),renotify:!!opt.renotify,requireInteraction:!!opt.requireInteraction,data:data};
   if(opt.vibrate)nopt.vibrate=opt.vibrate;
