@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v373 · 隐藏久未打开提示';
+const APP_VER='v374 · 久未打开提醒免冷却';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=373').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=374').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -512,8 +512,6 @@ function handleIdleEvent(type){
   try{last=+(localStorage.getItem(IDLE_LAST_KEY)||0);lastRemind=+(localStorage.getItem(IDLE_LAST_REMIND_KEY)||0);}catch(e){}
   if(!last)last=now-threshold-1000;
   if(now-last<threshold){idleTouchOpen();return;}
-  const cooldown=Math.max(60000,Math.min(threshold,55*60000));
-  if(lastRemind&&now-lastRemind<cooldown){idleTouchOpen();return;}
   const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
   const away=fmtDur(now-last);
   try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
