@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v370 · 云端事件收件箱';
+const APP_VER='v371 · 久未打开提醒测试';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=367').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=371').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -485,16 +485,44 @@ function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   if(d.target==='call'){if(_call)openIncoming();else go('home');return;}
   if(d.target==='mail'){go('mail');return;}
   if(d.target==='x'){openX();return;}}
-function routeHash(){const qev=new URLSearchParams(location.search||'').get('event');if(qev){history.replaceState(null,'',location.pathname);setTimeout(()=>handleExternalEvent(decodeURIComponent(qev)),500);return;}
+function routeHash(){const qev=new URLSearchParams(location.search||'').get('event');if(qev){const ev=decodeURIComponent(qev);idleMarkEventPending(ev);history.replaceState(null,'',location.pathname);setTimeout(()=>handleExternalEvent(ev),500);return;}
   const h=(location.hash||'').replace(/^#/,'');if(!h)return;
   const m=h.match(/^chat=([^&]+)/);if(m){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>openChat(decodeURIComponent(m[1])),300);return;}
   const gm=h.match(/^group=([^&]+)/);if(gm){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>go('group',{id:decodeURIComponent(gm[1])}),300);return;}
-  const ev=h.match(/^event=([^&]+)/);if(ev){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>handleExternalEvent(decodeURIComponent(ev[1])),500);return;}
+  const ev=h.match(/^event=([^&]+)/);if(ev){const typ=decodeURIComponent(ev[1]);idleMarkEventPending(typ);history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>handleExternalEvent(typ),500);return;}
   if(h==='call'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>{if(_call)openIncoming();},300);return;}
   if(h==='mail'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>go('mail'),300);return;}
   if(h==='x'){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>openX(),300);}}
 function externalEventContact(){return (S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked);}
-function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
+const IDLE_EVENT_TYPES={idle_check:1,idle_timeout:1,phone_idle:1};
+const IDLE_LAST_KEY='phone_idle_last_open_at';
+const IDLE_LAST_REMIND_KEY='phone_idle_last_remind_at';
+const IDLE_THRESHOLD_KEY='phone_idle_threshold_ms';
+const IDLE_DEFAULT_MS=60000;
+let _idleEventPendingUntil=0;
+function isIdleEventType(t){return !!IDLE_EVENT_TYPES[(''+(t||'')).replace(/[^\w-]/g,'')];}
+function idleThresholdMs(){let n=0;try{n=+(localStorage.getItem(IDLE_THRESHOLD_KEY)||0);}catch(e){}if(!n)n=IDLE_DEFAULT_MS;return Math.max(60000,Math.min(24*60*60000,n));}
+function idleEventInUrl(){try{const q=new URLSearchParams(location.search||'').get('event');if(isIdleEventType(q))return true;const h=(location.hash||'').replace(/^#/,'');const m=h.match(/^event=([^&]+)/);return !!(m&&isIdleEventType(decodeURIComponent(m[1]||'')));}catch(e){return false;}}
+function idleMarkEventPending(type){if(isIdleEventType(type))_idleEventPendingUntil=Date.now()+3500;}
+function idleTouchOpen(){try{localStorage.setItem(IDLE_LAST_KEY,''+Date.now());}catch(e){}}
+function idleTouchOpenIfNormal(){if(!idleEventInUrl()&&Date.now()>_idleEventPendingUntil)idleTouchOpen();}
+function idleRecentAssistantText(c){try{const lines=msgs(c.id).filter(m=>m.role==='assistant'&&(m.type==='text'||m.type==='voice')).slice(-5).map(m=>msgToText(m)).filter(Boolean).map(t=>t.replace(/\s+/g,' ').slice(0,60));return lines.length?'最近你说过这些，不能照搬、不能同样开头：'+lines.join(' / ')+'。':'';}catch(e){return '';}}
+function handleIdleEvent(type){
+  const now=Date.now(),threshold=idleThresholdMs();let last=0,lastRemind=0;
+  try{last=+(localStorage.getItem(IDLE_LAST_KEY)||0);lastRemind=+(localStorage.getItem(IDLE_LAST_REMIND_KEY)||0);}catch(e){}
+  if(!last){idleTouchOpen();return;}
+  if(now-last<threshold){idleTouchOpen();return;}
+  const cooldown=Math.max(60000,Math.min(threshold,55*60000));
+  if(lastRemind&&now-lastRemind<cooldown){idleTouchOpen();return;}
+  const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
+  const away=fmtDur(now-last);
+  try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
+  idleTouchOpen();
+  save();openChat(c.id);
+  const recent=idleRecentAssistantText(c);
+  scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在主动发微信把ta叫回来。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接要求ta回来，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
+}
+function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');if(isIdleEventType(type)){handleIdleEvent(type);return;}const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
   const map={douyin_timeout:{app:'抖音',label:'抖音使用超时',tip:'刚触发了 iPhone 屏幕使用时间的【抖音使用超时】提醒，说明ta今天刷抖音已经到设定限额了。'},tiktok_timeout:{app:'抖音',label:'抖音使用超时',tip:'刚触发了 iPhone 屏幕使用时间的【抖音使用超时】提醒，说明ta今天刷抖音已经到设定限额了。'}};
   const ev=map[type]||{app:'手机',label:'外部提醒',tip:'刚触发了一个手机使用提醒。'};
   S._extEvLast=S._extEvLast||{};if(Date.now()-(S._extEvLast[type]||0)<30000){toast('刚告诉过ta了');return;}S._extEvLast[type]=Date.now();
@@ -6617,13 +6645,14 @@ function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>
 initBattery();
 window.addEventListener('pagehide',()=>{callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(()=>pollExternalEvents(true),700);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleTouchOpenIfNormal,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-registerSW();window.addEventListener('hashchange',routeHash);window.addEventListener('focus',()=>{setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);});
+registerSW();window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleTouchOpenIfNormal,1600);});window.addEventListener('focus',()=>{setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);});
 render();restoreActiveCall();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(()=>pollExternalEvents(true),2600);
+setTimeout(idleTouchOpenIfNormal,3800);
 setInterval(()=>pollExternalEvents(false),30000);
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
