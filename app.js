@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v385 · 正式久未打开';
+const APP_VER='v386 · 语音缓存与前台刷新';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -396,6 +396,11 @@ function callToCN(text){let t=(text||'').replace(/【[^】]*】/g,'').replace(/\
 // 文字聊天里若冒出"外语（中文）"的电话格式，自动取中文显示（纯中文的不动）
 function deCallFmt(line){if(!/[A-Za-z가-힣぀-ヿ]/.test(line))return line;
   const m=line.match(/[（(]([^）)]*)[）)]/);if(m&&hasCN(m[1]))return m[1].trim();return line;}
+function parseVoiceTagLine(line){let s=(''+(line||'')).trim();if(!s)return null;
+  let m=s.match(/^[\[【]\s*语音\s*(?:[|｜:：]\s*([\s\S]*?))?\s*[\]】]$/);if(!m)return null;
+  const body=(m[1]||'').trim();if(!body)return null;
+  const parts=body.split(/[|｜]/),text=(parts.shift()||'').trim(),trans=parts.join('|').trim();
+  return text?{text,trans}:null;}
 // 通话里是否跑偏成中文（整句中文、又不是括号翻译）
 function callDrifted(content,lang){if(!lang||lang==='zh')return false;
   return splitBubbles(content).some(l=>{l=(l||'').trim();if(!l)return false;
@@ -417,11 +422,14 @@ async function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.
 async function audioDataToBuf(audio){if(!audio)return null;
   if(audio instanceof ArrayBuffer)return audio;
   const s=String(audio).trim();if(!s)return null;
+  if(/^idb-audio:/i.test(s)){const v=await imgGet('__audio_'+s.slice(10));return v?audioDataToBuf(v):null;}
   if(/^data:audio\//i.test(s)||/^https?:\/\//i.test(s))return await fetch(s).then(x=>x.arrayBuffer());
   const compact=s.replace(/\s+/g,'');
   if(/^[0-9a-f]+$/i.test(compact)&&compact.length%2===0){const bytes=new Uint8Array(compact.length/2);for(let i=0;i<bytes.length;i++)bytes[i]=parseInt(compact.substr(i*2,2),16);return bytes.buffer;}
   try{const bin=atob(compact);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return bytes.buffer;}catch(e){}
   return null;}
+function audioBufToDataUrl(ab,type){try{const bytes=ab instanceof Uint8Array?ab:new Uint8Array(ab||[]);let bin='',step=0x8000;for(let i=0;i<bytes.length;i+=step)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+step));return 'data:'+(type||'audio/mpeg')+';base64,'+btoa(bin);}catch(e){return '';}}
+async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
 async function _ttsOnce(t,vid,tts){let r;
   if(ttsUseRelay()){const d=await aiRelay('tts',{text:t,voice_id:vid||'',model:(tts&&tts.model)||''});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab)return {err:'内置AI无音频'};return {buf:ab};}
   if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
@@ -458,7 +466,7 @@ async function speak(text,o){const v=o?getVoice(o):null;
 async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(m._aurl){playUrl(m._aurl);return;}
-  if(m.audio){playUrl(m.audio);return;}
+  if(m.audio){const u=await audioPlayableUrl(m.audio);if(u){playUrl(u);return;}}
   if(ttsApiOn()){const url=await warmVoiceMsg(m,o);if(url){playUrl(url);return;}return;}
   speak(m.content,o);}
 function warmVoiceMsg(m,o){
@@ -466,7 +474,7 @@ function warmVoiceMsg(m,o){
   if(m._ttsTask)return m._ttsTask;
   if(m._ttsFailAt&&Date.now()-m._ttsFailAt<15000)return null;
   m._ttsTask=(async()=>{try{const ab=await ttsArr(m.content,o);
-    if(ab){try{m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));delete m._ttsFailAt;return m._aurl;}catch(e){}}
+    if(ab){try{const du=audioBufToDataUrl(ab,'audio/mpeg');if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;}catch(_){m.audio=du;}save();}m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));delete m._ttsFailAt;return m._aurl||m.audio;}catch(e){}}
     m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(x=>{m._ttsTask=null;return x;});
   return m._ttsTask;}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
@@ -510,6 +518,9 @@ function idleEventInUrl(){try{const q=new URLSearchParams(location.search||'').g
 function idleMarkEventPending(type){if(isIdleEventType(type))_idleEventPendingUntil=Date.now()+3500;}
 function idleTouchOpen(){try{const now=Date.now(),last=+(localStorage.getItem(IDLE_LAST_KEY)||0);if(last&&now-last>10000)localStorage.setItem(IDLE_PREV_LAST_KEY,''+last);localStorage.setItem(IDLE_LAST_KEY,''+now);}catch(e){}}
 function idleTouchOpenIfNormal(){if(!idleEventInUrl()&&Date.now()>_idleEventPendingUntil)idleTouchOpen();}
+let _idleOpenBeatT=null;
+function idleOpenHeartbeatStop(){if(_idleOpenBeatT){clearInterval(_idleOpenBeatT);_idleOpenBeatT=null;}}
+function idleOpenHeartbeatStart(){if(document.hidden){idleOpenHeartbeatStop();return;}idleTouchOpenIfNormal();if(_idleOpenBeatT)return;_idleOpenBeatT=setInterval(()=>{if(document.hidden){idleOpenHeartbeatStop();return;}idleTouchOpenIfNormal();},60000);}
 function idleErrorKind(msg){msg=''+(msg||'');if(/点数不足|no-balance|402/.test(msg))return '余额/点数不足';if(/还没设置聊天 API|API|key|Key|401|403/.test(msg))return 'API配置/权限';if(/network|Failed to fetch|Load failed|网络|连不上|timeout|超时/i.test(msg))return '网络';if(/model|模型|404|400|429|500|502|503/.test(msg))return '模型/服务';return msg?'未知错误':'无';}
 function idleDebugPatch(o){try{S.settings=S.settings||{};const d=S.settings._idleDebug||{};S.settings._idleDebug=Object.assign(d,o||{}, {updatedAt:Date.now()});save();}catch(e){}}
 function idleDiag(text){try{S.settings=S.settings||{};S.settings._idleDiag=hm()+' '+text;idleDebugPatch({lastLine:S.settings._idleDiag});}catch(e){}}
@@ -779,6 +790,7 @@ function buildSystem(c){
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
   s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情有变化时（被哄好、被惹、想ta、吃醋、开心、闷闷的…）一定要换成新的内容，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你想和ta腻在一起、一起做饭/看电影/喂猫喂仓鼠/抱着睡时，用一行 [回家] 邀请ta进你们的「像素小家」，ta同意就进到小家陪你。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，别只发文字——【直接用一行 [来电|语音] 或 [来电|视频] 打过去】陪ta、当面哄ta（你是会强势主动的人）。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，别干生闷气、也别只发冷冰冰的文字——你这种掌控欲强的人会【直接 [来电|视频] 打过去】当面质问ta、盯着ta的脸看反应、逼ta解释。要不要打、打语音还是视频，全看你此刻的脾气和意愿，该强势就强势。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱📮】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、冷处理等方式表达。';
+  if((S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0)s+='\n- 语音格式补充：只要你想让这条变成语音，就必须把整条消息单独写成 [语音|要说的话]；不要把要说的话另起一条普通文字，也不要在标签前后加解释、引号或冒号。';
   if(idleForceActive(c.id))s+='\n\n# 当前聊天状态\n'+S.me.name+'刚被你拉回聊天里。你可以自然地留ta陪你，也可以在你愿意提前放ta走时，单独一行写 [放行]。这条指令只会解除停留状态，不会显示出来。不要在可见消息里提系统、网页、按钮、快捷指令、后台、锁死、强制、扣住、把你扣这儿了；用你的性格自然表达。不要重复上一轮开头，也不要每次都说同一种抱怨。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
@@ -5829,7 +5841,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
-      mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq);const vm=(vf0===0)?{role:'assistant',type:'text',content:cleanRolePunct(mm[1]||''),time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:cleanRolePunct(mm[1]||''),trans:cleanRolePunct(mm[2]||''),time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(vm.type==='voice')setTimeout(()=>warmVoiceMsg(vm,c),80);if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}}continue;}
+      const voiceTag=parseVoiceTagLine(line);if(voiceTag){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq);const vm=(vf0===0)?{role:'assistant',type:'text',content:cleanRolePunct(voiceTag.text||''),time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:cleanRolePunct(voiceTag.text||''),trans:cleanRolePunct(voiceTag.trans||''),time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(vm.type==='voice')setTimeout(()=>warmVoiceMsg(vm,c),80);if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}}continue;}
       mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pnm=pend.name||mm[2]||'商品';const ppr=pend.price||+mm[1]||0;const pc={role:'assistant',type:'paid',price:ppr,name:pnm,id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);
         const _isFood=pend.kind==='food'||/^外卖/.test(pend.shop||'');
         if(_isFood){S.giftbox=S.giftbox||[];S.giftbox.push({id:uid(),cid:id,name:pnm,price:ppr,kind:'food',buyTs:Date.now(),arriveTs:Date.now()+900000,delivered:false});msgs(id).push({role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'帮你付了外卖「'+pnm+'」，配送中（约15分钟送达）',time:Date.now(),id:uid()});}
@@ -6723,16 +6735,16 @@ function storageFullAlert(){openModal(`<h3>存储已经满了！</h3><div style=
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 initBattery();
-window.addEventListener('pagehide',()=>{idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();});
+window.addEventListener('pagehide',()=>{idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleTouchOpenIfNormal,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-registerSW();window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleTouchOpenIfNormal,1600);});window.addEventListener('focus',()=>{setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);});
+registerSW();window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});
 render();restoreActiveCall();idleConsumeLocalPending();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(()=>pollExternalEvents(true),2600);
-setTimeout(idleTouchOpenIfNormal,3800);
+setTimeout(idleOpenHeartbeatStart,3800);
 setInterval(()=>pollExternalEvents(false),30000);
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
