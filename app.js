@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v381 · 久未打开时间修正';
+const APP_VER='v383 · 强制聊天模式';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -500,7 +500,8 @@ const IDLE_PREV_LAST_KEY='phone_idle_prev_open_at';
 const IDLE_LAST_REMIND_KEY='phone_idle_last_remind_at';
 const IDLE_THRESHOLD_KEY='phone_idle_threshold_ms';
 const IDLE_PENDING_KEY='phone_idle_pending_event';
-const IDLE_DEFAULT_MS=60000;
+const IDLE_DEFAULT_MS=3600000;
+const IDLE_FORCE_MS=10*60000;
 const IGNORED_EXTERNAL_EVENT_TYPES={douyin_timeout:1,tiktok_timeout:1};
 let _idleEventPendingUntil=0;
 function isIdleEventType(t){return !!IDLE_EVENT_TYPES[(''+(t||'')).replace(/[^\w-]/g,'')];}
@@ -517,7 +518,7 @@ function idleDebug(){S.settings=S.settings||{};return S.settings._idleDebug||(S.
 function idleTimeText(t){return t?fmtDT(t):'暂无';}
 function idleApiStatus(){if(aiCoreOn())return aiCoreUrl()?'内置AI已开':'内置AI已开，但后台地址为空';const a=S.settings&&S.settings.chat;return (a&&a.base&&a.key&&a.model)?('直连API：'+a.model):'聊天API未配置完整';}
 function idleDebugPanel(){const d=idleDebug(),now=Date.now(),last=+(localStorage.getItem(IDLE_LAST_KEY)||0),th=idleThresholdMs(),c=externalEventContact();const away=last?fmtDur(now-last):'暂无';
-  const rows=[['上次打开小手机',idleTimeText(last)],['当前离开时长',away],['当前阈值',fmtDur(th)],['收到 phone_idle',d.receivedAt?(fmtDT(d.receivedAt)+' · '+(d.eventType||'')):'暂无'],['进入处理逻辑',d.enteredAt?fmtDT(d.enteredAt):'暂无'],['判断用的时间',d.effectiveLastAt?fmtDT(d.effectiveLastAt):'暂无'],['时间判断',d.decision||'暂无'],['选中角色',d.contactName||((c&&(c.remark||c.name))||'暂无')],['AI调用',d.aiStatus||'暂无'],['生成结果',d.aiResult||'暂无'],['拦截/错误',d.blockedBy||d.aiErrorKind||'暂无'],['API状态',idleApiStatus()],['最后诊断',idleDiagText()]];
+  const rows=[['上次打开小手机',idleTimeText(last)],['当前离开时长',away],['当前阈值',fmtDur(th)],['强制聊天',d.forceChat||'暂无'],['收到 phone_idle',d.receivedAt?(fmtDT(d.receivedAt)+' · '+(d.eventType||'')):'暂无'],['进入处理逻辑',d.enteredAt?fmtDT(d.enteredAt):'暂无'],['判断用的时间',d.effectiveLastAt?fmtDT(d.effectiveLastAt):'暂无'],['时间判断',d.decision||'暂无'],['选中角色',d.contactName||((c&&(c.remark||c.name))||'暂无')],['AI调用',d.aiStatus||'暂无'],['生成结果',d.aiResult||'暂无'],['拦截/错误',d.blockedBy||d.aiErrorKind||'暂无'],['API状态',idleApiStatus()],['最后诊断',idleDiagText()]];
   return `<div class="section"><div style="padding:12px 14px;font-weight:600;color:#f59e0b">久未打开调试</div>
     ${rows.map(r=>`<div class="it"><span>${esc(r[0])}</span><span class="v" style="max-width:58%;white-space:normal;text-align:right;line-height:1.35">${esc(r[1])}</span></div>`).join('')}
     <div class="btns" style="padding:8px 14px 4px;gap:8px"><button class="btn g" onclick="idleSetThreshold(60000)">测试1分钟</button><button class="btn g" onclick="idleSetThreshold(3600000)">正式1小时</button></div>
@@ -534,6 +535,13 @@ function idleConsumeLocalPending(){let raw='',ev=null;try{raw=localStorage.getIt
   idleMarkEventPending(type);idleDebugPatch({localBridgeAt:Date.now(),localBridgeTs:+(ev&&ev.ts)||0,eventType:type,receivedAt:Date.now(),decision:'收到本地桥事件，准备处理',aiStatus:'待判断',aiResult:'待生成',blockedBy:''});
   setTimeout(()=>handleIdleEvent(type),300);return true;}
 function idleRecentAssistantText(c){try{const lines=msgs(c.id).filter(m=>m.role==='assistant'&&(m.type==='text'||m.type==='voice')).slice(-5).map(m=>msgToText(m)).filter(Boolean).map(t=>t.replace(/\s+/g,' ').slice(0,60));return lines.length?'最近你说过这些，不能照搬、不能同样开头：'+lines.join(' / ')+'。':'';}catch(e){return '';}}
+function idleForceState(){S.settings=S.settings||{};const f=S.settings._idleForce;if(!f||!f.id)return null;if(f.until&&Date.now()>=f.until){delete S.settings._idleForce;save();return null;}return f;}
+function idleForceActive(id){const f=idleForceState();return !!(f&&(!id||f.id===id));}
+function idleForceRemain(){const f=idleForceState();return f?Math.max(0,(f.until||0)-Date.now()):0;}
+function idleForceStart(c,awayText){if(!c)return;const now=Date.now(),until=now+IDLE_FORCE_MS;S.settings=S.settings||{};S.settings._idleForce={id:c.id,startAt:now,until,awayText:awayText||'',escaped:false};idleDebugPatch({forceChat:'已锁定到 '+fmtDT(until)});}
+function idleForceBanner(id){if(!idleForceActive(id))return '';return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(135deg,#2b1b24,#3a2431);color:#ffd6e8;font-size:12px;border-bottom:.5px solid rgba(255,255,255,.08)"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">被扣在聊天里 · 还剩 ${esc(fmtDur(idleForceRemain()))}</span><button class="minibtn" style="background:#3a3a3c;color:#fff;border:0" onclick="idleForceEscape()">小洞</button></div>`;}
+function idleForceBlockNav(p,params){const f=idleForceState();if(!f)return false;if(p==='chat'&&params&&params.id===f.id)return false;const c=getC(f.id);toast(c?((c.remark||c.name)+'还没放你走'):'还没到时间');stack=stack.filter(s=>s.p!=='chat');stack.push({p:'chat',id:f.id});render();return true;}
+function idleForceEscape(){const f=idleForceState();if(!f){home();return;}const c=getC(f.id);S.settings._idleForce=Object.assign({},f,{escaped:true,escapedAt:Date.now(),until:Date.now()-1});save();toast('你从小洞钻出去了');if(c){msgs(c.id).push({role:'user',type:'sys',content:'🕳️ '+S.me.name+'从小洞钻出了强制聊天页，提前逃走了',time:Date.now(),id:uid(),_silent:true});save();scheduleReply(c.id,'[系统：'+S.me.name+'刚从你留的小洞里钻出去了，提前逃离了你强制拉回来的聊天页。你知道ta跑了。请按你自己的人设和性格反应：强势型可以更生气地把ta抓回来，嘴硬型可以冷笑或记账，温柔黏人型可以委屈控诉，病娇/占有欲强可以更危险地盯紧。不要说系统、功能、按钮、网页、快捷指令，只像微信里发现ta溜走后自然发话。一两句即可。]');}home();}
 function handleIdleEvent(type){
   idleDiag('收到 '+type);
   const now=Date.now(),threshold=idleThresholdMs();let last=0,lastRemind=0,prevLast=0;
@@ -547,11 +555,12 @@ function handleIdleEvent(type){
   const away=fmtDur(now-effectiveLast);
   try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
   idleTouchOpen();
-  msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了',time:Date.now(),id:uid(),_silent:true});save();openChat(c.id);
+  idleForceStart(c,away);
+  msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了；你把ta强制拉回了聊天页，10分钟内不准乱跑',time:Date.now(),id:uid(),_silent:true});save();openChat(c.id);
   const recent=idleRecentAssistantText(c);
   idleDiag('已触发：提醒 '+(c.remark||c.name)+'，离开 '+away);
   idleDebugPatch({decision:'已触发：离开 '+away+(usedPrev?'（按打开前时间）':''),contactId:c.id,contactName:c.remark||c.name,hiddenMsgAt:Date.now(),aiStatus:'已排队',aiResult:'等待AI生成',blockedBy:'',apiStatus:idleApiStatus(),aiScheduledAt:Date.now(),aiDelaySec:Number(S.settings.replyDelay)||0});
-  scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在主动发微信把ta叫回来。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接要求ta回来，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
+  scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在已经把ta强制拉回微信聊天页，并且10分钟内不准ta乱跑；ta只能乖乖待在你这里，除非从小洞逃走。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接宣布把ta扣住，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
 }
 function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');if(isIdleEventType(type)){handleIdleEvent(type);return;}if(IGNORED_EXTERNAL_EVENT_TYPES[type])return;const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
   const ev={app:'手机',label:'外部提醒',tip:'刚触发了一个手机使用提醒。'};
@@ -776,12 +785,13 @@ function buildSystem(c){
 /* =================== 渲染路由 =================== */
 let stack=[{p:'home'}];
 let wxTab='chats';
-function go(p,params){stack.push(Object.assign({p},params));render();}
-function back(){if(stack.length>1){stack.pop();render();}}
-function home(){stack=[{p:'home'}];render();}
+function go(p,params){if(idleForceBlockNav(p,params))return;stack.push(Object.assign({p},params));render();}
+function back(){const c=cur();if(c&&c.p==='chat'&&idleForceActive(c.id)){toast('还没到10分钟，只能从小洞逃');return;}if(stack.length>1){stack.pop();render();}}
+function home(){if(idleForceBlockNav('home'))return;stack=[{p:'home'}];render();}
 function cur(){return stack[stack.length-1];}
 function render(){
   const c=cur();const app=$('#app');
+  const _force=idleForceState();if(_force&&(c.p!=='chat'||c.id!==_force.id)){stack=stack.filter(s=>s.p!=='chat');stack.push({p:'chat',id:_force.id});return render();}
   const _sb=$('#statusbar');if(_sb)_sb.className='statusbar'+(c.p==='home'?'':' dark');
   let html='';
   if(c.p==='home')html=renderHome();
@@ -5240,6 +5250,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
+    ${idleForceBanner(id)}
     <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
     <div class="panel" id="panel">
       <div class="ptabs"><span class="${_panelPage!=='emoji'?'on':''}" onclick="_panelPage='fn';render();$('#panel').classList.add('show')">功能</span><span class="${_panelPage==='emoji'?'on':''}" onclick="_panelPage='emoji';render();$('#panel').classList.add('show')"><span style="display:inline-flex;align-items:center;gap:5px">${svgIc('smile',16)}表情</span></span></div>
