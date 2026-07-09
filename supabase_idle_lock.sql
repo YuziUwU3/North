@@ -51,7 +51,9 @@ begin
     return 'ok';
   end if;
 
-  return 'locked';
+  -- iPhone Shortcuts can reliably test "has any value / has no value".
+  -- Returning null for an existing lock lets later App triggers stop cleanly.
+  return null;
 end;
 $$;
 
