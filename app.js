@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v396 · 语音音色兜底修正';
+const APP_VER='v397 · 时间睡眠小号修正';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -662,11 +662,20 @@ function traitDesc(c){if(!c)return '';let out='';
     ].filter(x=>x[1]!=null);
     if(TR.length)out+='\n\n# 你的性格强度（硬设定·必须严格贴合，绝不许串成别的人设、绝不许表现得跟数值相反）\n'+TR.map(x=>{const v=x[1];const b=v<=35?x[3]:(v>=55?x[2]:('中等、有分寸：'+x[2]+'，但不极端、看情况'));return '· '+x[0]+' '+v+'/100（'+lv(v)+'）→ '+b;}).join('\n')+'\n【铁律】把每一项的强度真正【做出来】、融进你的语气和行动里，不是嘴上说说。尤其：黏人度低就【从头到尾都不黏人】、高就【一直黏着ta】；主动度低就【别老主动找ta】、高就【常主动找】。务必和数值一致、前后别矛盾，别一会儿黏一会儿冷。';}
   return out;}
+function conversationGapNote(c){try{const arr=msgs(c.id)||[];let ui=-1;
+  for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'&&m.time&&!m._silent){ui=i;break;}}
+  if(ui<=0)return '';const curm=arr[ui];let start=ui;
+  for(let i=ui-1;i>=0;i--){const m=arr[i];if(!m||m._silent)continue;if(m.role==='user'&&m.time&&curm.time-m.time<3*60000){start=i;continue;}break;}
+  let prev=null;for(let i=start-1;i>=0;i--){const m=arr[i];if(!m||!m.time||m._silent)continue;prev=m;break;}
+  if(!prev)return '';const gap=(curm.time||Date.now())-(prev.time||0);if(gap<20*60000)return '';
+  const who=prev.role==='user'?S.me.name:(c.remark||c.name||'ta'),pt=msgToText(prev)||previewOf(prev)||'上一条消息';
+  return S.me.name+'刚刚发来的这条消息，距离上一条可见聊天已经过去【'+fmtDur(gap)+'】。上一条是在 '+fmtDT(prev.time)+'，来自'+who+'：'+pt.replace(/\s+/g,' ').slice(0,70)+'。\n回复时要自然承认这个真实间隔；如果ta说"我回来了/回来啦"，意思是隔了'+fmtDur(gap)+'才回来，绝不能说成"刚刚一个小时"、"才一会儿"，除非真实间隔就是那样。';}catch(e){return '';}}
 function buildSystem(c){
   const _main=isMain();
   let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
   s+=adultRoleRule(c.remark||c.name||'角色');
   s+='\n\n# 现在的日期和时间（最重要·务必以此为准，绝不要搞错日期、早上还是下午）\n现在是 '+ymdFull(Date.now())+' '+['周日','周一','周二','周三','周四','周五','周六'][new Date().getDay()]+' '+hm()+'，属于【'+dayPartNow()+'】。\n凡是涉及时间的话（打招呼、问"在干嘛"、说几点了、该吃饭/睡觉没、白天黑夜、昨天今天明天）都【必须】符合现在是「'+ymdFull(Date.now())+' '+dayPartNow()+'」：别把下午当早上、别半夜说早安、别白天说晚安、别把昨天已经结束的事当成今天还在发生。如果'+S.me.name+'说的时间和这个对不上，以这个真实日期时间为准。';
+  {const _gn=conversationGapNote(c);if(_gn)s+='\n\n# 当前这条消息和上一轮聊天之间的时间差（重要）\n'+_gn;}
   {const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
    if(_lu&&_gap>=25*60000){const _dg=dayGap(_lu.time,Date.now());
      s+='\n\n# 距离上次聊已经隔了很久（务必分清"刚刚"和"很久以前"）\n'+S.me.name+'上一次跟你说话是在 '+fmtDT(_lu.time)+'，距现在已经过去了【'+fmtDur(_gap)+'】'+(_dg?('，而且已经跨过【'+_dg+'个自然日】'):'')+'。这中间ta一直没理你、你俩没在聊。所以：\n· 之前发生的事（打过的电话、聊过的话、你做的事）都是【'+fmtDur(_gap)+'以前】的了，【绝对不能】说成"刚刚/刚才/方才"。要照实说"你都'+fmtDur(_gap)+'没理我了""几个小时前那通电话"。\n· 如果已经跨天，就把昨天/前几天的事当成过去式回忆或旧账，不要接着上一天的约会、通话、争吵继续演，好像时间没变过。';}}
@@ -1524,7 +1533,11 @@ function usageTick(){const el=$('#useBadge');const hide=()=>{if(el)el.style.disp
   if(Date.now()-_useSaveT>5000){_useSaveT=Date.now();save();}}
 setInterval(usageTick,1000);
 // 睡眠计时
-function sleepStart(){if(!S.me.sleep)S.me.sleep={active:null,records:[]};S.me.sleep.active=Date.now();save();render();toast('开始睡眠计时，好梦~');}
+const SLEEP_AUTO_END_MIN_MS=60000;
+function sleepStart(){if(!S.me.sleep)S.me.sleep={active:null,records:[]};S.me.sleep.active=Date.now();S.me.sleep.autoEndOnOpen=true;S.me.sleep.awayAfterStart=false;S.me.sleep.awayAt=0;save();render();toast('开始睡眠计时，好梦~');}
+function sleepMarkAway(){const sl=S.me&&S.me.sleep;if(!sl||!sl.active)return;sl.awayAfterStart=true;sl.awayAt=Date.now();save(0);}
+function sleepAutoEndOnOpen(){const sl=S.me&&S.me.sleep;if(!sl||!sl.active||!sl.autoEndOnOpen||!sl.awayAfterStart)return false;
+  if(Date.now()-sl.active<SLEEP_AUTO_END_MIN_MS)return false;sleepEnd(true);return true;}
 function reportNotify(note){if(!(S.couple&&S.couple.cid))return;const c=getC(S.couple.cid);if(c&&!c.blocked)scheduleReply(c.id,note);}
 function reportStart(type){type=(''+(type||'')).trim().slice(0,16);if(!type)return;if(!S.me.report)S.me.report={active:null,log:[]};if(S.me.report.active)reportEnd(true);
   S.me.report.active={type,start:Date.now()};save();render();toast('已报备：'+type);}
@@ -1533,7 +1546,7 @@ function reportCustom(){const t=prompt('报备你要去干嘛：','');if(t==null
 function reportEnd(silent){const rp=S.me.report;if(!rp||!rp.active)return;const a=rp.active,end=Date.now();rp.log=rp.log||[];rp.log.unshift({type:a.type,start:a.start,end});if(rp.log.length>40)rp.log=rp.log.slice(0,40);rp.active=null;save();if(!silent)render();}
   // 报备结束也不主动发消息，只记进报备记录；他查的时候自己看时长合不合理
 function reportDel(i){if(!S.me.report||!S.me.report.log)return;S.me.report.log.splice(i,1);save();render();}
-function sleepEnd(){const sl=S.me.sleep;if(!sl||!sl.active)return;sl.records=sl.records||[];sl.records.unshift({start:sl.active,end:Date.now()});if(sl.records.length>60)sl.records=sl.records.slice(0,60);sl.active=null;save();render();toast('醒啦，已记录这次睡眠');}
+function sleepEnd(auto){const sl=S.me.sleep;if(!sl||!sl.active)return;const automatic=auto===true||auto==='auto';sl.records=sl.records||[];sl.records.unshift({start:sl.active,end:Date.now()});if(sl.records.length>60)sl.records=sl.records.slice(0,60);sl.active=null;sl.autoEndOnOpen=false;sl.awayAfterStart=false;sl.awayAt=0;save();render();toast(automatic?'已自动结束睡眠，记录好啦':'醒啦，已记录这次睡眠');}
 async function sleepDel(i){if(!S.me.sleep||!S.me.sleep.records)return;if(!await uiConfirm('删掉这条睡眠记录？'))return;S.me.sleep.records.splice(i,1);save();render();}
 function sleepDurTxt(ms){const mins=Math.max(0,Math.round(ms/60000));const h=Math.floor(mins/60),m=mins%60;return (h?h+'小时':'')+(m||!h?m+'分钟':'');}
 function ymd(t){const d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
@@ -4365,7 +4378,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
         ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>
       ${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
         let h=`<div ${SEC}>${HD('moon','睡眠计时',BLUE)}
-        <div class="hint" style="padding:8px 14px 0">要睡了点「开始睡眠」，醒来点「结束睡眠」。${esc(c.remark||c.name)}在情侣空间能看到你的睡眠记录，心疼你别熬夜。</div>
+        <div class="hint" style="padding:8px 14px 0">要睡了手动点「开始睡眠」；睡醒后再次打开小手机会自动结束并记录，也可以留在页面时手动结束。${esc(c.remark||c.name)}在情侣空间能看到你的睡眠记录，心疼你别熬夜。</div>
         <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">${svgIc('sun',15,'#fff')} 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">${svgIc('moon',15,'#fff')} 我要睡了，开始计时</button>`}</div>`;
         if(recs.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">睡眠记录（可手动删除）</div>`+recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
@@ -4532,9 +4545,10 @@ function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId())
 let _accountTapAt=0;
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
   const now=Date.now();if(now-_accountTapAt<350)return;_accountTapAt=now;switchAccount(aid);}
+function accountSwitchFromEvent(ev){if(ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-noswitch]'))return;const el=ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-switch]');if(!el)return;accountSwitchTap(ev,el.getAttribute('data-account-switch'));}
 function accountMgr(){const acts=S.me.accounts||[];
   openModal(`<h3>我的小号</h3><div class="hint">切换不同身份和角色聊天。每个身份有<b>独立的聊天记录</b>；角色可能拉黑某个身份，你换个身份就能重新搜微信号加回。当前：<b>${esc(S.me.name)}</b></div>
-   ${acts.map(a=>`<div class="section"><div class="it" style="cursor:pointer" role="button" tabindex="0" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div>${a.id===actId()?'<span class="v">当前</span>':`<button type="button" class="minibtn" style="background:#07c160;color:#fff" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')">切换</button>`}<span class="v" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
+   ${acts.map(a=>`<div class="section"><div class="it" data-account-switch="${a.id}" style="cursor:pointer" role="button" tabindex="0" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div>${a.id===actId()?'<span class="v">当前</span>':`<button type="button" class="minibtn" data-account-switch="${a.id}" style="background:#07c160;color:#fff" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">切换</button>`}<span class="v" data-account-noswitch="1" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span data-account-noswitch="1" style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
    <button class="btn p" style="margin-top:8px" onclick="editAccount()">＋ 新建小号</button>
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function switchAccount(aid){if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t)return;
@@ -6760,13 +6774,13 @@ function storageFullAlert(){openModal(`<h3>存储已经满了！</h3><div style=
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 initBattery();
-window.addEventListener('pagehide',()=>{idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('beforeunload',()=>{callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pagehide',()=>{sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();});
+window.addEventListener('beforeunload',()=>{sleepMarkAway();callBackgroundHold();if(_savePending)saveNow();});
+window.addEventListener('pageshow',()=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-registerSW();window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});
-render();restoreActiveCall();idleConsumeLocalPending();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
+registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});
+sleepAutoEndOnOpen();render();restoreActiveCall();idleConsumeLocalPending();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(()=>pollExternalEvents(true),2600);
 setTimeout(idleOpenHeartbeatStart,3800);
