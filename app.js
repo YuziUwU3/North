@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v384 · 自然放行模式';
+const APP_VER='v385 · 正式久未打开';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -505,7 +505,7 @@ const IDLE_FORCE_MS=10*60000;
 const IGNORED_EXTERNAL_EVENT_TYPES={douyin_timeout:1,tiktok_timeout:1};
 let _idleEventPendingUntil=0;
 function isIdleEventType(t){return !!IDLE_EVENT_TYPES[(''+(t||'')).replace(/[^\w-]/g,'')];}
-function idleThresholdMs(){let n=0;try{n=+(localStorage.getItem(IDLE_THRESHOLD_KEY)||0);}catch(e){}if(!n)n=IDLE_DEFAULT_MS;return Math.max(60000,Math.min(24*60*60000,n));}
+function idleThresholdMs(){let n=0;try{n=+(localStorage.getItem(IDLE_THRESHOLD_KEY)||0);}catch(e){}if(!n)n=IDLE_DEFAULT_MS;return Math.max(IDLE_DEFAULT_MS,Math.min(24*60*60000,n));}
 function idleEventInUrl(){try{const q=new URLSearchParams(location.search||'').get('event');if(isIdleEventType(q))return true;const h=(location.hash||'').replace(/^#/,'');const m=h.match(/^event=([^&]+)/);return !!(m&&isIdleEventType(decodeURIComponent(m[1]||'')));}catch(e){return false;}}
 function idleMarkEventPending(type){if(isIdleEventType(type))_idleEventPendingUntil=Date.now()+3500;}
 function idleTouchOpen(){try{const now=Date.now(),last=+(localStorage.getItem(IDLE_LAST_KEY)||0);if(last&&now-last>10000)localStorage.setItem(IDLE_PREV_LAST_KEY,''+last);localStorage.setItem(IDLE_LAST_KEY,''+now);}catch(e){}}
@@ -535,15 +535,15 @@ function idleConsumeLocalPending(){let raw='',ev=null;try{raw=localStorage.getIt
   idleMarkEventPending(type);idleDebugPatch({localBridgeAt:Date.now(),localBridgeTs:+(ev&&ev.ts)||0,eventType:type,receivedAt:Date.now(),decision:'收到本地桥事件，准备处理',aiStatus:'待判断',aiResult:'待生成',blockedBy:''});
   setTimeout(()=>handleIdleEvent(type),300);return true;}
 function idleRecentAssistantText(c){try{const lines=msgs(c.id).filter(m=>m.role==='assistant'&&(m.type==='text'||m.type==='voice')).slice(-5).map(m=>msgToText(m)).filter(Boolean).map(t=>t.replace(/\s+/g,' ').slice(0,60));return lines.length?'最近你说过这些，不能照搬、不能同样开头：'+lines.join(' / ')+'。':'';}catch(e){return '';}}
-function idleForceState(){S.settings=S.settings||{};const f=S.settings._idleForce;if(!f||!f.id)return null;if(f.until&&Date.now()>=f.until){delete S.settings._idleForce;save();return null;}return f;}
-function idleForceActive(id){const f=idleForceState();return !!(f&&(!id||f.id===id));}
+function idleForceState(){S.settings=S.settings||{};if(S.settings._idleForce){delete S.settings._idleForce;save();}return null;}
+function idleForceActive(id){return false;}
 function idleForceRemain(){const f=idleForceState();return f?Math.max(0,(f.until||0)-Date.now()):0;}
-function idleForceStart(c,awayText){if(!c)return;const now=Date.now(),until=now+IDLE_FORCE_MS;S.settings=S.settings||{};S.settings._idleForce={id:c.id,startAt:now,until,awayText:awayText||'',escaped:false,hiddenAt:0,hiddenNoted:false};idleDebugPatch({forceChat:'陪聊到 '+fmtDT(until)});}
+function idleForceStart(c,awayText){idleDebugPatch({forceChat:'已关闭'});}
 function idleForceRelease(id,reason){const f=idleForceState();if(!f||f.id!==id)return false;delete S.settings._idleForce;idleDebugPatch({forceChat:reason==='role'?'角色已提前放行':'已解除'});save();toast(reason==='role'?'ta放你走了':'可以离开了');if(cur().p==='chat'&&cur().id===id)render();return true;}
-function idleForceMarkHidden(){const f=idleForceState();if(!f)return;f.hiddenAt=Date.now();save();}
-function idleForceReturnCheck(){const f=idleForceState();if(!f||!f.hiddenAt||f.hiddenNoted||f.escaped)return;const c=getC(f.id);if(!c)return;if(Date.now()-f.hiddenAt<12000)return;f.hiddenNoted=true;save();msgs(c.id).push({role:'user',type:'sys',content:'📱 '+S.me.name+'刚才没有从小洞离开，而是直接离开了小手机一会儿，现在又回来了',time:Date.now(),id:uid(),_silent:true});save();scheduleReply(c.id,'[系统：'+S.me.name+'刚才没有走你留的小洞，而是直接离开小手机一会儿，现在又回来了。你知道ta绕开你跑了一下。按你的人设自然反应，可以吃醋、委屈、冷笑、撒娇或不动声色地记账。不要说系统、功能、按钮、网页、快捷指令、后台、锁死、强制、扣住、把你扣这儿了。一两句即可，不要重复刚才的话。]');}
-function idleForceBanner(id){if(!idleForceActive(id))return '';return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(135deg,#2b1b24,#3a2431);color:#ffd6e8;font-size:12px;border-bottom:.5px solid rgba(255,255,255,.08)"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">先陪ta一会儿 · 还剩 ${esc(fmtDur(idleForceRemain()))}</span><button class="minibtn" style="background:#3a3a3c;color:#fff;border:0" onclick="idleForceEscape()">小洞</button></div>`;}
-function idleForceBlockNav(p,params){const f=idleForceState();if(!f)return false;if(p==='chat'&&params&&params.id===f.id)return false;toast('先陪ta一会儿');stack=stack.filter(s=>s.p!=='chat');stack.push({p:'chat',id:f.id});render();return true;}
+function idleForceMarkHidden(){}
+function idleForceReturnCheck(){}
+function idleForceBanner(id){return '';}
+function idleForceBlockNav(p,params){return false;}
 function idleForceEscape(){const f=idleForceState();if(!f){home();return;}const c=getC(f.id);S.settings._idleForce=Object.assign({},f,{escaped:true,escapedAt:Date.now(),until:Date.now()-1});save();toast('你从小洞溜走了');if(c){msgs(c.id).push({role:'user',type:'sys',content:'🕳️ '+S.me.name+'没有等你同意，偷偷从小洞溜走了',time:Date.now(),id:uid(),_silent:true});save();scheduleReply(c.id,'[系统：'+S.me.name+'刚才没有等你同意，偷偷从你留的小洞溜走了。你知道ta绕开你跑了。请按你自己的人设和性格自然反应：强势型可以压低语气追问，嘴硬型可以冷笑或记账，温柔黏人型可以委屈，病娇或占有欲强可以更危险地盯紧。不要说系统、功能、按钮、网页、快捷指令、锁死、强制、扣住、把你扣这儿了。不要重复刚才的话，一两句即可。]');}home();}
 function handleIdleEvent(type){
   idleDiag('收到 '+type);
@@ -559,11 +559,11 @@ function handleIdleEvent(type){
   try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
   idleTouchOpen();
   idleForceStart(c,away);
-  msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了；你把ta拉回聊天页，想让ta先陪你一会儿',time:Date.now(),id:uid(),_silent:true});save();openChat(c.id);
+  msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了；你把ta拉回聊天页，想和ta说几句话',time:Date.now(),id:uid(),_silent:true});save();openChat(c.id);
   const recent=idleRecentAssistantText(c);
   idleDiag('已触发：提醒 '+(c.remark||c.name)+'，离开 '+away);
   idleDebugPatch({decision:'已触发：离开 '+away+(usedPrev?'（按打开前时间）':''),contactId:c.id,contactName:c.remark||c.name,hiddenMsgAt:Date.now(),aiStatus:'已排队',aiResult:'等待AI生成',blockedBy:'',apiStatus:idleApiStatus(),aiScheduledAt:Date.now(),aiDelaySec:Number(S.settings.replyDelay)||0});
-  scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在把ta拉回微信聊天页，接下来10分钟会让ta先留在你这里；如果你愿意提前放ta走，可以单独一行写 [放行]。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势型可以低声管一管，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要说锁死、强制、扣住、把你扣这儿了，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
+  scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在把ta拉回微信聊天页。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势型可以低声管一管，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要说锁死、强制、扣住、把你扣这儿了，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
 }
 function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');if(isIdleEventType(type)){handleIdleEvent(type);return;}if(IGNORED_EXTERNAL_EVENT_TYPES[type])return;const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
   const ev={app:'手机',label:'外部提醒',tip:'刚触发了一个手机使用提醒。'};
@@ -1652,7 +1652,6 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <button class="btn p" onclick="saveSettings()">保存设置</button>
     ${storageMeter()}
     <div class="btns" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
-    ${idleDebugPanel()}
     <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
