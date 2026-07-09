@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v393 · 角色语音防重复';
+const APP_VER='v394 · 旧聊天清理修正';
 const VOICE_MAX_CHARS=200;
 function defState(){return{
   settings:{
@@ -5205,20 +5205,27 @@ async function c_delete(id){const c=getC(id);
   save();stack.pop();render();}
 function cleanStaleGags(){if(!S.couple||!S.couple.gags)return false;let ch=false;Object.keys(S.couple.gags).forEach(cid=>{const c=getC(cid);if(!c||c.deleted){delete S.couple.gags[cid];ch=true;}});if(ch)save();return ch;}
 function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
-  <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','all')">清空全部</button>
-  <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','3d')">清除最近 3 天</button>
-  <button class="btn g" style="margin-bottom:14px" onclick="doClear('${id}','7d')">清除最近 7 天</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','all')">清空全部文字聊天</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','old3d')">清除 3 天以前的旧聊天</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','old7d')">清除 7 天以前的旧聊天</button>
+  <button class="btn g" style="margin-bottom:14px" onclick="doClear('${id}','keep200')">只保留最近 200 条</button>
+  <div class="hint" style="margin-bottom:8px">上面几个清理旧聊天的选项会保护刚刚聊过的内容；通话记录始终保留。</div>
   <div class="hint">或按日期范围删除：</div>
   <div class="two"><div class="field"><label>从</label><input id="cl_a" type="date"></div><div class="field"><label>到</label><input id="cl_b" type="date"></div></div>
   <button class="btn d" onclick="doClear('${id}','range')">删除该范围</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-function doClear(id,mode){const list=msgs(id);let keep;
+function msgClearTime(m){const t=+(m&&(m.time||m.t));return t>946684800000?t:0;}
+function protectedRecentMsgIndexes(list,n){const set=new Set();let seen=0;for(let i=list.length-1;i>=0&&seen<n;i--){if(list[i]&&list[i]._call)continue;set.add(i);seen++;}return set;}
+async function doClear(id,mode){const list=msgs(id);let keep,tip='';
   // 通话记录【始终保留】，清空文字聊天不会动到电话/视频（去「通话记录」单独清）
-  if(mode==='all'){keep=list.filter(m=>m._call);}
-  else if(mode==='3d'||mode==='7d'){const cut=Date.now()-(mode==='3d'?3:7)*86400000;keep=list.filter(m=>m._call||m.time<cut);}
+  if(mode==='all'){keep=list.filter(m=>m._call);tip='清空全部文字聊天？通话记录会保留。';}
+  else if(mode==='old3d'||mode==='old7d'){const days=mode==='old3d'?3:7,cut=Date.now()-days*86400000,guard=protectedRecentMsgIndexes(list,40);
+    keep=list.filter((m,i)=>m._call||guard.has(i)||msgClearTime(m)>=cut);tip='删除 '+days+' 天以前的旧文字聊天？最近聊天和通话记录会保留。';}
+  else if(mode==='keep200'){let seen=0;keep=[];for(let i=list.length-1;i>=0;i--){const m=list[i];if(m._call||seen<200){keep.push(m);if(!m._call)seen++;}}keep.reverse();tip='只保留最近 200 条文字聊天？更早的文字聊天会删除，通话记录保留。';}
   else{const a=$('#cl_a').value,b=$('#cl_b').value;if(!a||!b){toast('选好起止日期');return;}
-    const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>m._call||m.time<t0||m.time>t1);}
-  S.messages[mkey(id)]=keep;save();closeModal();render();toast('已删除 '+(list.length-keep.length)+' 条文字聊天（通话记录保留）');}
+    const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>{const t=msgClearTime(m);return m._call||!t||t<t0||t>t1;});tip='删除 '+a+' 到 '+b+' 的文字聊天？没有日期的旧消息和通话记录会保留。';}
+  const n=list.length-keep.length;if(n<=0){toast('没有可删除的文字聊天');return;}if(!await uiConfirm(tip+'\n\n预计删除 '+n+' 条。'))return;
+  S.messages[mkey(id)]=keep;save();closeModal();render();toast('已删除 '+n+' 条文字聊天（通话记录保留）');}
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}
