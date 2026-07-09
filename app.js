@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v398 · 功能快捷入口';
+const APP_VER='v399 · 情侣行为小账本';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -670,6 +670,51 @@ function conversationGapNote(c){try{const arr=msgs(c.id)||[];let ui=-1;
   if(!prev)return '';const gap=(curm.time||Date.now())-(prev.time||0);if(gap<20*60000)return '';
   const who=prev.role==='user'?S.me.name:(c.remark||c.name||'ta'),pt=msgToText(prev)||previewOf(prev)||'上一条消息';
   return S.me.name+'刚刚发来的这条消息，距离上一条可见聊天已经过去【'+fmtDur(gap)+'】。上一条是在 '+fmtDT(prev.time)+'，来自'+who+'：'+pt.replace(/\s+/g,' ').slice(0,70)+'。\n回复时要自然承认这个真实间隔；如果ta说"我回来了/回来啦"，意思是隔了'+fmtDur(gap)+'才回来，绝不能说成"刚刚一个小时"、"才一会儿"，除非真实间隔就是那样。';}catch(e){return '';}}
+const BEHAVIOR_META={
+  late:{title:'熬夜',tone:'作息和睡觉时间'},
+  disappear:{title:'失踪不回',tone:'不回消息、突然消失'},
+  report:{title:'报备',tone:'出门、回来、去做什么有没有说'},
+  app:{title:'玩手机超时',tone:'游戏、刷视频、刷软件有没有失控'},
+  task:{title:'任务没完成',tone:'答应做的事和任务有没有做到'},
+  spend:{title:'乱点/乱花',tone:'重复点测试、乱花钱或乱消耗点数'}
+};
+function behaviorStore(){if(!S.couple)return null;S.couple.behavior=S.couple.behavior||{enabled:true,items:[]};if(S.couple.behavior.enabled==null)S.couple.behavior.enabled=true;S.couple.behavior.items=S.couple.behavior.items||[];return S.couple.behavior;}
+function behaviorOn(){const b=behaviorStore();return !!(b&&b.enabled!==false);}
+function behaviorTitle(cat){return (BEHAVIOR_META[cat]&&BEHAVIOR_META[cat].title)||'小事';}
+function behaviorCats(text){text=(''+(text||'')).replace(/\s+/g,'');const out=[];
+  if(/熬夜|通宵|早睡|早点睡|睡觉|晚睡|凌晨|一点前睡|1点前睡|两点前睡|2点前睡/.test(text))out.push('late');
+  if(/失踪|消失|不回|回消息|晾着|找不到|不理|上线|下线/.test(text))out.push('disappear');
+  if(/报备|告诉你去哪|去哪.*告诉|出门.*说|回来.*说|回家.*说/.test(text))out.push('report');
+  if(/少玩|不玩|不刷|别玩|别刷|游戏|抖音|小红书|微博|手机|限时|超时|沉迷/.test(text))out.push('app');
+  if(/任务|作业|答应做|没完成|完成/.test(text))out.push('task');
+  if(/乱花|乱买|点数|测试语音|重复点|扣点|钱包|花钱/.test(text))out.push('spend');
+  return [...new Set(out)];}
+function behaviorPromiseLike(text){text=''+(text||'');return /(我|以后|下次|今晚|明天|再也|保证|答应|发誓|一定|乖|听话|不会|不再|别生气|我错了).{0,18}(不|不会|不再|少|早点|一定|会|保证|答应|听|改|记得|报备|回你|睡|完成)|不会了|我改|我听你的|我保证|我答应你/.test(text);}
+function behaviorPrune(b){b.items=b.items||[];b.items.forEach(it=>{it.events=it.events||[];if(it.events.length>12){it.oldCount=(it.oldCount||0)+it.events.length-12;it.events=it.events.slice(0,12);}});
+  b.items.sort((a,b)=>(b.lastTs||b.ts||0)-(a.lastTs||a.ts||0));if(b.items.length>36)b.items=b.items.slice(0,36);}
+function behaviorFind(cat){const b=behaviorStore();if(!b)return null;return (b.items||[]).find(x=>x.active!==false&&x.cat===cat)||null;}
+function behaviorAddPromise(id,text,source){if(!(S.couple&&S.couple.cid===id&&behaviorOn()))return;const t=(''+(text||'')).trim();if(!t||!behaviorPromiseLike(t))return;const cats=behaviorCats(t);if(!cats.length)return;const b=behaviorStore(),now=Date.now();
+  cats.slice(0,2).forEach(cat=>{let it=behaviorFind(cat);if(!it){it={id:uid(),cat,title:behaviorTitle(cat),promise:'',ts:now,lastTs:now,count:0,events:[],active:true};b.items.unshift(it);}
+    it.promise=t.slice(0,90);it.promiseTs=now;it.lastTs=now;it.source=source||'chat';});
+  behaviorPrune(b);save();}
+function behaviorRecord(cat,detail,source,opt){opt=opt||{};if(!behaviorOn())return;const b=behaviorStore();if(!b)return;const now=opt.ts||Date.now();b._lastHit=b._lastHit||{};const gap=opt.gapMs==null?20*60000:opt.gapMs;
+  if(!opt.force&&b._lastHit[cat]&&now-b._lastHit[cat]<gap)return;b._lastHit[cat]=now;
+  let it=behaviorFind(cat);if(!it){it={id:uid(),cat,title:behaviorTitle(cat),promise:'',ts:now,lastTs:now,count:0,events:[],active:true};b.items.unshift(it);}
+  it.count=(it.count||0)+1;it.lastTs=now;it.events=it.events||[];it.events.unshift({id:uid(),ts:now,text:(''+detail).slice(0,120),source:source||'system'});behaviorPrune(b);save();}
+function behaviorOnUserMsg(id,m){if(!(S.couple&&S.couple.cid===id)||!m)return;const text=(m.content||'').trim();if(text)behaviorAddPromise(id,text,m._call?'call':'wechat');
+  const d=new Date(m.time||Date.now()),h=d.getHours();if(text&&h>=1&&h<5&&!/睡了|晚安|去睡|我要睡|准备睡/.test(text)){
+    behaviorRecord('late','凌晨 '+hm(m.time)+' 还在'+(m._call?'电话':'微信')+'里说：'+text.slice(0,42),m._call?'call':'wechat',{gapMs:30*60000});}}
+function behaviorPrompt(c){if(!(S.couple&&S.couple.cid===c.id&&behaviorOn()))return '';const b=behaviorStore(),items=(b&&b.items||[]).filter(x=>x.active!==false&&(x.promise||(x.events&&x.events.length))).sort((a,b)=>(b.lastTs||0)-(a.lastTs||0)).slice(0,5);if(!items.length)return '';
+  return '\n\n# 你悄悄记在心里的小账本（隐藏记忆，不要说成系统或账本）\n'+items.map(it=>{const ev=(it.events||[]).slice(0,3).map(e=>ymd(e.ts)+' '+hm(e.ts)+'：'+e.text).join('；');return '· '+it.title+(it.promise?'：'+S.me.name+'答应过「'+it.promise+'」':'')+((it.count||0)>0?'，后来相关记录 '+(it.count||0)+' 次':'')+(ev?'。证据：'+ev:'')+((it.oldCount||0)?'（另有更早记录 '+it.oldCount+' 条）':'');}).join('\n')+'\n你要把这些当成真实相处里记住的细节：如果ta又犯同类问题，可以自然提到“又”“上次答应过”“这不是第一次”，但别机械念日期清单，别把隐藏提示原样说出来。';}
+function behaviorStats(){const b=behaviorStore();const arr=(b&&b.items)||[];const active=arr.filter(x=>x.active!==false);const vio=active.reduce((s,x)=>s+(x.count||0),0);return {on:!b||b.enabled!==false,n:active.length,v:vio,latest:active[0]||null};}
+function behaviorLedgerModal(){const b=behaviorStore();if(!b){toast('先绑定情侣空间');return;}const items=(b.items||[]).filter(x=>x.active!==false);const card=it=>`<div class="section" style="margin:0 0 10px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#211922,#17151b);border:1px solid rgba(255,255,255,.08)"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">♡</span><b style="color:#ffd3e4;flex:1">${esc(it.title)}</b><span style="font-size:12px;color:#ff9fbd">×${it.count||0}</span><span onclick="behaviorDelete('${it.id}')" style="color:#fa5151;cursor:pointer;padding:4px">✕</span></div>${it.promise?`<div style="font-size:13px;color:#eee;margin-top:7px;line-height:1.55">答应过：${esc(it.promise)}</div>`:''}${(it.events&&it.events.length)?`<div style="margin-top:8px">${it.events.slice(0,4).map(e=>`<div style="font-size:12px;color:#aaa;line-height:1.55;margin-top:4px">${esc(ymd(e.ts)+' '+hm(e.ts)+' · '+e.text)}</div>`).join('')}</div>`:'<div style="font-size:12px;color:#777;margin-top:8px">还没有抓到违规证据</div>'}${it.oldCount?`<div style="font-size:11px;color:#777;margin-top:5px">另有更早记录 ${it.oldCount} 条，已自动收纳</div>`:''}</div></div>`;
+  openModal(`<h3>♡ 行为小账本</h3><div class="hint" style="line-height:1.7">这里记录你答应过ta的事、以及后来有没有又犯。角色会在微信和电话里悄悄记得，但不会在聊天框显示系统提示。</div>
+  <div class="section" style="margin:0 0 10px"><div class="it"><span>启用小账本</span><span class="sw ${b.enabled!==false?'on':''}" onclick="behaviorToggle()"></span></div></div>
+  ${items.length?items.map(card).join(''):'<div class="empty" style="padding:24px 10px">还没有记账。等你答应过什么、或又熬夜/失踪/超时，它会自己记下来。</div>'}
+  <div class="btns" style="gap:8px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn d" onclick="behaviorClear()">清空</button></div>`);}
+function behaviorToggle(){const b=behaviorStore();if(!b)return;b.enabled=b.enabled===false;save();const m=$('#modal');if(m&&m.classList.contains('show'))behaviorLedgerModal();else render();}
+function behaviorDelete(id){const b=behaviorStore();if(!b)return;const it=(b.items||[]).find(x=>x.id===id);if(it)it.active=false;save();behaviorLedgerModal();}
+async function behaviorClear(){if(!await uiConfirm('清空行为小账本？\n承诺和证据都会删除。'))return;const b=behaviorStore();if(!b)return;b.items=[];b._lastHit={};save();behaviorLedgerModal();}
 function buildSystem(c){
   const _main=isMain();
   let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
@@ -721,6 +766,7 @@ function buildSystem(c){
   if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
+  {const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
   if(_main&&c._meWxTransfers&&c._meWxTransfers.length){const tr=c._meWxTransfers[0];s+='\n\n# 你最近发现的微信/钱包转账痕迹\n'+S.me.name+'曾登录你的微信钱包，从你这里转给ta自己 ¥'+(+tr.amount||0).toFixed(2)+(tr.note?'，备注：'+tr.note:'')+'。你要分清：这不是你主动给ta转账，是ta登你微信转走后留下的账单痕迹。';}
   if(_main&&c._lastCallEnded&&Date.now()-c._lastCallEnded.ts<45*60000){const lc=c._lastCallEnded;const dir=lc.dir==='incoming'?'那通最初是你主动打给'+S.me.name+'的。':'那通最初是'+S.me.name+'主动打给你的。';s+='\n\n# 最近通话状态\n上一通'+(lc.kind==='video'?'视频':'语音')+'电话已经在 '+hm(lc.ts)+' 结束，现在没有正在通话。'+dir+'如果ta现在说打电话/打视频，这是要重新开始一通，不要说已经在打了。';}
   const _off=S.offline&&S.offline[c.id];
@@ -1525,7 +1571,7 @@ function usageTick(){const el=$('#useBadge');const hide=()=>{if(el)el.style.disp
   const limit=limitSecOf(key);                                      // 设了上限才倒计时+自动锁
   if(limit>0){const remain=limit-au.used[key];
     if(remain<=0){S.couple.locks=S.couple.locks||{};if(!S.couple.locks[key])S.couple.locks[key]={pwd:0,time:Date.now(),auto:true};
-      save();hide();toast('「'+(LOCKABLE[key]||key)+'」今天的时间用完啦，被自动锁上了，去求ta解开~');home();return;}
+      behaviorRecord('app','「'+(LOCKABLE[key]||key)+'」今天用满 '+Math.floor(limit/60)+' 分钟限额，被自动锁上', 'app-limit',{gapMs:2*3600000});save();hide();toast('「'+(LOCKABLE[key]||key)+'」今天的时间用完啦，被自动锁上了，去求ta解开~');home();return;}
     if(el){const m=Math.floor(remain/60),s=remain%60;el.style.display='block';
       el.textContent='⏳ '+(LOCKABLE[key]||'')+' '+m+':'+String(s).padStart(2,'0');
       el.className='usebadge'+(remain<=60?' warn':'');}}
@@ -1546,7 +1592,9 @@ function reportCustom(){const t=prompt('报备你要去干嘛：','');if(t==null
 function reportEnd(silent){const rp=S.me.report;if(!rp||!rp.active)return;const a=rp.active,end=Date.now();rp.log=rp.log||[];rp.log.unshift({type:a.type,start:a.start,end});if(rp.log.length>40)rp.log=rp.log.slice(0,40);rp.active=null;save();if(!silent)render();}
   // 报备结束也不主动发消息，只记进报备记录；他查的时候自己看时长合不合理
 function reportDel(i){if(!S.me.report||!S.me.report.log)return;S.me.report.log.splice(i,1);save();render();}
-function sleepEnd(auto){const sl=S.me.sleep;if(!sl||!sl.active)return;const automatic=auto===true||auto==='auto';sl.records=sl.records||[];sl.records.unshift({start:sl.active,end:Date.now()});if(sl.records.length>60)sl.records=sl.records.slice(0,60);sl.active=null;sl.autoEndOnOpen=false;sl.awayAfterStart=false;sl.awayAt=0;save();render();toast(automatic?'已自动结束睡眠，记录好啦':'醒啦，已记录这次睡眠');}
+function sleepEnd(auto){const sl=S.me.sleep;if(!sl||!sl.active)return;const automatic=auto===true||auto==='auto',st=sl.active,en=Date.now();sl.records=sl.records||[];sl.records.unshift({start:st,end:en});if(sl.records.length>60)sl.records=sl.records.slice(0,60);
+  {const h=new Date(st).getHours();if(h>=1&&h<5)behaviorRecord('late','睡眠记录显示 '+hm(st)+' 才开始睡，睡到 '+hm(en), 'sleep',{gapMs:8*3600000,force:true});}
+  sl.active=null;sl.autoEndOnOpen=false;sl.awayAfterStart=false;sl.awayAt=0;save();render();toast(automatic?'已自动结束睡眠，记录好啦':'醒啦，已记录这次睡眠');}
 async function sleepDel(i){if(!S.me.sleep||!S.me.sleep.records)return;if(!await uiConfirm('删掉这条睡眠记录？'))return;S.me.sleep.records.splice(i,1);save();render();}
 function sleepDurTxt(ms){const mins=Math.max(0,Math.round(ms/60000));const h=Math.floor(mins/60),m=mins%60;return (h?h+'小时':'')+(m||!h?m+'分钟':'');}
 function ymd(t){const d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
@@ -3087,6 +3135,7 @@ function submitTruth(id){const ta=$('#truth_t');const v=(ta?ta.value:'').trim();
 function checkTaskPenalty(c){const t=c&&c.tasks;if(!t||t.date===todayStr()||t.penalized)return;
   const undone=t.list.filter(x=>!x.done);t.penalized=true;
   if(undone.length){grudgesOf(c).unshift({id:uid(),text:t.date+' 没完成我布置的任务（差'+undone.length+'条：'+undone.map(x=>x.text).join('、').slice(0,36)+'）',done:false,ts:Date.now()});
+    behaviorRecord('task',t.date+' 有 '+undone.length+' 条任务没完成：'+undone.map(x=>x.text).join('、').slice(0,50),'task',{force:true});
     if(!c.blocked)scheduleReply(c.id,'[系统：'+t.date+'你给'+S.me.name+'布置的任务，ta有 '+undone.length+' 条没完成。你不太高兴，已经记到你的小本本上了，冷淡地说一句、并威胁线下见面要罚ta（怎么罚你自己定，符合人设），一两句。]');}
   save();}
 
@@ -3371,7 +3420,7 @@ function g_addMember(id){const g=S.groups.find(x=>x.id===id);const avail=S.conta
 async function bindCouple(id){const c=getC(id);
   if(S.couple&&S.couple.cid===id){go('couple');return;}/* 已经绑定的就是这个角色 → 直接进情侣空间，绝不重置天数/纪念日/授权 */
   if(S.couple&&S.couple.cid&&S.couple.cid!==id){if(!await uiConfirm('已绑定其他角色，换成 '+(c.remark||c.name)+'？这会重置在一起的天数和授权哦。'))return;}
-  const gr={};Object.keys(LOCKABLE).forEach(k=>gr[k]=true);const ga=S.contacts.filter(x=>!x.deleted&&x.id!==id).map(x=>x.id);S.couple={cid:id,startDate:todayStr(),anniversaries:[],grant:gr,gagAuth:ga,locks:{},gags:{}};save();render();toast('已绑定情侣空间');}
+  const gr={};Object.keys(LOCKABLE).forEach(k=>gr[k]=true);const ga=S.contacts.filter(x=>!x.deleted&&x.id!==id).map(x=>x.id);S.couple={cid:id,startDate:todayStr(),anniversaries:[],grant:gr,gagAuth:ga,locks:{},gags:{},behavior:{enabled:true,items:[]}};save();render();toast('已绑定情侣空间');}
 function openCouple(){go('couple');}
 function setHomeBg(){pickFile('image/*',async f=>{S.me.homeBg=await compress(f,1000,.7);save();render();toast('主屏壁纸已换 🖼️');});}
 function setCallBg(){pickFile('image/*',async f=>{S.me.callBg=await compress(f,1000,.72);save();if(cur().p==='settings')render();if(_call)renderCall();toast('通话背景已换');});}
@@ -4379,7 +4428,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
       <div style="display:flex;gap:8px;margin:0 12px 6px">
         <button class="minibtn" id="coutab1" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;${_couTab===2?'background:#2a2730;color:#bbb':'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff'}" onclick="couTab(1)">${svgIc('heart',14,_couTab===2?'#bbb':'#fff')}甜蜜日常</button>
         <button class="minibtn" id="coutab2" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;${_couTab===2?'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff':'background:#2a2730;color:#bbb'}" onclick="couTab(2)">${svgIc('shield',14,_couTab===2?'#fff':'#bbb')}管控授权</button></div>
-      <div style="margin:0 12px 8px">${quickJumpBar([['纪念日',"coupleJump(1,'cou_anniv')"],['睡眠',"coupleJump(1,'cou_sleep')"],['报备',"coupleJump(1,'cou_report')"],['授权',"coupleJump(2,'cou_grant')"],['禁言',"coupleJump(2,'cou_gag_auth')"],['钱包',"coupleJump(2,'cou_wallet')"],['限时',"coupleJump(2,'cou_limit')"],['盯防',"coupleJump(2,'cou_star')"],['小黑屋',"coupleJump(2,'cou_jail')"],['出门审批',"coupleJump(2,'cou_outpass')"],['登录微信',"coupleJump(2,'cou_wxlogin')"],['失踪催',"coupleJump(2,'cou_escalate')"]])}</div>
+      <div style="margin:0 12px 8px">${quickJumpBar([['纪念日',"coupleJump(1,'cou_anniv')"],['睡眠',"coupleJump(1,'cou_sleep')"],['报备',"coupleJump(1,'cou_report')"],['小账本',"coupleJump(1,'cou_behavior')"],['授权',"coupleJump(2,'cou_grant')"],['禁言',"coupleJump(2,'cou_gag_auth')"],['钱包',"coupleJump(2,'cou_wallet')"],['限时',"coupleJump(2,'cou_limit')"],['盯防',"coupleJump(2,'cou_star')"],['小黑屋',"coupleJump(2,'cou_jail')"],['出门审批',"coupleJump(2,'cou_outpass')"],['登录微信',"coupleJump(2,'cou_wxlogin')"],['失踪催',"coupleJump(2,'cou_escalate')"]])}</div>
       <div id="coupage1" style="display:${_couTab===2?'none':'block'}">
       <div ${SEC}><div class="it" onclick="coupleSet()"><span style="display:flex;align-items:center;gap:9px">${svgIc('calendar',16,ROSE)}在一起的日子</span><span class="v">${cp.startDate} ›</span></div></div>
       <div id="cou_anniv" ${SEC}>${HD('gift','纪念日',ROSE,`<span class="minibtn" onclick="addAnniv()">＋ 添加</span>`)}
@@ -4398,6 +4447,14 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
         else{h+=`<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px">${presets.map(p=>`<button class="minibtn" onclick="reportStart('${p}')">${p}</button>`).join('')}<button class="minibtn" style="background:#7c5cff;color:#fff" onclick="reportCustom()">＋ 其他…</button></div>`;}
         if(log.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">报备记录（可删）</div>`+log.slice(0,12).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)}→${hm(r.end)} ${esc(r.type)}<small style="display:block;color:#888">用了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="reportDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         return h+`</div>`;})()}
+      ${(function(){const bs=behaviorStats(),lt=bs.latest;return `<div id="cou_behavior" ${SEC}>${HD('notebook','行为小账本',PUR,`<span class="minibtn" onclick="behaviorLedgerModal()">查看</span>`)}
+        <div class="hint" style="padding:8px 14px 0">自动记下你答应过ta的事，以及后来有没有又熬夜、失踪、超时或没完成。ta会在微信和电话里悄悄记得，不会把系统提示显示在聊天框。</div>
+        <div style="padding:10px 14px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="border-radius:12px;background:rgba(255,255,255,.05);padding:10px;text-align:center"><div style="font-size:22px;color:#ffd3e4;font-weight:800">${bs.n}</div><div style="font-size:12px;color:#999">记着的小事</div></div>
+          <div style="border-radius:12px;background:rgba(255,255,255,.05);padding:10px;text-align:center"><div style="font-size:22px;color:#ff9fbd;font-weight:800">${bs.v}</div><div style="font-size:12px;color:#999">抓到的证据</div></div>
+        </div>
+        ${lt?`<div class="bill" style="border-radius:10px;margin:0 12px 12px"><div><b>${esc(lt.title)}</b><small>${esc((lt.promise||((lt.events&&lt.events[0]&&lt.events[0].text)||'')).slice(0,58))}</small></div><span class="v">›</span></div>`:`<div class="empty" style="padding:0 14px 12px">还没有记账</div>`}
+        <div class="it"><span>小账本启用</span><span class="sw ${bs.on?'on':''}" onclick="behaviorToggle()"></span></div></div>`;})()}
       </div>
       <div id="coupage2" style="display:${_couTab===2?'block':'none'}">
       ${(function(){const g=cp.grant||{},locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
@@ -5464,6 +5521,7 @@ function afterChat(id){const cb=$('#chatbg');if(cb)cb.scrollTop=cb.scrollHeight;
   maybeProactive(id);maybeSpyIdle(id);}
 
 function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();msgs(id).push(m);save();
+  if(m.role==='user')behaviorOnUserMsg(id,m);
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const c=getC(id);cb.insertAdjacentHTML('beforeend',bubbleRow(c,m));cb.scrollTop=cb.scrollHeight;}}}
 
 let _voiceMode=false;let _panelPage='fn';
@@ -6287,14 +6345,14 @@ function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_
   box.innerHTML=s?`<div class="csline ${s.who==='me'?'me':''}">${esc(s.text).replace(/\n/g,'<br>')}</div>`:'';}
 function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}
 function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
-  stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;msgs(id).push({role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session});save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}if(_call&&callOnUserSay(m.content||''))return;callAI();});}
+  stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;const um={role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session};msgs(id).push(um);behaviorOnUserMsg(id,um);save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}if(_call&&callOnUserSay(m.content||''))return;callAI();});}
 function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
 async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(text);
   if(!t)return new Promise(r=>setTimeout(r,1100));
   if(ttsApiOn()){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);}return;}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(res,Math.max(2500,t.length*200));}catch(e){res();}});}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
-  msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();_call.sub={who:'me',text:t};updateCallSub();
+  const um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);behaviorOnUserMsg(_call.id,um);save();_call.sub={who:'me',text:t};updateCallSub();
   if(callOnUserSay(t))return;callAI();}
 async function callAI(sysNote,opts){if(!_call)return;
   if(_callBusy){_callPend={sysNote,opts};return;}/* 上一轮还在说话/生成→排队，等它说完再接着，绝不并行(否则两轮消息叠一起、特别快) */
@@ -6474,6 +6532,7 @@ const _IGT=[90,180,300,1200];/* 分钟：一级催/二级火/三级来电/四级
 function escContact(){if(S.couple&&S.couple.cid){const c=getC(S.couple.cid);if(c&&!c.deleted)return c;}return S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||null;}
 function lastUserTs(cid){const arr=msgs(cid);for(let i=arr.length-1;i>=0;i--){if(arr[i].role==='user')return arr[i].time||0;}return 0;}
 function fireEscalation(c,stage,hours){const onl=isOnline()?'（ta还显示在线、却晾着你不回）':'';
+  if(stage>=2)behaviorRecord('disappear','已经约 '+hours+' 小时没回消息'+(isOnline()?'，期间还显示在线':''),'ignore',{gapMs:4*3600000});
   if(stage===1)scheduleReply(c.id,'[系统：'+S.me.name+'已经大约 '+hours+' 小时没回你消息了'+onl+'。你开始在意/担心，主动发条消息问ta在干嘛、催ta回你，按你人设、别太凶，一两句。]');
   else if(stage===2)scheduleReply(c.id,'[系统：'+S.me.name+'已经 '+hours+' 小时没理你了'+onl+'，你之前催过ta还没回。你不耐烦、火了，语气重些、带质问和占有欲，一两句。]');
   else if(stage===3){if(typeof _call==='undefined'||!_call)incomingCall(c.id,'voice');}
