@@ -1,6 +1,9 @@
 /* ---------- AI账户 / 内置AI ---------- */
 let _aiAcct=null,_aiAcctBusy=false,_aiUnlocked=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='';
-const AI_VOICE_PRESETS=[{id:'phonevoice20260709a',name:'还在玩手机？',clone:true,preset:true}];
+const AI_VOICE_PRESETS=[
+  {id:'phonevoice20260709b',name:'ydySVID_20260219',clone:true,preset:true},
+  {id:'phonevoice20260709a',name:'还在玩手机？',clone:true,preset:true}
+];
 function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 
 function openAIAccount(){if(_aiUnlocked){go('aiaccount');return;}
