@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v378 · 一起听上下文增强';
+const APP_VER='v379 · 久未打开调试面板';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -122,7 +122,7 @@ function aiDone(){_aiLoadN=Math.max(0,_aiLoadN-1);if(_aiLoadN<=0){_aiLoadN=0;con
 // 生成内容带自动重试：parseFn 解析失败/空就重试，最多 tries 次，全失败返回 null
 async function aiGen(messages,opt,parseFn,tries){tries=tries||3;for(let i=0;i<tries;i++){try{const r=await chatAPI(messages,opt);const out=parseFn(r);if(out!=null&&(out.length===undefined||out.length>0))return out;}catch(e){}}return null;}
 function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
-function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c._blk)c._blk={main:!!c.blocked};if(!c.imgLock)c.imgLock=buildImgLock(c);if(c.affection==null)c.affection=affBase(c);if(c.affectionLocked==null)c.affectionLocked=false;if(c.taskOff==null)c.taskOff=false;}return c;}
+function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c.proactive)c.proactive={enabled:false,start:9,end:23,times:2};if(!c._blk)c._blk={main:!!c.blocked};if(!c.imgLock)c.imgLock=buildImgLock(c);if(c.affection==null)c.affection=affBase(c);if(c.affectionLocked==null)c.affectionLocked=false;if(c.taskOff==null)c.taskOff=false;}return c;}
 function hashStr(s){s=''+(s||'');let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0);}
 function pickBySeed(arr,seed,shift){return arr[(Math.abs(seed+(shift||0))%arr.length)|0];}
 function buildImgLock(c){
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=378').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=379').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -507,22 +507,41 @@ function idleEventInUrl(){try{const q=new URLSearchParams(location.search||'').g
 function idleMarkEventPending(type){if(isIdleEventType(type))_idleEventPendingUntil=Date.now()+3500;}
 function idleTouchOpen(){try{localStorage.setItem(IDLE_LAST_KEY,''+Date.now());}catch(e){}}
 function idleTouchOpenIfNormal(){if(!idleEventInUrl()&&Date.now()>_idleEventPendingUntil)idleTouchOpen();}
-function idleDiag(text){try{S.settings=S.settings||{};S.settings._idleDiag=hm()+' '+text;save();}catch(e){}}
+function idleErrorKind(msg){msg=''+(msg||'');if(/点数不足|no-balance|402/.test(msg))return '余额/点数不足';if(/还没设置聊天 API|API|key|Key|401|403/.test(msg))return 'API配置/权限';if(/network|Failed to fetch|Load failed|网络|连不上|timeout|超时/i.test(msg))return '网络';if(/model|模型|404|400|429|500|502|503/.test(msg))return '模型/服务';return msg?'未知错误':'无';}
+function idleDebugPatch(o){try{S.settings=S.settings||{};const d=S.settings._idleDebug||{};S.settings._idleDebug=Object.assign(d,o||{}, {updatedAt:Date.now()});save();}catch(e){}}
+function idleDiag(text){try{S.settings=S.settings||{};S.settings._idleDiag=hm()+' '+text;idleDebugPatch({lastLine:S.settings._idleDiag});}catch(e){}}
 function idleDiagText(){return (S.settings&&S.settings._idleDiag)||'暂无';}
+function idleDebug(){S.settings=S.settings||{};return S.settings._idleDebug||(S.settings._idleDebug={});}
+function idleTimeText(t){return t?fmtDT(t):'暂无';}
+function idleApiStatus(){if(aiCoreOn())return aiCoreUrl()?'内置AI已开':'内置AI已开，但后台地址为空';const a=S.settings&&S.settings.chat;return (a&&a.base&&a.key&&a.model)?('直连API：'+a.model):'聊天API未配置完整';}
+function idleDebugPanel(){const d=idleDebug(),now=Date.now(),last=+(localStorage.getItem(IDLE_LAST_KEY)||0),th=idleThresholdMs(),c=externalEventContact();const away=last?fmtDur(now-last):'暂无';
+  const rows=[['上次打开小手机',idleTimeText(last)],['当前离开时长',away],['当前阈值',fmtDur(th)],['收到 phone_idle',d.receivedAt?(fmtDT(d.receivedAt)+' · '+(d.eventType||'')):'暂无'],['进入处理逻辑',d.enteredAt?fmtDT(d.enteredAt):'暂无'],['时间判断',d.decision||'暂无'],['选中角色',d.contactName||((c&&(c.remark||c.name))||'暂无')],['AI调用',d.aiStatus||'暂无'],['生成结果',d.aiResult||'暂无'],['拦截/错误',d.blockedBy||d.aiErrorKind||'暂无'],['API状态',idleApiStatus()],['最后诊断',idleDiagText()]];
+  return `<div class="section"><div style="padding:12px 14px;font-weight:600;color:#f59e0b">久未打开调试</div>
+    ${rows.map(r=>`<div class="it"><span>${esc(r[0])}</span><span class="v" style="max-width:58%;white-space:normal;text-align:right;line-height:1.35">${esc(r[1])}</span></div>`).join('')}
+    <div class="btns" style="padding:8px 14px 4px;gap:8px"><button class="btn g" onclick="idleSetThreshold(60000)">测试1分钟</button><button class="btn g" onclick="idleSetThreshold(3600000)">正式1小时</button></div>
+    <div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="idleSimulateAway()">模拟久未打开超过1分钟</button></div>
+    <div class="btns" style="padding:0 14px 8px"><button class="btn g" onclick="idleMarkNow()">把现在记为刚打开</button><button class="btn g" onclick="idleClearDebug()">清空诊断</button></div>
+    <div class="hint" style="padding:0 14px 12px">只测小手机本体：按钮会模拟收到 phone_idle，不会测试快捷指令跳转。</div></div>`;}
+function idleSetThreshold(ms){try{localStorage.setItem(IDLE_THRESHOLD_KEY,''+ms);}catch(e){}idleDebugPatch({thresholdMs:ms,decision:'已切换阈值：'+fmtDur(ms),blockedBy:''});toast('已切到 '+fmtDur(ms));render();}
+function idleMarkNow(){idleTouchOpen();idleDebugPatch({decision:'已手动清零计时',lastOpenAt:Date.now(),blockedBy:'',aiStatus:'暂无',aiResult:'暂无'});toast('计时已清零');render();}
+function idleClearDebug(){S.settings=S.settings||{};S.settings._idleDiag='暂无';S.settings._idleDebug={updatedAt:Date.now()};save();toast('已清空诊断');render();}
+function idleSimulateAway(){const th=Math.max(60000,idleThresholdMs());try{localStorage.setItem(IDLE_LAST_KEY,''+(Date.now()-th-3000));localStorage.removeItem(IDLE_LAST_REMIND_KEY);}catch(e){}idleDebugPatch({decision:'开始模拟：离开超过 '+fmtDur(th),blockedBy:'',aiStatus:'待调用',aiResult:'待生成',simulatedAt:Date.now()});handleIdleEvent('phone_idle');}
 function idleRecentAssistantText(c){try{const lines=msgs(c.id).filter(m=>m.role==='assistant'&&(m.type==='text'||m.type==='voice')).slice(-5).map(m=>msgToText(m)).filter(Boolean).map(t=>t.replace(/\s+/g,' ').slice(0,60));return lines.length?'最近你说过这些，不能照搬、不能同样开头：'+lines.join(' / ')+'。':'';}catch(e){return '';}}
 function handleIdleEvent(type){
   idleDiag('收到 '+type);
   const now=Date.now(),threshold=idleThresholdMs();let last=0,lastRemind=0;
   try{last=+(localStorage.getItem(IDLE_LAST_KEY)||0);lastRemind=+(localStorage.getItem(IDLE_LAST_REMIND_KEY)||0);}catch(e){}
   if(!last)last=now-threshold-1000;
-  if(now-last<threshold){idleDiag('未触发：只离开 '+fmtDur(now-last)+'，阈值 '+fmtDur(threshold));idleTouchOpen();return;}
-  const c=externalEventContact();if(!c){idleDiag('失败：没有可提醒角色');toast('先创建/绑定一个会关心你的角色');return;}
+  idleDebugPatch({eventType:type,receivedAt:now,enteredAt:now,lastOpenAt:last,thresholdMs:threshold,awayMs:now-last,aiStatus:'待判断',aiResult:'待生成',blockedBy:''});
+  if(now-last<threshold){idleDiag('未触发：只离开 '+fmtDur(now-last)+'，阈值 '+fmtDur(threshold));idleDebugPatch({decision:'未触发：离开 '+fmtDur(now-last),aiStatus:'未调用',aiResult:'未生成',blockedBy:'未达到时间'});idleTouchOpen();return;}
+  const c=externalEventContact();if(!c){idleDiag('失败：没有可提醒角色');idleDebugPatch({decision:'已达到时间',contactName:'暂无',aiStatus:'未调用',aiResult:'未生成',blockedBy:'没有可提醒角色'});toast('先创建/绑定一个会关心你的角色');return;}
   const away=fmtDur(now-last);
   try{localStorage.setItem(IDLE_LAST_REMIND_KEY,''+now);}catch(e){}
   idleTouchOpen();
   msgs(c.id).push({role:'user',type:'sys',content:'📱 久未打开小手机：'+S.me.name+'已经'+away+'没来找你了',time:Date.now(),id:uid(),_silent:true});save();openChat(c.id);
   const recent=idleRecentAssistantText(c);
   idleDiag('已触发：提醒 '+(c.remark||c.name)+'，离开 '+away);
+  idleDebugPatch({decision:'已触发：离开 '+away,contactId:c.id,contactName:c.remark||c.name,hiddenMsgAt:Date.now(),aiStatus:'已排队',aiResult:'等待AI生成',blockedBy:'',apiStatus:idleApiStatus(),aiScheduledAt:Date.now(),aiDelaySec:Number(S.settings.replyDelay)||0});
   scheduleReply(c.id,'[系统：'+S.me.name+'已经'+away+'没有打开小手机、没有来找你了。你现在主动发微信把ta叫回来。必须按你自己的人设、性格、关系、占有欲和黏人度反应：温柔型可以想念和撒娇，强势或管束型可以直接要求ta回来，嘴硬型可以别扭抱怨，病娇或吃醋型可以更危险地盯紧，成熟型可以克制提醒。'+recent+'不要说系统、不要说快捷指令、不要说"检测到/提醒/超时"，不要机械播报，也不要每次都说"太久没理我"。换一个自然切入点，只发一两句像微信里突然发来的话。]');
 }
 function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,'');if(isIdleEventType(type)){handleIdleEvent(type);return;}if(IGNORED_EXTERNAL_EVENT_TYPES[type])return;const c=externalEventContact();if(!c){toast('先创建/绑定一个会关心你的角色');return;}
@@ -1610,11 +1629,11 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <button class="btn p" onclick="saveSettings()">保存设置</button>
     ${storageMeter()}
     <div class="btns" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
+    ${idleDebugPanel()}
     <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
-    <div class="hint" style="text-align:center;padding:2px 14px">久未打开调试：${esc(idleDiagText())}</div>
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
     <div style="height:20px"></div>
   </div>`;
@@ -5720,6 +5739,7 @@ function lineToMsg(line,cch){
 
 async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)return;/* 已删除的角色(找回箱里)绝不后台发消息 */
   const _idleNote=!!(note&&/没有打开小手机|没来找你/.test(note));
+  if(_idleNote)idleDebugPatch({aiStatus:'生成中',aiResult:'等待AI返回',aiStartedAt:Date.now(),apiStatus:idleApiStatus(),blockedBy:''});
   // typing
   let typingEl;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){
     cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
@@ -5824,9 +5844,9 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
         notifyIncoming(c,msg);
         if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));cb.scrollTop=cb.scrollHeight;}}
         else if(cur().p==='wechat')render();}}
-    if(_idleNote)idleDiag(got?'AI回复已生成':'AI回复为空');
+    if(_idleNote){idleDiag(got?'AI回复已生成':'AI回复为空');idleDebugPatch({aiStatus:'已调用',aiResult:got?'已生成角色消息':'AI回复为空',aiFinishedAt:Date.now(),blockedBy:got?'':'AI回复为空'});}
   }catch(e){if(typingEl)typingEl.remove();
-    if(_idleNote)idleDiag('AI回复失败：'+((e&&e.message)||'未知错误').slice(0,60));
+    if(_idleNote){const em=((e&&e.message)||'未知错误').slice(0,160);idleDiag('AI回复失败：'+em.slice(0,60));idleDebugPatch({aiStatus:'调用失败',aiResult:'未生成',aiError:em,aiErrorKind:idleErrorKind(em),blockedBy:idleErrorKind(em),aiFinishedAt:Date.now()});}
     pushMsg(id,{role:'assistant',type:'text',content:'⚠️ '+e.message});}
   maybeSummarize(id);
 }
