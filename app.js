@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v392 · 测试语音防重复';
+const APP_VER='v393 · 角色语音防重复';
 const VOICE_MAX_CHARS=200;
 function defState(){return{
   settings:{
@@ -470,15 +470,20 @@ async function speakMsg(m,o){const v=o?getVoice(o):null;
   if(m.audio){const u=await audioPlayableUrl(m.audio);if(u){playUrl(u);return;}}
   if(ttsApiOn()){const url=await warmVoiceMsg(m,o);if(url){playUrl(url);return;}return;}
   speak(m.content,o);}
+function voiceTtsPending(m){return !!(m&&ttsApiOn()&&m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl&&(m._ttsTask||m._ttsLoading));}
+function refreshVoiceBubble(m){if(!m||!m.id)return;const el=document.querySelector('[data-vid="'+m.id+'"]');if(!el)return;
+  const loading=voiceTtsPending(m);el.classList.toggle('loading',loading);el.setAttribute('aria-busy',loading?'true':'false');}
 function warmVoiceMsg(m,o){
   if(!m||m.role==='user'||m.type!=='voice'||m.audio||m._aurl||!ttsApiOn())return m&&m._aurl;
   if(m._ttsTask)return m._ttsTask;
   if(m._ttsFailAt&&Date.now()-m._ttsFailAt<15000)return null;
+  m._ttsLoading=true;refreshVoiceBubble(m);
   m._ttsTask=(async()=>{try{const ab=await ttsArr(m.content,o);
-    if(ab){try{const du=audioBufToDataUrl(ab,'audio/mpeg');if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;}catch(_){m.audio=du;}save();}m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));delete m._ttsFailAt;return m._aurl||m.audio;}catch(e){}}
-    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(x=>{m._ttsTask=null;return x;});
+    if(ab){try{const du=audioBufToDataUrl(ab,'audio/mpeg');if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;}catch(_){m.audio=du;}}m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));delete m._ttsFailAt;return m._aurl||m.audio;}catch(e){}}
+    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);return x;});
   return m._ttsTask;}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
+  if(voiceTtsPending(m))return;
   const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}
   speakMsg(m,m.role==='user'?S.me:getC(owner));}
 /* ===== 顶部消息通知 ===== */
@@ -4525,7 +4530,7 @@ function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.callName=($('
 function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
 function accountMgr(){const acts=S.me.accounts||[];
   openModal(`<h3>我的小号</h3><div class="hint">切换不同身份和角色聊天。每个身份有<b>独立的聊天记录</b>；角色可能拉黑某个身份，你换个身份就能重新搜微信号加回。当前：<b>${esc(S.me.name)}</b></div>
-   ${acts.map(a=>`<div class="section"><div class="it">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1" onclick="switchAccount('${a.id}')"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div><span class="v" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
+   ${acts.map(a=>`<div class="section"><div class="it" style="cursor:pointer" role="button" tabindex="0" onclick="switchAccount('${a.id}')">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div><span class="v" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
    <button class="btn p" style="margin-top:8px" onclick="editAccount()">＋ 新建小号</button>
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function switchAccount(aid){if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t)return;
@@ -5339,8 +5344,8 @@ function buildPart(c,m,me){
   if(m.type==='chatlog'){const prev=(m.lines||[]).slice(0,3).map(l=>l.who+'：'+l.text).join('\n');return `<div class="card" style="width:240px;background:#2c2c2e" onclick="event.stopPropagation();openChatlog('${m.id}')"><div style="padding:11px"><div style="color:#9ec5fe;font-size:13px;font-weight:700;margin-bottom:5px">📑 ${esc(m.title)}</div><div style="color:#aaa;font-size:12px;white-space:pre-wrap;line-height:1.5">${esc(prev)}${(m.lines||[]).length>3?'\n…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.06);color:#888">共${(m.lines||[]).length}条 · 点击查看</div></div>`;}
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">💰</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">↩️</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
-  if(m.type==='voice'){const dur=m.dur||Math.max(1,Math.round((m.content||'').length/3));const wide=Math.min(60+dur*8,200);
-    return quoteBar(m)+`<div class="bubble voiceb" style="min-width:${wide}px" data-vid="${m.id}" onclick="event.stopPropagation();vtoggle('${m.id}')"><span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
+  if(m.type==='voice'){const dur=m.dur||Math.max(1,Math.round((m.content||'').length/3)),wide=Math.min(60+dur*8,200),loading=voiceTtsPending(m);
+    return quoteBar(m)+`<div class="bubble voiceb${loading?' loading':''}" style="min-width:${wide}px" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();${loading?'':`vtoggle('${m.id}')`}"><span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
   if(m.type==='sticker'){return `<div class="stickermsg"><img src="${m.img}">${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;}
   if(m.type==='familycard'){const bnd=m.bound;
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e8527f;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
@@ -5360,6 +5365,7 @@ function buildPart(c,m,me){
     return `<div class="card" style="width:240px;background:#1d2342;border:1px solid #4a5bb0"><div style="padding:12px"><div style="color:#9db4ff;font-size:11px;margin-bottom:4px">🎮 游戏邀请</div><div style="color:#e3e9ff;font-size:14px;font-weight:600">${esc(m.ge||'')} ${esc(m.gname||'一起玩')}</div><div style="color:#aab6e8;font-size:12px;margin-top:5px">想拉你进游戏空间一起玩～</div></div><div class="cfoot" style="color:#8fa0d8">${st==='accepted'?'ta答应啦🎮':st==='declined'?'ta这会儿不想玩':'等ta同意…'}</div></div>${playing?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#5b6bd6;color:#fff" onclick="event.stopPropagation();enterGameNow('${c.id}','${m.game}')">▶ 进入游戏</button></div>`:''}`;}
   return quoteBar(m)+`<div class="bubble">${esc(m.content)}</div>`;}
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
+  if(voiceTtsPending(m)){refreshVoiceBubble(m);return;}
   audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
   speakMsg(m,m.role==='user'?S.me:getC(owner));   // 点一下就播放，可重复点重复听
   const el=document.querySelector('[data-vid="'+mid+'"]');
@@ -5849,7 +5855,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
-      const voiceTag=parseVoiceTagLine(line);if(voiceTag){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq),vt=cleanRolePunct(voiceTag.text||''),tr=cleanRolePunct(voiceTag.trans||''),tooLong=[...vt].length>VOICE_MAX_CHARS;const vm=(vf0===0||tooLong)?{role:'assistant',type:'text',content:tr||vt,time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:vt,trans:tr,time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(vm.type==='voice')setTimeout(()=>warmVoiceMsg(vm,c),80);if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}}continue;}
+      const voiceTag=parseVoiceTagLine(line);if(voiceTag){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq),vt=cleanRolePunct(voiceTag.text||''),tr=cleanRolePunct(voiceTag.trans||''),tooLong=[...vt].length>VOICE_MAX_CHARS;const vm=(vf0===0||tooLong)?{role:'assistant',type:'text',content:tr||vt,time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:vt,trans:tr,time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(vm.type==='voice'&&ttsApiOn())vm._ttsLoading=true;if(vm.type==='voice')setTimeout(()=>warmVoiceMsg(vm,c),80);if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}}continue;}
       mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pnm=pend.name||mm[2]||'商品';const ppr=pend.price||+mm[1]||0;const pc={role:'assistant',type:'paid',price:ppr,name:pnm,id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);
         const _isFood=pend.kind==='food'||/^外卖/.test(pend.shop||'');
         if(_isFood){S.giftbox=S.giftbox||[];S.giftbox.push({id:uid(),cid:id,name:pnm,price:ppr,kind:'food',buyTs:Date.now(),arriveTs:Date.now()+900000,delivered:false});msgs(id).push({role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'帮你付了外卖「'+pnm+'」，配送中（约15分钟送达）',time:Date.now(),id:uid()});}
