@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v390 · 语音后扣点';
+const APP_VER='v391 · 音色命名';
 const VOICE_MAX_CHARS=200;
 function defState(){return{
   settings:{
@@ -1768,8 +1768,8 @@ async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(i
 // 拉取海螺账号下的可用音色（系统音色 + 你克隆的），点一下填入「默认音色」
 let _voiceList=[],_voiceQ='';
 const VOICE_PRESETS=[
-  {id:'phonevoice20260709b',name:'ydySVID_20260219',clone:true,preset:true},
-  {id:'phonevoice20260709a',name:'还在玩手机？',clone:true,preset:true}
+  {id:'phonevoice20260709b',name:'月岛萤',clone:true,preset:true},
+  {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
 ];
 function mergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
