@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>小手机久未打开</title>
+<style>
+html,body{margin:0;height:100%;background:#000;color:#eee;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}
+.box{max-width:300px;line-height:1.8;font-size:15px;color:#aaa}
+.spin{width:28px;height:28px;border:3px solid #333;border-top-color:#ff8fab;border-radius:50%;margin:0 auto 14px;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="box"><div class="spin"></div><div id="msg">正在唤起小手机...</div></div>
+<script>
+(function(){
+  var KEY='phone_idle_pending_event';
+  function text(t){var el=document.getElementById('msg');if(el)el.textContent=t;}
+  try{
+    localStorage.setItem(KEY,JSON.stringify({type:'phone_idle',ts:Date.now(),source:'local-bridge'}));
+    text('已写入本地事件，正在打开小手机...');
+  }catch(e){
+    text('写入本地事件失败，正在打开小手机...');
+  }
+  setTimeout(function(){location.replace('./%E5%B0%8F%E6%89%8B%E6%9C%BA.html');},120);
+})();
+</script>
+</body>
+</html>

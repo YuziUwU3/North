@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v379 · 久未打开调试面板';
+const APP_VER='v380 · 本地事件桥';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -476,7 +476,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=379').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=380').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -498,6 +498,7 @@ const IDLE_EVENT_TYPES={idle_check:1,idle_timeout:1,phone_idle:1};
 const IDLE_LAST_KEY='phone_idle_last_open_at';
 const IDLE_LAST_REMIND_KEY='phone_idle_last_remind_at';
 const IDLE_THRESHOLD_KEY='phone_idle_threshold_ms';
+const IDLE_PENDING_KEY='phone_idle_pending_event';
 const IDLE_DEFAULT_MS=60000;
 const IGNORED_EXTERNAL_EVENT_TYPES={douyin_timeout:1,tiktok_timeout:1};
 let _idleEventPendingUntil=0;
@@ -526,6 +527,11 @@ function idleSetThreshold(ms){try{localStorage.setItem(IDLE_THRESHOLD_KEY,''+ms)
 function idleMarkNow(){idleTouchOpen();idleDebugPatch({decision:'已手动清零计时',lastOpenAt:Date.now(),blockedBy:'',aiStatus:'暂无',aiResult:'暂无'});toast('计时已清零');render();}
 function idleClearDebug(){S.settings=S.settings||{};S.settings._idleDiag='暂无';S.settings._idleDebug={updatedAt:Date.now()};save();toast('已清空诊断');render();}
 function idleSimulateAway(){const th=Math.max(60000,idleThresholdMs());try{localStorage.setItem(IDLE_LAST_KEY,''+(Date.now()-th-3000));localStorage.removeItem(IDLE_LAST_REMIND_KEY);}catch(e){}idleDebugPatch({decision:'开始模拟：离开超过 '+fmtDur(th),blockedBy:'',aiStatus:'待调用',aiResult:'待生成',simulatedAt:Date.now()});handleIdleEvent('phone_idle');}
+function idleConsumeLocalPending(){let raw='',ev=null;try{raw=localStorage.getItem(IDLE_PENDING_KEY)||'';if(raw)localStorage.removeItem(IDLE_PENDING_KEY);}catch(e){}if(!raw)return false;
+  try{ev=JSON.parse(raw);}catch(e){ev={type:raw};}
+  const type=(''+((ev&&ev.type)||'phone_idle')).replace(/[^\w-]/g,'');if(!isIdleEventType(type))return false;
+  idleMarkEventPending(type);idleDebugPatch({localBridgeAt:Date.now(),localBridgeTs:+(ev&&ev.ts)||0,eventType:type,receivedAt:Date.now(),decision:'收到本地桥事件，准备处理',aiStatus:'待判断',aiResult:'待生成',blockedBy:''});
+  setTimeout(()=>handleIdleEvent(type),300);return true;}
 function idleRecentAssistantText(c){try{const lines=msgs(c.id).filter(m=>m.role==='assistant'&&(m.type==='text'||m.type==='voice')).slice(-5).map(m=>msgToText(m)).filter(Boolean).map(t=>t.replace(/\s+/g,' ').slice(0,60));return lines.length?'最近你说过这些，不能照搬、不能同样开头：'+lines.join(' / ')+'。':'';}catch(e){return '';}}
 function handleIdleEvent(type){
   idleDiag('收到 '+type);
@@ -6701,11 +6707,11 @@ function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>
 initBattery();
 window.addEventListener('pagehide',()=>{callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleTouchOpenIfNormal,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pageshow',()=>{setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleTouchOpenIfNormal,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;callBackgroundHold();if(_savePending)saveNow();}else{try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-registerSW();window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleTouchOpenIfNormal,1600);});window.addEventListener('focus',()=>{setTimeout(routeHash,120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);});
-render();restoreActiveCall();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
+registerSW();window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleTouchOpenIfNormal,1600);});window.addEventListener('focus',()=>{setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleTouchOpenIfNormal,1800);});
+render();restoreActiveCall();idleConsumeLocalPending();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(()=>pollExternalEvents(true),2600);
 setTimeout(idleTouchOpenIfNormal,3800);

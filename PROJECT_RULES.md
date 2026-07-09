@@ -55,6 +55,7 @@
 4. v379 手机实测已验证：在设置页点击“模拟久未打开超过1分钟”后，角色成功发消息。说明小手机本体收到 phone_idle 后的内部链路已经打通。
 5. v379 手机实测已验证：快捷指令用 webapp://...#event=phone_idle 可以打开主屏小手机，但调试面板“收到 phone_idle”仍停留在上一次模拟时间，说明 hash 事件没有传进主屏 webapp。
 6. v379 手机实测已验证：快捷指令用 webapp://...?event=phone_idle 也可以打开主屏小手机，但调试面板“收到 phone_idle”仍停留在上一次模拟时间，说明 query 事件同样没有传进主屏 webapp。
+7. v380 本地浏览器已验证：打开 phone-idle-local.html 后，页面能写入 localStorage 待处理 phone_idle，随后主页面能消费该事件并进入处理逻辑。
 
 ---
 
@@ -75,6 +76,7 @@
 5. 每次只让用户做一个明确操作，并说明这一步和昨天已失败步骤的区别。
 6. hash 和 query 都已排除，下一步不要再靠 URL 参数传事件。
 7. 下一步应改为“专用本地桥页面/路径触发”：用一个不依赖 query/hash、不依赖 Supabase 的同源页面写入 localStorage，然后再打开小手机主页面，由主页面读取本地待处理事件。
+8. v380 已实现本地事件桥：新增 phone-idle-local.html，主页面启动时读取 localStorage 待处理 phone_idle。下一次手机测试只测这个桥页面，不再测 #event 或 ?event。
 
 ---
 
