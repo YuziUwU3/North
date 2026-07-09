@@ -170,6 +170,15 @@ async function charge(userId: string, clientSecret: string, feature: string) {
   throw new Error("balance-busy-retry-later");
 }
 
+async function requireBalance(userId: string, clientSecret: string, feature: string) {
+  const cost = PRICE[feature] || 1;
+  const acct = await ensureAccount(userId, clientSecret);
+  if (acct.disabled) throw new Error("account-disabled");
+  const balance = acct.points || 0;
+  if (balance < cost) throw new Error("no-balance");
+  return { cost, balance };
+}
+
 async function finishCharge(ledgerId: string, ok: boolean, meta: Record<string, unknown> = {}) {
   await supabase.from("phone_ai_ledger").update({ status: ok ? "done" : "failed", meta }).eq("id", ledgerId);
 }
@@ -382,28 +391,25 @@ Deno.serve(async (req) => {
     }
 
     if (action === "tts") {
-      const c = await charge(userId, clientSecret, "tts");
       let model = "";
-      try {
-        const text = String(body.text || "").trim();
-        if (!text) throw new Error("missing-tts-text");
-        const chars = [...text].length;
-        if (chars > 200) throw new Error("tts-text-too-long");
-        model = "speech-02-turbo";
-        const voiceId = body.voice_id || Deno.env.get("TTS_VOICE_ID") || "male-qn-qingse";
-        const data = await minimaxTTS(text, voiceId, model);
-        const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
-        await finishCharge(c.ledgerId, true, {
-          model,
-          voice_id: voiceId,
-          char_count: chars,
-          estimated_cny: Number((chars * cnyPerChar).toFixed(4)),
-        });
-        return json({ ok: true, data, charged: c.cost, balance: c.balance, chars });
-      } catch (e) {
-        await refund(userId, clientSecret, "tts", c.cost, c.ledgerId, errText(e));
-        throw e;
-      }
+      const text = String(body.text || "").trim();
+      if (!text) throw new Error("missing-tts-text");
+      const chars = [...text].length;
+      if (chars > 200) throw new Error("tts-text-too-long");
+      await requireBalance(userId, clientSecret, "tts");
+      model = "speech-02-turbo";
+      const voiceId = body.voice_id || Deno.env.get("TTS_VOICE_ID") || "male-qn-qingse";
+      const data = await minimaxTTS(text, voiceId, model);
+      const c = await charge(userId, clientSecret, "tts");
+      const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
+      await finishCharge(c.ledgerId, true, {
+        model,
+        voice_id: voiceId,
+        char_count: chars,
+        estimated_cny: Number((chars * cnyPerChar).toFixed(4)),
+        postpaid: true,
+      });
+      return json({ ok: true, data, charged: c.cost, balance: c.balance, chars });
     }
 
     if (action === "tts_voices") {
