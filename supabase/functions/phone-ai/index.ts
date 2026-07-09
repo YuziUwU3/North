@@ -21,6 +21,7 @@ const PRICE: Record<string, number> = {
   tts: 10,
   summary: 2,
 };
+const DEFAULT_TTS_VOICE = "male-qn-qingse";
 
 const CHAT_GUARD = `你是“小手机”应用里的角色回复引擎，不是通用问答助手。所有回复都必须适配微信、线下约会、角色扮演、购物、信箱等小手机场景。
 最高优先级规则：
@@ -258,7 +259,7 @@ async function minimaxTTS(text: string, voiceId: string, model: string) {
   if (!r.ok || (data?.base_resp && data.base_resp.status_code !== 0)) {
     const code = data?.base_resp?.status_code;
     const statusMsg = String(data?.base_resp?.status_msg || "");
-    if (code === 2042 || /voice_id/i.test(statusMsg)) {
+    if (code === 2042 || code === 2054 || code === 20132 || /voice[\s_-]*id/i.test(statusMsg)) {
       throw new Error(`invalid-voice-id: ${statusMsg || "you don't have access to this voice_id"}`);
     }
     throw new Error(`minimax-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
@@ -398,13 +399,28 @@ Deno.serve(async (req) => {
       if (chars > 200) throw new Error("tts-text-too-long");
       await requireBalance(userId, clientSecret, "tts");
       model = "speech-02-turbo";
-      const voiceId = body.voice_id || Deno.env.get("TTS_VOICE_ID") || "male-qn-qingse";
-      const data = await minimaxTTS(text, voiceId, model);
+      const requestedVoiceId = body.voice_id || DEFAULT_TTS_VOICE;
+      let voiceId = requestedVoiceId;
+      let voiceFallback = false;
+      let data;
+      try {
+        data = await minimaxTTS(text, voiceId, model);
+      } catch (e) {
+        if (voiceId !== DEFAULT_TTS_VOICE && errText(e).includes("invalid-voice-id")) {
+          voiceId = DEFAULT_TTS_VOICE;
+          voiceFallback = true;
+          data = await minimaxTTS(text, voiceId, model);
+        } else {
+          throw e;
+        }
+      }
       const c = await charge(userId, clientSecret, "tts");
       const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
       await finishCharge(c.ledgerId, true, {
         model,
         voice_id: voiceId,
+        requested_voice_id: requestedVoiceId,
+        voice_fallback: voiceFallback,
         char_count: chars,
         estimated_cny: Number((chars * cnyPerChar).toFixed(4)),
         postpaid: true,

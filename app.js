@@ -22,8 +22,9 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v395 · 小号切换兼容';
+const APP_VER='v396 · 语音音色兜底修正';
 const VOICE_MAX_CHARS=200;
+const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -432,7 +433,7 @@ async function audioDataToBuf(audio){if(!audio)return null;
 function audioBufToDataUrl(ab,type){try{const bytes=ab instanceof Uint8Array?ab:new Uint8Array(ab||[]);let bin='',step=0x8000;for(let i=0;i<bytes.length;i+=step)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+step));return 'data:'+(type||'audio/mpeg')+';base64,'+btoa(bin);}catch(e){return '';}}
 async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
 async function _ttsOnce(t,vid,tts){let r;
-  if(ttsUseRelay()){const d=await aiRelay('tts',{text:t,voice_id:vid||'',model:'speech-02-turbo'});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab)return {err:'内置AI无音频'};return {buf:ab};}
+  if(ttsUseRelay()){const d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo'});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab)return {err:'内置AI无音频'};return {buf:ab};}
   if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
     r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
   else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
