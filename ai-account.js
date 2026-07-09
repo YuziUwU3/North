@@ -1,5 +1,5 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiUnlocked=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='';
+let _aiAcct=null,_aiAcctBusy=false,_aiUnlocked=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='';
 const AI_VOICE_PRESETS=[
   {id:'phonevoice20260709b',name:'月岛萤',clone:true,preset:true},
   {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
@@ -38,7 +38,8 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音音色</div>
       <div class="hint" style="padding:0 14px 8px">选中的音色会作为小手机默认语音音色。</div>
       <div class="it"><span>默认音色<small>${esc(voice)}</small></span><span class="v"><button class="minibtn" onclick="aiPullVoices()">拉取音色</button></span></div>
-      <div class="btns" style="padding:0 14px 10px"><button class="btn g" onclick="aiClearVoice()">清空音色</button><button class="btn p" onclick="aiTestVoice()">测试语音</button></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="aiClearVoice()">清空音色</button><button class="btn p" ${_aiVoiceTestBusy?'disabled':''} onclick="aiTestVoice()">${_aiVoiceTestBusy?'生成中…':'测试语音'}</button></div>
+      ${_aiVoiceTestBusy||_aiVoiceTestStatus?`<div class="hint" style="padding:0 14px 10px;color:${_aiVoiceTestBusy?'#ffb7d2':'#9aa0aa'}">${_aiVoiceTestBusy?'<span class="spin" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;vertical-align:-2px;margin-right:6px"></span>':''}${esc(_aiVoiceTestStatus||'语音生成中，请稍等，不要重复点击')}</div>`:''}
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">最近流水<small style="display:block;color:#777;font-weight:400;margin-top:3px">按本地时间显示，最多保留80条</small></div>
@@ -84,22 +85,24 @@ function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.
 function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=id;save();closeModal();toast('已设为默认音色');if(cur().p==='aiaccount')render();}
 function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='';save();toast('已清空默认音色');render();}
 async function aiTestVoice(){const text='我在测试这条语音的花销和声音效果。';
+  if(_aiVoiceTestBusy){toast('语音还在生成中，请稍等');return;}
   if(!aiVoiceEnabled()){toast('先打开语音API');return;}
-  toast('正在生成语音…');
+  _aiVoiceTestBusy=true;_aiVoiceTestStatus='语音生成中，请稍等，不要重复点击';if(cur().p==='aiaccount')render();
   try{initAudio();
     if(!aiVoiceRelayOn()&&typeof ttsArr==='function'){
       const ab=await Promise.race([ttsArr(text,{voice:{engine:'api',ttsVoice:((S.settings.tts||{}).voice)||''}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
-      if(ab==='__T_O__'){toast('语音测试超时');return;}
-      if(!ab){toast('没有拿到语音');return;}
-      const buf=await decodeBuf(ab);if(buf){playBuf(buf);toast('外置语音测试成功');}else toast('拿到语音数据，但播放失败');return;
+      if(ab==='__T_O__'){_aiVoiceTestStatus='语音测试超时，未完成生成';toast('语音测试超时');return;}
+      if(!ab){_aiVoiceTestStatus='没有拿到语音，请检查音色或接口';toast('没有拿到语音');return;}
+      const buf=await decodeBuf(ab);if(buf){playBuf(buf);_aiVoiceTestStatus='外置语音测试成功';toast('外置语音测试成功');}else{_aiVoiceTestStatus='拿到语音数据，但播放失败';toast('拿到语音数据，但播放失败');}return;
     }
     const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||'',model:'speech-02-turbo'}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
-    if(d==='__T_O__'){toast('语音测试超时');return;}
-    const audio=d&&d.data&&d.data.audio;if(!audio){toast('没有拿到语音');setTimeout(()=>aiAccountRefresh(true,true),600);return;}
+    if(d==='__T_O__'){_aiVoiceTestStatus='语音测试超时，未完成生成';toast('语音测试超时');return;}
+    const audio=d&&d.data&&d.data.audio;if(!audio){_aiVoiceTestStatus='没有拿到语音，请检查音色或后台余额';toast('没有拿到语音');setTimeout(()=>aiAccountRefresh(true,true),600);return;}
     const ab=await fetch(audio).then(x=>x.arrayBuffer());const buf=await decodeBuf(ab);
-    if(buf){playBuf(buf);toast('语音测试成功，流水里会显示语音扣点');setTimeout(()=>aiAccountRefresh(true,true),800);}
-    else toast('拿到语音数据，但播放失败');
-  }catch(e){toast('语音测试失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));setTimeout(()=>aiAccountRefresh(true,true),800);}}
+    if(buf){playBuf(buf);_aiVoiceTestStatus='语音测试成功';toast('语音测试成功');setTimeout(()=>aiAccountRefresh(true,true),800);}
+    else{_aiVoiceTestStatus='拿到语音数据，但播放失败';toast('拿到语音数据，但播放失败');}
+  }catch(e){_aiVoiceTestStatus='语音测试失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,'');toast(_aiVoiceTestStatus);setTimeout(()=>aiAccountRefresh(true,true),800);}
+  finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')render();}}
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId(),points:0},pricing:null,plans:null,ledger:[]};
   if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.account)_aiAcct.account=d.account;
