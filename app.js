@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v387 · 内置语音限额';
+const APP_VER='v388 · 克隆音色列表';
 const VOICE_MAX_CHARS=200;
 function defState(){return{
   settings:{
@@ -1767,16 +1767,20 @@ async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(i
   S.settings.tts=saved;}
 // 拉取海螺账号下的可用音色（系统音色 + 你克隆的），点一下填入「默认音色」
 let _voiceList=[],_voiceQ='';
+const VOICE_PRESETS=[{id:'phonevoice20260709a',name:'还在玩手机？',clone:true,preset:true}];
+function mergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
   toast('正在拉取音色…');
-  try{if(aiCoreOn()){const d=await aiRelay('tts_voices',{});_voiceList=(d&&d.voices)||[];_voiceQ='';showVoicePicker();return;}
+  try{if(aiCoreOn()){const d=await aiRelay('tts_voices',{});_voiceList=mergeVoicePresets((d&&d.voices)||[]);_voiceQ='';showVoicePicker();return;}
     if(!/minimax/i.test(base)){toast('这个只支持海螺(MiniMax)，地址要填 api.minimaxi.com');return;}
     if(!key){toast('先填上面的 API Key，或打开 AI账户里的“使用内置AI”');return;}
-    const r=await fetch(base+'/v1/get_voice',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
+    const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
+    const url=base+'/v1/get_voice'+(group?('?GroupId='+encodeURIComponent(group)):'');
+    const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
     const d=await r.json();if(!d||(d.base_resp&&d.base_resp.status_code!==0)){toast('拉取失败：'+((d&&d.base_resp&&d.base_resp.status_msg)||r.status));return;}
     const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
     const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
-    _voiceList=clones.concat(sys);_voiceQ='';showVoicePicker();
+    _voiceList=mergeVoicePresets(clones.concat(sys));_voiceQ='';showVoicePicker();
   }catch(e){toast('拉取失败，检查地址/Key/网络');}}
 function showVoicePicker(){const q=(_voiceQ||'').toLowerCase();
   const list=_voiceList.filter(v=>!q||(''+v.id).toLowerCase().indexOf(q)>=0||(''+v.name).toLowerCase().indexOf(q)>=0);

@@ -1,5 +1,7 @@
 /* ---------- AI账户 / 内置AI ---------- */
 let _aiAcct=null,_aiAcctBusy=false,_aiUnlocked=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='';
+const AI_VOICE_PRESETS=[{id:'phonevoice20260709a',name:'还在玩手机？',clone:true,preset:true}];
+function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 
 function openAIAccount(){if(_aiUnlocked){go('aiaccount');return;}
   openModal(`<h3>AI账户密码</h3><div class="hint">这里是后台测试入口，输入密码后进入。</div>
@@ -63,16 +65,17 @@ async function aiPullVoices(){toast('正在拉取音色…');
   try{const ext=aiExternalTts();
     if(!aiVoiceRelayOn()&&ext&&/minimax/i.test(ext.base||'')){
       const base=(ext.base||'').replace(/\/+$/,'');
-      const r=await fetch(base+'/v1/get_voice',{method:'POST',headers:{'Authorization':'Bearer '+ext.key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
+      const gid=(ext.group||'').trim(),url=base+'/v1/get_voice'+(gid?('?GroupId='+encodeURIComponent(gid)):'');
+      const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+ext.key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
       const d=await r.json().catch(()=>null);
       if(!d||(d.base_resp&&d.base_resp.status_code!==0)){toast('拉取失败：'+((d&&d.base_resp&&d.base_resp.status_msg)||r.status));return;}
       const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
       const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
-      _aiVoiceList=clones.concat(sys);_aiVoiceQ='';
+      _aiVoiceList=aiMergeVoicePresets(clones.concat(sys));_aiVoiceQ='';
       if(!_aiVoiceList.length){toast('没有拉到音色，检查 MiniMax Key / GroupId');return;}
       aiShowVoicePicker();return;
     }
-    const d=await aiRelay('tts_voices',{});_aiVoiceList=(d&&d.voices)||[];_aiVoiceQ='';
+    const d=await aiRelay('tts_voices',{});_aiVoiceList=aiMergeVoicePresets((d&&d.voices)||[]);_aiVoiceQ='';
     if(!_aiVoiceList.length){toast('没有拉到音色，检查 MiniMax Key / GroupId');return;}
     aiShowVoicePicker();
   }catch(e){toast('拉取失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}}
