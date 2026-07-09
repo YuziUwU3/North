@@ -32,8 +32,9 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音计费表</div>
       <div class="it"><span>小手机扣点</span><span class="v">${aiPrice('tts')} 点 / 次</span></div>
+      <div class="it"><span>内置语音模型<small>AI账户固定省钱模型，外部自配不受影响</small></span><span class="v">speech-02-turbo</span></div>
       <div class="it"><span>官方成本估算<small>speech-02-turbo 约按字符扣费</small></span><span class="v">约 ¥0.0002 / 字</span></div>
-      <div class="it"><span>参考花费<small>100字约¥0.02，500字约¥0.10</small></span><span class="v">成功才扣点</span></div>
+      <div class="it"><span>参考花费<small>100字约¥0.02，200字约¥0.04</small></span><span class="v">成功才扣点</span></div>
       <div class="it"><span>失败规则<small>没拿到可播放语音，小手机点数退回</small></span><span class="v">失败退点</span></div>
     </div>
     <div class="section">
@@ -94,7 +95,7 @@ async function aiTestVoice(){const text='我在测试这条语音的花销和声
       if(!ab){toast('没有拿到语音');return;}
       const buf=await decodeBuf(ab);if(buf){playBuf(buf);toast('外置语音测试成功');}else toast('拿到语音数据，但播放失败');return;
     }
-    const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||'',model:((S.settings.tts||{}).model)||''}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
+    const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||'',model:'speech-02-turbo'}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(d==='__T_O__'){toast('语音测试超时');return;}
     const audio=d&&d.data&&d.data.audio;if(!audio){toast('没有拿到语音');setTimeout(()=>aiAccountRefresh(true,true),600);return;}
     const ab=await fetch(audio).then(x=>x.arrayBuffer());const buf=await decodeBuf(ab);

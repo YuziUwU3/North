@@ -385,12 +385,13 @@ Deno.serve(async (req) => {
       const c = await charge(userId, clientSecret, "tts");
       let model = "";
       try {
-        const text = String(body.text || "").trim().slice(0, 1200);
+        const text = String(body.text || "").trim();
         if (!text) throw new Error("missing-tts-text");
-        model = body.model || Deno.env.get("TTS_MODEL") || "speech-02-turbo";
+        const chars = [...text].length;
+        if (chars > 200) throw new Error("tts-text-too-long");
+        model = "speech-02-turbo";
         const voiceId = body.voice_id || Deno.env.get("TTS_VOICE_ID") || "male-qn-qingse";
         const data = await minimaxTTS(text, voiceId, model);
-        const chars = [...text].length;
         const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
         await finishCharge(c.ledgerId, true, {
           model,
