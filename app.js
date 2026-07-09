@@ -22,7 +22,7 @@ async function redeemInvite(code){try{
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v397 · 时间睡眠小号修正';
+const APP_VER='v398 · 功能快捷入口';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -1580,15 +1580,20 @@ function setTab(n){_setTab=n;const p1=$('#setpage1'),p2=$('#setpage2'),t1=$('#se
   p1.style.display=n===2?'none':'block';p2.style.display=n===2?'block':'none';
   if(t1){t1.style.background=n===2?'#2c2c2e':'#07c160';t1.style.color=n===2?'#ccc':'#fff';}
   if(t2){t2.style.background=n===2?'#07c160':'#2c2c2e';t2.style.color=n===2?'#fff':'#ccc';}}
+function jumpToSection(id){const el=document.getElementById(id);if(!el)return;try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){el.scrollIntoView(true);}}
+function settingsJump(tab,id){setTab(tab);setTimeout(()=>jumpToSection(id),60);}
+function coupleJump(tab,id){couTab(tab);setTimeout(()=>jumpToSection(id),60);}
+function quickJumpBar(items){return `<div class="section" style="margin:0 0 10px;border-radius:12px;overflow:hidden"><div style="padding:10px 12px"><div style="font-size:12px;color:#888;margin-bottom:7px">快捷入口</div><div style="display:flex;flex-wrap:wrap;gap:6px">${items.map(x=>`<button class="minibtn" style="background:#24242a;color:#ddd;border:1px solid rgba(255,255,255,.08)" onclick="${x[1]}">${x[0]}</button>`).join('')}</div></div></div>`;}
 function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">设置</span><span class="r"></span></div>
   <div class="scroll" style="padding:12px;background:#000">
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="minibtn" id="settab1" style="flex:1;${_setTab===2?'background:#2c2c2e;color:#ccc':'background:#07c160;color:#fff'}" onclick="setTab(1)">接口·模型</button>
       <button class="minibtn" id="settab2" style="flex:1;${_setTab===2?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(2)">偏好·工具</button></div>
+    ${quickJumpBar([['聊天',"settingsJump(1,'set_chat')"],['辅助',"settingsJump(1,'set_aux')"],['联网',"settingsJump(1,'set_search')"],['识图',"settingsJump(1,'set_vision')"],['语音',"settingsJump(1,'set_tts')"],['偏好',"settingsJump(2,'set_prefs')"],['外观',"settingsJump(2,'set_look')"],['表情/语音',"settingsJump(2,'set_media')"],['AI真图',"settingsJump(2,'set_image')"],['桌面布局',"settingsJump(2,'set_layout')"],['备份',"settingsJump(2,'set_backup')"],['存储',"settingsJump(2,'set_storage')"]])}
     <div id="setpage1" style="display:${_setTab===2?'none':'block'}">
     <div class="hint">聊天和识图可以用不同模型。地址已经预填好了，填上 Key 就能用。</div>
-    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#07c160">聊天模型</div>
+    <div class="section" id="set_chat"><div style="padding:12px 14px;font-weight:600;color:#07c160">聊天模型</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_cbase" value="${esc(a.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_ckey" type="password" value="${esc(a.key)}" placeholder="sk-…"></div>
       <div class="field" style="padding:0 14px"><label>模型名</label><div style="display:flex;gap:6px"><input id="s_cmodel" value="${esc(a.model)}" style="flex:1"><button class="minibtn" onclick="fetchModels('s_cbase','s_ckey','s_cmodel')">拉取</button></div></div>
@@ -1596,14 +1601,14 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
         <div class="field"><label>回复长度</label><input id="s_cmax" type="number" value="${a.maxTokens}"></div></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testMain()">测试主模型</button></div><div id="testC" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
-    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#6c5ce7">辅助模型（省钱·给次要功能用）</div>
+    <div class="section" id="set_aux"><div style="padding:12px 14px;font-weight:600;color:#6c5ce7">辅助模型（省钱·给次要功能用）</div>
       <div class="hint" style="padding:0 14px">只有【微信聊天 · 朋友圈 · 信箱】用主模型；其余全用这个便宜的辅助模型：游戏、购物刷新、外卖、X的所有内容、查他手机、联网搜索等。只填「模型名」就行，地址/Key留空会自动复用上面的聊天模型。不填模型名=全部都用主模型。</div>
       <div class="field" style="padding:0 14px"><label>模型名（如 gpt-4o-mini / 更便宜的）</label><div style="display:flex;gap:6px"><input id="s_xmodel" value="${esc((S.settings.aux||{}).model||'')}" placeholder="留空=全部都用主模型" style="flex:1"><button class="minibtn" onclick="fetchModels('s_xbase','s_xkey','s_xmodel')">拉取</button></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>接口地址(可选)</label><input id="s_xbase" value="${esc((S.settings.aux||{}).base||'')}" placeholder="留空=同聊天"></div>
         <div class="field"><label>API Key(可选)</label><input id="s_xkey" type="password" value="${esc((S.settings.aux||{}).key||'')}" placeholder="留空=同聊天"></div></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testAux()">测试副模型</button></div><div id="testX" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
-    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#3a7bd5">联网搜索（浏览器/[联网]用）</div>
+    <div class="section" id="set_search"><div style="padding:12px 14px;font-weight:600;color:#3a7bd5">联网搜索（浏览器/[联网]用）</div>
       <div class="it"><span>联网方式</span><span class="v">${[["jina","jina搜索"],["model","用模型"]].map(m=>`<span onclick="S.settings.search=Object.assign({base:\'https://s.jina.ai\',key:\'\',model:\'\'},S.settings.search,{mode:\'${m[0]}\'});save();render()" style="cursor:pointer;padding:3px 9px;border-radius:8px;${((S.settings.search||{}).mode||'jina')===m[0]?'background:#3a7bd5;color:#fff':'color:#888'}">${m[1]}</span>`).join('')}</span></div>
       ${((S.settings.search||{}).mode||'jina')==='model'?`<div class="hint" style="padding:0 14px">用你的兼容API搜索。<b>普通模型不能真联网</b>(只会凭记忆答)；要真联网请填<b>带联网能力的模型</b>(如 -online / sonar / gpt-4o-search-preview)。地址/Key留空=用上面的聊天模型。</div>
       <div class="field" style="padding:0 14px"><label>联网模型名</label><input id="s_semodel" value="${esc((S.settings.search||{}).model||'')}" placeholder="留空=用聊天模型(可能不实时)"></div>
@@ -1612,13 +1617,13 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px 10px"><label>API Key</label><input id="s_sekey" type="password" value="${esc((S.settings.search||{}).key||'')}" placeholder="jina_xxx"></div>`}
       <div class="btns" style="padding:4px 14px 6px"><button class="btn g" onclick="testSE()">测试联网</button></div><div id="testSE" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
-    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">识图模型（发照片时用）</div>
+    <div class="section" id="set_vision"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">识图模型（发照片时用）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_vbase" value="${esc(v.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_vkey" type="password" value="${esc(v.key)}" placeholder="不填则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><div style="display:flex;gap:6px"><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图" style="flex:1"><button class="minibtn" onclick="fetchModels('s_vbase','s_vkey','s_vmodel')">拉取</button></div></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testVision()">测试识图</button></div><div id="testV" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
-    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
+    <div class="section" id="set_tts"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
       <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，把角色「语音音色」引擎切成 API：<br>· <b>MiniMax 海螺（推荐·国内·便宜·克隆很真）</b>：开了内置AI后不用在这里填Key，模型默认 speech-02-turbo；每个角色可填不同 voice_id，点“拉取我的全部音色”可选系统音色和已克隆音色。<br>· <b>旧直连模式</b>：不开内置AI时，才需要在这里填接口地址和Key。</div>
       <div class="it"><span>启用语音API<br><small style="color:#888">开：角色语音条和电话使用内置或外置API音色；关：使用手机系统音。</small></span><span class="sw ${ttsEnabled(S.settings.tts||{})?'on':''}" onclick="S.settings.tts=S.settings.tts||{};S.settings.tts.enabled=!ttsEnabled(S.settings.tts);save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.minimaxi.com 或 api.elevenlabs.io"></div>
@@ -1637,7 +1642,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     </div>
     </div>
     <div id="setpage2" style="display:${_setTab===2?'block':'none'}">
-    <div class="section">
+    <div class="section" id="set_prefs">
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
@@ -1654,7 +1659,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it" style="flex-wrap:wrap"><span>${svgIc('volume',15,'#bbb')} 音量 <b style="color:#07c160">${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}%</b><small style="color:#999;display:block">后台听歌听不清ta讲话，可调到100%以上加大</small></span><input type="range" min="0" max="300" step="10" value="${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}" style="width:100%;margin-top:6px" oninput="S.settings.volume=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'" onchange="playDing()"></div>
       <div class="it">后台通知（点开授权）<span class="v" onclick="reqNotify()">允许 ›</span></div>
     </div>
-    <div class="section">
+    <div class="section" id="set_look">
       <div class="it" onclick="alarmManager()"><span>${svgIc('clock',15,'#bbb')} 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
       <div class="it"><span>${svgIc('image',15,'#bbb')} 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="appIconEditor()"><span>${svgIc('image',15,'#bbb')} App 图标美化</span><span class="v">自定义主屏图标 ›</span></div>
@@ -1664,12 +1669,12 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>${svgIc('phone',15,'#bbb')} 通话背景</span><span class="v"><button class="minibtn" onclick="setCallBg()">${S.me.callBg?'换':'上传'}</button>${S.me.callBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.callBg=\'\';save();render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>${svgIc('weather',15,'#bbb')} 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
-    <div class="section">
+    <div class="section" id="set_media">
       <div class="it" onclick="aiStkManager()"><span>${svgIc('smile',15,'#bbb')} 角色的表情包</span><span class="v">${(S.aiStickers||[]).length}个 ›</span></div>
       <div class="it"><span>角色发表情频率</span><span class="v"><select id="s_stkfreq" onchange="S.settings.stkFreq=+this.value;save()" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px">${[[0,'关闭'],[1,'偶尔'],[2,'适中'],[3,'经常']].map(o=>`<option value="${o[0]}" ${(S.settings.stkFreq==null?2:S.settings.stkFreq)===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></span></div>
       <div class="it"><span>角色发语音频率</span><span class="v"><select id="s_voicefreq" onchange="S.settings.voiceFreq=+this.value;save()" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px">${[[0,'关闭'],[1,'偶尔'],[2,'经常'],[3,'总是']].map(o=>`<option value="${o[0]}" ${(S.settings.voiceFreq==null?1:S.settings.voiceFreq)===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></span></div>
     </div>
-    <div class="section">
+    <div class="section" id="set_image">
       <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
       <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时真生成一张图（不露脸·贴合人设身形），每张耗几分钱token、约半分钟；关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
@@ -1683,9 +1688,11 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div id="testOut" style="display:none"></div>
     <button class="btn p" onclick="saveSettings()">保存设置</button>
     ${storageMeter()}
-    <div class="btns" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
+    <div class="btns" id="set_layout" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
+    <div id="set_backup">
     <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
+    </div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
@@ -4372,19 +4379,20 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
       <div style="display:flex;gap:8px;margin:0 12px 6px">
         <button class="minibtn" id="coutab1" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;${_couTab===2?'background:#2a2730;color:#bbb':'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff'}" onclick="couTab(1)">${svgIc('heart',14,_couTab===2?'#bbb':'#fff')}甜蜜日常</button>
         <button class="minibtn" id="coutab2" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;${_couTab===2?'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff':'background:#2a2730;color:#bbb'}" onclick="couTab(2)">${svgIc('shield',14,_couTab===2?'#fff':'#bbb')}管控授权</button></div>
+      <div style="margin:0 12px 8px">${quickJumpBar([['纪念日',"coupleJump(1,'cou_anniv')"],['睡眠',"coupleJump(1,'cou_sleep')"],['报备',"coupleJump(1,'cou_report')"],['授权',"coupleJump(2,'cou_grant')"],['禁言',"coupleJump(2,'cou_gag_auth')"],['钱包',"coupleJump(2,'cou_wallet')"],['限时',"coupleJump(2,'cou_limit')"],['盯防',"coupleJump(2,'cou_star')"],['小黑屋',"coupleJump(2,'cou_jail')"],['出门审批',"coupleJump(2,'cou_outpass')"],['登录微信',"coupleJump(2,'cou_wxlogin')"],['失踪催',"coupleJump(2,'cou_escalate')"]])}</div>
       <div id="coupage1" style="display:${_couTab===2?'none':'block'}">
       <div ${SEC}><div class="it" onclick="coupleSet()"><span style="display:flex;align-items:center;gap:9px">${svgIc('calendar',16,ROSE)}在一起的日子</span><span class="v">${cp.startDate} ›</span></div></div>
-      <div ${SEC}>${HD('gift','纪念日',ROSE,`<span class="minibtn" onclick="addAnniv()">＋ 添加</span>`)}
+      <div id="cou_anniv" ${SEC}>${HD('gift','纪念日',ROSE,`<span class="minibtn" onclick="addAnniv()">＋ 添加</span>`)}
         ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>
       ${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
-        let h=`<div ${SEC}>${HD('moon','睡眠计时',BLUE)}
+        let h=`<div id="cou_sleep" ${SEC}>${HD('moon','睡眠计时',BLUE)}
         <div class="hint" style="padding:8px 14px 0">要睡了手动点「开始睡眠」；睡醒后再次打开小手机会自动结束并记录，也可以留在页面时手动结束。${esc(c.remark||c.name)}在情侣空间能看到你的睡眠记录，心疼你别熬夜。</div>
         <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">${svgIc('sun',15,'#fff')} 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">${svgIc('moon',15,'#fff')} 我要睡了，开始计时</button>`}</div>`;
         if(recs.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">睡眠记录（可手动删除）</div>`+recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
         return h+`</div>`;})()}
       ${(function(){const rp=S.me.report||{active:null,log:[]};const log=rp.log||[];const presets=['洗澡','吃饭','玩游戏','看剧','健身','出门'];
-        let h=`<div ${SEC}>${HD('location','报备 · 我去干嘛了',AMBER)}
+        let h=`<div id="cou_report" ${SEC}>${HD('location','报备 · 我去干嘛了',AMBER)}
         <div class="hint" style="padding:8px 14px 0">出门做点啥就点一下开始、回来点结束。${esc(c.remark||c.name)}第一时间知道你去哪了、用了多久，就不会瞎担心/瞎吃醋啦。</div>`;
         if(rp.active){h+=`<div style="padding:10px 14px"><div style="text-align:center;color:#ffb83b;font-size:14px;margin-bottom:8px">正在「${esc(rp.active.type)}」…从 ${hm(rp.active.start)} 开始（已 ${sleepDurTxt(Date.now()-rp.active.start)}）</div><button class="btn p" onclick="reportEnd()">结束 / 我回来了</button></div>`;}
         else{h+=`<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px">${presets.map(p=>`<button class="minibtn" onclick="reportStart('${p}')">${p}</button>`).join('')}<button class="minibtn" style="background:#7c5cff;color:#fff" onclick="reportCustom()">＋ 其他…</button></div>`;}
@@ -4393,29 +4401,29 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
       </div>
       <div id="coupage2" style="display:${_couTab===2?'block':'none'}">
       ${(function(){const g=cp.grant||{},locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
-        let h=`<div ${SEC}>${HD('lock','软件管控授权',ROSE)}
+        let h=`<div id="cou_grant" ${SEC}>${HD('lock','软件管控授权',ROSE)}
         <div class="hint" style="padding:8px 14px 0">勾选的App才授权给 ${esc(c.remark||c.name)} 管。ta会在合适的时机(比如该睡了)自己判断锁哪些；锁了得问ta要密码、在下面输入才能解开。取消授权ta会立刻知道。</div>
         ${Object.keys(LOCKABLE).map(k=>`<div class="it"><span>${LOCKABLE[k]}</span><span class="sw ${g[k]?'on':''}" onclick="coupleGrant('${k}')"></span></div>`).join('')}</div>
-        <div ${SEC}>${HD('mute','允许ta禁言这些人的聊天',ROSE)}<div class="hint" style="padding:8px 14px 0">勾选谁，ta才能在吃醋时锁住你和这个人的聊天(和ta自己的永远不锁)。</div>
+        <div id="cou_gag_auth" ${SEC}>${HD('mute','允许ta禁言这些人的聊天',ROSE)}<div class="hint" style="padding:8px 14px 0">勾选谁，ta才能在吃醋时锁住你和这个人的聊天(和ta自己的永远不锁)。</div>
         ${(function(){const aus=cp.gagAuth||[];const cs=S.contacts.filter(x=>!x.deleted&&x.id!==cp.cid);return cs.length?cs.map(x=>`<div class="it"><span>${esc(x.remark||x.name)}</span><span class="sw ${aus.indexOf(x.id)>=0?'on':''}" onclick="coupleGagAuth('${x.id}')"></span></div>`).join(''):'<div class="hint" style="padding:8px 14px">通讯录里还没有别的角色</div>';})()}</div>`;
-        if(lk.length||gk.length){h+=`<div ${SEC}>${HD('lock','ta锁住的（去微信里求ta解开）',RED)}
+        if(lk.length||gk.length){h+=`<div id="cou_locks" ${SEC}>${HD('lock','ta锁住的（去微信里求ta解开）',RED)}
         <div class="hint" style="padding:8px 14px 0">这些是${esc(c.remark||c.name)}锁的。只有ta愿意时、在聊天里说"给你解开了"才会解开——好好求ta吧。</div>
         ${lk.map(k=>`<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('lock',15,'#fa5151')}${LOCKABLE[k]||k}</span><span class="v" style="color:#888">已锁</span></div>`).join('')}
         ${gk.map(cid=>{const gc=getC(cid);return `<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('mute',15,'#fa5151')}和「${esc(gc?(gc.remark||gc.name):'?')}」的聊天</span><span class="v" style="color:#888">已禁言</span></div>`;}).join('')}</div>`;}
         return h;})()}
-      ${(function(){const nm=esc(c.remark||c.name);return `<div ${SEC}>${HD('wallet','钱包 / 亲属卡 管控',GOLD)}
+      ${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wallet" ${SEC}>${HD('wallet','钱包 / 亲属卡 管控',GOLD)}
         <div class="hint" style="padding:8px 14px 0">开了之后，${nm} 能扣你零花钱、能冻结你的亲属卡当惩罚；你就改不了自己的余额了（防作弊），没钱得求ta给。</div>
         <div class="it"><span>把钱包/亲属卡交给ta管</span><span class="sw ${cp.walletAuth?'on':''}" onclick="coupleWalletAuth()"></span></div>
         ${cp.walletAuth?`<div class="it"><span style="color:#888">当前零钱</span><span class="v">¥${(+S.me.balance).toFixed(2)}（ta可扣）</span></div>${cp.cardFrozen?`<div class="it"><span style="color:#fa5151;display:flex;align-items:center;gap:8px">${svgIc('card',15,'#fa5151')}亲属卡已被ta冻结</span><span class="v" style="color:#888">求ta解冻</span></div>`:''}`:''}</div>`;})()}
       ${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
-        let h=`<div ${SEC}>${HD('timer','软件使用时长 / 限额',AMBER)}
+        let h=`<div id="cou_limit" ${SEC}>${HD('timer','软件使用时长 / 限额',AMBER)}
         <div class="hint" style="padding:8px 14px 0">${esc(c.remark||c.name)}主动给授权的软件设每天能玩多久；用够了会自动锁，得求ta才能多玩。只统计在软件里的时间，退出去不算。今天的记录ta查手机也看得到。</div>`;
         if(keys.length){h+=keys.map(k=>{const used=usedSecOf(k),lim=tl[k]?tl[k]*60+((S.me.appUsage&&S.me.appUsage.bonus&&S.me.appUsage.bonus[k])||0):0;const um=Math.floor(used/60),us=used%60;const usedTxt=um+'分'+String(us).padStart(2,'0')+'秒';
           return `<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${LOCKABLE[k]}<small style="display:block;color:#888">今天已用 ${usedTxt}${lim?' / 限额 '+Math.floor(lim/60)+'分钟':'（ta还没设限额）'}</small></div>${lim&&used>=lim?'<span class="v" style="color:#fa5151">已用完</span>':(lim?'<span class="v" style="color:#19a463">剩 '+Math.max(0,Math.ceil((lim-used)/60))+'分</span>':'')}</div>`;}).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有使用记录，也没设限额</div>`;
         return h+`</div>`;})()}
-      ${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div ${SEC}>${HD('star',esc(c.remark||c.name)+' 重点盯防的人',GOLD)}<div class="hint" style="padding:8px 14px 0">ta自己判断、自己标的（不放心/吃醋谁就盯谁），查岗会优先盯这些人。你也能在这儿取消。</div>${st.length?st.map(x=>`<div class="it"><span style="display:flex;align-items:center;gap:8px">${svgIc('star',15,GOLD)}${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}
-      ${(function(){const nm=esc(c.remark||c.name);const cl=coldLeft(c);return `<div ${SEC}>${HD('shield','终极惩罚 · 禁闭室（小黑屋）','#e0344a')}
+      ${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div id="cou_star" ${SEC}>${HD('star',esc(c.remark||c.name)+' 重点盯防的人',GOLD)}<div class="hint" style="padding:8px 14px 0">ta自己判断、自己标的（不放心/吃醋谁就盯谁），查岗会优先盯这些人。你也能在这儿取消。</div>${st.length?st.map(x=>`<div class="it"><span style="display:flex;align-items:center;gap:8px">${svgIc('star',15,GOLD)}${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}
+      ${(function(){const nm=esc(c.remark||c.name);const cl=coldLeft(c);return `<div id="cou_jail" ${SEC}>${HD('shield','终极惩罚 · 禁闭室（小黑屋）','#e0344a')}
         <div class="hint" style="padding:8px 14px 0">最重的惩罚：开了之后，${nm} 能在你越线时把你关进"小黑屋"，他会化作偏执病态的【病娇黑暗形态】，做到他的条件才放你出来。墙角留了个"狗洞"后门，钻出去能逃、但会被他逮到（用了他更记仇、冷处理更久）。</div>
         <div class="it"><span>允许 ${nm} 关我小黑屋</span><span class="sw ${cp.jailAuth?'on':''}" onclick="coupleJailAuth()"></span></div>
         <div class="it"><span>禁闭室用辅助模型</span><span class="sw ${S.settings.jailAux?'on':''}" onclick="S.settings.jailAux=!S.settings.jailAux;save();render();toast(S.settings.jailAux?'禁闭室→辅助模型':'禁闭室→主模型')"></span></div>
@@ -4424,13 +4432,13 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
         <div class="hint" style="padding:8px 14px 0;color:#888">主模型更稳更入戏；某些模型不认这个剧情时，可切换试试。</div>
         <div class="it" onclick="jailTest()"><span style="display:flex;align-items:center;gap:8px">${svgIc('flask',15,'#bbb')}测试进小黑屋（不留记录·随时出）</span><span class="v">›</span></div>
         ${cl?`<div class="it"><span style="color:#9ec5fe;display:flex;align-items:center;gap:8px">${svgIc('snow',15,BLUE)}他正在冷处理你</span><span class="v" style="color:#888">到 ${hm(cl)} 自然消气（求他可提前）</span></div>`:''}</div>`;})()}
-      <div ${SEC}>${HD('location','出门报备审批',BLUE)}
+      <div id="cou_outpass" ${SEC}>${HD('location','出门报备审批',BLUE)}
         <div class="hint" style="padding:8px 14px 0">你要出门/和谁见面，可以先发个申请给 ${esc(c.remark||c.name)}，等ta批准（ta可能会追问、定规矩）。</div>
         <div class="it" onclick="outpassRequest()"><span>发起出门申请</span><span class="v">›</span></div></div>
-      ${(function(){const nm=esc(c.remark||c.name);return `<div ${SEC}>${HD('idcard','微信登录权限',PUR)}
+      ${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wxlogin" ${SEC}>${HD('idcard','微信登录权限',PUR)}
         <div class="hint" style="padding:8px 14px 0">开了之后，${nm} 能随时【直接登录你的微信账号】(限时1分钟、有倒计时)。登录期间你无法操作微信，ta能看到你微信里的【全部细节】（比偷偷查岗看得全），还能删你好友、以你名义警告某人。1分钟后自动退出、ta会来找你。比"查岗"更狠，慎开。</div>
         <div class="it"><span>允许 ${nm} 登录我的微信</span><span class="sw ${cp.wxLoginAuth?'on':''}" onclick="coupleWxLoginAuth()"></span></div></div>`;})()}
-      <div ${SEC}>${HD('bell','失踪 · 夺命连环催',ROSE)}
+      <div id="cou_escalate" ${SEC}>${HD('bell','失踪 · 夺命连环催',ROSE)}
         <div class="hint" style="padding:8px 14px 0">开了之后，你长时间不回ta：约1.5小时温柔催→3小时不耐烦→5小时直接来电；失踪近一整天还无视，他可能把你关小黑屋(需上面授权)。点了睡眠/报备计时的时段【不算】，他知道你在干嘛。</div>
         <div class="it"><span>开启失踪升级</span><span class="sw ${cp.escalate?'on':''}" onclick="coupleEscalate()"></span></div></div>
       <div style="padding:0 12px"><button class="btn d" style="display:flex;align-items:center;justify-content:center;gap:7px" onclick="askConfirm('解除情侣绑定？',()=>{S.couple=null;save();render()},{danger:true})">${svgIc('heartoff',16,'#fff')}解除绑定</button></div>
@@ -6760,7 +6768,7 @@ setInterval(cloudAutoTick,600000);setTimeout(()=>{if(S.settings&&S.settings.clou
 function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=new Blob([s||JSON.stringify(S)]).size;}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
   const CAP=5*1024*1024;return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100))};}
 function storageMeter(){const si=storageInfo();const col=si.pct>=80?'#fa5151':si.pct>=60?'#ffb83b':'#19a463';
-  return `<div class="section"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
+  return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
     <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${si.pct}%;background:${col};transition:.3s"></div></div>
     <div class="hint" style="padding:7px 0 0">${si.pct>=80?'快满了！赶紧导出备份，再删点旧图片/聊天。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}</div></div></div>`;}
 let _storeWarned=false;
