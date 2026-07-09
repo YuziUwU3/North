@@ -510,41 +510,10 @@ body{background:#000;padding:0;}
 .jintro span{color:#7a0014;font-size:16px;letter-spacing:6px;text-shadow:0 0 12px #5a0010;animation:jintrot 2.6s steps(8) forwards;}
 @keyframes jintrof{0%{background:#000}55%{background:#000}70%{background:rgba(10,0,3,.96)}100%{background:rgba(7,0,3,0);visibility:hidden}}
 @keyframes jintrot{0%,40%{opacity:0}45%{opacity:.2}50%{opacity:1}55%{opacity:.1}62%{opacity:1}70%{opacity:.3}100%{opacity:0}}
-/* ===== 像素小家 ===== */
-.cozywrap{background:linear-gradient(#1b1426,#241a30 60%,#2b2238);min-height:100%;}
-.cozytop{text-align:center;padding:12px 14px 2px;color:#e9def7;}
-.cozytop .ci{font-size:13px;color:#c9b8e6;}
-.cozybar{height:9px;border-radius:6px;background:#1c1428;box-shadow:inset 0 0 0 1px #4a3a63;overflow:hidden;margin:7px auto 0;max-width:230px;}
-.cozybar>i{display:block;height:100%;background:linear-gradient(90deg,#ff8fab,#c79bff);}
-.cozyhouse{position:relative;width:300px;max-width:94%;margin:12px auto 4px;filter:drop-shadow(0 10px 22px rgba(0,0,0,.5));}
-.cozyroof{width:0;height:0;margin:0 auto;border-left:153px solid transparent;border-right:153px solid transparent;border-bottom:42px solid #b65b4d;}
-.cozyrow{display:flex;justify-content:center;}
-.croom{position:relative;width:150px;height:136px;box-sizing:border-box;border:3px solid #4a3829;overflow:hidden;cursor:pointer;}
 .aiload{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99998;background:rgba(20,20,24,.92);color:#fff;padding:15px 22px;border-radius:14px;display:none;align-items:center;gap:11px;font-size:14px;box-shadow:0 12px 34px rgba(0,0,0,.55);}
 .aiload.show{display:flex;}
 .aiload .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.28);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;flex:none;}
 @keyframes aispin{to{transform:rotate(360deg)}}
-.croom.on{box-shadow:inset 0 0 0 3px #ffd479;}
-.croom .clabel{position:absolute;top:5px;left:6px;font-size:10.5px;color:#fff;background:rgba(0,0,0,.32);padding:1px 7px;border-radius:7px;z-index:6;}
-.croom .cfloorpx{position:absolute;left:0;right:0;bottom:0;height:20px;background:repeating-linear-gradient(90deg,#bd884f 0 9px,#b07e47 9px 18px);border-top:3px solid #8a5f33;z-index:1;}
-.cfurn{position:absolute;left:0;right:0;bottom:20px;display:flex;justify-content:center;align-items:flex-end;z-index:2;pointer-events:none;}
-.cfurn svg{shape-rendering:crispEdges;display:block;}
-.cozyfigs{position:absolute;left:0;right:0;bottom:18px;display:flex;justify-content:center;gap:12px;z-index:5;pointer-events:none;animation:cozypop .35s ease;}
-@keyframes cozypop{0%{transform:translateY(6px);opacity:.3}100%{transform:translateY(0);opacity:1}}
-.ch-fig{display:flex;flex-direction:column;align-items:center;}
-.ch-head{width:21px;height:21px;border-radius:6px;background-size:cover;background-position:center;image-rendering:auto;box-shadow:0 0 0 2px #1b1320;display:flex;align-items:center;justify-content:center;font-size:14px;}
-.ch-body{width:17px;height:19px;border-radius:5px 5px 3px 3px;margin-top:-1px;box-shadow:0 0 0 2px #1b1320;}
-.cozypets{position:absolute;right:8px;bottom:20px;z-index:4;font-size:15px;letter-spacing:2px;pointer-events:none;}
-.cozybub{max-width:300px;margin:10px auto 2px;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.5;}
-.cozybub.me{background:#3a2440;color:#ffd9ea;}
-.cozybub.ta{background:#2a2440;color:#e2d6ff;}
-.cozybub b{opacity:.85;}
-.cozytabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px 12px 2px;}
-.cozytab{font-size:12px;color:#c9b8e6;background:#241a32;border:1px solid #443458;padding:4px 11px;border-radius:14px;cursor:pointer;}
-.cozytab.on{background:#7a5bb0;color:#fff;border-color:#7a5bb0;}
-.cozyacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px 14px 22px;}
-.cozybtn{font-size:13px;color:#fff;background:linear-gradient(135deg,#ff8fab,#b07be0);border:none;padding:8px 16px;border-radius:16px;cursor:pointer;font-weight:600;box-shadow:0 3px 10px rgba(176,123,224,.35);}
-.cozybtn:disabled{opacity:.5;}
 </style>
 </head>
 <body>
@@ -563,7 +532,7 @@ body{background:#000;padding:0;}
   <div class="usebadge" id="useBadge"></div>
 </div></div>
 
-<script src="app.js?v=399"></script>
-<script src="ai-account.js?v=399"></script>
+<script src="app.js?v=400"></script>
+<script src="ai-account.js?v=400"></script>
 </body>
 </html>
