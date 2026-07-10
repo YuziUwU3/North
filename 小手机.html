@@ -26,7 +26,7 @@
 </script>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
-button,.btn,.minibtn,.send,.plus,.app,.list .row,.tabbar .tb,.nav .l,.nav .r,.panel .it,.card,.sw,.it{touch-action:manipulation;}
+button,.btn,.minibtn,.send,.plus,.app,.list .row,.tabbar .tb,.nav .l,.nav .r,.panel .it,.card,.sw,.it,.pfswipe{touch-action:manipulation;}
 html,body{height:100%;}
 body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   background:linear-gradient(135deg,#ffd6e8,#d6e4ff 50%,#e3d6ff);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:12px;}
@@ -75,7 +75,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .meta{flex:1;min-width:0;}
 .meta .n{font-size:16px;color:#111;display:flex;align-items:center;gap:6px;}
 .meta .s{font-size:13px;color:#999;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.meta .time{font-size:11px;color:#bbb;}
+.meta .time{font-size:10px;color:#c4c4c8;font-weight:400;opacity:.72;line-height:1.15;}
+.meta.time{font-size:10px;color:#c4c4c8;font-weight:400;opacity:.72;line-height:1.15;}
+.pfsoft{font-size:11px;color:#8d8d93;background:rgba(160,160,170,.14);border-radius:999px;padding:3px 8px;white-space:nowrap;}
+.pfswipe{position:relative;overflow:hidden;background:#fff;border-bottom:.5px solid #f0f0f0;}
+.pfswipe .pfmain{position:relative;z-index:1;transition:transform .18s ease;border-bottom:0;}
+.pfswipe.open .pfmain{transform:translateX(-76px);}
+.pfswipe .pfdel{position:absolute;right:0;top:0;bottom:0;width:76px;border:0;background:#fa5151;color:#fff;font-size:14px;font-weight:600;}
 .pin{background:#f7f7f7;}
 .tag{font-size:10px;background:#ffe0ea;color:#e0719a;border-radius:4px;padding:1px 5px;}
 .badge{background:#fa5151;color:#fff;font-size:11px;border-radius:10px;padding:0 6px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
@@ -106,7 +112,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .card{width:215px;border-radius:9px;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.1);}
 .cpay{padding:13px 14px;display:flex;align-items:center;gap:11px;color:#fff;}
 .cpay.t{background:#f7a23b;}.cpay.r{background:#fa5151;}.cpay.done{background:#d9b48a;}
-.cpay .big{font-size:30px;}.cpay .t1{font-size:16px;font-weight:600;}.cpay .t2{font-size:11px;opacity:.9;margin-top:2px;}
+.cpay .big{width:34px;height:34px;display:flex;align-items:center;justify-content:center;}.cpay .big svg{display:block;}.cpay .t1{font-size:16px;font-weight:600;}.cpay .t2{font-size:11px;opacity:.9;margin-top:2px;}
 .cfoot{font-size:10px;padding:4px 14px;background:rgba(255,255,255,.18);color:#fff;}
 .cloc{background:#fff;}.cloc .map{height:80px;background:linear-gradient(135deg,#cfe9c8,#a8d8e8);display:flex;align-items:center;justify-content:center;font-size:28px;}
 .cloc .info{padding:8px 11px;}.cloc .n{font-size:14px;font-weight:600;}.cloc .a{font-size:11px;color:#999;margin-top:2px;}
@@ -197,13 +203,20 @@ body{background:#000;padding:0;}
 .list .row{background:#1c1c1e;border-bottom:.5px solid #2a2a2c;}
 .list .row:active{background:#262628;}
 .list .row.pin{background:#202024;}
-.meta .n{color:#f2f2f2;}.meta .s{color:#8e8e93;}.meta .time{color:#666;}
+.meta .n{color:#f2f2f2;}.meta .s{color:#8e8e93;}.meta .time{color:#7a7a80;}
+.meta.time{color:#7a7a80;}
+.pfswipe{background:#1c1c1e;border-bottom:.5px solid #2a2a2c;}
 .tabbar{background:#1c1c1e;border-top:.5px solid #2a2a2c;}.tabbar .tb{color:#888;}
 .chatbg{background:#0d0d0d;}
 .tstamp span{background:#3a3a3c;color:#bbb;}
 .msg.them .bubble{background:#2c2c2e;color:#ececec;}
 .msg.me .bubble{background:linear-gradient(135deg,#ffd6e8,#ffc0d6);color:#6b2942;}
 .bubble{color:#ececec;}
+.bubble.recalled{background:transparent!important;color:#8a8a90!important;font-size:12px;padding:3px 6px;}
+.bubble.mention{box-shadow:0 0 0 1px rgba(255,143,171,.45) inset;background:#332732!important;}
+.pfrecall{font-size:10px;color:#8e8e93;margin-right:8px;cursor:pointer;}
+.pfrecall:active{color:#ff8fab;}
+.pfcollect{margin-top:5px;padding:3px 9px;font-size:10px;background:rgba(255,255,255,.08);color:#aaa;border-radius:999px;}
 .msgt{font-size:10px;color:#888;margin-top:2px;padding:0 2px;}
 .moodbar{padding:7px 14px;background:#181820;color:#b9a6e0;font-size:12px;border-bottom:.5px solid #2a2a2c;display:flex;align-items:center;gap:6px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
 .inputbar{background:#1c1c1e;border-top:.5px solid #2a2a2c;}
@@ -221,13 +234,17 @@ body{background:#000;padding:0;}
 .wxlight .list .row{background:#fff;border-bottom:.5px solid #ececec;}
 .wxlight .list .row:active{background:#f0f0f0;}
 .wxlight .list .row.pin{background:#f6f6f6;}
-.wxlight .meta .n{color:#111;}.wxlight .meta .s{color:#999;}.wxlight .meta .time{color:#bbb;}
+.wxlight .meta .n{color:#111;}.wxlight .meta .s{color:#999;}.wxlight .meta .time{color:#b6b6bc;}
+.wxlight .meta.time{color:#b6b6bc;}
+.wxlight .pfswipe{background:#fff;border-bottom:.5px solid #ececec;}
 .wxlight .tabbar{background:#f7f7f7;border-top:.5px solid #dcdcdc;}.wxlight .tabbar .tb{color:#999;}.wxlight .tabbar .tb.on{color:#07c160;}
 .wxlight .chatbg{background:#ededed;}
 .wxlight .tstamp span{background:#d6d6d6;color:#777;}
 .wxlight .msg.them .bubble{background:#fff;color:#111;}
 .wxlight .msg.me .bubble{background:#95ec69;color:#0b3b18;}
 .wxlight .bubble{color:#111;}
+.wxlight .bubble.mention{background:#fff4f8!important;box-shadow:0 0 0 1px rgba(255,143,171,.45) inset;}
+.wxlight .pfcollect{background:#f1f1f3;color:#777;}
 .wxlight .msgt{color:#aaa;}
 .wxlight .moodbar{background:#fff;color:#c2407a;border-bottom:.5px solid #ececec;}
 .wxlight .inputbar{background:#f7f7f7;border-top:.5px solid #dcdcdc;}
@@ -532,7 +549,7 @@ body{background:#000;padding:0;}
   <div class="usebadge" id="useBadge"></div>
 </div></div>
 
-<script src="app.js?v=404"></script>
-<script src="ai-account.js?v=404"></script>
+<script src="app.js?v=405"></script>
+<script src="ai-account.js?v=405"></script>
 </body>
 </html>
