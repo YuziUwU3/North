@@ -43,9 +43,11 @@ function phoneFriendById(id){id=(''+id).toUpperCase();return (phoneFriendState()
 function phoneFriendName(f){return (f&&(f.display_name||f.name))||'小手机好友';}
 function pfFriendDisplayName(f){const p=phoneFriendState(),id=(''+((f&&f.phone_id)||(f&&f.id)||'')).toUpperCase();return (id&&p.remarks&&p.remarks[id])||phoneFriendName(f);}
 function pfGroupDisplayName(g){const p=phoneFriendState(),gid=g&&(g.group_id||g.id);return (gid&&p.groupRemarks&&p.groupRemarks[gid])||(g&&g.name)||'小手机群聊';}
+const PHONE_FRIEND_AVATAR_MAX=60000;
 function phoneFriendAvatar(f){return (f&&(f.avatar||f.icon))||'🙂';}
 function pfAvatarHTML(f,extra){let v=phoneFriendAvatar(f);v=(''+(v||'')).trim();
-  if(v.indexOf('data:image')===0||/^https?:\/\//i.test(v))return av(v,extra);
+  if(/^https?:\/\//i.test(v))return av(v,extra);
+  if(v.indexOf('data:image')===0&&v.length>2400)return av(v,extra);
   if(v&&Array.from(v).length<=3)return av(v,extra);
   const nm=pfFriendDisplayName(f),ch=Array.from(nm||'?')[0]||'?';
   return `<div class="avatar ${extra||''}" style="background:linear-gradient(135deg,#9ec5fe,#c9b7ff);color:#fff;font-weight:800">${esc(ch)}</div>`;}
@@ -62,7 +64,7 @@ async function pfRpc(fn,args,ms){const r=await fetchT(GATE_URL+'/rest/v1/rpc/'+f
   const txt=await r.text();let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){d=txt;}
   if(!r.ok){let msg=(d&&d.message)||txt||('HTTP '+r.status);if(/Could not find the function|schema cache|404/i.test(msg))msg='好友云端表还没开通，先把 supabase_phone_friends.sql 执行一次';throw new Error(String(msg).slice(0,160));}
   return d;}
-function pfProfilePayload(){const p=phoneFriendState();return {p_phone_id:p.id,p_secret:p.secret,p_display_name:(S.me.name||'我').slice(0,40),p_avatar:(''+(S.me.avatar||'🙂')).slice(0,1800),p_allow_search:p.allowSearch!==false};}
+function pfProfilePayload(){const p=phoneFriendState();return {p_phone_id:p.id,p_secret:p.secret,p_display_name:(S.me.name||'我').slice(0,40),p_avatar:(''+(S.me.avatar||'🙂')).slice(0,PHONE_FRIEND_AVATAR_MAX),p_allow_search:p.allowSearch!==false};}
 let _pfSyncBusy=false,_pfLastAuto=0,_pfSendBusy={};
 async function pfEnsure(force){const p=phoneFriendState();if(!force&&p._registeredAt&&Date.now()-p._registeredAt<6*3600000)return true;
   await pfRpc('phone_friend_upsert_profile',pfProfilePayload(),25000);p._registeredAt=Date.now();p.lastError='';save();return true;}
@@ -81,8 +83,8 @@ function pfStoreGroupMessage(m){const p=phoneFriendState();if(!m)return;const gi
   if(ts<=(p.groupClearBefore[gid]||0))return;
   p.groupMessages[gid].push({id,gid,from:(''+(m.from_id||m.from||'')).toUpperCase(),text:(''+(m.body||m.text||'')).slice(0,1000),time:ts});
   p.groupMessages[gid].sort((a,b)=>(a.time||0)-(b.time||0));if(p.groupMessages[gid].length>400)p.groupMessages[gid]=p.groupMessages[gid].slice(-400);}
-async function phoneFriendSync(silent){if(_pfSyncBusy)return;const p=phoneFriendState();_pfSyncBusy=true;
-  try{await pfEnsure();const since=Math.max(0,(p.lastSync||0)-60000);const d=await pfRpc('phone_friend_sync',{p_phone_id:p.id,p_secret:p.secret,p_since_ms:since},30000);
+async function phoneFriendSync(silent,forceProfile){if(_pfSyncBusy)return;const p=phoneFriendState();_pfSyncBusy=true;
+  try{await pfEnsure(!!forceProfile);const since=Math.max(0,(p.lastSync||0)-60000);const d=await pfRpc('phone_friend_sync',{p_phone_id:p.id,p_secret:p.secret,p_since_ms:since},30000);
     const oldFriendMsgMax={};Object.keys(p.messages||{}).forEach(k=>{oldFriendMsgMax[k]=Math.max(0,...(p.messages[k]||[]).map(m=>m.time||0));});
     const oldGroupMsgMax={};Object.keys(p.groupMessages||{}).forEach(k=>{oldGroupMsgMax[k]=Math.max(0,...(p.groupMessages[k]||[]).map(m=>m.time||0));});
     p.friends=Array.isArray(d&&d.friends)?d.friends:[];p.requests=Array.isArray(d&&d.requests)?d.requests:[];(Array.isArray(d&&d.messages)?d.messages:[]).forEach(pfStoreMessage);
@@ -93,7 +95,7 @@ async function phoneFriendSync(silent){if(_pfSyncBusy)return;const p=phoneFriend
     p.lastSync=+(d&&d.server_time_ms)||Date.now();p.lastError='';save();const c=cur&&cur();if(c&&(c.p==='pffriends'||c.p==='pfchat'||c.p==='pfgroup'||c.p==='wechat'))render();}
   catch(e){p.lastError=e&&e.message||'好友同步失败';save();if(!silent)toast(p.lastError);}
   finally{_pfSyncBusy=false;}}
-function phoneFriendMaybeSync(force){const now=Date.now();if(!force&&now-_pfLastAuto<15000)return;_pfLastAuto=now;phoneFriendSync(true);}
+function phoneFriendMaybeSync(force){const now=Date.now();if(!force&&now-_pfLastAuto<15000)return;_pfLastAuto=now;phoneFriendSync(true,!!force);}
 function openPhoneFriends(){go('pffriends');setTimeout(()=>phoneFriendMaybeSync(true),60);}
 function pfReqs(dir){const p=phoneFriendState();return (p.requests||[]).filter(r=>r.direction===dir&&r.status==='pending');}
 function pfFriendRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
@@ -175,7 +177,7 @@ async function sendPhoneFriendGroup(gid){const ta=$('#pfg_input'),text=(ta&&ta.v
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v402 · 好友体验修复';
+const APP_VER='v403 · 好友头像修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -3293,7 +3295,7 @@ function wxSearchRun(q){const box=$('#wxs_res');if(!box)return;q=(q||'').trim().
 
 function renderPhoneFriends(){const p=phoneFriendState();phoneFriendMaybeSync(false);const incoming=pfReqs('incoming'),outgoing=pfReqs('outgoing'),search=p.search||{};
   const found=(search.items||[]).map(x=>{const id=(''+(x.phone_id||x.id||'')).toUpperCase();const already=id===p.id||phoneFriendById(id);return `<div class="row">${av(x.avatar||'🙂','sm')}<div class="meta"><div class="n">${esc(x.display_name||'小手机用户')}</div><div class="s">小手机ID：${esc(id)}</div></div>${already?'<span class="v">已添加</span>':`<button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRequest('${id}')">添加</button>`}</div>`;}).join('');
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">小手机好友</span><span class="r" onclick="phoneFriendSync(false)">${svgIc('refresh',20,'#ccc')}</span></div>
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">小手机好友</span><span class="r" onclick="phoneFriendSync(false,true)">${svgIc('refresh',20,'#ccc')}</span></div>
   <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">
     <div class="section" style="margin:12px">
       <div style="padding:13px 14px 6px;color:#9ec5fe;font-weight:700">我的小手机ID</div>

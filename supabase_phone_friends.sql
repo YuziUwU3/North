@@ -98,7 +98,7 @@ begin
   end if;
 
   insert into phone_friend_profiles(phone_id, secret_hash, display_name, avatar, allow_search, updated_at)
-  values (v_id, v_hash, left(coalesce(p_display_name,'小手机用户'),40), left(coalesce(p_avatar,'🙂'),1800), coalesce(p_allow_search,true), now())
+  values (v_id, v_hash, left(coalesce(p_display_name,'小手机用户'),40), left(coalesce(p_avatar,'🙂'),60000), coalesce(p_allow_search,true), now())
   on conflict (phone_id) do update set
     display_name = excluded.display_name,
     avatar = excluded.avatar,
