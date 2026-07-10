@@ -257,7 +257,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v409 · 多人游戏房';
+const APP_VER='v410 · 情侣空间滚动修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -1143,6 +1143,7 @@ function render(){
   const c=cur();const app=$('#app');
   const _force=idleForceState();if(_force&&(c.p!=='chat'||c.id!==_force.id)){stack=stack.filter(s=>s.p!=='chat');stack.push({p:'chat',id:_force.id});return render();}
   const _sb=$('#statusbar');if(_sb)_sb.className='statusbar'+(c.p==='home'?'':' dark');
+  const _couScroll=(c.p==='couple'&&$('#couplescroll'))?$('#couplescroll').scrollTop:0;
   let html='';
   if(c.p==='home')html=renderHome();
   else if(c.p==='music')html=renderMusic();
@@ -1192,6 +1193,7 @@ function render(){
   else if(c.p==='momentDetail')html='';
   const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'))?' wxlight':'';
   app.innerHTML='<div class="page'+_wxL+'">'+html+'</div>';
+  if(c.p==='couple'&&_couScroll>0){const _cs=$('#couplescroll');if(_cs)_cs.scrollTop=_couScroll;}
   if(c.p==='chat'){afterChat(c.id);}
   if(c.p==='pfchat'){const b=$('#pfchatbg');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='pfgroup'){const b=$('#pfgroupbg');if(b)b.scrollTop=b.scrollHeight;}
@@ -4737,7 +4739,7 @@ function couTab(n){_couTab=n;const p1=$('#coupage1'),p2=$('#coupage2'),t1=$('#co
 function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.cid);
   const BG='background:linear-gradient(180deg,#181019 0%,#0c0a0e 45%,#000 100%)';
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r"></span></div>
-    <div class="scroll" style="${BG}"><div class="empty" style="padding:60px 30px;line-height:2.1">${svgIc('heart',46,'#e89db5')}<div style="margin-top:14px">还没绑定～<br>去某个角色的「资料页」点 <b style="color:#e89db5">绑定情侣空间</b><br>（只能绑定一个）</div></div></div>`;
+    <div class="scroll" id="couplescroll" style="${BG}"><div class="empty" style="padding:60px 30px;line-height:2.1">${svgIc('heart',46,'#e89db5')}<div style="margin-top:14px">还没绑定～<br>去某个角色的「资料页」点 <b style="color:#e89db5">绑定情侣空间</b><br>（只能绑定一个）</div></div></div>`;
   const days=Math.max(0,Math.floor((Date.now()-new Date(cp.startDate).getTime())/86400000));
   const ROSE='#e89db5',GOLD='#e8b878',BLUE='#9ec5fe',AMBER='#ffc078',RED='#ff6b81',PUR='#c5a6ff';
   const PINKTH=S.me.theme==='pink',WHITETH=S.me.theme==='white',LIGHTTH=PINKTH||WHITETH;
@@ -4747,7 +4749,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
   const SEC='class="section" style="margin:12px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:#17151b"';
   const frame=a=>`<span style="display:inline-block;border-radius:18px;padding:2.5px;background:linear-gradient(135deg,${GOLD},${ROSE})">${av(a,'lg')}</span>`;
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r" onclick="coupleSet()">${svgIc('dots',20,'#bbb')}</span></div>
-    <div class="scroll" style="${BG}">
+    <div class="scroll" id="couplescroll" style="${BG}">
       <div style="margin:14px;border-radius:22px;padding:24px 20px 20px;text-align:center;position:relative;overflow:hidden;background:${BANBG};box-shadow:0 16px 38px rgba(${PINKTH?'232,150,181,.4':WHITETH?'150,150,160,.25':'70,30,55,.45'}),inset 0 1px 0 rgba(255,255,255,.12);border:1px solid rgba(${WHITETH?'0,0,0,.05':'255,255,255,'+(PINKTH?'.5':'.1')})">
         <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -12%,rgba(${LIGHTTH?'255,255,255,.4':'232,176,120,.25'}),transparent 60%);pointer-events:none"></div>
         <div style="display:flex;justify-content:center;gap:16px;align-items:center;margin-bottom:14px;position:relative">${frame(S.me.avatar)}<span style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))">${svgIc('heart',26,PINKTH?'#ff7eb3':'#ffc1d4')}</span>${frame(c.avatar)}</div>
