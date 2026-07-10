@@ -19,10 +19,102 @@ async function redeemInvite(code){try{
   if(!r.ok)return {ok:false,err:'验证服务出错('+r.status+')，稍后再试'};
   const v=await r.json();return {ok:v===true};
 }catch(e){return {ok:false,err:'连不上验证服务器，检查下网络'};}}
+/* 小手机好友：公开ID + 本机密钥。ID可以给别人搜，密钥只存在本机，用来防冒充。 */
+function pfRand(n){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';try{const b=new Uint8Array(n);crypto.getRandomValues(b);for(let i=0;i<n;i++)s+=a[b[i]%a.length];return s;}catch(_){for(let i=0;i<n;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}}
+function phoneFriendState(){S.me=S.me||{};const p=S.me.phoneFriend||(S.me.phoneFriend={});
+  if(!p.id)p.id='SP'+pfRand(8);p.id=(''+p.id).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10);
+  if(!/^SP[A-Z0-9]{8}$/.test(p.id))p.id='SP'+pfRand(8);
+  if(!p.secret)p.secret='pfs_'+pfRand(32);
+  if(p.allowSearch==null)p.allowSearch=true;
+  if(!Array.isArray(p.friends))p.friends=[];
+  if(!Array.isArray(p.requests))p.requests=[];
+  if(!p.messages||typeof p.messages!=='object')p.messages={};
+  if(!Array.isArray(p.groups))p.groups=[];
+  if(!p.groupMessages||typeof p.groupMessages!=='object')p.groupMessages={};
+  return p;}
+function phoneFriendId(){return phoneFriendState().id;}
+function phoneFriendById(id){id=(''+id).toUpperCase();return (phoneFriendState().friends||[]).find(f=>(''+(f.phone_id||f.id||'')).toUpperCase()===id)||null;}
+function phoneFriendName(f){return (f&&(f.display_name||f.name))||'小手机好友';}
+function phoneFriendAvatar(f){return (f&&(f.avatar||f.icon))||'🙂';}
+function pfHeaders(){return {'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'};}
+async function pfRpc(fn,args,ms){const r=await fetchT(GATE_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:pfHeaders(),body:JSON.stringify(args||{})},ms||25000);
+  const txt=await r.text();let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){d=txt;}
+  if(!r.ok){let msg=(d&&d.message)||txt||('HTTP '+r.status);if(/Could not find the function|schema cache|404/i.test(msg))msg='好友云端表还没开通，先把 supabase_phone_friends.sql 执行一次';throw new Error(String(msg).slice(0,160));}
+  return d;}
+function pfProfilePayload(){const p=phoneFriendState();return {p_phone_id:p.id,p_secret:p.secret,p_display_name:(S.me.name||'我').slice(0,40),p_avatar:(''+(S.me.avatar||'🙂')).slice(0,1800),p_allow_search:p.allowSearch!==false};}
+let _pfSyncBusy=false,_pfLastAuto=0,_pfSendBusy={};
+async function pfEnsure(force){const p=phoneFriendState();if(!force&&p._registeredAt&&Date.now()-p._registeredAt<6*3600000)return true;
+  await pfRpc('phone_friend_upsert_profile',pfProfilePayload(),25000);p._registeredAt=Date.now();p.lastError='';save();return true;}
+function pfStoreMessage(m){const p=phoneFriendState();if(!m)return;const me=p.id;const from=(''+(m.from_id||m.from||'')).toUpperCase(),to=(''+(m.to_id||m.to||'')).toUpperCase();
+  const other=from===me?to:from;if(!other)return;p.messages[other]=p.messages[other]||[];
+  const id=m.id||('m_'+(m.created_at||m.time||Date.now())+'_'+from+'_'+to);if(p.messages[other].some(x=>x.id===id))return;
+  const ts=+(m.time||m.ts||0)||(m.created_at?new Date(m.created_at).getTime():Date.now());
+  p.messages[other].push({id,from,to,text:(''+(m.body||m.text||'')).slice(0,1000),time:ts});
+  p.messages[other].sort((a,b)=>(a.time||0)-(b.time||0));if(p.messages[other].length>300)p.messages[other]=p.messages[other].slice(-300);}
+function pfStoreGroupMessage(m){const p=phoneFriendState();if(!m)return;const gid=m.group_id||m.gid;if(!gid)return;p.groupMessages[gid]=p.groupMessages[gid]||[];
+  const id=m.id||('gm_'+gid+'_'+(m.created_at||m.time||Date.now())+'_'+(m.from_id||''));if(p.groupMessages[gid].some(x=>x.id===id))return;
+  const ts=+(m.time||m.ts||0)||(m.created_at?new Date(m.created_at).getTime():Date.now());
+  p.groupMessages[gid].push({id,gid,from:(''+(m.from_id||m.from||'')).toUpperCase(),text:(''+(m.body||m.text||'')).slice(0,1000),time:ts});
+  p.groupMessages[gid].sort((a,b)=>(a.time||0)-(b.time||0));if(p.groupMessages[gid].length>400)p.groupMessages[gid]=p.groupMessages[gid].slice(-400);}
+async function phoneFriendSync(silent){if(_pfSyncBusy)return;const p=phoneFriendState();_pfSyncBusy=true;
+  try{await pfEnsure();const since=Math.max(0,(p.lastSync||0)-60000);const d=await pfRpc('phone_friend_sync',{p_phone_id:p.id,p_secret:p.secret,p_since_ms:since},30000);
+    p.friends=Array.isArray(d&&d.friends)?d.friends:[];p.requests=Array.isArray(d&&d.requests)?d.requests:[];(Array.isArray(d&&d.messages)?d.messages:[]).forEach(pfStoreMessage);
+    p.groups=Array.isArray(d&&d.groups)?d.groups:[];(Array.isArray(d&&d.group_messages)?d.group_messages:[]).forEach(pfStoreGroupMessage);
+    p.lastSync=+(d&&d.server_time_ms)||Date.now();p.lastError='';save();const c=cur&&cur();if(c&&(c.p==='pffriends'||c.p==='pfchat'||c.p==='pfgroup'||c.p==='wechat'))render();}
+  catch(e){p.lastError=e&&e.message||'好友同步失败';save();if(!silent)toast(p.lastError);}
+  finally{_pfSyncBusy=false;}}
+function phoneFriendMaybeSync(force){const now=Date.now();if(!force&&now-_pfLastAuto<15000)return;_pfLastAuto=now;phoneFriendSync(true);}
+function openPhoneFriends(){go('pffriends');setTimeout(()=>phoneFriendMaybeSync(true),60);}
+function pfReqs(dir){const p=phoneFriendState();return (p.requests||[]).filter(r=>r.direction===dir&&r.status==='pending');}
+function pfFriendRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
+  return fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=(p.messages&&p.messages[id])||[],lm=arr[arr.length-1],unread=arr.filter(m=>m.from===id&&m.time>(f.read_at||0)).length;
+    return `<div class="row" onclick="openPhoneFriendChat('${id}')">${av(phoneFriendAvatar(f),'sm')}<div class="meta"><div class="n">${esc(phoneFriendName(f))}<span class=tag style="margin-left:6px">小手机好友</span></div><div class="s">${lm?esc((lm.from===p.id?'我：':'')+lm.text):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${unread?'<span class="badge">'+unread+'</span>':''}</div></div>`;}).join('');}
+function pfGroupRowsHTML(){const p=phoneFriendState(),gs=p.groups||[];if(!gs.length)return '';
+  return gs.map(g=>{const gid=g.group_id||g.id,arr=(p.groupMessages&&p.groupMessages[gid])||[],lm=arr[arr.length-1],mem=(g.members||[]).length||g.member_count||0;
+    return `<div class="row" onclick="openPhoneFriendGroup('${gid}')"><div class="avatar sm" style="background:#3b8d7b">${svgIc('users',22,'#fff')}</div><div class="meta"><div class="n">${esc(g.name||'小手机群聊')}<span class=tag style="margin-left:6px">${mem}人</span></div><div class="s">${lm?esc((pfNameById(lm.from)||'成员')+'：'+lm.text):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;}).join('');}
+function phoneFriendEntryHTML(){const n=pfReqs('incoming').length;return `<div class="list"><div class="row" onclick="openPhoneFriends()"><div class="avatar sm" style="background:#6574ff">${svgIc('users',22,'#fff')}</div><div class="meta"><div class="n">小手机好友</div><div class="s">我的小手机ID：${esc(phoneFriendId())}</div></div>${n?'<span class="badge">'+n+'</span>':'<span class="v">›</span>'}</div></div>`;}
+function copyPhoneFriendId(){const id=phoneFriendId();try{navigator.clipboard&&navigator.clipboard.writeText(id);}catch(_){}toast('已复制小手机ID：'+id);}
+async function phoneFriendToggleSearch(){const p=phoneFriendState();p.allowSearch=p.allowSearch===false;save();render();try{await pfEnsure(true);toast(p.allowSearch?'别人可以搜到你':'已关闭被搜索');}catch(e){toast(e.message||'同步失败');}}
+async function phoneFriendSearch(q){q=(q||($('#pf_search')&&$('#pf_search').value)||'').trim().toUpperCase();if(!q){toast('输入对方的小手机ID');return;}const p=phoneFriendState();p.search={q,busy:true,items:[]};render();
+  try{await pfEnsure();const items=await pfRpc('phone_friend_search',{p_query:q},20000);p.search={q,busy:false,items:Array.isArray(items)?items:[]};save();render();}
+  catch(e){p.search={q,busy:false,items:[],err:e.message};save();render();toast(e.message||'搜索失败');}}
+function phoneFriendSearchFromWx(q){openPhoneFriends();setTimeout(()=>{const i=$('#pf_search');if(i)i.value=(''+q).trim().toUpperCase();phoneFriendSearch((''+q).trim().toUpperCase());},120);}
+async function phoneFriendRequest(toId){toId=(''+toId).toUpperCase();const p=phoneFriendState();if(toId===p.id){toast('这是你自己的小手机ID');return;}if(phoneFriendById(toId)){toast('你们已经是好友了');return;}
+  try{await pfEnsure();await pfRpc('phone_friend_send_request',{p_from_id:p.id,p_secret:p.secret,p_to_id:toId,p_message:''},25000);toast('好友申请已发送');phoneFriendSync(true);}
+  catch(e){toast(e.message||'发送失败');}}
+async function phoneFriendRespond(rid,ok){try{const p=phoneFriendState();await pfRpc('phone_friend_respond_request',{p_to_id:p.id,p_secret:p.secret,p_request_id:rid,p_accept:!!ok},25000);toast(ok?'已通过':'已忽略');phoneFriendSync(true);}
+  catch(e){toast(e.message||'操作失败');}}
+function openPhoneFriendChat(id){id=(''+id).toUpperCase();go('pfchat',{id});setTimeout(()=>phoneFriendMaybeSync(true),60);}
+function phoneFriendChatMessages(id){const p=phoneFriendState();id=(''+id).toUpperCase();const a=(p.messages&&p.messages[id])||[];return a.slice().sort((x,y)=>(x.time||0)-(y.time||0));}
+async function sendPhoneFriend(id){id=(''+id).toUpperCase();const ta=$('#pf_input'),text=(ta&&ta.value||'').trim();if(!text)return;if(_pfSendBusy[id]){toast('上一条还在发送');return;}const p=phoneFriendState();_pfSendBusy[id]=true;if(ta)ta.value='';
+  pfStoreMessage({id:'local_'+uid(),from_id:p.id,to_id:id,body:text,created_at:new Date().toISOString(),time:Date.now()});save();render();
+  try{await pfEnsure();const m=await pfRpc('phone_friend_send_message',{p_from_id:p.id,p_secret:p.secret,p_to_id:id,p_body:text},30000);pfStoreMessage(m);p.lastSync=0;save();phoneFriendSync(true);}
+  catch(e){toast(e.message||'发送失败');}
+  finally{delete _pfSendBusy[id];if(cur().p==='pfchat'&&cur().id===id)render();}}
+function phoneFriendActivity(since){try{const p=phoneFriendState(),rows=[];(p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=((p.messages||{})[id]||[]).filter(m=>(m.time||0)>since);if(arr.length){const recent=arr.slice(-4).map(m=>(m.from===p.id?S.me.name:phoneFriendName(f))+'：'+(''+m.text).replace(/\n/g,' ').slice(0,36)).join('\n');rows.push({t:arr[arr.length-1].time,n:phoneFriendName(f),recent});}});
+    (p.groups||[]).forEach(g=>{const gid=g.group_id||g.id,arr=((p.groupMessages||{})[gid]||[]).filter(m=>(m.time||0)>since);if(arr.length){const recent=arr.slice(-4).map(m=>(pfNameById(m.from)||'成员')+'：'+(''+m.text).replace(/\n/g,' ').slice(0,36)).join('\n');rows.push({t:arr[arr.length-1].time,n:g.name||'小手机群聊',recent});}});
+    rows.sort((a,b)=>b.t-a.t);return rows.length?'·她最近和小手机好友聊天：\n'+rows.slice(0,3).map(r=>'【'+r.n+' '+hm(r.t)+'】\n'+r.recent).join('\n')+'\n':'';}catch(_){return '';}}
+function pfNameById(id){id=(''+id).toUpperCase();const p=phoneFriendState();if(id===p.id)return S.me.name||'我';const f=phoneFriendById(id);return f?phoneFriendName(f):id;}
+function openPhoneFriendGroup(gid){go('pfgroup',{gid});setTimeout(()=>phoneFriendMaybeSync(true),60);}
+function pfGroupById(gid){return (phoneFriendState().groups||[]).find(g=>(g.group_id||g.id)===gid)||null;}
+function pfGroupMessages(gid){const p=phoneFriendState();return ((p.groupMessages&&p.groupMessages[gid])||[]).slice().sort((a,b)=>(a.time||0)-(b.time||0));}
+function phoneFriendCreateGroupModal(){const fs=phoneFriendState().friends||[];if(fs.length<1){toast('先添加小手机好友');return;}window._pfGroupSel=[];
+  openModal(`<h3>新建小手机群</h3><div class="field"><label>群名</label><input id="pfg_name" value="小手机群聊"></div>
+    <div class="hint">选择要拉进群的好友。基础版会直接创建群，后续可以再加邀请确认。</div>
+    ${fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase();return `<div class="it" onclick="pfGroupPick('${id}')">${av(phoneFriendAvatar(f),'sm')}<span style="flex:1">${esc(phoneFriendName(f))}</span><span class="v" id="pfg_${id}">＋</span></div>`;}).join('')}
+    <div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="phoneFriendCreateGroup()">创建群聊</button></div>`);}
+function pfGroupPick(id){window._pfGroupSel=window._pfGroupSel||[];const i=window._pfGroupSel.indexOf(id);if(i>=0)window._pfGroupSel.splice(i,1);else window._pfGroupSel.push(id);const el=$('#pfg_'+id);if(el)el.textContent=i>=0?'＋':'✓';}
+async function phoneFriendCreateGroup(){const ids=(window._pfGroupSel||[]).slice();if(!ids.length){toast('至少选一个好友');return;}const p=phoneFriendState(),name=(($('#pfg_name')&&$('#pfg_name').value)||'小手机群聊').trim().slice(0,40)||'小手机群聊';
+  try{await pfEnsure();const g=await pfRpc('phone_friend_create_group',{p_owner_id:p.id,p_secret:p.secret,p_name:name,p_member_ids:ids},30000);closeModal();toast('群聊已创建');await phoneFriendSync(true);openPhoneFriendGroup((g&&g.group_id)||g);}
+  catch(e){toast(e.message||'创建失败');}}
+async function sendPhoneFriendGroup(gid){const ta=$('#pfg_input'),text=(ta&&ta.value||'').trim();if(!text)return;const p=phoneFriendState();if(ta)ta.value='';
+  pfStoreGroupMessage({id:'local_'+uid(),group_id:gid,from_id:p.id,body:text,time:Date.now()});save();render();
+  try{await pfEnsure();const m=await pfRpc('phone_friend_send_group_message',{p_from_id:p.id,p_secret:p.secret,p_group_id:gid,p_body:text},30000);pfStoreGroupMessage(m);save();phoneFriendSync(true);}
+  catch(e){toast(e.message||'发送失败');}}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v400 · 内在连续性';
+const APP_VER='v401 · 小手机好友';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -913,6 +1005,9 @@ function render(){
   else if(c.p==='worldbook')html=renderWorldbook();
   else if(c.p==='wechat')html=renderWeChat();
   else if(c.p==='chat')html=renderChat(c.id);
+  else if(c.p==='pffriends')html=renderPhoneFriends();
+  else if(c.p==='pfchat')html=renderPhoneFriendChat(c.id);
+  else if(c.p==='pfgroup')html=renderPhoneFriendGroup(c.gid);
   else if(c.p==='group')html=renderGroup(c.id);
   else if(c.p==='couple')html=renderCouple();
   else if(c.p==='jail')html=renderJail();
@@ -951,6 +1046,8 @@ function render(){
   const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'))?' wxlight':'';
   app.innerHTML='<div class="page'+_wxL+'">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
+  if(c.p==='pfchat'){const b=$('#pfchatbg');if(b)b.scrollTop=b.scrollHeight;}
+  if(c.p==='pfgroup'){const b=$('#pfgroupbg');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='alter'){const b=$('#alterbg');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='tale'){const b=$('#talebox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='dread'){const b=$('#dreadbox');if(b)b.scrollTop=b.scrollHeight;}
@@ -3130,7 +3227,42 @@ function wxSearchRun(q){const box=$('#wxs_res');if(!box)return;q=(q||'').trim().
   if(!q){box.innerHTML='<div class="empty" style="padding:34px 24px;color:#888;line-height:1.8">输入关键词<br>搜你和所有角色的聊天记录</div>';return;}
   const hits=[];S.contacts.filter(c=>!c.deleted).forEach(c=>{const arr=msgs(c.id);for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(!m||m.type==='sys')continue;let t='';if(m.type==='text')t=m.content||'';else if(m.type==='voice')t=m.content||'';else continue;if(t&&t.toLowerCase().indexOf(q)>=0)hits.push({c,m,t});}});
   hits.sort((a,b)=>(b.m.time||0)-(a.m.time||0));
-  box.innerHTML=hits.length?('<div style="padding:8px 14px 2px;color:#888;font-size:12px">找到 '+hits.length+' 条</div>'+hits.slice(0,80).map(h=>`<div class="row" onclick="openChat('${h.c.id}')">${av(h.c.avatar)}<div class="meta"><div class="n">${esc(h.c.remark||h.c.name)}<span style="color:#666;font-weight:400;font-size:11px;float:right">${h.m.time?hm(h.m.time):''}</span></div><div class="s">${h.m.role==='user'?'<span style="color:#888">我：</span>':''}${wxHi(h.t,q)}</div></div></div>`).join('')):('<div class="empty" style="padding:34px 24px;color:#888">没找到包含「'+esc(q)+'」的聊天</div>');}
+  const pf=/^sp[a-z0-9]{4,12}$/i.test(q)?`<div class="list"><div class="row" onclick="phoneFriendSearchFromWx('${esc(q)}')"><div class="avatar sm" style="background:#6574ff">${svgIc('users',21,'#fff')}</div><div class="meta"><div class="n">搜索小手机ID</div><div class="s">查找 ${esc(q.toUpperCase())} 并申请添加</div></div><span class="v">›</span></div></div>`:'';
+  box.innerHTML=pf+(hits.length?('<div style="padding:8px 14px 2px;color:#888;font-size:12px">找到 '+hits.length+' 条</div>'+hits.slice(0,80).map(h=>`<div class="row" onclick="openChat('${h.c.id}')">${av(h.c.avatar)}<div class="meta"><div class="n">${esc(h.c.remark||h.c.name)}<span style="color:#666;font-weight:400;font-size:11px;float:right">${h.m.time?hm(h.m.time):''}</span></div><div class="s">${h.m.role==='user'?'<span style="color:#888">我：</span>':''}${wxHi(h.t,q)}</div></div></div>`).join('')):('<div class="empty" style="padding:34px 24px;color:#888">没找到包含「'+esc(q)+'」的聊天</div>'));}
+
+function renderPhoneFriends(){const p=phoneFriendState();phoneFriendMaybeSync(false);const incoming=pfReqs('incoming'),outgoing=pfReqs('outgoing'),search=p.search||{};
+  const found=(search.items||[]).map(x=>{const id=(''+(x.phone_id||x.id||'')).toUpperCase();const already=id===p.id||phoneFriendById(id);return `<div class="row">${av(x.avatar||'🙂','sm')}<div class="meta"><div class="n">${esc(x.display_name||'小手机用户')}</div><div class="s">小手机ID：${esc(id)}</div></div>${already?'<span class="v">已添加</span>':`<button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRequest('${id}')">添加</button>`}</div>`;}).join('');
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">小手机好友</span><span class="r" onclick="phoneFriendSync(false)">${svgIc('refresh',20,'#ccc')}</span></div>
+  <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">
+    <div class="section" style="margin:12px">
+      <div style="padding:13px 14px 6px;color:#9ec5fe;font-weight:700">我的小手机ID</div>
+      <div class="it"><span style="font-size:22px;font-weight:800;letter-spacing:1px">${esc(p.id)}</span><button class="minibtn" onclick="copyPhoneFriendId()">复制</button></div>
+      <div class="it"><span>允许别人通过ID搜到我</span><span class="sw ${p.allowSearch!==false?'on':''}" onclick="phoneFriendToggleSearch()"></span></div>
+      ${p.lastError?`<div class="hint" style="color:#e8a85b">${esc(p.lastError)}</div>`:''}
+    </div>
+    <div class="section" style="margin:12px">
+      <div style="padding:12px 14px 4px;color:#cdd;font-weight:700">添加好友</div>
+      <div style="display:flex;gap:8px;padding:6px 14px 12px"><input id="pf_search" value="${esc(search.q||'')}" placeholder="输入对方小手机ID，如 SPXXXXXX" style="flex:1;border:1px solid #38383a;border-radius:9px;padding:9px;background:#2c2c2e;color:#eee;text-transform:uppercase"><button class="send" onclick="phoneFriendSearch()">搜索</button></div>
+      ${search.busy?'<div class="empty" style="padding:14px;color:#888">搜索中…</div>':search.err?`<div class="hint" style="color:#e8a85b">${esc(search.err)}</div>`:(found||((search.q||'')?'<div class="empty" style="padding:14px;color:#888">没搜到这个ID</div>':''))}
+    </div>
+    ${incoming.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#ffb6d0;font-weight:700">新的申请</div>${incoming.map(r=>`<div class="it">${av(r.from_avatar||'🙂','sm')}<span style="flex:1">${esc(r.from_name||r.from_id)}</span><button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRespond('${r.id}',true)">通过</button><button class="minibtn" onclick="phoneFriendRespond('${r.id}',false)">忽略</button></div>`).join('')}</div>`:''}
+    ${outgoing.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#aaa;font-weight:700">已发送申请</div>${outgoing.map(r=>`<div class="it"><span>${esc(r.to_name||r.to_id)}</span><span class="v">等待通过</span></div>`).join('')}</div>`:''}
+    <div class="section" style="margin:12px">
+      <div class="it" onclick="phoneFriendCreateGroupModal()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('users',18,'#c3c6d2')}新建小手机群</span><span class="v">›</span></div>
+    </div>
+    <div class="list">${pfGroupRowsHTML()}${pfFriendRowsHTML()||'<div class="empty" style="padding:24px;color:#888">还没有小手机好友<br>让对方把小手机ID发给你，或复制你的ID给对方</div>'}</div>
+    <div style="height:30px"></div>
+  </div>`;}
+function renderPhoneFriendChat(id){const p=phoneFriendState();id=(''+id).toUpperCase();const f=phoneFriendById(id)||{phone_id:id,display_name:id,avatar:'🙂'};const arr=phoneFriendChatMessages(id);
+  let body='';arr.forEach((m,i)=>{const prev=i?arr[i-1]:null;if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;const me=m.from===p.id;body+=`<div class="msg ${me?'me':'them'}"><span>${av(me?S.me.avatar:phoneFriendAvatar(f))}</span><div class="col"><div class="bubble">${esc(m.text)}</div><div class="msgt">${hm(m.time)}</div></div></div>`;});
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(phoneFriendName(f))}</span><span class="r"></span></div>
+    <div class="chatbg" id="pfchatbg">${body||'<div class="empty" style="padding:40px;color:#888">你们已经是小手机好友了</div>'}</div>
+    <div class="inputbar"><textarea id="pf_input" rows="1" placeholder="发消息…"></textarea><button class="send" onclick="sendPhoneFriend('${id}')" ${_pfSendBusy[id]?'disabled':''}>发送</button></div>`;}
+function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机群聊',members:[]};const p=phoneFriendState(),arr=pfGroupMessages(gid);
+  let body='';arr.forEach((m,i)=>{const prev=i?arr[i-1]:null;if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;const me=m.from===p.id;body+=`<div class="msg ${me?'me':'them'}"><span>${av(me?S.me.avatar:(phoneFriendById(m.from)&&phoneFriendAvatar(phoneFriendById(m.from)))||'🙂')}</span><div class="col">${me?'':`<div style="font-size:11px;color:#888;margin:0 0 2px 4px">${esc(pfNameById(m.from)||'成员')}</div>`}<div class="bubble">${esc(m.text)}</div><div class="msgt">${hm(m.time)}</div></div></div>`;});
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(g.name||'小手机群聊')}</span><span class="r" onclick="phoneFriendSync(false)">${svgIc('refresh',20,'#ccc')}</span></div>
+    <div class="chatbg" id="pfgroupbg">${body||'<div class="empty" style="padding:40px;color:#888">群聊已创建</div>'}</div>
+    <div class="inputbar"><textarea id="pfg_input" rows="1" placeholder="发群消息…"></textarea><button class="send" onclick="sendPhoneFriendGroup('${gid}')">发送</button></div>`;}
 
 function wxChats(){
   const list=[...S.contacts].filter(c=>!c.deleted&&(isMain()||addedHere(c)||msgs(c.id).length)).sort((a,b)=>{
@@ -3139,9 +3271,10 @@ function wxChats(){
   const groups=isMain()?(S.groups||[]):[];
   const banner=isMain()?'':`<div style="padding:8px 12px;background:#3a2d4a;color:#d6c2f0;font-size:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">${svgIc('idcard',14,'#d6c2f0')}当前身份：${esc(S.me.name)}（在「我」里可切换/搜微信号加人）</div>`;
   const searchbar=`<div onclick="openWxSearch()" style="margin:8px 12px;padding:8px 12px;background:${S.me.wxTheme==='white'?'#fff':'#1c1c1e'};border-radius:9px;color:#999;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">${svgIc('search',15,'#999')} 搜索聊天记录</div>`;
-  let html=banner+searchbar+'<div class="list">';
+  const pfBlock=isMain()?(pfGroupRowsHTML()+pfFriendRowsHTML()):'';
+  let html=banner+searchbar+'<div class="list">'+pfBlock;
   groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;});
-  if(!list.length&&!groups.length)return banner+'<div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
+  if(!list.length&&!groups.length&&!pfBlock)return banner+'<div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
   html+=list.map(c=>{const lm=lastMsg(c.id);
     return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
@@ -4512,7 +4645,7 @@ function wxContacts(){
   const rec=recoverableFriends();const rf=rec.length?`<div class="list"><div class="row" onclick="openFriendRecovery()"><div class="avatar sm" style="background:#20b26c">♻️</div><div class="meta"><div class="n">好友找回</div><div class="s" style="color:#888">有 ${rec.length} 个被删的好友可找回（3天内）</div></div><span class="badge">${rec.length}</span></div></div>`:'';
   const wl=S.me.wxTheme==='white';
   const search=`<div style="padding:8px 12px;background:${wl?'#ededed':'#1c1c1e'};border-bottom:.5px solid ${wl?'#dcdcdc':'#2a2a2c'}"><input value="${esc(_ctSearch)}" oninput="ctSearchInput(this.value)" placeholder="🔍 搜名字 / 微信号" style="width:100%;border:1px solid ${wl?'#e2e2e2':'#38383a'};border-radius:16px;padding:7px 14px;background:${wl?'#fff':'#2c2c2e'};color:${wl?'#111':'#eee'};outline:none"><button class="minibtn" style="width:100%;margin-top:8px;padding:8px;background:#7c5cff;color:#fff" onclick="genCharPrompt()">想要的角色搜不到？描述一下，AI 帮你生成</button></div>`;
-  return search+fr+rf+'<div class="list" id="ctlist">'+ctListHTML()+'</div>';
+  return search+(isMain()?phoneFriendEntryHTML():'')+fr+rf+'<div class="list" id="ctlist">'+ctListHTML()+'</div>';
 }
 function openFriendRecovery(){purgeOldDeleted();const rec=recoverableFriends();
   openModal(`<h3>♻️ 好友找回</h3><div class="hint">这些是最近删掉的好友（你自己删的、或角色登你微信删的都算）。<b>3天内</b>可以找回、连聊天记录一起回来，过期永久消失。</div>`
@@ -4569,7 +4702,7 @@ function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8
 function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.callName=($('#me_callname')&&$('#me_callname').value.trim())||'';S.me.wxid=$('#me_wxid').value.trim();
   S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();S.me.steps=+$('#me_steps').value||0;
   {const ag=$('#me_age');S.me.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#me_adult');S.me.adultConsent=!ad||ad.checked;}
-  syncActiveAccount();save();closeModal();render();}
+  syncActiveAccount();save();try{pfEnsure(true).catch(()=>{});}catch(_){}closeModal();render();}
 function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
 let _accountTapAt=0;
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
@@ -4624,6 +4757,7 @@ function myActivity(exceptId,since){let s='';since=since||0;
   s+=travelTicketDiscoveryLine(exceptId,true);
   const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm&&x.lm.time>since).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,3);
   if(others.length)s+='·她最近在跟这些人聊（附最近几句往来内容）：\n'+others.map(o=>{const nm=(o.c.remark||o.c.name);const recent=msgs(o.c.id).slice(-6).map(mm=>{const t=msgToText(mm);return t?((mm.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,42)):'';}).filter(Boolean).join('\n');return '【'+nm+cMark(o.c)+' '+hm(o.lm.time)+'】\n'+recent;}).join('\n')+'\n';
+  s+=phoneFriendActivity(since);
   // 她最近新加的好友（带添加时间，让你分得清哪些是刚加的、哪些是老早就有的，别把老友当新欢乱吃醋）
   const _newc=S.contacts.filter(x=>!x.deleted&&x.id!==exceptId&&x.createdAt&&(Date.now()-x.createdAt<7*86400000)&&x.createdAt>since).sort((a,b)=>b.createdAt-a.createdAt).slice(0,4);
   if(_newc.length)s+='·她最近新加的好友：'+_newc.map(x=>(x.remark||x.name)+cMark(x)+'（'+fmtDur(Date.now()-x.createdAt)+'前加的）').join('、')+'\n';
