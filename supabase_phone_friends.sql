@@ -2,7 +2,8 @@
 -- 在 Supabase SQL Editor 执行一次即可。
 -- 安全模型：公开的小手机ID只用于搜索；写入/发消息必须同时带本机 secret。
 
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 create table if not exists phone_friend_profiles (
   phone_id text primary key,
@@ -65,7 +66,7 @@ alter table phone_friend_group_messages enable row level security;
 
 create or replace function phone_friend_hash(p_secret text)
 returns text language sql immutable as $$
-  select encode(digest(coalesce(p_secret,''), 'sha256'), 'hex')
+  select encode(extensions.digest(convert_to(coalesce(p_secret,''), 'UTF8'), 'sha256'), 'hex')
 $$;
 
 create or replace function phone_friend_check(p_phone_id text, p_secret text)
