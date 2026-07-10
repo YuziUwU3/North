@@ -210,7 +210,7 @@ begin
   if length(trim(coalesce(p_body,''))) = 0 then raise exception 'empty-message'; end if;
 
   insert into phone_friend_messages(from_id, to_id, body)
-  values (v_from, v_to, left(trim(p_body),1000))
+  values (v_from, v_to, left(trim(p_body),60000))
   returning * into v_msg;
 
   return jsonb_build_object('id', v_msg.id, 'from_id', v_msg.from_id, 'to_id', v_msg.to_id, 'body', v_msg.body, 'created_at', v_msg.created_at);
@@ -316,7 +316,7 @@ begin
   if length(trim(coalesce(p_body,''))) = 0 then raise exception 'empty-message'; end if;
 
   insert into phone_friend_group_messages(group_id, from_id, body)
-  values (p_group_id, v_from, left(trim(p_body),1000))
+  values (p_group_id, v_from, left(trim(p_body),60000))
   returning * into v_msg;
 
   return jsonb_build_object('id', v_msg.id, 'group_id', v_msg.group_id, 'from_id', v_msg.from_id, 'body', v_msg.body, 'created_at', v_msg.created_at);
