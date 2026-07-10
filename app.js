@@ -289,7 +289,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v418 · 好友在线已读修复';
+const APP_VER='v419 · 查手机好友修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -455,7 +455,8 @@ function affStage(v){return v>=86?'很亲密':v>=70?'亲密':v>=50?'熟悉':v>=3
 function affTone(c){const v=affNow(c),nm=S.me.name;if(v>=86)return '你和'+nm+'已经非常亲密，像长期稳定伴侣，关心、占有欲、管着ta都可以自然一点，但仍按你的人设拿捏分寸。';if(v>=70)return '你已经很在意'+nm+'，会主动关心、吃醋、想靠近，语气比普通朋友亲密。';if(v>=50)return '你对'+nm+'比较熟悉，有明显好感，会自然照顾ta，但还不到无条件黏人。';if(v>=30)return '你对'+nm+'正在慢慢靠近，可以温和回应、偶尔关心，别一下子太亲密或太管束。';if(v>=15)return '你和'+nm+'只是普通关系，保持礼貌和一点距离，别过度管ta、别像恋人一样安排ta。';return '你对'+nm+'还很疏离或有点冷淡，少主动管束，少说亲密称呼，先观察ta。';}
 function affInterestHit(text,c){text=''+(text||'');const p=((c&&c.persona)||'')+' '+((c&&c.signature)||'')+' '+((c&&c.job)||'');const hits=['喜欢','爱好','兴趣','在意','珍惜','工作','职业','梦想','猫','音乐','电影','书','吃饭','睡觉','想你','谢谢','辛苦','对不起','抱抱','陪你','好看','帅','厉害'].filter(k=>text.includes(k)&&(p.includes(k)||/谢谢|辛苦|对不起|抱抱|陪你|想你|好看|帅|厉害/.test(k)));return hits.length;}
 function affDeltaFor(text,c){text=''+(text||'');if(!text.trim())return 0;let d=0;if(/谢谢|辛苦|想你|喜欢你|爱你|陪你|抱抱|哄你|对不起|错了|好看|帅|厉害|在乎你|心疼/.test(text))d+=1+Math.min(2,affInterestHit(text,c));if(/滚|烦死|讨厌你|闭嘴|别管我|拉黑|删除|分手|恶心|废物|有病|不想理你/.test(text))d-=2;if(/骗你|不需要你|关你什么事|你谁啊/.test(text))d-=1;if(d>3)d=3;if(d<-3)d=-3;return d;}
-function maybeAffectionShift(id,c,lastUser,reply){if(!isMain()||!c||c.affectionLocked)return;const now=Date.now();if(now-(c._affAt||0)<180000)return;const txt=((lastUser&&msgToText(lastUser))||'')+'\n'+(reply||'');const d=affDeltaFor(txt,c);if(!d)return;c.affection=Math.max(1,Math.min(100,affNow(c)+d));c._affAt=now;save();}
+function affDailyGain(c){const k=ymd(Date.now());if(!c._affGain||c._affGain.date!==k)c._affGain={date:k,up:0};return c._affGain;}
+function maybeAffectionShift(id,c,lastUser,reply){if(!isMain()||!c||c.affectionLocked)return;const now=Date.now();if(now-(c._affAt||0)<180000)return;const txt=((lastUser&&msgToText(lastUser))||'')+'\n'+(reply||'');let d=affDeltaFor(txt,c);if(!d)return;if(d>0){const day=affDailyGain(c),left=Math.max(0,10-(+day.up||0));if(left<=0){c._affAt=now;save();return;}d=Math.min(d,left);day.up=(+day.up||0)+d;}c.affection=Math.max(1,Math.min(100,affNow(c)+d));c._affAt=now;save();}
 function meAge(){let n=+((S.me&&S.me.age)||18);if(!isFinite(n)||n<0)n=18;return Math.round(n);}
 function meIsAdult(){return (S.me&&S.me.adultConsent!==false)&&meAge()>=18;}
 function adultRoleRule(label){if(!meIsAdult())return '\n\n# 年龄边界\n'+S.me.name+'的资料没有确认成年。亲密互动必须克制，保持普通关系分寸。';
@@ -2278,8 +2279,6 @@ function spyWxList(id,c,d){const items=[];const seen={};
     items.push({k:'wxintro_'+i,name:nm,avatar:cc?cc.avatar:'🙂',prev:w?((w.lines&&w.lines[w.lines.length-1])||''):'（'+S.me.name+'介绍你加的好友）',del:true});seen[nm]=1;});
   (d.wechat||[]).forEach((w,i)=>{if(seen[w.who])return;items.push({k:'wx_'+i,name:w.who||'某人',avatar:'🙂',prev:(w.lines&&w.lines[w.lines.length-1])||'',del:true});});
   (d.groups||[]).forEach((gp,i)=>items.push({k:'wxg_'+i,name:(gp.name||'群聊'),avatar:'👥',prev:(gp.lines&&gp.lines[gp.lines.length-1])||'',grp:true}));
-  try{const p=phoneFriendState();(p.friends||[]).forEach(f=>{const pid=(''+(f.phone_id||f.id)).toUpperCase(),arr=phoneFriendChatMessages(pid),lm=arr[arr.length-1];items.push({k:'pf_'+pid,name:pfFriendDisplayName(f),avatar:phoneFriendAvatar(f),prev:lm?pfSpyMsgText(lm):'小手机真人好友',pf:true});});
-    (p.groups||[]).forEach(g=>{const gid=g.group_id||g.id,arr=pfGroupMessages(gid),lm=arr[arr.length-1];items.push({k:'pfg_'+gid,name:pfGroupDisplayName(g),avatar:'群',prev:lm?((pfNameById(lm.from)||'成员')+'：'+pfSpyMsgText(lm)):'小手机真人群聊',pf:true,grp:true});});}catch(_){}
   return items;}
 function spyLastPrev(id){const m=msgs(id).filter(x=>!x._call);const lm=m[m.length-1];return lm?previewOf(lm):'';}
 function spyAlbumHTML(d){let arr=d&&d.album;if(!arr)return '<div class="empty" style="padding:34px">相册是空的</div>';
@@ -2300,6 +2299,7 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
   const navbar=t=>`<div class="nav" style="background:#161616"><span class="l" onclick="${((app.indexOf('wx')===0||app.indexOf('pf')===0)&&app!=='wechat')?`spyOpen('${id}','wechat')`:`spyOpen('${id}','')`}" style="color:#ccc">‹</span><span class="t" style="color:#eee">${t}</span><span class="r"></span></div>`;
   const bub=(mine,txt)=>`<div style="display:flex;margin:6px 12px;${mine?'justify-content:flex-end':''}"><div style="max-width:72%;padding:8px 11px;border-radius:13px;font-size:14px;line-height:1.45;background:${mine?'#1f8f4d':'#262628'};color:#fff">${esc(txt)}</div></div>`;
   const wxchat=(t,lines)=>navbar(t)+`<div class="scroll" style="background:#0e0e0e">${lines||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>'}<div style="height:20px"></div></div>`;
+  if(app.indexOf('pf_')===0||app.indexOf('pfg_')===0){_spyApp='wechat';return spyAppView(id,c,'wechat');}
   if(app==='wxme'){const ms=msgs(id).filter(m=>!m._call&&(m.type==='text'||m.type==='voice'||m.type==='sticker')).slice(-30);
     const body=ms.map(m=>{const mine=m.role==='assistant';const t=msgToText(m);return t?bub(mine,t):'';}).join('');
     return wxchat(esc(S.me.name),body);}
@@ -5641,14 +5641,16 @@ function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){c._bloc
 async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
   if(S.friendRequests.some(r=>r.contactId===id))return;
   let msg='是我，别拉黑我好不好…我们好好说。';
-  try{msg=(await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：'+S.me.name+'把你拉黑了，你不死心，重新申请加回好友。写一句简短的好友验证消息，别超过20字。]'}])).split('\n')[0].slice(0,30)||msg;}catch(e){}
+  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：'+S.me.name+'把你拉黑了，你不死心，重新申请加回好友。只输出一句你对她说的好友验证消息，别超过20字。不要输出[心情]、[心情值]、动作描写或任何系统标签。]'}]);
+    msg=friendReqText(raw,msg);}catch(e){}
   S.friendRequests.push({id:uid(),contactId:id,msg,time:Date.now()});save();
   if(!c.muted)playDing();if(cur().p==='wechat'&&wxTab==='contacts')render();
   toast('通讯录有人申请加你');}
+function friendReqText(raw,fb){let lines=splitBubbles(cleanReply(raw)).map(x=>cleanRolePunct((''+x).replace(/^[「"']+|[」"']+$/g,'').trim())).filter(x=>x&&!/^[\[【]/.test(x)&&!CTLLEAK.test(x)&&!isRefusal(x));let t=(lines[0]||fb||'是我，别拉黑我好不好…').replace(/\s+/g,' ').trim();return t.slice(0,32)||fb;}
 function openFriendRequests(){if(!S.friendRequests.length){toast('暂无新申请');return;}
-  openModal(`<h3>新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+  openModal(`<h3>新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);r.msg=friendReqText(r.msg,'是我，别拉黑我好不好…');return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){setBlk(c,false);c._readdedAt=Date.now();c._readdKnown=false;if(c._blockedAt)c._blockDur=fmtDur(Date.now()-c._blockedAt);c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
-  S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');}
+  S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');if(c&&!c.blocked)setTimeout(()=>scheduleReply(c.id,'[系统：'+S.me.name+'刚通过了你的好友申请。你终于被加回来了，马上发一条正常微信消息给她：可以委屈、着急、松口气或追问为什么拉黑你，但不要再输出好友验证格式，也不要只写心情。]'),500);}
 function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
 async function c_delete(id){const c=getC(id);
   if(!isMain()){if(!await uiConfirm('从当前小号「'+esc(S.me.name)+'」里删掉这个好友？\n（只影响这个小号，不动大号，之后还能搜微信号重新加回来）'))return;
