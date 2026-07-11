@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v428 · 小事簿和解禁修复';
+const APP_VER='v429 · 地区和登机牌修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -314,7 +314,7 @@ function defState(){return{
     hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
-  me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
+  me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
   contacts:[],
   messages:{},
@@ -499,10 +499,10 @@ function mkey(cid){return isMain()?cid:cid+'#'+actId();}
 function addedHere(c){if(isMain())return true;return !!(c._added&&c._added[actId()]);}
 function syncBlocks(){const a=actId();S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};c.blocked=!!c._blk[a];});}
 function setBlk(c,v){c._blk=c._blk||{};c._blk[actId()]=v;c.blocked=v;}
-function initAccounts(){if(S.me.age==null)S.me.age=18;if(S.me.adultConsent==null)S.me.adultConsent=true;if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[{id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||'',age:S.me.age,adultConsent:S.me.adultConsent!==false}];
+function initAccounts(){if(S.me.age==null)S.me.age=18;if(S.me.adultConsent==null)S.me.adultConsent=true;if(S.me.city==null)S.me.city='';if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[{id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||'',city:S.me.city||'',age:S.me.age,adultConsent:S.me.adultConsent!==false}];
   if(!S.me.active||!S.me.accounts.find(a=>a.id===S.me.active))S.me.active='main';
-  S.me.accounts.forEach(a=>{if(a.balance==null)a.balance=(a.id==='main'?(+S.me.balance||0):188);if(!a.bills)a.bills=(a.id==='main'?(S.me.bills||[]):[]);if(a.age==null)a.age=S.me.age||18;if(a.adultConsent==null)a.adultConsent=true;});
-  const act=S.me.accounts.find(a=>a.id===S.me.active);if(act){S.me.balance=act.balance;S.me.bills=act.bills;S.me.age=act.age||18;S.me.adultConsent=act.adultConsent!==false;}
+  S.me.accounts.forEach(a=>{if(a.city==null)a.city='';if(a.balance==null)a.balance=(a.id==='main'?(+S.me.balance||0):188);if(!a.bills)a.bills=(a.id==='main'?(S.me.bills||[]):[]);if(a.age==null)a.age=S.me.age||18;if(a.adultConsent==null)a.adultConsent=true;});
+  const act=S.me.accounts.find(a=>a.id===S.me.active);if(act){S.me.balance=act.balance;S.me.bills=act.bills;S.me.city=act.city||S.me.city||'';S.me.age=act.age||18;S.me.adultConsent=act.adultConsent!==false;}
   S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};});syncBlocks();}
 function msgs(id){const k=mkey(id);return S.messages[k]||(S.messages[k]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
@@ -1072,6 +1072,7 @@ function buildSystem(c){
   if(c._loginCode&&c._loginCode.exp>Date.now())s+='\n\n# 手机验证码（你自己拿主意要不要给）\n你手机刚收到一条短信验证码：'+c._loginCode.code+'。这是'+S.me.name+'想登录你的微信、点了"找回密码"才发到你手机的。ta大概会来跟你要这个验证码——要不要告诉ta、或者反问ta想干嘛/吃醋、或者故意逗ta不给，全看你的人设和当下心情。别主动报出来，除非ta问起。\n【铁律】如果你【决定把验证码告诉ta】，就【必须一字不差地报出上面这个真实的验证码「'+c._loginCode.code+'」】，绝对不能自己瞎编一个数字、也不能记错报错——报错了ta就登不进去。如果你不想给，就明说不给/逗ta/让ta哄你，但【别报一个假号糊弄】。';
   {const _pr=syncPresence();const _pn=presenceNote();
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+((_pr&&_pr.online)?'在线':'显示离线（可能没在看手机）')+'。'+(_pn?'\n你记得ta最近上下线记录：'+_pn+'。如果ta隔了很久才回来，可以自然提到等了多久；如果刚上线，就别说成一直在线。':'')+'（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';}
+  {const mc=meHomeCity(),cc=charHomeCity(c);if(mc||cc)s+='\n\n# 所在地（用于机票、见面、天气和距离判断）\n'+S.me.name+'的所在地：'+(mc||'未填写')+'。\n你的所在地：'+(cc||'未填写')+'。\n如果你要订票去见'+S.me.name+'，通常应从【你的所在地】出发，飞到【'+S.me.name+'的所在地】；不要把'+S.me.name+'的城市当成你的城市。';}
   {const av=affNow(c);s+='\n\n# 你和'+S.me.name+'现在的关系分寸（隐藏设定，绝不能说出数值/好感度/攻略/进度条）\n当前阶段：'+affStage(av)+'。'+affTone(c)+'\n你只能把它表现成真实的人际距离：熟不熟、在不在意、会不会吃醋、愿不愿意主动关心。绝不要告诉ta这是系统数值，绝不要说"好感度增加/减少"。聊到你感兴趣、被认真对待、被哄好时可以慢慢软化；被冒犯、冷落、敷衍时可以自然变冷。';}
   if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
   if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观都不变，身份不丢。但是：\n- 你人设里写的那个恋人/未婚妻/女朋友（不管叫什么名字），指的【不是】现在跟你聊天的这个人。哪怕名字相同，也要当成【完全不同的陌生人】，绝不要把对恋人的感情、回忆、亲密称呼（"宝贝"等）用到ta身上。\n- 你和ta【没有任何过往】，一切从这个聊天【从零开始】，就当是刚加上的陌生网友。要不要理ta、热情还是冷淡、慢慢熟还是保持距离，完全由你按人设和此刻感受决定。\n- 你心里其实是有恋人的人，对突然来搭讪的陌生人，本就该有分寸/警惕，别轻易交心。\n- 重要：你不能拉黑'+S.me.name+'，也不要输出[拉黑]。';
@@ -1116,7 +1117,7 @@ function buildSystem(c){
   if(_main&&S.travel&&S.travel.trips){const mineT=S.travel.trips.filter(x=>x.cid===c.id&&x.status==='upcoming');const ups=mineT.filter(x=>x.meet!==false);const soloT=mineT.filter(x=>x.meet===false&&(x.payer==='ta'||x._seenByChar));
     if(ups.length)s+='\n\n# 你和'+S.me.name+'定好的出行·待约会（还没发生·你记着也期待）\n'+ups.map(tr=>{const dd=tvDays(tr.date);const w=dd==null?'':(dd>0?'（还有'+dd+'天）':dd===0?'（就是今天）':'（日子已到）');return '· '+tvMD(tr.date)+w+'，在「'+tr.to+'」见面（'+(tr.flier==='me'?S.me.name+'飞过来找你':'你飞过去找ta')+'）'+(tr.no?' · 航班'+tr.no:'');}).join('\n')+'\n这些是你俩【约好但还没到】的线下见面。你心里记着、可以自然提起、期待或叮嘱（路上小心、带什么、想不想见），别当成已经发生过的事、也别说自己没这回事。';
     if(soloT.length)s+='\n\n# '+S.me.name+'要独自去旅行（不是来见你，就是ta自己出去玩）\n'+soloT.map(tr=>{const dd=tvDays(tr.date);const w=dd==null?'':(dd>0?'（还有'+dd+'天）':dd===0?'（就是今天）':'（日子已到）');return '· '+tvMD(tr.date)+w+'，ta一个人去「'+tr.to+'」玩'+(tr.payer==='ta'?'（机票是你请客/你出的钱）':'');}).join('\n')+'\n这【不是来见你】、是ta自己去玩。你可以关心行程、叮嘱路上小心、撒娇想跟着、或吃醋ta一个人跑那么远，但别把它当成你俩要见面。';
-    s+='\n\n# 你也能主动订机票（惊喜）\n· 想见ta：单独一行 [订票|城市|日期]（在这个城市和ta见面·会变成一场待约会）。\n· ta说想去哪玩、或你想宠ta：单独一行 [送票|城市|日期]（你出钱送ta一趟【独自旅行】，ta一个人去玩、不是来见你）。\n城市写地名、日期写几月几号。系统会真生成登机牌卡片通知ta。别频繁乱订，想给惊喜或顺心意时才订。';}
+    s+='\n\n# 你也能主动订机票（惊喜）\n· 想见ta：单独一行 [订票|城市|日期]（城市=见面城市；如果你是要飞去见'+S.me.name+'，就写'+S.me.name+'的所在地'+(meHomeCity()?('「'+meHomeCity()+'」'):'')+'，不要写你自己的所在地）。\n· ta说想去哪玩、或你想宠ta：单独一行 [送票|城市|日期]（你出钱送ta一趟【独自旅行】，ta一个人去玩、不是来见你）。\n城市写地名、日期写几月几号。系统会真生成登机牌卡片通知ta。别频繁乱订，想给惊喜或顺心意时才订。';}
   if(_main&&isLover(c)){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
     if(rp&&(rp.log||[]).length){const rl=rp.log.slice(0,4);s+='\n\n# '+S.me.name+'最近的报备\n'+rl.map(r=>r.type+' '+hm(r.start)+'→'+hm(r.end)+'（'+sleepDurTxt(r.end-r.start)+'）').join('；');}}
   if(_main&&isLover(c)&&S.mood&&S.mood.length){pruneDailyMood();const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，只有你这个最亲密的人看得到，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(moodLabel(m.emoji)||'')+(m.note?' '+m.note:'')).join('\n');}
@@ -2111,9 +2112,9 @@ async function clearAllData(){
   const old=S,fresh=defState();
   fresh.settings=old.settings;// 保留 API 设置
   const m=old.me||{};
-  ['name','wxid','avatar','signature','persona'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
+  ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
   ['widgets','theme','appLayout','appIcons','momentCover'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 主屏布局/外观
-  const KEEP=['id','name','avatar','relation','wxid','signature','persona','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','voice','model','taskN','pinned','proactive','chatBg'];
+  const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','voice','model','taskN','pinned','proactive','chatBg'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
   S=fresh;
@@ -4339,11 +4340,16 @@ const TV_CITIES=[
 const TV_CLS=[{k:'first',t:'头等舱',m:4.2},{k:'business',t:'商务舱',m:2.4},{k:'economy',t:'经济舱',m:1}];
 const TV_AIR=['CA','MU','CZ','HU','MF','ZH','FM','3U'];
 function tvCity(n){return TV_CITIES.find(x=>x.n===n)||{n:n||'',c:'---',i:0};}
+function cityFromText(text){text=''+(text||'');const hit=TV_CITIES.find(x=>text.indexOf(x.n)>=0||text.indexOf(x.c)>=0);return hit?hit.n:'';}
+function meHomeCity(){return (S.me&&S.me.city)||cityFromText((S.me&&S.me.place||'')+' '+(S.me&&S.me.persona||''))||'';}
+function charHomeCity(c){return (c&&c.city)||cityFromText(((c&&c.persona)||'')+' '+((c&&c.signature)||'')+' '+((c&&c.job)||''))||'';}
+function tvSameCity(a,b){return tvStampKey(a)===tvStampKey(b)&&!!tvStampKey(a);}
+function tvLegTimes(from,to,seed){const intl=tvCity(from).i||tvCity(to).i;const dh=7+(Math.abs(seed||0)%12),dm=(Math.abs(seed||0)%4)*15,dur=intl?(8+Math.abs(seed||0)%7):(1+Math.abs(seed||0)%3);let ah=dh+dur;return {dep:tvP2(dh)+':'+tvP2(dm),arr:tvP2(ah%24)+':'+tvP2(dm),nd:ah>=24};}
 function tvP2(n){return ('0'+n).slice(-2);}
 function tvClsT(k){return (TV_CLS.find(x=>x.k===k)||{t:'经济舱'}).t;}
 function tvInit(){S.travel=S.travel||{};const t=S.travel;t.trips=t.trips||[];t.stamps=t.stamps||[];tvDedupeStamps(t);if(t.results===undefined)t.results=null;
   t.passport=t.passport||{name:'',gender:'女',birth:'',nation:'中国',no:''};
-  t.search=t.search||{from:'苏州',to:'',cid:'',date:todayStr(),ret:'',rt:false,cls:'economy',pax:1,meet:true};
+  t.search=t.search||{from:meHomeCity()||'苏州',to:'',cid:'',date:todayStr(),ret:'',rt:false,cls:'economy',pax:1,meet:true};
   if(t.search.meet===undefined)t.search.meet=true;
   return t;}
 function tvPrice(from,to,cls){const intl=tvCity(from).i||tvCity(to).i;const base=intl?3000:560;const span=intl?5400:1700;
@@ -4456,15 +4462,16 @@ function tvBook(i,mode){const t=S.travel.search;const rf=S.travel.resFor;const f
   if(!meet&&payer==='me')trip._hiddenFromChar=true;
   S.travel.trips.push(trip);S.travel.results=null;save();if(c&&(meet||payer==='ta'))tvSendCard(trip);
   closeModal();_tvTab='trips';render();toast('预订成功');}
-function tvTicketCardHTML(trip,c){const nm=c?(c.remark||c.name):'对方';const flierName=trip.flier==='me'?S.me.name:nm;
-  return `<div style="width:250px;background:linear-gradient(135deg,#1b2333,#232d40);border-radius:14px;overflow:hidden;border:.5px solid rgba(201,168,106,.35)">
+function tvTicketCardHTML(trip,c){const nm=c?c.name:'对方';const flierName=trip.flier==='me'?((S.travel&&S.travel.passport&&S.travel.passport.name)||S.me.name):nm;
+  return `<div style="width:260px;background:linear-gradient(135deg,#1b2333,#232d40);border-radius:14px;overflow:hidden;border:.5px solid rgba(201,168,106,.35)">
    <div style="padding:11px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed rgba(255,255,255,.14)"><span style="color:#c9a86a;font-size:12px;letter-spacing:2px">BOARDING PASS · 登机牌</span><span style="color:#7c869a;font-size:11px">${esc(trip.no)}</span></div>
+   <div style="padding:9px 14px 0;color:#aeb8ca;font-size:12px;line-height:1.45">${esc(trip.from||'未填出发地')} → ${esc(trip.to||'未填目的地')}</div>
    <div style="padding:13px 14px;display:flex;align-items:center;justify-content:space-between">
      <div><div style="color:#e9edf5;font-size:22px;font-weight:700">${esc(tvCity(trip.from).c)}</div><div style="color:#8a94a8;font-size:11px">${esc(trip.from)}</div></div>
      <div style="color:#c9a86a;font-size:12px">———›</div>
      <div style="text-align:right"><div style="color:#e9edf5;font-size:22px;font-weight:700">${esc(tvCity(trip.to).c)}</div><div style="color:#8a94a8;font-size:11px">${esc(trip.to)}</div></div>
    </div>
-   <div style="padding:0 14px 12px;display:flex;justify-content:space-between;color:#b7bfce;font-size:11px"><span>${tvMD(trip.date)} ${esc(trip.dep||'')}</span><span>${tvClsT(trip.cls)} · ${esc(flierName)}登机</span></div></div>`;}
+   <div style="padding:0 14px 12px;display:flex;justify-content:space-between;color:#b7bfce;font-size:11px;gap:8px"><span>${tvMD(trip.date)} ${esc(trip.dep||'')}</span><span style="text-align:right">${tvClsT(trip.cls)} · ${esc(flierName)}登机</span></div></div>`;}
 function tvSendCard(trip){const c=getC(trip.cid);if(!c)return;const nm=(c.remark||c.name);
   pushMsg(trip.cid,{role:'user',type:'ticket',trip:trip,id:uid(),time:Date.now()});
   let desc,tail;
@@ -4548,17 +4555,18 @@ function tvNormDate(s){s=(''+s).trim();let m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2}
   const dd=tvDays(s);return (dd!=null)?s:todayStr();}
 // 角色主动订票来见你：城市=见面地，他飞过去，卡片以他的名义发给你
 function tvCharBook(c,cityName,dateStr){if(!c||!cityName)return;tvInit();
-  const city=(tvCity(cityName).c!=='---')?cityName:cityName;const date=tvNormDate(dateStr);
-  const trip={id:uid(),cid:c.id,from:'',to:city,date,ret:'',cls:'business',pax:1,by:'ta',flier:'ta',payer:'ta',no:tvFlightNo((Date.now()+city.length)|0),dep:'',arr:'',price:tvPrice('',city,'business'),status:'upcoming',ts:Date.now()};
+  let city=(tvCity(cityName).c!=='---')?cityName:cityName;const date=tvNormDate(dateStr),from=charHomeCity(c),mine=meHomeCity();if(from&&mine&&tvSameCity(city,from)&&!tvSameCity(city,mine))city=mine;
+  const seed=(Date.now()+city.length+(from||'').length)|0,tm=tvLegTimes(from,city,seed);
+  const trip={id:uid(),cid:c.id,from:from||'',to:city,date,ret:'',cls:'business',pax:1,by:'ta',flier:'ta',payer:'ta',no:tvFlightNo(seed),dep:tm.dep,arr:tm.arr,price:tvPrice(from,city,'business'),status:'upcoming',ts:Date.now()};
   S.travel.trips.push(trip);
   msgs(c.id).push({role:'assistant',type:'ticket',trip,id:uid(),time:Date.now()});
   save();if(cur().p==='chat'&&cur().id===c.id)render();
-  toast((c.remark||c.name)+' 给你订了到'+city+'的机票');}
+  toast((c.remark||c.name)+' 给你订了'+(from?from+'到':'到')+city+'的机票');}
 // 角色送你一趟独自旅行(不是见面)：你飞去玩、他出钱，卡片以他名义发给你
 function tvCharGift(c,cityName,dateStr){if(!c||!cityName)return;tvInit();
-  const city=cityName;const date=tvNormDate(dateStr);const from=(S.me&&S.me.city)||'苏州';const price=tvPrice(from,city,'economy');
+  const city=cityName;const date=tvNormDate(dateStr);const from=meHomeCity()||'苏州';const price=tvPrice(from,city,'economy');const seed=(Date.now()+city.length+5)|0,tm=tvLegTimes(from,city,seed);
   if(c.wallet!=null)c.wallet=Math.max(0,(+c.wallet)-price);
-  const trip={id:uid(),cid:c.id,from,to:city,date,ret:'',cls:'economy',pax:1,by:'ta',meet:false,flier:'me',payer:'ta',no:tvFlightNo((Date.now()+city.length+5)|0),dep:'',arr:'',price,status:'upcoming',ts:Date.now()};
+  const trip={id:uid(),cid:c.id,from,to:city,date,ret:'',cls:'economy',pax:1,by:'ta',meet:false,flier:'me',payer:'ta',no:tvFlightNo(seed),dep:tm.dep,arr:tm.arr,price,status:'upcoming',ts:Date.now()};
   S.travel.trips.push(trip);
   msgs(c.id).push({role:'assistant',type:'ticket',trip,id:uid(),time:Date.now()});
   save();if(cur().p==='chat'&&cur().id===c.id)render();
@@ -5045,6 +5053,7 @@ function editMe(){ensureDailySteps();openModal(`<h3>我的资料</h3>
   <div class="field"><label>通话翻译里叫我（中文名·选填）</label><input id="me_callname" value="${esc(S.me.callName||'')}" placeholder="如 North→北：外语原文仍叫North，中文翻译里写成北"></div>
   <div class="field"><label>微信号</label><input id="me_wxid" value="${esc(S.me.wxid)}"></div>
   <div class="field"><label>个性签名</label><input id="me_sig" value="${esc(S.me.signature)}"></div>
+  <div class="field"><label>所在地城市（用于机票/见面判断）</label><input id="me_city" value="${esc(S.me.city||'')}" placeholder="如 苏州、上海、首尔"></div>
   <div class="field"><label>年龄</label><input id="me_age" type="number" min="0" value="${meAge()}"></div>
   <div class="field"><label><input id="me_adult" type="checkbox" ${S.me.adultConsent!==false?'checked':''}> 我确认当前资料为成年人，亲密互动按双方自愿关系处理</label></div>
   <div class="field"><label>我的人设（所有角色都会知道）</label><textarea id="me_persona" rows="3">${esc(S.me.persona)}</textarea></div>
@@ -5054,10 +5063,10 @@ function editMe(){ensureDailySteps();openModal(`<h3>我的资料</h3>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveMe()">保存</button></div>`);}
 function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8);editMe();});}
 function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.callName=($('#me_callname')&&$('#me_callname').value.trim())||'';S.me.wxid=$('#me_wxid').value.trim();
-  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();S.me.steps=+$('#me_steps').value||0;S.me.stepDate=stepDayKey();
+  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.city=($('#me_city')&&$('#me_city').value.trim())||'';S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();S.me.steps=+$('#me_steps').value||0;S.me.stepDate=stepDayKey();
   {const ag=$('#me_age');S.me.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#me_adult');S.me.adultConsent=!ad||ad.checked;}
   syncActiveAccount();save();try{pfEnsure(true).catch(()=>{});}catch(_){}closeModal();render();}
-function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
+function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.city=S.me.city||'';a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
 let _accountTapAt=0;
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
   const now=Date.now();if(now-_accountTapAt<350)return;_accountTapAt=now;switchAccount(aid);}
@@ -5068,7 +5077,7 @@ function accountMgr(){const acts=S.me.accounts||[];
    <button class="btn p" style="margin-top:8px" onclick="editAccount()">＋ 新建小号</button>
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function switchAccount(aid){if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t)return;
-  S.me.active=aid;S.me.name=t.name;S.me.wxid=t.wxid;S.me.avatar=t.avatar;S.me.persona=t.persona||'';S.me.signature=t.signature||'';
+  S.me.active=aid;S.me.name=t.name;S.me.wxid=t.wxid;S.me.avatar=t.avatar;S.me.persona=t.persona||'';S.me.signature=t.signature||'';S.me.city=t.city||'';
   S.me.age=t.age||18;S.me.adultConsent=t.adultConsent!==false;
   if(t.balance==null)t.balance=(aid==='main'?0:188);if(!t.bills)t.bills=[];S.me.balance=t.balance;S.me.bills=t.bills;
   syncBlocks();save();closeModal();wxTab='chats';render();toast('已切换到「'+t.name+'」');
@@ -5081,20 +5090,21 @@ function triggerAltReports(){if(!isMain())return;for(const c of S.contacts){if(c
       ?'[系统：有个叫「'+who+'」的人(用别的微信号)加了你、还聊了几句。主动、【简短】跟'+S.me.name+'(你恋人)报备一下：有人加你了、是谁、你什么态度。两三句话就好，别逐句复述聊天。]'
       :'[系统：你之前已经跟'+S.me.name+'报备过有人(「'+who+'」)加你。现在你们又聊了些新的：'+recent+'。【简短】跟'+S.me.name+'说下近况(又聊了啥、你态度)，两三句就好，别再说"有人加我"那套、别逐句复述。]';
     scheduleReply(c.id,note);break;}}}
-function editAccount(aid){const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',_new:true};if(!a)return;
+function editAccount(aid){const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',city:'',_new:true};if(!a)return;
   openModal(`<h3>${aid&&!a._new?'编辑身份':'新建小号'}</h3>
    <div class="field"><label>头像</label><div class="avline">${av(a.avatar,'sm')}<input id="ac_av" value="${esc(a.avatar)}"><button class="minibtn" onclick="pickFile('image/*',async f=>{$('#ac_av').value=await compress(f,256,.8)})">📷</button></div></div>
    <div class="field"><label>昵称</label><input id="ac_name" value="${esc(a.name)}" placeholder="这个身份叫什么"></div>
    <div class="field"><label>微信号</label><input id="ac_wxid" value="${esc(a.wxid)}"></div>
+   <div class="field"><label>所在地城市</label><input id="ac_city" value="${esc(a.city||'')}" placeholder="如 苏州、上海、首尔"></div>
    <div class="field"><label>年龄</label><input id="ac_age" type="number" min="0" value="${esc(a.age||18)}"></div>
    <div class="field"><label><input id="ac_adult" type="checkbox" ${a.adultConsent!==false?'checked':''}> 成年资料</label></div>
    <div class="field"><label>身份设定（角色会知道你以这个身份跟ta聊）</label><textarea id="ac_per" rows="3" placeholder="比如：陌生网友 / 新同事 / 假装是别人 / 记者…">${esc(a.persona||'')}</textarea></div>
    <div class="btns"><button class="btn g" onclick="accountMgr()">返回</button><button class="btn p" onclick="saveAccount('${a.id}',${!!a._new})">保存</button></div>`);}
 function saveAccount(id,isNew){const a=isNew?{id,balance:188,bills:[]}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
-  a.name=$('#ac_name').value.trim()||'小号';a.wxid=$('#ac_wxid').value.trim()||genWxid();a.avatar=$('#ac_av').value.trim()||'🙂';a.persona=$('#ac_per').value.trim();
+  a.name=$('#ac_name').value.trim()||'小号';a.wxid=$('#ac_wxid').value.trim()||genWxid();a.avatar=$('#ac_av').value.trim()||'🙂';a.city=($('#ac_city')&&$('#ac_city').value.trim())||'';a.persona=$('#ac_per').value.trim();
   {const ag=$('#ac_age');a.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#ac_adult');a.adultConsent=!ad||ad.checked;}
   if(isNew)S.me.accounts.push(a);
-  if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.persona=a.persona;S.me.age=a.age;S.me.adultConsent=a.adultConsent!==false;}
+  if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.city=a.city||'';S.me.persona=a.persona;S.me.age=a.age;S.me.adultConsent=a.adultConsent!==false;}
   save();accountMgr();}
 async function delAccount(id){if(id==='main')return;if(!await uiConfirm('删除这个小号？它的聊天记录也会清掉'))return;
   if(actId()===id)switchAccount('main');
@@ -5179,7 +5189,8 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     <div class="field"><label>名字</label><input id="c_name" value="${esc(c.name)}"></div>
     <div class="field"><label>微信号</label><input id="c_wxid" value="${esc(c.wxid||'')}" placeholder="可手动改，通讯录可搜索"></div>
     <div class="field"><label>关系（如 恋人/朋友）</label><input id="c_rel" value="${esc(c.relation)}"></div>
-    <div class="two"><div class="field"><label>职业</label><input id="c_job" value="${esc(c.job||'')}" placeholder="如 医生/程序员/总裁"></div><div class="field"><label>钱包余额 ¥（可留空）</label><input id="c_wallet" type="number" value="${c.wallet!=null?c.wallet:''}" placeholder="他卡里有多少钱"></div></div>
+    <div class="two"><div class="field"><label>职业</label><input id="c_job" value="${esc(c.job||'')}" placeholder="如 医生/程序员/总裁"></div><div class="field"><label>所在地城市</label><input id="c_city" value="${esc(c.city||'')}" placeholder="如 首尔、上海、苏州"></div></div>
+    <div class="field"><label>钱包余额 ¥（可留空）</label><input id="c_wallet" type="number" value="${c.wallet!=null?c.wallet:''}" placeholder="他卡里有多少钱"></div>
     <div class="two"><div class="field"><label>性别</label><select id="c_gender" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${['','男','女'].map(g=>`<option value="${g}" ${(c.gender||'')===g?'selected':''}>${g||'未设'}</option>`).join('')}</select></div><div class="field"><label class="avline" style="font-weight:400">⭐重点关注<span class="sw ${c.star?'on':''}" id="c_star" onclick="this.classList.toggle('on')"></span></label><div style="font-size:11px;color:#999">开了他查岗会重点盯这个人</div></div></div>
     <div class="field"><label>签名</label><input id="c_sig" value="${esc(c.signature)}"></div>
     <div class="field"><label>人设 / 性格设定</label><textarea id="c_persona" rows="5">${esc(c.persona)}</textarea></div>
@@ -5203,7 +5214,7 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
 function upC(){pickFile('image/*',async f=>{const d=await compress(f,256,.8);$('#c_av').value=d;});}
 function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:''}:getC(id);
   c.name=$('#c_name').value.trim()||'新角色';c.avatar=$('#c_av').value.trim()||'🙂';c.relation=$('#c_rel').value.trim();
-  c.job=($('#c_job')&&$('#c_job').value.trim())||'';{const _w=$('#c_wallet')?$('#c_wallet').value.trim():'';c.wallet=(_w==='')?null:(+_w||0);}
+  c.job=($('#c_job')&&$('#c_job').value.trim())||'';c.city=($('#c_city')&&$('#c_city').value.trim())||'';{const _w=$('#c_wallet')?$('#c_wallet').value.trim():'';c.wallet=(_w==='')?null:(+_w||0);}
   c.wxid=($('#c_wxid')&&$('#c_wxid').value.trim())||c.wxid||genWxid();
   c.signature=$('#c_sig').value.trim();c.persona=$('#c_persona').value.trim();c.greeting=$('#c_greet').value.trim();
   c.msgMin=Math.max(1,+$('#c_mmin').value||1);c.msgMax=Math.max(c.msgMin,+$('#c_mmax').value||4);
@@ -5623,7 +5634,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">资料</span><span class="r" onclick="editContact('${id}')">编辑</span></div>
   <div class="scroll" style="background:#000">
     <div class="list"><div class="row" style="padding:18px 14px">${av(c.avatar,'lg')}
-      <div class="meta"><div class="n" style="font-size:19px">${esc(c.name)}</div><div class="s">${esc(c.relation||'')}</div><div class="s">${esc(c.signature||'')}</div></div></div></div>
+      <div class="meta"><div class="n" style="font-size:19px">${esc(c.name)}</div><div class="s">${esc(c.relation||'')}</div><div class="s">${esc(c.signature||'')}</div>${(c.city||charHomeCity(c))?`<div class="s">所在地：${esc(c.city||charHomeCity(c))}</div>`:''}</div></div></div>
     <div class="section" style="margin:12px">
       <div class="it" onclick="setRemark('${id}')"><span>备注</span><span class="v">${esc(c.remark||'添加备注')}</span></div>
       <div class="it" onclick="editContact('${id}')"><span>人设</span><span class="v">点击修改</span></div>
