@@ -73,13 +73,13 @@ function pfPayloadIsPay(m){const p=pfMsgPayload(m);return !!(p&&(p.type==='trans
 function pfMentionsMe(m){const t=''+((m&&m.body)||(m&&m.text)||'');const nm=(S.me&&S.me.name)||'我';return !!(t&&nm&&t.indexOf('@'+nm)>=0);}
 function pfSafeBody(body){body=''+(body||'');return body.length>PHONE_FRIEND_BODY_MAX?body.slice(0,PHONE_FRIEND_BODY_MAX):body;}
 function pfTypingActive(){try{const a=document.activeElement,p1=$('#pfpanel'),p2=$('#pfgpanel');return !!((a&&(a.id==='pf_input'||a.id==='pfg_input'||a.id==='pf_search'))||(p1&&p1.classList.contains('show'))||(p2&&p2.classList.contains('show')));}catch(_){return false;}}
-function pfNotifyFriend(m){const p=phoneFriendState(),from=(''+(m.from_id||m.from||'')).toUpperCase();if(!from||from===p.id)return;
+function pfNotifyFriend(m,opt){opt=opt||{};if(pfIsRoomTransport(m))return;const p=phoneFriendState(),from=(''+(m.from_id||m.from||'')).toUpperCase();if(!from||from===p.id)return;
   const f=phoneFriendById(from)||{phone_id:from,display_name:from,avatar:'🙂'},msg={text:(''+(m.body||m.text||'')),time:m.created_at?new Date(m.created_at).getTime():Date.now()};
   const viewing=cur().p==='pfchat'&&cur().id===from;if(viewing){pfMarkRead(from);return;}
   if(!opt.silent&&S.settings.sound&&typeof playDing==='function')playDing();
   const b=$('#msgBanner');if(b&&!_call){b.innerHTML=`${pfAvatarHTML(f,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(pfFriendDisplayName(f))}</div><div class="bm">${esc(pfMsgPreview(msg))}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneFriendChat(from);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
   appNotify(pfFriendDisplayName(f),pfMsgPreview(msg),{tag:'pf-'+from,data:{type:'open',target:'pfchat',id:from}});}
-function pfNotifyGroup(m){const p=phoneFriendState(),gid=m.group_id||m.gid,from=(''+(m.from_id||m.from||'')).toUpperCase();if(!gid||!from||from===p.id)return;
+function pfNotifyGroup(m,opt){opt=opt||{};const p=phoneFriendState(),gid=m.group_id||m.gid,from=(''+(m.from_id||m.from||'')).toUpperCase();if(!gid||!from||from===p.id)return;
   const g=pfGroupById(gid)||{group_id:gid,name:'小手机群聊'},msg={text:(''+(m.body||m.text||'')),time:m.created_at?new Date(m.created_at).getTime():Date.now()};
   const title=pfGroupDisplayName(g),line=(pfMentionsMe(msg)?'[有人@你] ':'')+(pfNameById(from)||'成员')+'：'+pfMsgPreview(msg);
   const viewing=cur().p==='pfgroup'&&cur().gid===gid;if(viewing){pfMarkGroupRead(gid);return;}
@@ -179,15 +179,15 @@ async function phoneFriendRespond(rid,ok){try{const p=phoneFriendState();await p
   catch(e){toast(e.message||'操作失败');}}
 function openPhoneFriendChat(id){id=(''+id).toUpperCase();pfMarkRead(id);go('pfchat',{id});setTimeout(()=>{const p=phoneFriendState(),empty=!pfMsgList(p.messages,id).length;if(empty)phoneFriendSync(true,false,true);else phoneFriendMaybeSync(true);},60);}
 function phoneFriendChatMessages(id){const p=phoneFriendState();id=(''+id).toUpperCase();return pfVisibleMsgList(p.messages,id).slice().sort((x,y)=>(x.time||0)-(y.time||0));}
-async function sendPhoneFriendBody(id,body,opt){id=(''+id).toUpperCase();body=(''+(body||'')).trim();opt=opt||{};if(!body)return;if(body.length>PHONE_FRIEND_BODY_MAX){toast('这条消息太大，发不出去');return;}if(_pfSendBusy[id]){toast('上一条还在发送');return;}const p=phoneFriendState();_pfSendBusy[id]=true;const localId='local_'+uid();
-  if(S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)]){delete _pfSendBusy[id];toast('这段聊天被ta禁言了，先去求ta解开');return;}
+async function sendPhoneFriendBody(id,body,opt){id=(''+id).toUpperCase();body=(''+(body||'')).trim();opt=opt||{};const silent=!!opt.silent,transport=!!opt.transport;if(!body)return;if(body.length>PHONE_FRIEND_BODY_MAX){if(!transport)toast('这条消息太大，发不出去');return;}if(!silent&&_pfSendBusy[id]){toast('上一条还在发送');return;}const p=phoneFriendState();if(!silent)_pfSendBusy[id]=true;const localId='local_'+uid();
+  if(S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)]){if(!silent)delete _pfSendBusy[id];if(!transport)toast('这段聊天被ta禁言了，先去求ta解开');return;}
   pfStoreMessage({id:localId,from_id:p.id,to_id:id,body,created_at:new Date().toISOString(),time:Date.now()});
   if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);
-  save();render();
-  if(S.settings.sound&&typeof playDing==='function')playDing();
+  save();if(!silent)render();
+  if(!silent&&S.settings.sound&&typeof playDing==='function')playDing();
   try{await pfEnsure();const m=await pfRpc('phone_friend_send_message',{p_from_id:p.id,p_secret:p.secret,p_to_id:id,p_body:body},30000);pfStoreMessage(m);p.lastSync=0;save();phoneFriendSync(true);}
-  catch(e){if(opt.bill){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机转账'));const arr=pfMsgList(p.messages,id);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}toast(e.message||'发送失败');}
-  finally{delete _pfSendBusy[id];if(cur().p==='pfchat'&&cur().id===id)render();}}
+  catch(e){if(opt.bill){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机转账'));const arr=pfMsgList(p.messages,id);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!transport)toast(e.message||'发送失败');}
+  finally{if(!silent)delete _pfSendBusy[id];if(!silent&&cur().p==='pfchat'&&cur().id===id)render();}}
 async function sendPhoneFriend(id){const ta=$('#pf_input'),text=(ta&&ta.value||'').trim();if(!text)return;if(ta){ta.value='';ta.style.height='auto';}sendPhoneFriendBody(id,text);}
 function pfSpyMsgText(m){if(!m)return '';if(m.recalled)return '[已撤回一条消息]';const p=pfMsgPayload(m);if(!p)return (m.text||'').replace(/\n/g,' ').slice(0,80);if(p.type==='sticker')return '[表情]'+(p.meaning?' '+p.meaning:'');if(p.type==='transfer'||p.type==='redpacket'){const got=m.received?('（'+(m.receivedBy?pfNameById(m.receivedBy):'对方')+'已收）'):'（未收）';return (p.type==='redpacket'?'[红包] ':'[转账] ')+'¥'+(+p.amount||0).toFixed(2)+(p.note?' '+p.note:'')+got;}return pfMsgPreview(m);}
 function pfSpyLine(m,peer){const p=phoneFriendState();return '['+ymd(m.time||Date.now())+' '+hm(m.time||Date.now())+'] '+(m.from===p.id?S.me.name:(peer||pfNameById(m.from)||'对方'))+'：'+pfSpyMsgText(m);}
@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v424 · 小剧场事件修复';
+const APP_VER='v425 · 好友通知修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -3819,7 +3819,7 @@ function mgrCreateRoom(k){const roles=[...document.querySelectorAll('[data-mgr-r
   const g=mgrGame(k),id='mgr_'+uid(),r={id,game:k,title:g.e+' '+g.n,hostId:phoneFriendId(),hostName:S.me.name,host:true,status:'lobby',readyMe:false,created:Date.now(),roleIds:roles,pfIds:pfs,roleNames:roles.map(x=>{const c=getC(x);return c&&(c.remark||c.name)||x;}),pfNames:pfs.map(mgrPfName),members:{},msgs:[],busy:false};
   r.members.me={name:S.me.name,kind:'me',ready:false};roles.forEach(cid=>{const c=getC(cid);r.members[mgrPlayerKey('role',cid)]={name:(c&&(c.remark||c.name))||cid,kind:'role',ready:true};});pfs.forEach(pid=>{r.members[mgrPlayerKey('pf',pid)]={name:mgrPfName(pid),kind:'pf',ready:false};});
   mgrRooms().unshift(r);save();closeModal();pfs.forEach(pid=>mgrSendPf(pid,r,{type:'game_room_invite',hostId:r.hostId,hostName:r.hostName,roleNames:r.roleNames,pfNames:r.pfNames,created:r.created}));go('mgroom',{id});}
-function mgrSendPf(pid,r,pl){const body=pfPack(Object.assign({roomId:r.id,game:r.game,title:r.title},pl||{}));if(body)sendPhoneFriendBody(pid,body,{silent:true});}
+function mgrSendPf(pid,r,pl){const body=pfPack(Object.assign({roomId:r.id,game:r.game,title:r.title},pl||{}));if(body)sendPhoneFriendBody(pid,body,{silent:true,transport:true});}
 function mgrBroadcast(r,pl,exclude){(r.pfIds||[]).forEach(pid=>{if(pid!==exclude)mgrSendPf(pid,r,pl);});}
 function mgrStatePayload(r,extra){return Object.assign({type:'game_room_state',eid:uid(),status:r.status,startedAt:r.startedAt||0,drama:r.drama||null,turnOrder:r.turnOrder||[],turnIndex:r.turnIndex||0,members:r.members||{}},extra||{});}
 function mgrBroadcastState(r,extra){if(r&&r.host)mgrBroadcast(r,mgrStatePayload(r,extra));}
