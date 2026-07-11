@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v441 · 浏览器联网状态';
+const APP_VER='v442 · 情侣任务权限';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -1143,7 +1143,8 @@ function buildSystem(c,opt){
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+((_pr&&_pr.online)?'在线':'显示离线（可能没在看手机）')+'。'+(_pn?'\n你记得ta最近上下线记录：'+_pn+'。如果ta隔了很久才回来，可以自然提到等了多久；如果刚上线，就别说成一直在线。':'')+'（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';}
   {const mc=meHomeCity(),cc=charHomeCity(c);if(mc||cc)s+='\n\n# 所在地（用于机票、见面、天气和距离判断）\n'+S.me.name+'的所在地：'+(mc||'未填写')+'。\n你的所在地：'+(cc||'未填写')+'。\n如果你要订票去见'+S.me.name+'，通常应从【你的所在地】出发，飞到【'+S.me.name+'的所在地】；不要把'+S.me.name+'的城市当成你的城市。';}
   {const av=affNow(c);s+='\n\n# 你和'+S.me.name+'现在的关系分寸（隐藏设定，绝不能说出数值/好感度/攻略/进度条）\n当前阶段：'+affStage(av)+'。'+affTone(c)+'\n你只能把它表现成真实的人际距离：熟不熟、在不在意、会不会吃醋、愿不愿意主动关心。绝不要告诉ta这是系统数值，绝不要说"好感度增加/减少"。聊到你感兴趣、被认真对待、被哄好时可以慢慢软化；被冒犯、冷落、敷衍时可以自然变冷。';}
-  if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
+  if(!taskRelationAllowed(c))s+='\n\n# 布置任务权限（重要）\n你和'+S.me.name+'当前不是情侣关系，因此你没有给ta布置任务、惩罚任务、打卡、检讨或强制安排的权限。可以像普通关系一样提出建议或邀请，但不能把建议说成ta必须完成的任务。';
+  else if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
   if(!_main)s+=altIdentityPrompt(c);
   {const _ba=friendMetaGet(c,'blockedAt'),_ra=friendMetaGet(c,'readdedAt'),_rk=friendMetaGet(c,'readdKnown'),_bd=friendMetaGet(c,'blockDur');
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(_ba?'，已经'+fmtDur(Date.now()-_ba):'')+'，你能感觉到被冷落/拒绝。';
@@ -3400,7 +3401,8 @@ function editDyProfile(){const p=S.dy.profile;openModal(`<h3>编辑抖音资料<
 
 /* ---------- 任务便签（他给我布置每日任务）---------- */
 let _taskBusy=false;
-function taskC(){const cc=S.couple&&getC(S.couple.cid);return (cc&&!cc.deleted&&!cc.blocked&&!cc.taskOff&&cc)||S.contacts.find(x=>!x.deleted&&!x.blocked&&!x.taskOff&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked&&!x.taskOff)||null;}
+function taskRelationAllowed(c){return !!(c&&isLover(c));}
+function taskC(){const ok=x=>!!(x&&!x.deleted&&!x.blocked&&!x.taskOff&&taskRelationAllowed(x)),cc=S.couple&&getC(S.couple.cid);return ok(cc)?cc:(S.contacts.find(ok)||null);}
 function tasksToday(c){const t=c&&c.tasks;return (t&&t.date===todayStr())?t:null;}
 function _taskNorm(s){return (''+s).replace(/[\s，。、！!？?.~…：:；;「」『』""''（）()]/g,'');}
 // 判断 text 是否和 list 里已有任务重复：一模一样 / 子串 / 共享强关键字(检讨等) / 关键字高度重合
@@ -7471,7 +7473,7 @@ function maybeSpyIntent(reply,c,id,lu){const sp=getSpy(c);if(!sp.granted||c.bloc
   setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus}),900);}
 // 他口头额外布置任务/惩罚（聊天或通话里都行）：识别后真的加进任务便签
 let _taskIntentT={};
-async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||c.taskOff||!isMain())return;const tm=taskC();if(!tm||tm.id!==c.id)return;
+async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||c.taskOff||!isMain()||!taskRelationAllowed(c))return;const tm=taskC();if(!tm||tm.id!==c.id)return;
   if(!/罚你|惩罚|罚抄|罚款|(加|布置|再来|多)(个|条|一个|一条)?任务|任务[:：]|今晚?.{0,4}(不准|不许|必须|得给我|要给我)|今天.{0,6}(不准|不许|必须|得给我|要给我)|写(篇|个|段|一篇|一段)?.{0,3}(检讨|小作文|保证书|情书)|不准(玩|刷|聊|睡)/.test(reply))return;
   const now=Date.now();if(now-(_taskIntentT[c.id]||0)<8000)return;_taskIntentT[c.id]=now;
   try{const sys='判断"'+(c.remark||c.name)+'"这句话是不是在给'+S.me.name+'【额外布置一个具体任务或惩罚】（要ta去做某件事）。是就提取成一条任务；只是普通调情/威胁/抱怨但没真布置具体任务，就当没有。\n只输出JSON：{"task":{"text":"任务描述(用ta的口吻,简短)","verify":"essay或moment或tweet或douyin或real","target":数字或0}} 或 {"task":null}。\nverify：essay=要她写东西(target填字数上限)；moment/tweet/douyin=要她发朋友圈/推/抖音；real=其它现实或暧昧小事。';
