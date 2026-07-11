@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v433 · 相关记忆检索';
+const APP_VER='v434 · 自然主动与当前活动';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -311,7 +311,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true, humanLike:true,
+    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true, humanLike:true, initiative:true, currentActivity:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -736,6 +736,28 @@ function whereNow(c){const sc=c&&c.sched;if(!sc||!sc.on)return '';
   if(t<pmE+150)return '刚下班，可能在回'+home+'的路上、在外面吃晚饭、或顺路逛逛买点东西';
   if(t<23*60+30)return '下班后的自由时间：可能在'+home+'，也可能在外面（吃东西/购物/约朋友/某个地方），晚一点会回'+home;
   return '在'+home+'休息、准备睡觉';}
+function activityHash(s){let h=2166136261;for(const ch of String(s||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return Math.abs(h>>>0);}
+function activityPick(c,key,arr,now){const d=now||new Date(),seed=(c&&c.id||'role')+'|'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+'|'+key;return arr[activityHash(seed)%arr.length];}
+function activitySpec(c,now){now=now||new Date();const h=now.getHours(),m=h*60+now.getMinutes(),sc=c&&c.sched,home=(sc&&sc.home)||'家',work=(sc&&sc.work)||'工作地点',workThing=c&&c.job?(c.job+'相关的事'):'工作';let key,label,busy=0,until;
+  if(sc&&sc.on){const amS=toMin(sc.amS||'08:00'),amE=toMin(sc.amE||'12:00'),pmS=toMin(sc.pmS||'14:00'),pmE=toMin(sc.pmE||'18:00');
+    if(m<amS-60){key='sleep';label='还在'+home+'睡觉';busy=3;until=amS-60;}
+    else if(m<amS){key='morning';label=activityPick(c,key,['在'+home+'起床收拾','在准备出门','在通勤路上'],now);busy=1;until=amS;}
+    else if(m<amE){key='work-am';label='在'+work+'忙'+workThing;busy=3;until=amE;}
+    else if(m<pmS){key='lunch';label=activityPick(c,key,['在吃午饭','刚吃完午饭休息','在午休'],now);busy=1;until=pmS;}
+    else if(m<pmE){key='work-pm';label='在'+work+'忙'+workThing;busy=3;until=pmE;}
+    else if(m<pmE+150){key='after-work';label=activityPick(c,key,['刚忙完在回'+home+'的路上','刚结束今天的工作','在处理下班前后的琐事'],now);busy=1;until=pmE+150;}
+    else if(m<23*60+30){key='evening';label=activityPick(c,key,['在'+home+'休息','在整理自己的东西','在做自己的事','刚闲下来'],now);busy=0;until=23*60+30;}
+    else{key='late';label='在'+home+'准备休息';busy=2;until=24*60;}
+  }else if(h<7){key='sleep';label='在睡觉或休息';busy=3;until=7*60;}
+  else if(h<9){key='morning';label=activityPick(c,key,['刚起床收拾','在吃早饭','在准备开始今天的事'],now);busy=1;until=9*60;}
+  else if(h<12){key='day-am';label=c&&c.job?('在忙'+c.job+'相关的工作'):activityPick(c,key,['在处理手头的事情','在忙自己的事'],now);busy=3;until=12*60;}
+  else if(h<14){key='lunch';label=activityPick(c,key,['在吃午饭','吃完午饭歇一会儿','在午休'],now);busy=1;until=14*60;}
+  else if(h<18){key='day-pm';label=c&&c.job?('在忙'+c.job+'相关的工作'):activityPick(c,key,['在处理手头的事情','在忙自己的事'],now);busy=3;until=18*60;}
+  else if(h<23){key='evening';label=activityPick(c,key,['刚忙完闲下来','在吃晚饭','在休息','在做自己的事'],now);busy=0;until=23*60;}
+  else{key='late';label='准备休息';busy=2;until=24*60;}
+  const end=new Date(now);end.setHours(0,until||0,0,0);if(end<=now)end.setDate(end.getDate()+1);return{key,label,busy,until:end.getTime(),source:sc&&sc.on?'schedule':'inferred'};}
+function currentRoleActivity(c,now){if(!c)return null;const d=now||new Date(),at=d.getTime(),spec=activitySpec(c,d),old=c._currentActivity;if(!old||old.key!==spec.key||old.label!==spec.label||old.until<=at){c._currentActivity={key:spec.key,label:spec.label,busy:spec.busy,source:spec.source,startedAt:at,until:spec.until};}return c._currentActivity;}
+function currentActivityPrompt(c){if(!humanLikeOn()||S.settings.currentActivity===false)return'';const a=currentRoleActivity(c);if(!a)return'';return '\n\n# 你此刻真实在做的事（隐藏连续状态）\n你现在'+a.label+'，忙碌程度 '+a.busy+'/3。被问到在干嘛、是否方便聊天时要与此一致；可以因此决定回复长短和主动频率。这个状态只提供到上述粒度，不要凭空编造具体公司、人名、餐厅、路线、订单或已经发生的现实事件。状态变化后可以偶尔自然分享，但不要每轮报备。';}
 function isOnline(){const m=S.me.onlineMode||'auto';if(m==='on')return true;if(m==='off')return false;return document.visibilityState==='visible';}
 function presenceSet(on){S.presence=S.presence||{};if(S.presence.online!==on){S.presence.online=on;S.presence.changedAt=Date.now();if(on)S.presence.lastOn=Date.now();else S.presence.lastOff=Date.now();try{save(900);}catch(e){}}return S.presence;}
 function syncPresence(){return presenceSet(isOnline());}
@@ -1186,8 +1208,8 @@ function buildSystem(c,opt){
     if(_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
     if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=c.taskN||3;const _nReal=tt.list.filter(x=>!x.truth).length;const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。'+(_nReal>=_cap?'\n【任务便签已满、到上限了】今天不能再往任务便签里加新任务条目了。你要是还想让ta做别的，只能在聊天里【口头】要求ta去做（说说而已，不会再生成新的任务条目）。':'');}}
-  // 作息 / 此刻在哪
-  const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';
+  // 作息 / 当前活动：活人感开启时使用稳定活动状态；关闭时保留旧作息提示
+  {const _ap=currentActivityPrompt(c);if(_ap)s+=_ap;else{const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';}}
   // 亲属卡 / 推荐过的好友（仅主身份）
   if(_main&&c.family&&c.family.bound)s+='\n\n# 亲属卡\n你给'+S.me.name+'开了一张亲属卡，每月额度¥'+(+c.family.quota).toFixed(0)+'，本月已用¥'+(+(c.family.used||0)).toFixed(0)+'。ta用这张卡消费你会立刻收到提醒，可以据此关心/管教ta。';
   if(_main&&c._pushedToMe&&c._pushedToMe.length)s+='\n\n# 你推荐给ta的朋友\n你曾把这些自己的朋友推荐给'+S.me.name+'让ta加：'+c._pushedToMe.join('、')+'。你记得这件事。';
@@ -2091,6 +2113,8 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
       <div class="it"><span>通用活人感增强<br><small style="color:#888">理解上下文、按性格决定策略和消息节奏，并减少复述与重复模板</small></span><span class="sw ${S.settings.humanLike!==false?'on':''}" onclick="S.settings.humanLike=(S.settings.humanLike===false);save();render()"></span></div>
+      <div class="it"><span>低频主动与自然回访<br><small style="color:#888">按角色主动度、当前状态和近期话题决定是否主动，不会到点机械催消息</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
+      <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
       <div class="it"><span>查他手机·刷新用副模型<br><small style="color:#888">开：用便宜的副模型生成ta手机内容（省钱）；关：用主模型（更稳更贴人设）。哪个刷得出、刷得好就用哪个</small></span><span class="sw ${S.settings.spyAux?'on':''}" onclick="S.settings.spyAux=!S.settings.spyAux;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -6169,14 +6193,14 @@ function hlVisibleLines(content){return splitBubbles(content).map(x=>cleanRolePu
 function hlRecent(c){if(!c)return[];if(!Array.isArray(c._humanRecent))c._humanRecent=[];return c._humanRecent;}
 function hlInterpret(c,text,note){
   text=String(text||'').trim();const compact=text.replace(/\s+/g,'');
-  const asked=explicitReplyCount(text),emotion=dialogueEmotionSnapshot(c),bad=badMoodInContent(c,'')||emotion.intensity>=25,short=compact.length<=4;
+  const asked=explicitReplyCount(text),emotion=dialogueEmotionSnapshot(c),activity=(S.settings.currentActivity===false?null:currentRoleActivity(c)),bad=badMoodInContent(c,'')||emotion.intensity>=25,short=compact.length<=4;
   const explicitStop=/^(不要|别|停|停止|够了|不愿意|我拒绝|不可以)[了吧啊呀哦嘛]*[。！!？?]*$/.test(compact)||/别再|不要再|我不喜欢这样|到此为止/.test(text);
   const comfort=userNeedsComfortText(text),probe=moodProbeText(text),apology=/对不起|抱歉|我错了|原谅我|别生气|和好/.test(text);
   const question=/[？?]|怎么|为什么|为何|什么|哪里|哪儿|多少|几点|能不能|可不可以|是不是/.test(text);
   const playful=/哈哈|嘿嘿|嘻嘻|逗你|开玩笑|撒娇|想你|亲亲|抱抱|哼/.test(text);
   const ambiguous=short&&/^(嗯|哦|噢|哼|行|好吧|随便|算了|没事|你猜|不要|行吧)[。！!？?]*$/.test(compact);
   let intent='分享/闲聊',strategy='具体承接 + 自然表达自己的看法',confidence=ambiguous?'low':'high';
-  if(note){intent='系统触发的主动消息',strategy='结合当前状态主动推进，不重复上一轮';confidence='high';}
+  if(note){intent=/低频主动消息/.test(note)?'角色低频主动开启话题':'系统触发的主动消息',strategy=/低频主动消息/.test(note)?'从当前活动、相关回访或自我表达中自然选一个切入点':'结合当前状态主动推进，不重复上一轮';confidence='high';}
   else if(explicitStop){intent='明确拒绝或停止',strategy='立即停止对应推进，尊重边界并简短确认';}
   else if(comfort){intent='需要安慰或情绪承接',strategy='先承接具体感受，再按人设安抚并给一个可回应的落点';}
   else if(probe&&bad){intent='追问角色真实情绪',strategy='保留人物表达方式，但必须逐步透露真实原因或在意点';}
@@ -6189,10 +6213,11 @@ function hlInterpret(c,text,note){
   else if(comfort){max=Math.min(6,Math.max(3,+c.msgMax||4));min=Math.min(3,max);}
   else if(explicitStop||ambiguous||compact.length<=2){max=Math.min(max,2);}
   else if(/解释|说清楚|认真|重要|怎么办|建议/.test(text)){min=Math.min(2,max);max=Math.max(min,Math.min(max,4));}
+  if(!asked&&activity&&activity.busy>=3&&!comfort){max=Math.min(max,2);min=Math.min(min,max);}
   const recent=hlRecent(c).slice(-5),sameCounts=recent.slice(-2).length===2&&recent.slice(-2).every(x=>x.bubbles===recent[recent.length-1].bubbles);
-  return {intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,emotion,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent};}
+  return {intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,emotion,activity,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent};}
 function hlPlanPrompt(c,p){if(!p)return'';const recent=p.recent.length?p.recent.map(x=>'· '+x.strategy+'；'+x.bubbles+'条；开头：'+(x.opening||'无')).join('\n'):'· 暂无';
-  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。';}
+  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。';}
 function hlChars(s){return new Set(hlNorm(s).split('').filter(Boolean));}
 function hlSimilarity(a,b){a=hlChars(a);b=hlChars(b);if(!a.size||!b.size)return 0;let n=0;a.forEach(x=>{if(b.has(x))n++;});return n/Math.max(a.size,b.size);}
 function hlValidate(content,p,c,userText){const lines=hlVisibleLines(content),fails=[];if(!p)return{ok:true,fails};
@@ -7208,22 +7233,40 @@ function proCall(id){const c=getC(id);if(!c||c.blocked||_call)return false;if(S.
   const reasons=['有点想ta了','突然很想听听ta声音','惦记ta这会儿在干嘛','想ta想得坐不住','就是想ta了忍不住'];
   incomingCall(id,kind);if(_call){_call._pro=true;_call._proReason=reasons[Math.floor(Math.random()*reasons.length)];}
   return !!_call;}
-async function maybeProactive(id){if(!isMain())return;if(_call)return;/* 通话中不发微信消息(点外卖/送礼走通话内指令) */const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
-  const now=new Date().getHours()*60+new Date().getMinutes();const s=toMin(c.proactive.start),e=toMin(c.proactive.end);const inWin=s<=e?(now>=s&&now<e):(now>=s||now<e);
-  if(!inWin)return;const lm=lastMsg(id);if(lm&&Date.now()-lm.time<(Number(S.settings.proactiveIdleMin)||20)*60000)return;
-  const today=new Date().toDateString();const pc=S._proactiveCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
-  if(pc.n>=(c.proactive.times||1))return;pc.n++;S._proactiveCount[id]=pc;save();
-  // 打电话几率：按设置为基准，再按这个角色的【黏人度/主动度】调整——黏人主动的更爱直接打来，高冷独立的很少打
-  const cp=effCallProb(c);
-  if(cp>0&&Math.random()*100<cp&&!_call&&!(S.jail&&S.jail.active)&&!(S.me.sleep&&S.me.sleep.active)){if(proCall(id))return;}
-  const _wn=whereNow(c);const _share=Math.random()<0.55;// 一半几率"分享他自己的一天"，一半是"想你找你"
-  const note=_share
-    ? '[系统：现在是'+hm()+'（'+dayPartNow()+'）。你主动给'+S.me.name+'发消息——不是查岗、不是质问ta为什么不回，而是像一个有自己生活的人那样，随口分享你此刻在干嘛/今天的小事'+(_wn?'（你这会儿大概：'+_wn+'）':'')+'：比如刚忙完/在吃啥/路上看到什么。【按你自己的性格和黏人度来：黏人就自然带点想ta，不黏人就淡淡说一句、别硬装黏人】。口语化，一两条短消息。]'
-    : '[系统：现在是'+hm()+'，'+S.me.name+'有一会儿没理你了，你主动发条消息找ta。【完全按你的人设和黏人度来】：黏人就黏着点撒娇/念叨，不黏人/高冷就淡淡问一句或随口说件事，别硬装黏人、也别像审问查岗。一两条短消息。]';
-  try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:c.model==='aux'});
-    applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];return;}if(/^\[(联网)\|/.test(l)||CTLLEAK.test(_lt))return;const mm=lineToMsg(l,c);if(mm.type==='text'&&/^\[(记住|闹钟|来电)\|/.test(mm.content))return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();
-    if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
-  }catch(e){}}
+async function maybeProactive(id){if(!isMain())return;if(_call)return;/* 通话中不发微信消息(点外卖/送礼走通话内指令) */const c=getC(id);if(!c||!c.proactive||!c.proactive.enabled||c.blocked)return;
+  return initiativeMaybeSend(c);}
+
+function initiativeState(c){c._initiative=c._initiative||{};const k=memoryScopeKey();c._initiative[k]=c._initiative[k]||{nextAt:0,lastAt:0,lastKind:'',lastMemory:''};return c._initiative[k];}
+function initiativeWindow(c,now){const p=c&&c.proactive;if(!p||!p.enabled)return false;const n=now.getHours()*60+now.getMinutes(),s=toMin(p.start==null?9:p.start),e=toMin(p.end==null?23:p.end);return s<=e?(n>=s&&n<e):(n>=s||n<e);}
+function initiativeDelayMs(c){const base=Math.max(1,Number(S.settings.proactiveIdleMin)||20),active=c&&c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c&&c.traits&&c.traits.cling!=null?+c.traits.cling:50,factor=Math.max(.65,Math.min(1.8,1.45-(active*.006+cling*.0025))),jitter=.85+Math.random()*.45;return base*60000*factor*jitter;}
+function initiativeRecentUser(c){const arr=msgs(c.id);for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'&&m.type!=='sys'){const t=msgToText(m);if(t)return{text:t,time:m.time||0};}}return null;}
+function initiativeMemory(c,a,st){const lu=initiativeRecentUser(c),q=(lu&&lu.text||'')+' '+(a&&a.label||'');const ctx=selectRelevantMemory(c,q,2),pick=(ctx.items||[]).find(x=>x.score>=4.4&&memoryNorm(x.text)!==st.lastMemory);return pick||null;}
+function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50;let kind;
+  if(mem&&Math.random()<(active>=65?.48:.32))kind='callback';
+  else if(a&&a.busy<=1&&Math.random()<.5)kind='share';
+  else if(active>=60&&Math.random()<.55)kind='self';
+  else kind='reconnect';
+  if(kind===st.lastKind){const choices=['callback','share','self','reconnect'].filter(x=>x!==kind&&(x!=='callback'||mem)&&(x!=='share'||(a&&a.busy<=1)));if(choices.length)kind=choices[activityHash(c.id+'|'+Date.now())%choices.length];}
+  let goal='';if(kind==='callback')goal='自然想起并回访这件事：「'+mem.text+'」。只问一个具体落点，不要背诵旧记录，也不要说“我还记得数据库里写着”。';
+  else if(kind==='share')goal='从你此刻“'+a.label+'”这个真实状态出发，分享一个很小的当下感受或念头；可以说刚忙完、正休息、准备做什么，但不要编造具体公司、人名、餐厅、商品、天气或已经发生的外部事件。';
+  else if(kind==='self')goal='主动表达一个符合你人设的真实想法、偏好或此刻心情，让对方更了解你；要和近期聊天有一点自然联系，不要突然发表人生演讲。';
+  else goal='自然重新开启对话。主动度或黏人度高可以直接表达想念、想听ta说话；低则淡淡抛出一个具体话头。不要机械质问“为什么不回”，也不要查岗。';
+  return{kind,memory:mem,goal,note:'[系统：这是一次【低频主动消息】，不是对方刚发来新话。现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。]'};}
+let _initiativeBusy={};
+function initiativeMaybeSend(c){if(!humanLikeOn()||S.settings.initiative===false||!isMain()||!c||c.deleted||c.blocked||!c.proactive||!c.proactive.enabled||_call||_initiativeBusy[c.id])return false;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active||memoryPending(c))return false;const now=new Date();if(!initiativeWindow(c,now))return false;
+  const st=initiativeState(c),ts=Date.now(),lm=lastMsg(c.id),delay=initiativeDelayMs(c);if(S.settings.manualReply&&lm&&lm.role==='user')return false;if(typeof _replying!=='undefined'&&_replying===c.id)return false;
+  if((c.followups||[]).some(x=>!x.asked&&x.due<=ts&&ts-x.due<48*3600000))return false;
+  {const _lut=typeof lastUserTs==='function'?lastUserTs(c.id):0;if(_lut&&S.couple&&S.couple.escalate&&typeof escContact==='function'&&escContact()===c&&ts-_lut>=_IGT[0]*60000)return false;}
+  if(!st.nextAt)st.nextAt=Math.max(ts,(lm&&lm.time||ts)+delay);if(ts<st.nextAt)return false;
+  S._proactiveCount=S._proactiveCount||{};const today=now.toDateString(),pc=S._proactiveCount[c.id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}if(pc.n>=(c.proactive.times||1))return false;
+  const a=currentRoleActivity(c,now);if(!a)return false;if(a.key==='sleep'){st.nextAt=Math.max(a.until,ts+delay);return false;}const active=c.traits&&c.traits.active!=null?+c.traits.active:50;if(a.busy>=3&&active<70){st.nextAt=Math.min(a.until,ts+Math.max(20*60000,delay*.6));return false;}
+  if(lm&&lm.role==='assistant'&&ts-(lm.time||0)<Math.max(15*60000,delay*1.8)){st.nextAt=(lm.time||ts)+Math.max(15*60000,delay*1.8);return false;}
+  const plan=initiativePlan(c,a,st);st.lastAt=ts;st.lastKind=plan.kind;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=ts+initiativeDelayMs(c);c._initiativeLast={time:ts,kind:plan.kind,activity:a.label,memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[c.id]=pc;save();
+  const cp=effCallProb(c);if(plan.kind==='reconnect'&&cp>0&&Math.random()*100<cp&&proCall(c.id))return true;
+  _initiativeBusy[c.id]=1;try{scheduleReply(c.id,plan.note);}finally{setTimeout(()=>{delete _initiativeBusy[c.id];},Math.max(10000,(Number(S.settings.replyDelay)||0)*1000+5000));}return true;}
+let _initiativeCursor=0;
+function checkInitiative(){if(!isMain()||!humanLikeOn()||S.settings.initiative===false)return;const cs=S.contacts||[];for(let i=0;i<cs.length;i++){const idx=(_initiativeCursor+i)%cs.length;if(initiativeMaybeSend(cs[idx])){_initiativeCursor=(idx+1)%Math.max(1,cs.length);break;}}}
+setInterval(checkInitiative,90000);setTimeout(checkInitiative,25000);
 
 /* ---------- 查岗（他看我的手机）---------- */
 function spyBudget(id){const today=new Date().toDateString();const c=getSpy(getC(id));const pc=S._spyCount&&S._spyCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
