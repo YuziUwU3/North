@@ -293,7 +293,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v420 · 好友私聊防丢修复';
+const APP_VER='v421 · 计步每日刷新';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -306,7 +306,7 @@ function defState(){return{
     hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
-  me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
+  me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
   contacts:[],
   messages:{},
@@ -680,15 +680,17 @@ window.addEventListener('pageshow',()=>syncPresence());
 window.addEventListener('pagehide',()=>presenceSet(false));
 setTimeout(()=>syncPresence(),1000);
 let _stepOn=false,_stepLast=0,_stepPrev=0,_stepHandler=null;
+function stepDayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function ensureDailySteps(){S.me=S.me||{};const today=stepDayKey();if(!S.me.stepDate){S.me.stepDate=today;return false;}if(S.me.stepDate!==today){S.me.stepDate=today;S.me.steps=0;S.me._stepRptDate='';save(900);return true;}return false;}
 function stepMotion(e){const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);const now=Date.now();
-  if(mag-_stepPrev>2.2&&now-_stepLast>320){S.me.steps=(S.me.steps||0)+1;_stepLast=now;if(cur().p==='wechat'&&wxTab==='me'){const e2=document.querySelector('.it span');}}_stepPrev=mag;if(now-_stepLast>4000)save();}
+  ensureDailySteps();if(mag-_stepPrev>2.2&&now-_stepLast>320){S.me.steps=(S.me.steps||0)+1;S.me.stepDate=stepDayKey();_stepLast=now;if(cur().p==='wechat'&&wxTab==='me'){const e2=document.querySelector('.it span');}}_stepPrev=mag;if(now-_stepLast>4000)save();}
 async function toggleSteps(){if(_stepOn){window.removeEventListener('devicemotion',_stepHandler);_stepOn=false;S.me.stepOn=false;save();render();toast('已停止计步');return;}
   try{if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){const p=await DeviceMotionEvent.requestPermission();if(p!=='granted'){toast('没给运动权限');return;}}
-    _stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;S.me.stepOn=true;save();render();toast('开始计步，会一直记着，走起来试试👟');
+    ensureDailySteps();_stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;S.me.stepOn=true;save();render();toast('开始计步，步数每天0点自动刷新');
   }catch(e){toast('这设备不支持计步，可在资料里手填步数');}}
 async function resumeSteps(){if(_stepOn||!S.me.stepOn)return;
   try{if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){const p=await DeviceMotionEvent.requestPermission();if(p!=='granted')return;}
-    _stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;if(cur().p==='wechat'&&wxTab==='me')render();}catch(e){}}
+    ensureDailySteps();_stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;if(cur().p==='wechat'&&wxTab==='me')render();}catch(e){}}
 document.addEventListener('click',()=>{if(S.me.stepOn&&!_stepOn)resumeSteps();},{once:true});
 /* ===== 语音 ===== */
 function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh'};return o.voice;}
@@ -4958,7 +4960,7 @@ function collarBadge(){const cl=S.me.collar;if(!cl||!cl.text)return '';
   const t=(''+cl.text).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}️❤‍⃣]/gu,'').replace(/\s+/g,' ').trim();
   if(!t)return '';
   return `<span title="归属印记·你自己摘不掉，得求ta取下" style="display:inline-block;margin-left:8px;padding:2px 11px 3px;border-radius:12px;font-size:11px;font-weight:600;letter-spacing:1px;color:#fff;background:linear-gradient(135deg,#ffa6cd,#ff6fa5);box-shadow:0 2px 7px rgba(255,111,165,.45);vertical-align:middle;white-space:nowrap">${esc(t)}</span>`;}
-function wxMe(){const on=isOnline();const md=S.me.onlineMode||'auto';
+function wxMe(){ensureDailySteps();const on=isOnline();const md=S.me.onlineMode||'auto';
   return `<div class="list">
     <div class="row" onclick="editMe()" style="padding:18px 14px"><div style="position:relative">${av(S.me.avatar,'lg')}<span style="position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border-radius:50%;background:${on?'#2bd66a':'#888'};border:2px solid #1c1c1e"></span></div>
       <div class="meta"><div class="n" style="font-size:19px">${esc(S.me.name)}${collarBadge()} <span style="font-size:12px;color:${on?'#2bd66a':'#888'}">${on?'● 在线':'○ 离线'}</span></div>
@@ -4976,7 +4978,7 @@ function wxMe(){const on=isOnline();const md=S.me.onlineMode||'auto';
     <div class="it" onclick="go('settings')"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('gear',18,'#c3c6d2')}设置 / API</span><span class="v">›</span></div>
   </div>`;
 }
-function editMe(){openModal(`<h3>我的资料</h3>
+function editMe(){ensureDailySteps();openModal(`<h3>我的资料</h3>
   <div class="field"><label>头像</label><div class="avline">${av(S.me.avatar,'sm')}<input id="me_av" value="${esc(S.me.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upMe()"></button></div></div>
   <div class="field"><label>昵称</label><input id="me_name" value="${esc(S.me.name)}"></div>
   <div class="field"><label>通话翻译里叫我（中文名·选填）</label><input id="me_callname" value="${esc(S.me.callName||'')}" placeholder="如 North→北：外语原文仍叫North，中文翻译里写成北"></div>
@@ -4991,7 +4993,7 @@ function editMe(){openModal(`<h3>我的资料</h3>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveMe()">保存</button></div>`);}
 function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8);editMe();});}
 function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.callName=($('#me_callname')&&$('#me_callname').value.trim())||'';S.me.wxid=$('#me_wxid').value.trim();
-  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();S.me.steps=+$('#me_steps').value||0;
+  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();S.me.steps=+$('#me_steps').value||0;S.me.stepDate=stepDayKey();
   {const ag=$('#me_age');S.me.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#me_adult');S.me.adultConsent=!ad||ad.checked;}
   syncActiveAccount();save();try{pfEnsure(true).catch(()=>{});}catch(_){}closeModal();render();}
 function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
@@ -6954,7 +6956,7 @@ let _alarmFired={};
 function checkAlarms(){if(!isMain())return;const now=new Date();const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const tag=now.toDateString()+hhmm;
   S.alarms.forEach(a=>{if(a.enabled&&a.time===hhmm&&_alarmFired[a.id]!==tag){_alarmFired[a.id]=tag;if(!_call)incomingCall(a.contactId,'voice');if(a.repeat!=='daily'){S.alarms=S.alarms.filter(z=>z.id!==a.id);save();}}});}
 setInterval(checkAlarms,15000);
-function checkStepReport(){if(!isMain())return;const now=new Date();if(now.getHours()!==23)return;const today=now.toDateString();if(S.me._stepRptDate===today)return;
+function checkStepReport(){if(!isMain())return;ensureDailySteps();const now=new Date();if(now.getHours()!==23)return;const today=now.toDateString();if(S.me._stepRptDate===today)return;
   const c=(S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked&&getSpy(x).granted);
   if(!c||c.blocked)return;S.me._stepRptDate=today;save();
   scheduleReply(c.id,'[系统：现在23点，你看到'+S.me.name+'今天的微信步数是 '+(S.me.steps||0)+' 步。就这一次、主动关心一句（步数少就催ta多动动别老躺着，多了就夸ta/心疼ta累，符合你人设）。今天别再提步数了。]');}
