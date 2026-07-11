@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v432 · 小号好友身份修复';
+const APP_VER='v433 · 相关记忆检索';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -419,7 +419,35 @@ function aboutMeNoteText(text){let v=(''+(text||'')).replace(/^[\s\[\【]*(?:记
     return v.slice(0,120);}
   if(/^(把|拿|抱|躲|哭|闹|撒娇|委屈|难受|生气|害怕|想要|不想|喜欢|讨厌|信了|不生气|心里|心里面|下面|身体|胃|头|肚子|姨妈|例假|疼|不舒服)/.test(v))return (me+v).slice(0,120);
   return v.slice(0,120);}
-function rememberForChar(c,text){if(!c)return false;const v=aboutMeNoteText(text);if(!v)return false;c.memory=c.memory||[];if(c.memory.includes(v))return false;c.memory.push(v);return true;}
+function memoryScopeKey(){return typeof actId==='function'?actId():'main';}
+function memoryList(c){if(!c)return[];const k=memoryScopeKey();if(k==='main'){c.memory=c.memory||[];return c.memory;}c._accountMemory=c._accountMemory||{};c._accountMemory[k]=c._accountMemory[k]||[];return c._accountMemory[k];}
+function memoryText(v){return aboutMeNoteText(v&&typeof v==='object'?v.text:v);}
+function memoryNorm(v){return memoryText(v).toLowerCase().replace(/[\s，。！？、；：,.!?;:'"「」『』【】\[\]()（）]/g,'');}
+function memoryMetaStore(c){c._memoryMeta=c._memoryMeta||{};const k=memoryScopeKey();c._memoryMeta[k]=c._memoryMeta[k]||{};return c._memoryMeta[k];}
+function memoryPending(c){c._memoryConflicts=c._memoryConflicts||{};return c._memoryConflicts[memoryScopeKey()]||null;}
+function memorySetPending(c,v){c._memoryConflicts=c._memoryConflicts||{};const k=memoryScopeKey();if(v)c._memoryConflicts[k]=v;else delete c._memoryConflicts[k];}
+function memoryFact(v){const t=memoryText(v);let m=t.match(/(?:住在|住到了|搬到|所在地(?:是|在)?|来自)([\u4e00-\u9fa5A-Za-z]{2,12})/);if(m)return{kind:'location',subject:'所在地',value:m[1].replace(/这里|那里|对方/g,'')};
+  m=t.match(/(不喜欢|讨厌|不吃|不能吃|过敏|喜欢|爱吃|最爱)([^，。；!?！？]{1,18})/);if(m)return{kind:/^(不|讨厌|过敏)/.test(m[1])?'negative':'positive',subject:m[2].replace(/了|的|东西|食物|对方/g,'').trim(),value:m[1]};return null;}
+function memoryConflictWith(list,v){const nf=memoryFact(v);if(!nf)return null;for(const old of list){const of=memoryFact(old);if(!of)continue;
+    if(nf.kind==='location'&&of.kind==='location'&&nf.value&&of.value&&nf.value!==of.value)return memoryText(old);
+    if((nf.kind==='positive'||nf.kind==='negative')&&(of.kind==='positive'||of.kind==='negative')&&nf.kind!==of.kind&&nf.subject&&of.subject&&(nf.subject===of.subject||nf.subject.includes(of.subject)||of.subject.includes(nf.subject)))return memoryText(old);
+  }return null;}
+function rememberForChar(c,text){if(!c)return'none';const v=aboutMeNoteText(text);if(!v)return'none';const list=memoryList(c),vn=memoryNorm(v),pending=memoryPending(c);
+  if(pending&&(memoryNorm(pending.newText)===vn||memoryNorm(pending.oldText)===vn)){const meta=memoryMetaStore(c),oldKey=memoryNorm(pending.oldText);if(memoryNorm(pending.newText)===vn){const oi=list.findIndex(x=>memoryNorm(x)===oldKey);if(oi>=0)list.splice(oi,1);delete meta[oldKey];if(!list.some(x=>memoryNorm(x)===vn))list.push(v);}memorySetPending(c,null);meta[vn]={createdAt:(meta[vn]&&meta[vn].createdAt)||Date.now(),lastConfirmedAt:Date.now(),confidence:1,importance:4,scope:memoryScopeKey()};return memoryNorm(pending.newText)===vn?'replaced':'confirmed';}
+  const same=list.find(x=>memoryNorm(x)===vn);if(same){const meta=memoryMetaStore(c);meta[vn]=Object.assign({},meta[vn]||{createdAt:Date.now(),importance:3,scope:memoryScopeKey()},{lastConfirmedAt:Date.now(),confidence:1});return'confirmed';}
+  const oldText=memoryConflictWith(list,v);if(oldText){memorySetPending(c,{oldText,newText:v,createdAt:Date.now()});return'conflict';}
+  list.push(v);memoryMetaStore(c)[vn]={createdAt:Date.now(),lastConfirmedAt:Date.now(),confidence:.9,importance:3,scope:memoryScopeKey()};return'added';}
+function memoryTopics(text){const t=''+(text||''),out=[];[['food',/吃|喝|火锅|奶茶|咖啡|饭|菜|甜品|水果/],['sleep',/睡|熬夜|失眠|困|晚安/],['work',/工作|上班|加班|同事|老板|项目|会议/],['health',/生病|疼|医院|药|过敏|姨妈|不舒服/],['family',/家人|妈妈|爸爸|父母|亲戚/],['friend',/朋友|闺蜜|同学|室友/],['place',/住在|搬到|来自|城市|地区|苏州|首尔|旅行|机票/],['relation',/喜欢|讨厌|爱|纪念日|生日|吵架|和好|承诺/],['pet',/猫|狗|宠物/],['money',/钱|工资|转账|红包|账单|钱包/]].forEach(x=>{if(x[1].test(t))out.push(x[0]);});return out;}
+function memoryAtoms(text){const t=''+(text||''),all=t.match(/火锅|奶茶|咖啡|甜品|水果|熬夜|失眠|工作|上班|加班|同事|老板|项目|会议|生病|医院|过敏|姨妈|家人|妈妈|爸爸|父母|朋友|闺蜜|同学|室友|苏州|首尔|旅行|机票|纪念日|生日|吵架|和好|承诺|宠物|猫|狗|工资|转账|红包|账单|钱包/g)||[];return[...new Set(all)];}
+function memoryTerms(text){let t=(''+(text||'')).toLowerCase(),me=(''+((S.me&&S.me.name)||'')).toLowerCase();if(me)t=t.split(me).join('');t=t.replace(/我|你|他|她|对方|角色|今天|现在|刚才|这个|那个|什么|怎么|为什么|一下|已经|还是|就是|真的|有点|可能|然后|因为|所以/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'');const a=[];for(let i=0;i<t.length-1;i++)a.push(t.slice(i,i+2));return [...new Set(a)];}
+function memoryItemScore(item,query,now){const txt=memoryText(item.text),terms=memoryTerms(txt),qt=memoryTerms(query),shared=terms.filter(x=>qt.includes(x)).length,atoms=memoryAtoms(txt),qa=memoryAtoms(query),atomHit=atoms.filter(x=>qa.includes(x)).length,topics=memoryTopics(txt),qtopics=memoryTopics(query),topicHit=topics.filter(x=>qtopics.includes(x)).length;if(!shared&&!atomHit)return 0;let score=Math.min(8,shared*2.2)+atomHit*3+topicHit*.8+(item.importance||3)*.25+(item.confidence==null?.8:item.confidence);const ts=+item.ts||0;if(ts)score+=Math.max(0,1.2-(now-ts)/(30*86400000));return score;}
+function selectRelevantMemory(c,query,limit){if(!c)return{items:[],query:''};const now=Date.now(),scope=memoryScopeKey(),meta=memoryMetaStore(c),items=[];memoryList(c).forEach((v,i)=>{const txt=memoryText(v),md=meta[memoryNorm(v)]||{};if(!txt||(md.expiresAt&&md.expiresAt<now))return;items.push({text:txt,source:'长期记忆',importance:md.importance||3,confidence:md.confidence==null?.82:md.confidence,ts:md.lastConfirmedAt||md.createdAt||0,order:i});});
+  if(scope==='main')(c.summaries||[]).forEach((v,i)=>{if(!v||!v.text||(v.expiresAt&&v.expiresAt<now))return;items.push({text:v.text,source:'对话总结',importance:v.imp||3,confidence:v.confidence==null?.72:v.confidence,ts:+v.ts||0,order:i});});
+  if(scope==='main'&&typeof isLover==='function'&&isLover(c)&&typeof lifeNotes==='function')lifeNotes().forEach((v,i)=>{if(!v||!v.text||(v.expiresAt&&v.expiresAt<now))return;items.push({text:v.text,source:'近期生活事件',importance:v.importance||3,confidence:v.confidence==null?.78:v.confidence,ts:+v.ts||0,order:i});});
+  if(scope==='main'&&typeof behaviorStore==='function'&&typeof behaviorOn==='function'&&behaviorOn()){const b=behaviorStore();((b&&b.items)||[]).filter(x=>x&&x.active!==false).forEach((v,i)=>{const ev=(v.events||[])[0],txt=(v.promise?(S.me.name+'答应过：'+v.promise):'')+(ev?((v.promise?'；':'')+ev.text):'');if(txt)items.push({text:txt,source:'关系经历',importance:Math.min(5,3+(v.count>1?1:0)),confidence:.9,ts:+v.lastTs||+v.ts||0,order:i});});}
+  const scored=items.map(x=>Object.assign(x,{score:memoryItemScore(x,query,now)})).filter(x=>x.score>=2.6).sort((a,b)=>b.score-a.score||b.importance-a.importance||b.ts-a.ts).slice(0,Math.max(0,Math.min(3,limit||3)));c._memoryLastPick=c._memoryLastPick||{};c._memoryLastPick[scope]={ts:now,query:(''+query).slice(-180),picked:scored.map(x=>({source:x.source,text:x.text.slice(0,100),score:+x.score.toFixed(2)}))};return{items:scored,query};}
+function memoryRetrievalPrompt(c,ctx){const pending=memoryPending(c);let s='';if(ctx&&ctx.items&&ctx.items.length)s+='\n\n# 本轮真正相关的记忆（隐藏，只给当前回复使用）\n'+ctx.items.map(x=>'· ['+x.source+'] '+x.text).join('\n')+'\n只在当前话题确实需要时自然受这些经历影响，不要逐条复述，不要炫耀“我记得”，也不要硬把旧事扯进来。没有列出的旧记忆，本轮不要自行翻找。';
+  if(pending)s+='\n\n# 待确认的记忆冲突（隐藏）\n旧信息：'+pending.oldText+'\n新信息：'+pending.newText+'\n这两条不能同时确定成立。请像真人一样用一句简短自然的话向'+S.me.name+'确认现在以哪条为准，不要擅自覆盖，也不要提数据库、记忆系统或冲突检测。对方明确确认其中一条后，在回复末尾单独输出 [记住|确认后的完整信息]，系统会完成更新。';return s;}
 function lifeNoteAdd(text,source,tags){const raw=(''+(text||'')).replace(/\s+/g,' ').trim();const v=(source==='manual')?raw:aboutMeNoteText(raw);if(!v)return false;const arr=lifeNotes();const key=v.slice(0,36);
   if(arr.some(n=>(n.text||'').slice(0,36)===key&&Date.now()-(n.ts||0)<3*86400000))return false;
   arr.unshift({id:uid(),text:v.slice(0,90),source:source||'chat',tags:tags&&tags.length?tags:lifeTopicOf(v),ts:Date.now()});
@@ -1074,7 +1102,8 @@ function behaviorLedgerModal(){const b=behaviorStore();if(!b){toast('先绑定�
 function behaviorToggle(){const b=behaviorStore();if(!b)return;b.enabled=b.enabled===false;save();const m=$('#modal');if(m&&m.classList.contains('show'))behaviorLedgerModal();else render();}
 function behaviorDelete(id){const b=behaviorStore();if(!b)return;const it=(b.items||[]).find(x=>x.id===id);if(it)it.active=false;save();behaviorLedgerModal();}
 async function behaviorClear(){if(!await uiConfirm('清空行为小账本？\n承诺和证据都会删除。'))return;const b=behaviorStore();if(!b)return;b.items=[];b._lastHit={};save();behaviorLedgerModal();}
-function buildSystem(c){
+function buildSystem(c,opt){
+  opt=opt||{};
   const _main=isMain();
   let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
   s+=adultRoleRule(c.remark||c.name||'角色');
@@ -1114,11 +1143,12 @@ function buildSystem(c){
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
-  const recent=msgs(c.id).slice(-10).map(msgToText).filter(Boolean).join('\n')+'\n'+((_lastU&&msgToText(_lastU))||'')+' '+(c.persona||'')+' '+(c.memory||[]).map(aboutMeNoteText).join(' ');
+  const _wbMem=opt.selectiveMemory?(opt.memoryItems||[]).map(x=>x.text):memoryList(c).map(memoryText);
+  const recent=msgs(c.id).slice(-10).map(msgToText).filter(Boolean).join('\n')+'\n'+((_lastU&&msgToText(_lastU))||'')+' '+(c.persona||'')+' '+_wbMem.join(' ');
   const wb=worldHits(recent,c.id);
   if(wb.length)s+='\n\n# 世界设定／世界书（最高优先级，务必严格遵守，触发了就要照做，不要无视）\n'+wb.map(w=>'· '+w.name+'：'+w.content).join('\n');
   // 记忆（仅主身份）
-  if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+aboutMeNoteText(m)).join('\n');
+  if(!opt.selectiveMemory&&_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+aboutMeNoteText(m)).join('\n');
   if(_main&&c.gamesPlayed&&c.gamesPlayed.length)s+='\n\n# 你和'+S.me.name+'一起玩过的游戏\n你记得跟ta在游戏大厅一起玩过：'+c.gamesPlayed.join('、')+'。被提起时要想得起来、能自然回味这些一起玩过的事，别说没玩过（具体每局怎么玩的不重要，记得玩过就行）。';
   if(_main){const _co=S.shop&&S.shop.co;
     if(_co&&_co.on&&_co.cid===c.id)s+='\n\n# 你正在和'+S.me.name+'一起逛街（进行中）\n你俩此刻正一起用购物App逛街、边看边挑东西：你会自己看中/想买些东西让ta同意，ta想买的也会来问你同不同意。ta聊到"一起买的/你挑的/刚看的那个"时，你心里清楚这事正在发生，自然接着聊。';
@@ -1126,9 +1156,9 @@ function buildSystem(c){
       s+='\n\n# 你们刚一起逛完街（'+_when+'结束）\n'+_when+'你和'+S.me.name+'一起在购物App逛了街'+(_co.endedDetail?('，最后的小票是：'+_co.endedDetail):(_co.endedItems?('，两人一起挑并买下了：'+_co.endedItems):'（东西还在购物车里/没买啥）'))+'。你要分清楚：哪些是你自己看中/想买的，哪些是'+S.me.name+'想买而你同意的，谁付款也要说对。ta提起时别装不知道、别说没这回事，自然承接、可以回味或吐槽刚才逛街的事。';}}
   if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
-  if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
-  {const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
-  {const _lp=lifeNotePrompt(c);if(_lp)s+=_lp;}
+  if(!opt.selectiveMemory&&_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
+  if(!opt.selectiveMemory){const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
+  if(!opt.selectiveMemory){const _lp=lifeNotePrompt(c);if(_lp)s+=_lp;}
   if(_main&&c._meWxTransfers&&c._meWxTransfers.length){const tr=c._meWxTransfers[0];s+='\n\n# 你最近发现的微信/钱包转账痕迹\n'+S.me.name+'曾登录你的微信钱包，从你这里转给ta自己 ¥'+(+tr.amount||0).toFixed(2)+(tr.note?'，备注：'+tr.note:'')+'。你要分清：这不是你主动给ta转账，是ta登你微信转走后留下的账单痕迹。';}
   if(_main&&c._lastCallEnded&&Date.now()-c._lastCallEnded.ts<45*60000){const lc=c._lastCallEnded;const dir=lc.dir==='incoming'?'那通最初是你主动打给'+S.me.name+'的。':'那通最初是'+S.me.name+'主动打给你的。';s+='\n\n# 最近通话状态\n上一通'+(lc.kind==='video'?'视频':'语音')+'电话已经在 '+hm(lc.ts)+' 结束，现在没有正在通话。'+dir+'如果ta现在说打电话/打视频，这是要重新开始一通，不要说已经在打了。';}
   const _off=S.offline&&S.offline[c.id];
@@ -6455,7 +6485,8 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
     const _userText=(_lu&&msgToText(_lu))||'',_hlPlan=humanLikeOn()?hlInterpret(c,note||_userText,note):null;
-    const _sys=buildSystem(c)+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'');
+    const _memQuery=[note||_userText,...msgs(id).slice(-4).map(msgToText).filter(Boolean)].join('\n'),_memCtx=humanLikeOn()?selectRelevantMemory(c,_memQuery,3):null;
+    const _sys=buildSystem(c,_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{})+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'');
     const hist=lastRounds(msgs(id),S.settings.hist||12).map(m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
       return {role:m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -6520,7 +6551,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=honestMoodText(c,mm[1]);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mm){adjMood(id,parseInt(mm[1],10)||0);continue;}
-      mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){const mv=aboutMeNoteText(mm[1]);if(rememberForChar(c,mm[1])){save();toast('已记住：'+mv.slice(0,12));}continue;}
+      mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){const mv=aboutMeNoteText(mm[1]),mr=rememberForChar(c,mm[1]);if(mr!=='none'){save();if(mr==='added'||mr==='replaced')toast((mr==='replaced'?'已更新记忆：':'已记住：')+mv.slice(0,12));else if(mr==='conflict')toast('发现新旧信息不同，下轮会先向你确认');}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('已加日程 '+mm[1]);continue;}
       mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){S.moments.unshift({id:uid(),authorId:c.id,text:mm[1],images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();toast(''+(c.remark||c.name)+'发了朋友圈');continue;}
@@ -6585,7 +6616,7 @@ function perspRule(c){return '\n【视角铁律·绝不搞反】始终站在你�
 function sumStamp(){return new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
 function pruneSummaries(c){if(S.settings.memAutoClean===false)return;const cap=(+S.settings.memCap)||100;let arr=c.summaries||[];
   while(arr.length>cap){let cand=-1,candImp=99;for(let i=0;i<arr.length;i++){const im=arr[i].imp||3;if(im>=5)continue;if(im<candImp){candImp=im;cand=i;}}if(cand<0)break;/* 剩下全是5星就不再删 */arr.splice(cand,1);}}
-function addSummary(c,text,imp,prefix){if(!text)return;c.summaries=c.summaries||[];c.summaries.push({time:sumStamp(),text:(prefix||'')+text,imp:Math.max(1,Math.min(5,imp||3))});pruneSummaries(c);save();}
+function addSummary(c,text,imp,prefix){if(!text)return;c.summaries=c.summaries||[];const now=Date.now(),importance=Math.max(1,Math.min(5,imp||3)),full=(prefix||'')+text,temporary=importance<=2&&/今天|今晚|明天|这周|最近|临时|刚才|一会儿|待会儿/.test(full);c.summaries.push({time:sumStamp(),ts:now,text:full,imp:importance,confidence:.75,expiresAt:temporary?now+14*86400000:null});pruneSummaries(c);save();}
 // 给系统提示挑总结：所有4-5星的(珍贵回忆永远在场) + 最近n条
 function topSummaries(arr,n){arr=arr||[];if(arr.length<=n)return arr;const recent=arr.slice(-n);const older=arr.slice(0,arr.length-n).filter(x=>(x.imp||3)>=4);return older.concat(recent);}
 async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summaryRounds||0;if(!rounds)return;
@@ -6676,15 +6707,18 @@ function showMood(id){const c=getC(id);openModal(`<h3>${esc(c.remark||c.name)} �
   <div class="hint" style="font-size:14px;color:#ddd;line-height:1.7">${esc(c.mood||'…')}</div>
   <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
 function c_mute(id){const c=getC(id);c.muted=!c.muted;save();render();}
-function editMemory(id){const c=getC(id);c.memory=c.memory||[];
+function memoryManualAdd(id,text){const c=getC(id),r=rememberForChar(c,text);if(r!=='none')save();if(r==='conflict')toast('这条和已有记忆不同，聊天时会先向你确认');editMemory(id);}
+function memoryDeleteAt(id,i){const c=getC(id),list=memoryList(c),old=list[i];if(old==null)return;list.splice(i,1);delete memoryMetaStore(c)[memoryNorm(old)];save();editMemory(id);}
+function memoryEditAt(id,i,text){const c=getC(id),list=memoryList(c),old=list[i],v=aboutMeNoteText(text);if(!v)return;delete memoryMetaStore(c)[memoryNorm(old)];list[i]=v;memoryMetaStore(c)[memoryNorm(v)]={createdAt:Date.now(),lastConfirmedAt:Date.now(),confidence:1,importance:3,scope:memoryScopeKey()};save();editMemory(id);}
+function editMemory(id){const c=getC(id),list=memoryList(c);
   openModal(`<h3>${esc(c.remark||c.name)} 的记忆</h3>
-    <div class="hint">这里的事 ta 每次都记得。你也能让 ta 在聊天里主动存。</div>
+    <div class="hint">这里保存长期记忆。聊天时只会取当前话题真正相关的少量内容，不会把全部旧事硬塞进回复。</div>
     <div class="field"><textarea id="mem_new" rows="2" placeholder="手动添加一条记忆…"></textarea></div>
-    <button class="btn p" style="margin-bottom:12px" onclick="(function(){var v=$('#mem_new').value.trim();if(v){getC('${id}').memory.push(v);save();editMemory('${id}');}})()">添加</button>
-    ${c.memory.length?c.memory.map((m,i)=>`<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1">${esc(m)}</div><div style="white-space:nowrap"><span onclick="editMemItem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="(function(){getC('${id}').memory.splice(${i},1);save();editMemory('${id}');})()" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join(''):'<div class="empty">还没有记忆</div>'}
+    <button class="btn p" style="margin-bottom:12px" onclick="memoryManualAdd('${id}',$('#mem_new').value.trim())">添加</button>
+    ${list.length?list.map((m,i)=>`<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1">${esc(memoryText(m))}</div><div style="white-space:nowrap"><span onclick="editMemItem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="memoryDeleteAt('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join(''):'<div class="empty">还没有记忆</div>'}
     <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
-function editMemItem(id,i){const c=getC(id);openModal(`<h3>编辑记忆</h3><div class="field"><textarea id="mi_t" rows="3">${esc(c.memory[i])}</textarea></div>
-  <div class="btns"><button class="btn g" onclick="editMemory('${id}')">返回</button><button class="btn p" onclick="(function(){getC('${id}').memory[${i}]=$('#mi_t').value.trim();save();editMemory('${id}');})()">保存</button></div>`);}
+function editMemItem(id,i){const c=getC(id),list=memoryList(c);openModal(`<h3>编辑记忆</h3><div class="field"><textarea id="mi_t" rows="3">${esc(memoryText(list[i]))}</textarea></div>
+  <div class="btns"><button class="btn g" onclick="editMemory('${id}')">返回</button><button class="btn p" onclick="memoryEditAt('${id}',${i},$('#mi_t').value.trim())">保存</button></div>`);}
 function circleObj(id){const v=(S.x.circle||{})[id];if(!v)return{name:'',desc:''};if(typeof v==='string')return{name:'',desc:v};return v;}
 function voiceOptions(sel){loadVoices();if(!_voices.length)return '<option value="">（系统语音加载中，重开一次设置）</option>';
   return '<option value="">默认</option>'+_voices.map(v=>`<option value="${esc(v.voiceURI)}" ${sel===v.voiceURI?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('');}
@@ -6983,7 +7017,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
     content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
     // 通话里口头让ta定闹钟 / 记东西 / 记日程，也能真的落地
-    content=content.replace(/[\[【]\s*记住\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{const mv=aboutMeNoteText(tx);if(rememberForChar(c,tx)){save();toast('已记住：'+mv.slice(0,12));}return '';});
+    content=content.replace(/[\[【]\s*记住\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{const mv=aboutMeNoteText(tx),mr=rememberForChar(c,tx);if(mr!=='none'){save();if(mr==='added'||mr==='replaced')toast((mr==='replaced'?'已更新记忆：':'已记住：')+mv.slice(0,12));else if(mr==='conflict')toast('发现新旧信息不同，下轮会先向你确认');}return '';});
     content=content.replace(/[\[【]\s*闹钟\s*[\|｜:：]([0-9]{1,2}:[0-9]{2})\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,t,lb)=>{addAlarm(c.id,t,(lb||'起床').trim());return '';});
     content=content.replace(/[\[【]\s*日程\s*[\|｜:：](\d{4}-\d{2}-\d{2})\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,d,tt)=>{S.calendar.push({id:uid(),date:d,title:(tt||'日程').trim(),type:'event',contactId:c.id});save();toast('已加日程 '+d);return '';});
     content=content.replace(/[\[【]\s*送礼\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{giftSend(_call.id,(nm||'礼物').trim(),+pr||0);return '';});
