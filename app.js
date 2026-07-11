@@ -302,7 +302,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v446 · 回复完整性修复';
+const APP_VER='v447 · 微信登录与小黑屋记录修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -1186,7 +1186,7 @@ function buildSystem(c,opt){
   if(!opt.selectiveMemory){const _pd=powerDynamicPrompt(c);if(_pd)s+=_pd;const _kd=bdsmKnowledgeBasePrompt(c);if(_kd)s+=_kd;const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
   if(!opt.selectiveMemory){const _lp=lifeNotePrompt(c);if(_lp)s+=_lp;}
   if(_main&&c._meWxTransfers&&c._meWxTransfers.length){const tr=c._meWxTransfers[0];s+='\n\n# 你最近发现的微信/钱包转账痕迹\n'+S.me.name+'曾登录你的微信钱包，从你这里转给ta自己 ¥'+(+tr.amount||0).toFixed(2)+(tr.note?'，备注：'+tr.note:'')+'。你要分清：这不是你主动给ta转账，是ta登你微信转走后留下的账单痕迹。';}
-  if(_main&&c._lastCallEnded&&Date.now()-c._lastCallEnded.ts<45*60000){const lc=c._lastCallEnded;const dir=lc.dir==='incoming'?'那通最初是你主动打给'+S.me.name+'的。':'那通最初是'+S.me.name+'主动打给你的。';s+='\n\n# 最近通话状态\n上一通'+(lc.kind==='video'?'视频':'语音')+'电话已经在 '+hm(lc.ts)+' 结束，现在没有正在通话。'+dir+'如果ta现在说打电话/打视频，这是要重新开始一通，不要说已经在打了。';}
+  if(_main&&c._lastCallEnded&&Date.now()-c._lastCallEnded.ts<45*60000){const lc=c._lastCallEnded;const dir=lc.dir==='incoming'?'那通最初是你主动打给'+S.me.name+'的。':'那通最初是'+S.me.name+'主动打给你的。';const endedBy=(lc.endedBy==='role'||lc.byAI)?'【是你主动挂断的，不是'+S.me.name+'挂的】。':'【是'+S.me.name+'挂断的，不是你挂的】。';const why=lc.reason==='wxlogin'?'你当时是为了登录'+S.me.name+'的微信才主动结束通话，重新打来时绝不能反过来怪ta挂你电话。':'';s+='\n\n# 最近通话状态\n上一通'+(lc.kind==='video'?'视频':'语音')+'电话已经在 '+hm(lc.ts)+' 结束，现在没有正在通话。'+dir+endedBy+why+'如果ta现在说打电话/打视频，这是要重新开始一通，不要说已经在打了。';}
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main&&S.travel&&S.travel.trips){const mineT=S.travel.trips.filter(x=>x.cid===c.id&&x.status==='upcoming');const ups=mineT.filter(x=>x.meet!==false);const soloT=mineT.filter(x=>x.meet===false&&(x.payer==='ta'||x._seenByChar));
@@ -4790,7 +4790,7 @@ function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;
 function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;jailBump();S.jail.choice=null;save();jailRender();
   const freeRound=(S.jail.optRounds||0)>=2;/* 已经连出两轮选项了→这一轮让她自己打字 */
   jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：'+(freeRound?'这一轮【绝对不要】再出选择题（不许用[选择]），改成逼问/质问一句，逼ta【自己打字、亲口】回答你，让ta用自己的话说，等ta开口。':'满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta只要选错一次就可以用 [突脸|一句话] 狠狠吓ta')+'；其余全凭你的意愿。]');}
-function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;const _jmsgs=(S.jail.msgs||[]).slice();S.jail.active=false;S.jail.choice=null;S.jail.releasedAt=Date.now();save();
+function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;const _jmsgs=(S.jail.msgs||[]).slice();S.jail.active=false;S.jail.choice=null;S.jail.releasedAt=Date.now();S.jail.endMode=backdoor?'backdoor':(test?'test':'released');save();
   let _cleared=0;
   if(!test&&c){_cleared=(c.grudges||[]).filter(x=>!x.done).length;
     // 关进小黑屋清算完，旧账都算已处理→自动清空省空间，只留这次关押记录
@@ -4828,7 +4828,11 @@ function jailLockHome(){const c=jailC();setTimeout(jailAmbientStart,60);return `
   <div class="jred q" style="font-size:46px">🩸</div><div class="jred jtitle" style="font-size:24px;font-weight:700;margin:14px 0">禁 闭 室</div>
   <div class="jnar">门……从外面锁上了。<br>${esc((c&&(c.remark||c.name))||'他')}把ta关了进来。<br>乖乖做到他要的，他才会放ta出去。</div>
   <button class="dybtn" style="background:#8a0018;margin-top:18px" onclick="go('jail')">进去面对他</button></div></div>`;}
-function renderJail(){if(!S.jail||!S.jail.active)return jailLockHome();const c=getC(S.jail.cid);if(!c)return '';setTimeout(jailAmbientStart,60);
+function renderJailHistory(){const j=S.jail,c=j&&getC(j.cid);const has=!!(j&&!j.test&&(j.msgs||[]).length);const body=has?(j.msgs||[]).map(m=>jailMsgHTML(Object.assign({},m,{id:''}),false,false)).join(''):'';
+  const when=j&&j.since?new Date(j.since).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';const ended=j&&j.endMode==='backdoor'?'从狗洞逃出':'已经离开';
+  return `<div class="jail jailbg"><div style="position:relative;z-index:482;flex:0 0 auto;padding:12px;border-bottom:1px solid #2a0008;display:flex;align-items:center"><span onclick="home()" style="font-size:28px;color:#aaa;cursor:pointer">‹</span><div style="flex:1;text-align:center"><div class="jred jtitle" style="font-size:18px;font-weight:700">上一次小黑屋记录</div>${has?`<div style="color:#777;font-size:11px">${esc((c&&(c.remark||c.name))||'角色')} · ${esc(when)} · ${ended}</div>`:''}</div><span style="width:20px"></span></div>
+    <div class="xscroll" style="flex:1;position:relative;z-index:482">${has?`${j.reason?`<div class="jnar">关押原因：${esc(j.reason)}</div>`:''}${body}<div class="jnar">—— 本场记录会保留到下一场小黑屋开始 ——</div>`:'<div class="empty" style="padding:80px 24px;color:#777">还没有可查看的上一场记录</div>'}</div></div>`;}
+function renderJail(){if(!S.jail||!S.jail.active)return renderJailHistory();const c=getC(S.jail.cid);if(!c)return '';setTimeout(jailAmbientStart,60);
   const body=(S.jail.msgs||[]).map(m=>jailMsgHTML(m,false,false)).join('')+(_jailBusy?`<div class="jnar" style="opacity:.5">…他正盯着ta…</div>`:'');
   const pending=(!_jailBusy&&S.jail.choice);
   const foot=pending?`<div style="padding:8px 14px"><div class="jred" style="font-size:15px;text-align:center;margin-bottom:10px">${esc(S.jail.choice.q)}</div><div style="display:flex;flex-direction:column;gap:9px">${S.jail.choice.opts.map((o,i)=>`<button class="jopt" onclick="jailChoose(${i})">${esc(o)}</button>`).join('')}</div></div>`
@@ -5029,6 +5033,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
         <div class="it"><span>小黑屋上下文条数<br><small style="color:#888">每次带多少条记录给AI。大=更记得住不重复问、更费API；小=省钱但容易忘。默认100，范围20-200</small></span><input type="number" min="20" max="200" value="${S.settings.jailHist||100}" onchange="S.settings.jailHist=Math.max(20,Math.min(200,+this.value||100));save();toast('小黑屋上下文：'+S.settings.jailHist+'条')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
         <div class="it"><span>小黑屋跳戏时重试次数<br><small style="color:#888">AI跳戏/夹英文时自动重生成几次。多=更不容易出戏但更费钱。默认1，范围0-3</small></span><input type="number" min="0" max="3" value="${S.settings.jailRetry!=null?S.settings.jailRetry:1}" onchange="S.settings.jailRetry=Math.max(0,Math.min(3,+this.value||0));save();toast('小黑屋重试：'+S.settings.jailRetry+'次')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
         <div class="hint" style="padding:8px 14px 0;color:#888">主模型更稳更入戏；某些模型不认这个剧情时，可切换试试。</div>
+        <div class="it" onclick="go('jail')"><span style="display:flex;align-items:center;gap:8px">🕘 查看上一次小黑屋记录<br><small style="color:#888">随时可看，下一场开始时才会覆盖</small></span><span class="v">›</span></div>
         <div class="it" onclick="jailTest()"><span style="display:flex;align-items:center;gap:8px">${svgIc('flask',15,'#bbb')}测试进小黑屋（不留记录·随时出）</span><span class="v">›</span></div>
         ${cl?`<div class="it"><span style="color:#9ec5fe;display:flex;align-items:center;gap:8px">${svgIc('snow',15,BLUE)}他正在冷处理你</span><span class="v" style="color:#888">到 ${hm(cl)} 自然消气（求他可提前）</span></div>`:''}</div>`;})()}
       <div id="cou_outpass" ${SEC}>${HD('location','出门报备审批',BLUE)}
@@ -6443,6 +6448,8 @@ const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|�
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
 function wxLoginActive(){return !!(S.wxLogin&&Date.now()<S.wxLogin.until);}
+function wxLoginBlockReply(id,note){const wl=S.wxLogin;if(!wl||Date.now()>=wl.until||wl.by!==id)return false;
+  const t=(''+(note||'')).trim();if(t){wl.deferredNotes=Array.isArray(wl.deferredNotes)?wl.deferredNotes:[];if(wl.deferredNotes.indexOf(t)<0)wl.deferredNotes.push(t.slice(0,500));wl.deferredNotes=wl.deferredNotes.slice(-4);save(500);}return true;}
 function wxLoginStartTimer(){if(_wxLoginTimer)clearInterval(_wxLoginTimer);_wxLoginTimer=setInterval(()=>{
   if(!S.wxLogin){clearInterval(_wxLoginTimer);_wxLoginTimer=null;return;}
   if(Date.now()>=S.wxLogin.until){wxLogout();return;}
@@ -6472,7 +6479,7 @@ function wxLoginIntroFallback(c,cid,intent,sentKeys){if(!intent||!intent.intro||
   try{const p=phoneFriendState();(p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase();const arr=pfMsgList(p.messages,id);items.push({type:'pf',id,name:pfFriendDisplayName(f),score:arr.length?(arr[arr.length-1].time||0):0});});}catch(_){}
   items.sort((a,b)=>b.score-a.score);let n=[...sentKeys].filter(k=>k.indexOf('role:')===0||k.indexOf('pf:')===0).length;items.some(it=>{if(n>=max)return true;const key=it.type+':'+it.id;if(sentKeys.has(key))return false;const say=wxLoginIntroLine(c,it.type,it.name);if(it.type==='role'){msgs(it.id).push({role:'user',type:'text',content:say,time:Date.now(),id:uid(),_wxlogin:true});const tc=getC(it.id);if(tc&&!tc.blocked)scheduleReply(it.id);}else if(it.type==='pf'){sendPhoneFriendBody(it.id,say,{silent:true});}sentKeys.add(key);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('以你名义向「'+it.name+'」介绍了自己');n++;return n>=max;});}
 function wxDoLogin(cid){if(wxLoginActive())return;const c=getC(cid);if(!c)return;
-  S.wxLogin={by:cid,until:Date.now()+60000,did:[]};save();wxLoginStartTimer();
+  S.wxLogin={by:cid,until:Date.now()+60000,did:[],deferredNotes:[]};save();wxLoginStartTimer();
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();
   toast(''+(c.remark||c.name)+' 登录了你的微信');
   wxLoginSession(cid);}
@@ -6480,7 +6487,8 @@ function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer
   if(wl){const c=getC(wl.by);if(c){const did=(wl.did||[]);
     msgs(wl.by).push({role:'user',type:'sys',content:'🔓 '+(c.remark||c.name)+' 退出了你的微信登录',time:Date.now(),id:uid()});save();
     const saw=wl.saw?('\n\n你刚看到的摘要如下：\n'+wl.saw.slice(0,2200)):'';
-    if(!c.blocked)scheduleReply(wl.by,'[系统：你刚【登录'+S.me.name+'的微信看了整整一分钟】，现在退出来了。'+(did.length?'你在里面做了这些：'+did.join('；')+'。':'你把ta和所有人的聊天都仔细翻了一遍。')+saw+'\n\n现在主动来找ta，把你最在意的1到3个人/群聊挑出来总结给ta听：说清楚你看到谁和谁在聊、最近大概聊了什么、你为什么在意。不要复制大段聊天原文，不要一口气列全名单；符合你人设，可以质问、吃醋、敲打、宣示主权或装作平静。]');}}
+    const deferred=(wl.deferredNotes||[]).length?'\n\n登录期间本来触发但被暂缓的事情：'+wl.deferredNotes.join('；').slice(0,900)+'。现在已经退出微信，只能在这条退出后的回复里自然接住真正重要的一件，别把系统提示逐条复述、别连续补发很多条。':'';
+    if(!c.blocked)scheduleReply(wl.by,'[系统：你刚【登录'+S.me.name+'的微信看了整整一分钟】，现在已经退出；登录期间你不能给'+S.me.name+'发微信，只有退出后才可以发。'+(did.length?'你在里面做了这些：'+did.join('；')+'。':'你把ta和所有人的聊天都仔细翻了一遍。')+saw+deferred+'\n\n现在只发一轮消息来找ta，把你最在意的1到3个人/群聊挑出来总结给ta听：说清楚你看到谁和谁在聊、最近大概聊了什么、你为什么在意。不要复制大段聊天原文，不要一口气列全名单；符合你人设，可以质问、吃醋、敲打、宣示主权或装作平静。]');}}
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();}
 async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
   spyKnowledgeSync(c);const dump=wxLoginWechatSummary(cid);if(S.wxLogin&&S.wxLogin.by===cid){S.wxLogin.saw=dump;save();}
@@ -6651,6 +6659,7 @@ function lineToMsg(line,cch){
   return {role:'assistant',type:'text',content:'[图片]'+(desc?'：'+desc:'')};}
 
 async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)return;/* 已删除的角色(找回箱里)绝不后台发消息 */
+  if(wxLoginBlockReply(id,note))return;/* 角色登录用户微信期间不能同时给用户发消息；退出后合并承接 */
   const _idleNote=!!(note&&/没有打开小手机|没来找你/.test(note));
   if(_idleNote)idleDebugPatch({aiStatus:'生成中',aiResult:'等待AI返回',aiStartedAt:Date.now(),apiStatus:idleApiStatus(),blockedBy:''});
   // typing
@@ -6735,7 +6744,9 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('已加日程 '+mm[1]);continue;}
       mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){S.moments.unshift({id:uid(),authorId:c.id,text:mm[1],images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();toast(''+(c.remark||c.name)+'发了朋友圈');continue;}
       mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){publishRoleTweet(c,mm[1],{toast:true});continue;}
-      await sleep(got?roleMessageGap(line):0);got=true;
+      await sleep(got?roleMessageGap(line):0);
+      if(wxLoginBlockReply(id,note))break;/* 回复生成到一半时若角色开始登录，也立刻停止继续发 */
+      got=true;
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -6824,6 +6835,7 @@ async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
 let _replyTimers={};
 let _replying=null;
 function scheduleReply(id,note){
+  if(wxLoginBlockReply(id,note))return;
   if(note&&_call&&_call.state==='active'&&_call.id===id&&/任务|便签|没完成|未完成|完成|验收|奖励|惩罚|罚/.test(note)){
     callAI(String(note).replace(/\]\s*$/,'\n【重要·此刻正在通话中】你们正在通话，这件事必须在电话里直接说，绝对不要另发微信消息。]'));
     return;
@@ -7053,15 +7065,16 @@ function declineCall(){if(!_call)return;ringStop();endCallTimers();hideCallBanne
   const c=getC(id);if(wasIn&&c&&!c.blocked){
     if(wasCb)maybeCallBack(id,_kind,false);// 她连回拨都不接，是不是还追，看他心情
     else {setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，ta拒接了。你察觉到了，主动发消息问ta为什么不接、在干嘛（符合你心情值和人设）。]'),2500);scheduleRejectedCallFollowup(id,Date.now(),kindTxt);}}}
-function hangupCall(byAI){if(!_call)return;blip(300,.3);endCallTimers();hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');
+function hangupCall(byAI,reason){if(!_call)return;blip(300,.3);endCallTimers();hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
-  msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+kindTxt+'结束 · 时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
+  const endText=byAI?(reason==='wxlogin'?'角色为了登录你的微信主动挂断':'角色主动挂断'):'你主动挂断';
+  msgs(id).push({role:'user',type:'sys',content:'通话结束 · '+endText+' · '+kindTxt+'时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
   _call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();if(cur().p==='chat')render();
   summarizeCall(id,kindTxt,_sess);
   const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';const dirTxt=_dir==='incoming'?'这通电话最初是你主动打给'+S.me.name+'的。':'这通电话最初是'+S.me.name+'主动打给你的。';
-  if(c){c._lastCallEnded={ts:Date.now(),kind:_kind,dir:_dir,byAI:!!byAI,dur};save();}
+  if(c){c._lastCallEnded={ts:Date.now(),kind:_kind,dir:_dir,byAI:!!byAI,endedBy:byAI?'role':'user',reason:reason||'',dur};save();}
   if(c&&!c.blocked){
-    if(byAI)setTimeout(()=>aiReply(id,'[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。'+dirTxt+'挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'),2500);
+    if(byAI){if(reason!=='wxlogin')setTimeout(()=>aiReply(id,'[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。'+dirTxt+'挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'),2500);}
     else if(dur<25)maybeCallBack(id,_kind,true);// 她没聊几句就莫名其妙挂了/闹脾气逃避 → 至少再回拨一次，之后看心情
     else{c._cbTries=0;save();setTimeout(()=>aiReply(id,'[系统：你们这通'+kindTxt+'聊了'+durTxt+'，是'+S.me.name+'挂断的。'+dirTxt+'你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你人设）。]'),2500);}
   }}
@@ -7238,7 +7251,7 @@ async function callAI(sysNote,opts){if(!_call)return;
       const spoken=pickSpoken(u.orig,_vlang);
       if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c);await sleep(950);}else await sleep(Math.max(1700,u.orig.length*150));}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
-    if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true);if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
+    if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}
   finally{_callBusy=false;
     if(_callPend&&_call&&_call.state==='active'){const p=_callPend;_callPend=null;setTimeout(()=>{if(_call&&_call.state==='active')callAI(p.sysNote,p.opts);},700);}
