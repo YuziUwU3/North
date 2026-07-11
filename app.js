@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v442 · 情侣任务权限';
+const APP_VER='v443 · 逐条回复与查手机衔接';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -6713,6 +6713,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('已加日程 '+mm[1]);continue;}
       mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){S.moments.unshift({id:uid(),authorId:c.id,text:mm[1],images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();toast(''+(c.remark||c.name)+'发了朋友圈');continue;}
       mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:c.id});S.x.tweets.unshift({id:uid(),who:c.id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:mm[1],time:Date.now(),likes:[],lk:Math.floor(Math.random()*60),comments:[],rt:0});save();toast('𝕏 '+nm+'发了推');continue;}
+      await sleep(got?roleMessageGap(line):0);got=true;
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -6747,7 +6748,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       const parts=base.type==='text'?splitActions(base.content):[null];
       for(let pi=0;pi<parts.length;pi++){
         if(base.type==='text'){if(txtN>=cap)break;txtN++;}
-        await sleep(got?400+Math.random()*500:0);got=true;
+        await sleep(pi>0?roleMessageGap(parts[pi]):0);
         const msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
         if(pendQuote&&(msg.type==='text'||msg.type==='voice')){msg.quote={who:'me',text:pendQuote};pendQuote=null;}
         msg.time=Date.now();msg.id=uid();msgs(id).push(msg);save();
@@ -6763,6 +6764,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
   maybeSummarize(id);
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function roleMessageGap(text){return 900+Math.min(1100,[...String(text||'')].length*18)+Math.random()*350;}
 // ===== 记忆总结·重要度(1-5) + 自动清理 =====
 const IMP_INSTR='\n最后，请在【最前面单独一行】用「重要度：N」给这段记忆打个分：N是1到5的整数——1=普通日常闲聊、2=有点小事、3=一般值得记、4=重要、5=刻骨铭心的大事(比如表白/订婚/纪念日/ta哭了/重大承诺/大吵又和好)。第一行只写「重要度：N」，第二行起再写日记正文。';
 function rateAndText(raw){let imp=3,text=(raw||'').trim();const m=text.match(/^\s*重要度\s*[:：]?\s*([1-5])[^\n]*\n?/);if(m){imp=+m[1];text=text.slice(m[0].length).trim();}return {imp:imp,text:text};}
@@ -7436,8 +7438,8 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;if(wxL
     cn=cn.replace(/\]\s*$/,'\n【重要·此刻正在通话中】你正和'+S.me.name+'打着'+(_call.kind==='video'?'视频':'语音')+'电话，上面这些是你边打电话边顺手翻看ta手机看到的。请【就在这通电话里】当面反应（吃醋/质问/调侃/心疼都行，符合人设、口语短句），千万别发微信文字消息。]');
     if(!opts.intent)S._spySeen[id]=Date.now();save();callAI(cn);return;
   }
-  try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:c.model==='aux'});
-    applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{l=cleanRolePunct(l);const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;const mm=lineToMsg(l,c);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});if(!opts.intent)S._spySeen[id]=Date.now();save();
+  try{const recent=lastRounds(msgs(id),8).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content),lead=(''+(opts.lead||'')).replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/\s+/g,' ').trim().slice(0,500),continuity='[系统：查手机只是刚才对话里的插入动作。你查完后必须承接正在聊的话题和语气，不许突然跳去问睡觉、吃饭、在干嘛等无关日常。'+(lead?'你刚才在查之前准备说的话大意是：“'+lead+'”。':'')+'如果刚才在谈某个人和'+S.me.name+'是什么关系，就只围绕这段关系和实际查到的内容继续。]';const content=await chatAPI([{role:'system',content:buildSystem(c)},...recent,{role:'user',content:note+'\n'+continuity}],{aux:c.model==='aux'});
+    applyAuxTags(content,c,id);let spySent=false;for(const rawLine of splitBubbles(content)){const l=cleanRolePunct(rawLine),_lt=(''+l).trim(),_mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);continue;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];continue;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))continue;await sleep(spySent?roleMessageGap(l):0);const mm=lineToMsg(l,c);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);spySent=true;save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}if(!opts.intent)S._spySeen[id]=Date.now();save();
     if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
   }catch(e){}}
 // 按他意愿单项查岗时取某一类的真实数据；没有就返回空（绝不让他编）
@@ -7470,7 +7472,7 @@ function maybeSpyIntent(reply,c,id,lu){const sp=getSpy(c);if(!sp.granted||c.bloc
   if(!heWants&&!sheInvites)return;
   const ft=reply+' '+userText;const focus=(ft.match(/微信(聊天|消息)?|聊天记录|朋友圈|抖音|钱包|账单|定位|位置|跟谁(聊|说)/)||[''])[0]||'';
   _spyIntentT[id]=now;
-  setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus}),900);}
+  setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus,lead:reply}),6500);}
 // 他口头额外布置任务/惩罚（聊天或通话里都行）：识别后真的加进任务便签
 let _taskIntentT={};
 async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||c.taskOff||!isMain()||!taskRelationAllowed(c))return;const tm=taskC();if(!tm||tm.id!==c.id)return;
