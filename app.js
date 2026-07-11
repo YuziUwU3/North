@@ -112,38 +112,39 @@ function pfHasAnyFriendMessages(p){return Object.keys(p.messages||{}).some(k=>Ar
 function pfNeedsFullSync(p,forceFull){if(forceFull||p._forceFullSync)return true;const ids=pfFriendIds(p);if(!ids.length)return false;if(!p.lastSync)return true;if(Date.now()-(p._lastFullSyncAt||0)<300000)return false;if(!pfHasAnyFriendMessages(p)&&ids.length)return true;return ids.some(id=>!Array.isArray((p.messages||{})[id])&&(p.clearBefore||{})[id]==null);}
 async function pfEnsure(force){const p=phoneFriendState();if(!force&&p._onlineAt&&Date.now()-p._onlineAt<60000)return true;
   await pfRpc('phone_friend_upsert_profile',pfProfilePayload(),25000);p._registeredAt=Date.now();p._onlineAt=Date.now();p.lastError='';save();return true;}
-function pfStoreMessage(m){const p=phoneFriendState();if(!m)return;const me=p.id;const from=(''+(m.from_id||m.from||'')).toUpperCase(),to=(''+(m.to_id||m.to||'')).toUpperCase();
-  const other=from===me?to:from;if(!other)return;p.messages[other]=pfEnsureMsgList(p.messages,other);
+function pfStoreMessage(m){const p=phoneFriendState();if(!m)return false;const me=p.id;const from=(''+(m.from_id||m.from||'')).toUpperCase(),to=(''+(m.to_id||m.to||'')).toUpperCase();
+  const other=from===me?to:from;if(!other)return false;p.messages[other]=pfEnsureMsgList(p.messages,other);
   const id=m.id||('m_'+(m.created_at||m.time||Date.now())+'_'+from+'_'+to);
   const ts=+(m.time||m.ts||0)||(m.created_at?new Date(m.created_at).getTime():Date.now());
   if(from&&from!==me)pfInferFriendRead(other,from,ts);
-  if(p.messages[other].some(x=>x.id===id))return;
+  if(p.messages[other].some(x=>x.id===id))return false;
   const oldLocal=!String(id).startsWith('local_')?pfClearLocalPending(other,m):null;
-  if(ts<=(p.clearBefore[other]||0))return;
+  if(ts<=(p.clearBefore[other]||0))return false;
   const kept={id,from,to,text:pfSafeBody(m.body||m.text||''),time:ts,recalled:!!m.recalled||!!(oldLocal&&oldLocal.recalled),received:!!m.received||!!(oldLocal&&oldLocal.received),receivedBy:m.received_by||m.receiver_id||(oldLocal&&oldLocal.receivedBy)||''};
-  if(pfIsRoomTransport(kept)){pfHandleGamePayload(kept);return;}
+  if(pfIsRoomTransport(kept)){pfHandleGamePayload(kept);return false;}
   p.messages[other].push(kept);
-  p.messages[other].sort((a,b)=>(a.time||0)-(b.time||0));if(p.messages[other].length>300)p.messages[other]=p.messages[other].slice(-300);pfHandleGamePayload(kept);}
-function pfStoreGroupMessage(m){const p=phoneFriendState();if(!m)return;const gid=m.group_id||m.gid;if(!gid)return;p.groupMessages[gid]=pfEnsureMsgList(p.groupMessages,gid);
-  const id=m.id||('gm_'+gid+'_'+(m.created_at||m.time||Date.now())+'_'+(m.from_id||'')),ts=+(m.time||m.ts||0)||(m.created_at?new Date(m.created_at).getTime():Date.now()),from=(''+(m.from_id||m.from||'')).toUpperCase();if(from&&from!==p.id)pfInferGroupRead(gid,from,ts);if(p.groupMessages[gid].some(x=>x.id===id))return;
+  p.messages[other].sort((a,b)=>(a.time||0)-(b.time||0));if(p.messages[other].length>300)p.messages[other]=p.messages[other].slice(-300);pfHandleGamePayload(kept);return true;}
+function pfStoreGroupMessage(m){const p=phoneFriendState();if(!m)return false;const gid=m.group_id||m.gid;if(!gid)return false;p.groupMessages[gid]=pfEnsureMsgList(p.groupMessages,gid);
+  const id=m.id||('gm_'+gid+'_'+(m.created_at||m.time||Date.now())+'_'+(m.from_id||'')),ts=+(m.time||m.ts||0)||(m.created_at?new Date(m.created_at).getTime():Date.now()),from=(''+(m.from_id||m.from||'')).toUpperCase();if(from&&from!==p.id)pfInferGroupRead(gid,from,ts);if(p.groupMessages[gid].some(x=>x.id===id))return false;
   let oldLocal=null;if(!String(id).startsWith('local_')){const from=(''+(m.from_id||m.from||'')).toUpperCase(),body=''+(m.body||m.text||'');const arr=p.groupMessages[gid];for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(String(x.id||'').startsWith('local_')&&x.from===from&&x.text===body&&Date.now()-(x.time||0)<120000){oldLocal=arr.splice(i,1)[0];break;}}}
-  if(ts<=(p.groupClearBefore[gid]||0))return;
+  if(ts<=(p.groupClearBefore[gid]||0))return false;
   p.groupMessages[gid].push({id,gid,from,text:pfSafeBody(m.body||m.text||''),time:ts,recalled:!!m.recalled||!!(oldLocal&&oldLocal.recalled),received:!!m.received||!!(oldLocal&&oldLocal.received),receivedBy:m.received_by||m.receiver_id||(oldLocal&&oldLocal.receivedBy)||''});
-  p.groupMessages[gid].sort((a,b)=>(a.time||0)-(b.time||0));if(p.groupMessages[gid].length>400)p.groupMessages[gid]=p.groupMessages[gid].slice(-400);}
+  p.groupMessages[gid].sort((a,b)=>(a.time||0)-(b.time||0));if(p.groupMessages[gid].length>400)p.groupMessages[gid]=p.groupMessages[gid].slice(-400);return true;}
 function pfApplyReceipt(r){const p=phoneFriendState(),mid=''+(r&&r.message_id||''),rid=(''+(r&&r.receiver_id||'')).toUpperCase();if(!mid)return;Object.keys(p.messages||{}).forEach(id=>{pfMsgList(p.messages,id).forEach(m=>{if(m.id===mid){if(pfPayloadIsPay(m)){m.received=true;m.receivedBy=rid;m.receivedAt=r.received_at?new Date(r.received_at).getTime():Date.now();}else pfSetReadBy(m,rid);}});});Object.keys(p.groupMessages||{}).forEach(gid=>{pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.id===mid){if(pfPayloadIsPay(m)){m.received=true;m.receivedBy=rid;m.receivedAt=r.received_at?new Date(r.received_at).getTime():Date.now();}else pfSetReadBy(m,rid);}});});}
 function pfApplyRecall(r){const p=phoneFriendState(),mid=''+(r&&r.message_id||'');if(!mid)return;Object.keys(p.messages||{}).forEach(id=>{pfMsgList(p.messages,id).forEach(m=>{if(m.id===mid){m.recalled=true;m.text='';}});});Object.keys(p.groupMessages||{}).forEach(gid=>{pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.id===mid){m.recalled=true;m.text='';}});});}
 function pfKeyOf(x){return (''+((x&&x.phone_id)||(x&&x.group_id)||(x&&x.id)||'')).toUpperCase();}
 function pfMergeRemote(local,remote,kind){local=Array.isArray(local)?local:[];if(!Array.isArray(remote))return local;if(!remote.length&&local.length)return local;const m=new Map();local.forEach(x=>{const k=pfKeyOf(x);if(k)m.set(k,x);});remote.forEach(x=>{const k=pfKeyOf(x);if(k)m.set(k,Object.assign({},m.get(k)||{},x));});return Array.from(m.values());}
+function pfRememberNotification(p,key){if(!key)return false;p._notifiedMessageIds=Array.isArray(p._notifiedMessageIds)?p._notifiedMessageIds:[];if(p._notifiedMessageIds.includes(key))return false;p._notifiedMessageIds.push(key);if(p._notifiedMessageIds.length>300)p._notifiedMessageIds.splice(0,p._notifiedMessageIds.length-300);return true;}
 async function phoneFriendSync(silent,forceProfile,forceFull){if(_pfSyncBusy)return;const p=phoneFriendState();_pfSyncBusy=true;
   try{await pfEnsure(!!forceProfile);const full=pfNeedsFullSync(p,!!forceFull),since=full?0:Math.max(0,(p.lastSync||0)-60000);const d=await pfRpc('phone_friend_sync',{p_phone_id:p.id,p_secret:p.secret,p_since_ms:since},30000);
     const oldFriendMsgMax={};Object.keys(p.messages||{}).forEach(k=>{oldFriendMsgMax[k]=Math.max(0,...pfMsgList(p.messages,k).map(m=>m.time||0));});
     const oldGroupMsgMax={};Object.keys(p.groupMessages||{}).forEach(k=>{oldGroupMsgMax[k]=Math.max(0,...pfMsgList(p.groupMessages,k).map(m=>m.time||0));});
     const srvMsgs=Array.isArray(d&&d.messages)?d.messages:[],srvGroupMsgs=Array.isArray(d&&d.group_messages)?d.group_messages:[],srvReceipts=Array.isArray(d&&d.receipts)?d.receipts:[],srvRecalls=Array.isArray(d&&d.recalls)?d.recalls:[];
-    p.friends=pfMergeRemote(p.friends,d&&d.friends,'friend');p.requests=Array.isArray(d&&d.requests)?d.requests:[];srvMsgs.forEach(pfStoreMessage);
-    p.groups=pfMergeRemote(p.groups,d&&d.groups,'group');srvGroupMsgs.forEach(pfStoreGroupMessage);srvReceipts.forEach(pfApplyReceipt);srvRecalls.forEach(pfApplyRecall);
+    const insertedFriend=new Set(),insertedGroup=new Set();p.friends=pfMergeRemote(p.friends,d&&d.friends,'friend');p.requests=Array.isArray(d&&d.requests)?d.requests:[];srvMsgs.forEach(m=>{if(pfStoreMessage(m))insertedFriend.add(''+(m.id||''));});
+    p.groups=pfMergeRemote(p.groups,d&&d.groups,'group');srvGroupMsgs.forEach(m=>{if(pfStoreGroupMessage(m))insertedGroup.add(''+(m.id||''));});srvReceipts.forEach(pfApplyReceipt);srvRecalls.forEach(pfApplyRecall);
     pfReconcileReadInference();
-    srvMsgs.forEach(m=>{const from=(''+(m.from_id||'')).toUpperCase(),ts=m.created_at?new Date(m.created_at).getTime():0;if(from&&from!==p.id&&ts>(oldFriendMsgMax[from]||0))pfNotifyFriend(m);});
-    srvGroupMsgs.forEach(m=>{const gid=m.group_id,from=(''+(m.from_id||'')).toUpperCase(),ts=m.created_at?new Date(m.created_at).getTime():0;if(from&&from!==p.id&&gid&&ts>(oldGroupMsgMax[gid]||0))pfNotifyGroup(m);});
+    srvMsgs.forEach(m=>{const from=(''+(m.from_id||'')).toUpperCase(),ts=m.created_at?new Date(m.created_at).getTime():0,key='f:'+(m.id||'');if(from&&from!==p.id&&(full||insertedFriend.has(''+(m.id||'')))){const fresh=pfRememberNotification(p,key);if(!full&&fresh&&ts>(oldFriendMsgMax[from]||0))pfNotifyFriend(m);}});
+    srvGroupMsgs.forEach(m=>{const gid=m.group_id,from=(''+(m.from_id||'')).toUpperCase(),ts=m.created_at?new Date(m.created_at).getTime():0,key='g:'+(m.id||'');if(from&&from!==p.id&&gid&&(full||insertedGroup.has(''+(m.id||'')))){const fresh=pfRememberNotification(p,key);if(!full&&fresh&&ts>(oldGroupMsgMax[gid]||0))pfNotifyGroup(m);}});
     p.lastSync=+(d&&d.server_time_ms)||Date.now();if(full){p._lastFullSyncAt=Date.now();delete p._forceFullSync;delete p._repairNote;}p.lastError='';save();const c=cur&&cur();if(c&&(c.p==='pffriends'||c.p==='pfchat'||c.p==='pfgroup'||c.p==='wechat')&&!pfTypingActive())render();}
   catch(e){p.lastError=e&&e.message||'好友同步失败';save();if(!silent)toast(p.lastError);}
   finally{_pfSyncBusy=false;}}
@@ -301,7 +302,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v444 · 自然心理引导';
+const APP_VER='v445 · 查岗记忆防重复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -2032,9 +2033,12 @@ function scanAutoPost(){if(!S._autoPost)S._autoPost={};const today=new Date().to
   });}
 async function doAutoMoment(id){const c=getC(id);try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条朋友圈（结合此刻心情/日常/和'+S.me.name+'的关系都行），只输出动态内容本身，一两句，别带方括号。'}]);
   S.moments.unshift({id:uid(),authorId:id,text:cleanReply(r).slice(0,120),images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();if(cur().p==='wechat'&&wxTab==='moments')render();toast(''+(c.remark||c.name)+'发了朋友圈');}catch(e){}}
+function publishRoleTweet(c,text,opt){opt=opt||{};text=(''+(text||'')).trim();if(!c||!text)return false;const now=Date.now(),norm=text.toLowerCase().replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'');
+  const recent=(S.x&&S.x.tweets||[]).filter(t=>t.who===c.id&&now-(t.time||0)<10*60000);if((c._lastTweetAt&&now-c._lastTweetAt<30000)||recent.some(t=>(''+(t.text||'')).toLowerCase().replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'')===norm))return false;
+  const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:c.id});S.x.tweets.unshift({id:uid(),who:c.id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text,time:now,likes:[],lk:Math.floor(Math.random()*(opt.auto?80:60)),comments:[],rt:0});c._lastTweetAt=now;save();if(cur().p==='x')render();if(opt.notify)notifyX(c,text);if(opt.toast)toast('𝕏 '+nm+'发了推');return true;}
 async function doAutoTweet(id){const c=getC(id);try{const _co=(typeof circleObj==='function')?circleObj(id):{};const note=_co.desc?'，贴合你的圈子定位「'+_co.desc+'」':'';
   const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条推特'+note+'，一两句，只输出推文内容，别带方括号。'}],{aux:true});
-  const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:id});const _tw=cleanReply(r);S.x.tweets.unshift({id:uid(),who:id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:_tw,time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:0});save();if(cur().p==='x')render();notifyX(c,_tw);}catch(e){}}
+  publishRoleTweet(c,cleanReply(r),{auto:true,notify:true});}catch(e){}}
 function notifyX(c,text){if(c.muted)return;playDing();appNotify((c.remark||c.name)+' 发了新动态',text,{tag:'x-'+c.id,data:{type:'open',target:'x'}});const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#000;border:1px solid #333;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px">𝕏</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 发了新动态</div><div class="bm">${esc(text)}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openX();};
@@ -5533,6 +5537,17 @@ let _hisTab='chat';
 let _hisLoginMode='wx',_hisSync=false;/* 登录方式(微信号/手机号) + 是否勾选同步聊天记录 */
 function hisWxData(cid){S.hisWx=S.hisWx||{};if(!S.hisWx[cid])S.hisWx[cid]={seeded:false,friends:[],moments:[],log:[]};return S.hisWx[cid];}
 function hisLog(cid,txt){const d=hisWxData(cid);d.log=d.log||[];d.log.push({t:Date.now(),txt:(''+txt).slice(0,80)});if(d.log.length>40)d.log=d.log.slice(-40);save();}
+/* 查岗认知：每个联系人只保留一条可更新状态，不保存无限查岗流水账。 */
+function spyKnowledgeStore(c){if(!c)return{contacts:{}};const k=c._spyKnowledge;if(!k||typeof k!=='object'||Array.isArray(k))c._spyKnowledge={contacts:{}};c._spyKnowledge.contacts=c._spyKnowledge.contacts&&typeof c._spyKnowledge.contacts==='object'?c._spyKnowledge.contacts:{};return c._spyKnowledge;}
+function spyKnowledgeNameKey(name){return(''+(name||'')).trim().toLowerCase().replace(/\s+/g,'').slice(0,48);}
+function spyKnowledgePrune(c){const st=spyKnowledgeStore(c),all=Object.entries(st.contacts);const deleted=all.filter(x=>x[1]&&x[1].status==='deleted').sort((a,b)=>(b[1].updatedAt||0)-(a[1].updatedAt||0));deleted.slice(40).forEach(x=>delete st.contacts[x[0]]);const rest=Object.entries(st.contacts).sort((a,b)=>(b[1].updatedAt||0)-(a[1].updatedAt||0));rest.slice(120).forEach(x=>delete st.contacts[x[0]]);}
+function spyKnowledgeSet(c,key,data){if(!c||!key||!data||!data.name)return null;const st=spyKnowledgeStore(c),now=Date.now(),old=st.contacts[key]||{};st.contacts[key]=Object.assign({},old,data,{key,name:(''+data.name).trim().slice(0,48),learnedAt:old.learnedAt||now,updatedAt:now});spyKnowledgePrune(c);return st.contacts[key];}
+function spyKnowledgeSync(c){if(!c)return;const now=Date.now(),st=spyKnowledgeStore(c),roleKeys=new Set(),pfKeys=new Set();
+  (S.contacts||[]).forEach(x=>{if(!x||x.id===c.id)return;const key='role:'+x.id;roleKeys.add(key);if(!x.deleted)spyKnowledgeSet(c,key,{name:x.remark||x.name,kind:'role',relation:x.relation||'微信联系人',status:'current',lastSeenAt:now,source:'查岗'});else if(st.contacts[key]&&st.contacts[key].status!=='deleted')spyKnowledgeSet(c,key,{name:st.contacts[key].name||x.remark||x.name,kind:'role',relation:st.contacts[key].relation||x.relation||'微信联系人',status:'deleted',deletedAt:x._delByChar||now,deletedBy:x._delByChar?'你':'未知',deletedFrom:S.me.name+'的微信'});});
+  try{const p=phoneFriendState();(p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id||'')).toUpperCase();if(!id)return;const key='pf:'+id;pfKeys.add(key);spyKnowledgeSet(c,key,{name:pfFriendDisplayName(f),kind:'phoneFriend',relation:'小手机真人好友',status:'current',lastSeenAt:now,source:'查岗'});});if(!(p.messages&&p.messages.__idb))Object.keys(st.contacts).forEach(key=>{const e=st.contacts[key];if(key.startsWith('pf:')&&e.status==='current'&&!pfKeys.has(key))spyKnowledgeSet(c,key,Object.assign({},e,{status:'deleted',deletedAt:now,deletedBy:'未知',deletedFrom:S.me.name+'的小手机好友'}));});}catch(_){}
+  Object.keys(st.contacts).forEach(key=>{const e=st.contacts[key];if(key.startsWith('role:')&&e.status==='current'&&!roleKeys.has(key))spyKnowledgeSet(c,key,Object.assign({},e,{status:'deleted',deletedAt:now,deletedBy:'未知',deletedFrom:S.me.name+'的微信'}));});spyKnowledgePrune(c);}
+function spyKnowledgePrompt(c,context,knownBefore){const st=spyKnowledgeStore(c),ctx=(''+(context||'')).toLowerCase().replace(/\s+/g,''),all=Object.values(st.contacts).filter(e=>e&&e.name&&(!knownBefore||knownBefore.has(e.key))),relevant=all.filter(e=>ctx.includes(spyKnowledgeNameKey(e.name))),picked=[];
+  relevant.forEach(e=>{if(!picked.some(x=>x.key===e.key)&&picked.length<8)picked.push(e);});if(!picked.length)return'';const lines=picked.map(e=>{if(e.status==='deleted'){const who=e.deletedBy==='你'?'是你亲手删除的':(e.deletedBy==='未知'?'删除人不确定':'是'+e.deletedBy+'删除的');return '· '+e.name+'：你以前认识/见过；已从'+(e.deletedFrom||'对应联系人列表')+'删除，'+who+'。不要把ta当成第一次出现，也不要说ta目前还在被删除的那份列表里。';}return '· '+e.name+'：你以前已经见过，不是第一次知道；当前身份是'+(e.relation||'联系人')+'。再次看到时承接已有认知，信息不足可以问关系细节，但不能装作完全不认识。';});return '\n\n【你的联系人认知·精简状态】\n'+lines.join('\n')+'\n这是可更新的当前认知，不是要求你逐条复述。注意“从你自己的微信删除”和“从'+S.me.name+'的微信删除”是两回事。';}
 // 角色删掉【他自己微信里】的某个好友：从登他微信(d.friends)和查他手机(spy.wechat)里一起抹掉
 function charDelOwnFriend(c,name){if(!c||!name)return;const cid=c.id;name=(''+name).trim();if(!name)return;
   const match=s=>{s=''+(s||'');return s===name||(name.length>=2&&(s.includes(name)||name.includes(s)));};
@@ -5541,7 +5556,7 @@ function charDelOwnFriend(c,name){if(!c||!name)return;const cid=c.id;name=(''+na
   if(d&&d.friends)d.friends=d.friends.filter(f=>{if(match(f.name)){removed=removed||f.name;return false;}return true;});
   if(S.spy&&S.spy[cid]&&S.spy[cid].wechat)S.spy[cid].wechat=S.spy[cid].wechat.filter(x=>{if(match(x.who)){removed=removed||x.who;return false;}return true;});
   if(c._gotFromMe)c._gotFromMe=c._gotFromMe.filter(n=>!match(n));
-  if(removed){msgs(cid).push({role:'user',type:'sys',content:'🗑️ '+(c.remark||c.name)+' 把自己微信里的好友「'+removed+'」删掉了',time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===cid)render();}}
+  if(removed){spyKnowledgeSet(c,'own:'+spyKnowledgeNameKey(removed),{name:removed,kind:'ownFriend',relation:'你自己的微信好友',status:'deleted',deletedAt:Date.now(),deletedBy:'你',deletedFrom:'你自己的微信'});msgs(cid).push({role:'user',type:'sys',content:'🗑️ '+(c.remark||c.name)+' 把自己微信里的好友「'+removed+'」删掉了',time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===cid)render();}}
 /* 高级感头像：彩色圆 + 名字末字（替掉突兀的 emoji 头像） */
 function hisAv(name,sz){sz=sz||40;const nm=(''+(name||'')).replace(/[（(][^)）]*[)）]/g,'').trim();const ch=(nm.slice(-1)||(''+(name||'?')).slice(0,1))||'?';const hue=((''+name).split('').reduce((a,ch)=>a+ch.charCodeAt(0),0))%360;return '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:'+Math.round(sz*0.28)+'px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-size:'+Math.round(sz*0.42)+'px;font-weight:600;background:linear-gradient(135deg,hsl('+hue+',42%,56%),hsl('+((hue+38)%360)+',44%,42%))">'+esc(ch)+'</div>';}
 /* 和「查他手机」互通：他微信里的好友/聊天同步到 spy 数据 */
@@ -6173,6 +6188,7 @@ function cNamecard(id){$('#panel').classList.remove('show');const cs=S.contacts.
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function sendNamecard(id,fid){const f=getC(fid);if(!f)return;closeModal();const c=getC(id);
   c._gotFromMe=c._gotFromMe||[];if(c._gotFromMe.indexOf(f.remark||f.name)<0)c._gotFromMe.push(f.remark||f.name);
+  spyKnowledgeSet(c,'role:'+f.id,{name:f.remark||f.name,kind:'role',relation:'你经'+S.me.name+'介绍认识的微信联系人',status:'current',lastSeenAt:Date.now(),source:'好友名片'});
   pushMsg(id,{role:'user',type:'namecard',dir:'mine',cname:f.remark||f.name,wxid:f.wxid,avatar:f.avatar,persona:(f.signature||f.relation||'我的好友'),refId:fid,id:uid()});
   toast('已把 '+(f.remark||f.name)+' 的名片推给ta');scheduleReply(id);}
 function addHisCard(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.added||m.declined)return;
@@ -6465,13 +6481,13 @@ function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer
     if(!c.blocked)scheduleReply(wl.by,'[系统：你刚【登录'+S.me.name+'的微信看了整整一分钟】，现在退出来了。'+(did.length?'你在里面做了这些：'+did.join('；')+'。':'你把ta和所有人的聊天都仔细翻了一遍。')+saw+'\n\n现在主动来找ta，把你最在意的1到3个人/群聊挑出来总结给ta听：说清楚你看到谁和谁在聊、最近大概聊了什么、你为什么在意。不要复制大段聊天原文，不要一口气列全名单；符合你人设，可以质问、吃醋、敲打、宣示主权或装作平静。]');}}
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();}
 async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
-  const dump=wxLoginWechatSummary(cid);if(S.wxLogin&&S.wxLogin.by===cid){S.wxLogin.saw=dump;save();}
+  spyKnowledgeSync(c);const dump=wxLoginWechatSummary(cid);if(S.wxLogin&&S.wxLogin.by===cid){S.wxLogin.saw=dump;save();}
   const intent=wxLoginRecentIntent(cid),intentText=intent.text?('\n\n【刚刚'+S.me.name+'对你的要求/上下文】'+intent.text+'\n如果ta刚要求你“介绍自己/打招呼/让别人认识你”，你要优先照做：不要只发群聊一条；要给最合适的1到3个一对一联系人分别发自然的介绍。若ta明确说“每个人/所有人/都发”，最多挑最近或最重要的5个人分别发。'):'';const sentKeys=new Set(),selfName=wxLoginSelfName(c),displayName=wxLoginDisplayName(c);
   const note='[系统：你刚【登录了'+S.me.name+'的微信账号】，限时1分钟，现在能看到ta微信里的【全部细节】——所有联系人、最近两天的上下文摘要、角色群聊、小手机真人好友和小手机真人群聊（这比你平时偷偷查岗看得全太多了）。\n置顶排在最前的那个就是【你自己（'+displayName+'）】，那是'+S.me.name+'给你的备注/显示名；你的真实名字/对外自称是【'+selfName+'】。你介绍自己时必须说“我是'+selfName+'”，绝对不要把备注“'+displayName+'”当成自己的名字。'+intentText+'\n下面是ta微信里的真实内容摘要：\n\n'+dump+'\n\n【很重要】上面这份就是ta微信里【现在的全部联系人/群聊摘要】。如果你印象/记忆里ta还有别的谁、但上面这份名单里【根本没有】，那说明ta【早就把那个人删掉或清空了】——【绝对别再提那个人、别把ta当成现在还在的联系人来吃醋或质问】，只针对上面真实存在的人反应。小手机真人好友/真人群聊不是虚拟角色，群聊要看每行发言人，别把谁和谁聊的说混。\n\n【代发口吻铁律】你写在 [对Ta说|对象|内容] 里的“内容”会真的以'+S.me.name+'账号发给那个人/那个群。它必须像“'+S.me.name+'正在对收件人说话”，不能像你私下在对'+S.me.name+'本人说话。严禁在代发内容里写 baby/宝贝/亲爱的 这类你对'+S.me.name+'的称呼；严禁写“你在这个群里发消息记得分寸”“别让外人看到”这种训'+S.me.name+'的话。若要提醒群，就对群成员说“大家以后在群里注意分寸”；若要介绍你自己，就对收件人说“大家好/你好，我是'+selfName+'，借'+S.me.name+'的号打个招呼”。\n\n你可以凭自己的人设和占有欲决定做什么（可以都不做、也可以做几样）：\n· 看虚拟角色联系人不顺眼/觉得是威胁，单独一行 [删好友|那个人的名字] 把ta从'+S.me.name+'微信里删掉；\n· 【小手机真人好友 / 小手机真人群聊不能被你删除】，你只能发消息划界限、禁言、或者退出来后找'+S.me.name+'争取ta同意少理对方；\n· 也能【以'+S.me.name+'的口吻】给最在意的一到三个人或群发一两句话(警告/划界限/宣示主权/介绍你自己)，单独一行 [对Ta说|联系人或群名|要发的话]；可以发给虚拟角色，也可以发给小手机真人好友或小手机群聊；\n· 如果情侣空间授权了禁言，你还能单独一行 [禁言|联系人或群名] 锁住ta和那个人/群的聊天；\n· 还能顺手【把ta给你（'+displayName+'）设的备注名改掉】逗ta/宣示主权，单独一行 [改备注|新的备注名]——要【站在'+S.me.name+'的角度、写ta会怎么称呼你】（如"老公""坏蛋""亲爱的"），别写成第三人称身份（"XX的未婚妻/老公"是错的）；而且【别每次登录都改，两三天改一次就够】，不确定就别改。\n只输出你要执行的指令行，别的什么都先别说——等会儿退出来你再去找ta算账。]';
   try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:c.model==='aux',max:400});
     if(!S.wxLogin)return;
     splitBubbles(r).forEach(l=>{l=l.trim();let m;
-      if((m=l.match(/^[\[【]\s*删好友\s*[\|｜:：]\s*([^\]】]+)[\]】]$/))){const nm=m[1].trim();const tgt=S.contacts.find(x=>!x.deleted&&x.id!==cid&&(x.name===nm||x.remark===nm||(nm.length>=2&&((x.name&&x.name.includes(nm))||(x.remark&&x.remark.includes(nm))))));if(tgt){tgt.deleted=true;tgt._delByChar=Date.now();tgt._deleteCount=(tgt._deleteCount||0)+1;delete tgt._recoveredAt;S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('删了好友「'+(tgt.remark||tgt.name)+'」');}return;}
+      if((m=l.match(/^[\[【]\s*删好友\s*[\|｜:：]\s*([^\]】]+)[\]】]$/))){const nm=m[1].trim();const tgt=S.contacts.find(x=>!x.deleted&&x.id!==cid&&(x.name===nm||x.remark===nm||(nm.length>=2&&((x.name&&x.name.includes(nm))||(x.remark&&x.remark.includes(nm))))));if(tgt){tgt.deleted=true;tgt._delByChar=Date.now();tgt._deleteCount=(tgt._deleteCount||0)+1;delete tgt._recoveredAt;spyKnowledgeSet(c,'role:'+tgt.id,{name:tgt.remark||tgt.name,kind:'role',relation:tgt.relation||'微信联系人',status:'deleted',deletedAt:Date.now(),deletedBy:'你',deletedFrom:S.me.name+'的微信'});S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('删了好友「'+(tgt.remark||tgt.name)+'」');}return;}
       if((m=l.match(/^[\[【]\s*改备注\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]$/))){const nv=m[1].trim();if(nv&&Date.now()-(c._remarkAt||0)>2.5*86400000){c.remark=nv;c._remarkAt=Date.now();S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('把自己的备注改成了「'+nv+'」');}return;}
       if((m=l.match(/^[\[【]\s*禁言\s*[\|｜:：]\s*([^\]】]+)[\]】]$/))){const tgt=gagFind(m[1],true);if(tgt){gagSetKey(tgt.key,genPwd());S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('禁言了「'+tgt.name+'」');}return;}
       if((m=l.match(/^[\[【]\s*对Ta说\s*[\|｜:：]\s*([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]$/))){const nm=m[1].trim(),rawSay=m[2].trim();if(!rawSay)return;const tgt=S.contacts.find(x=>!x.deleted&&x.id!==cid&&(x.name===nm||x.remark===nm||(nm.length>=2&&((x.name&&x.name.includes(nm))||(x.remark&&x.remark.includes(nm))))));if(tgt){const say=wxLoginFixOutgoing(c,'role',tgt.remark||tgt.name,rawSay,intent);if(!say)return;msgs(tgt.id).push({role:'user',type:'text',content:say,time:Date.now(),id:uid(),_wxlogin:true});sentKeys.add('role:'+tgt.id);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('以你名义跟「'+(tgt.remark||tgt.name)+'」说了："'+say.slice(0,28)+'"');if(!tgt.blocked)scheduleReply(tgt.id);return;}const gt=gagFind(nm,false);if(gt&&gt.type==='pf'){const pid=gt.key.slice(3),say=wxLoginFixOutgoing(c,'pf',gt.name,rawSay,intent);if(!say)return;sendPhoneFriendBody(pid,say,{silent:true});sentKeys.add('pf:'+pid);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('以你名义跟小手机好友「'+gt.name+'」说了："'+say.slice(0,28)+'"');return;}if(gt&&gt.type==='pfg'){const gid=gt.key.slice(4),say=wxLoginFixOutgoing(c,'pfg',gt.name,rawSay,intent);if(!say)return;sendPhoneFriendGroupBody(gid,say,{silent:true});sentKeys.add('pfg:'+gid);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('以你名义在小手机群「'+gt.name+'」说了："'+say.slice(0,28)+'"');return;}return;}
@@ -6716,7 +6732,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('已加日程 '+mm[1]);continue;}
       mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){S.moments.unshift({id:uid(),authorId:c.id,text:mm[1],images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();toast(''+(c.remark||c.name)+'发了朋友圈');continue;}
-      mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:c.id});S.x.tweets.unshift({id:uid(),who:c.id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:mm[1],time:Date.now(),likes:[],lk:Math.floor(Math.random()*60),comments:[],rt:0});save();toast('𝕏 '+nm+'发了推');continue;}
+      mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){publishRoleTweet(c,mm[1],{toast:true});continue;}
       await sleep(got?roleMessageGap(line):0);got=true;
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
@@ -7192,7 +7208,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     content=content.replace(/[\[【]\s*送礼\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{giftSend(_call.id,(nm||'礼物').trim(),+pr||0);return '';});
     // 通话里也能：发朋友圈 / 发推 / 转账（执行后不读出来）
     content=content.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{S.moments.unshift({id:uid(),authorId:c.id,text:(tx||'').trim(),images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();if(cur().p==='wechat'&&wxTab==='moments')render();return '';});
-    content=content.replace(/[\[【]\s*发推\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:c.id});S.x.tweets.unshift({id:uid(),who:c.id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:(tx||'').trim(),time:Date.now(),likes:[],lk:Math.floor(Math.random()*60),comments:[],rt:0});save();return '';});
+    content=content.replace(/[\[【]\s*发推\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{publishRoleTweet(c,tx);return '';});
     content=content.replace(/[\[【]\s*(转账|红包)\s*[\|｜:：]([0-9.]+)\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,kind,amt,note)=>{const ty=(kind==='红包'?'redpacket':'transfer'),av=+amt||0;if(msgs(_call.id).some(x=>x.role==='assistant'&&x.type===ty&&Math.abs((+x.amount||0)-av)<0.01&&Date.now()-(x.time||0)<180000))return '';/* 3分钟内同额转账/红包不重复 */const tc={role:'assistant',type:ty,amount:av,note:(note||'').trim(),received:false,id:uid(),time:Date.now()};msgs(_call.id).push(tc);notifyIncoming(c,tc);save();return '';});
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,_call.id))extractControl(content,c,_statedPwd);}
@@ -7421,7 +7437,7 @@ function spyBudget(id){const today=new Date().toDateString();const c=getSpy(getC
 async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;if(wxLoginActive())return;/* 他正登录着你微信就别再触发旧的查岗,避免查两次 */const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
   if(_call&&!(_call.id===id&&_call.state==='active'))return;/* 有通话在进行（响铃/拨号/或在和别人通话）就别冒出查岗微信消息；只有"正和ta本人通话中"才继续（下面会把反应导进电话里）*/
   if(!force&&!spyBudget(id))return;recordVisit(id,'查看手机');
-  const fd=opts.intent?spyFocusData(id,opts.focus):null;const flab=fd?(fd.label||opts.focus||'手机'):'';
+  const knownBefore=new Set(Object.keys(spyKnowledgeStore(c).contacts));spyKnowledgeSync(c);const fd=opts.intent?spyFocusData(id,opts.focus):null;const flab=fd?(fd.label||opts.focus||'手机'):'';
   const steps=opts.intent?['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 '+flab]:['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 抖音(搜索/点赞/私信)','正在查看 X动态','正在查看 X私信','正在查看 钱包账单','正在查看 购物订单','正在查看 浏览器记录','正在查看 线下约会记录'].concat(sp.loc?['正在查看 实时定位']:[]).concat(['查看完成']);
   const B=$('#spyBanner');B.className='spybanner show';
   for(let i=0;i<steps.length;i++){B.innerHTML=`👁️ <b>${esc(c.remark||c.name)}</b> ${esc(steps[i])}<span class="spydot">…</span>`;await sleep(900);}
@@ -7436,13 +7452,14 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;if(wxL
     if(/没什么新动静/.test(act)){S._spySeen[id]=Date.now();save();return;}
     note='[系统：你查看了'+S.me.name+'的手机，看到这些"自上次以来的新动静"：\n'+act+'\n请只针对这些新内容给ta发微信（吃醋/关心/调侃/质问都行，符合人设），别重复以前提过的事。\n【说话要求】简短直接、戳重点，一两句就够，别啰嗦一大堆。自然口语。\n【铁律】只能依据上面真实内容，不许编造没有的记录。]';
   }
+  note+=spyKnowledgePrompt(c,note+' '+(opts.lead||''),knownBefore);save(500);
   if(_call&&_call.state==='active'&&_call.id===id){
     /* 正在和ta通话：查手机的反应直接进这通电话——电话里的他和微信是同一个人，查完当场就知道、当面说，而不是另发微信质问 */
     let cn=note.replace(/给ta发微信/g,'当面跟ta说');
     cn=cn.replace(/\]\s*$/,'\n【重要·此刻正在通话中】你正和'+S.me.name+'打着'+(_call.kind==='video'?'视频':'语音')+'电话，上面这些是你边打电话边顺手翻看ta手机看到的。请【就在这通电话里】当面反应（吃醋/质问/调侃/心疼都行，符合人设、口语短句），千万别发微信文字消息。]');
     if(!opts.intent)S._spySeen[id]=Date.now();save();callAI(cn);return;
   }
-  try{const recent=lastRounds(msgs(id),8).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content),lead=(''+(opts.lead||'')).replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/\s+/g,' ').trim().slice(0,500),continuity='[系统：查手机只是刚才对话里的插入动作。你查完后必须承接正在聊的话题和语气，不许突然跳去问睡觉、吃饭、在干嘛等无关日常。'+(lead?'你刚才在查之前准备说的话大意是：“'+lead+'”。':'')+'如果刚才在谈某个人和'+S.me.name+'是什么关系，就只围绕这段关系和实际查到的内容继续。]';const content=await chatAPI([{role:'system',content:buildSystem(c)},...recent,{role:'user',content:note+'\n'+continuity}],{aux:c.model==='aux'});
+  try{const recent=lastRounds(msgs(id),8).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content),lead=(''+(opts.lead||'')).replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/\s+/g,' ').trim().slice(0,500),continuity='[系统：查手机只是刚才对话里的插入动作。你查完后必须承接正在聊的话题和语气，不许突然跳去问睡觉、吃饭、在干嘛等无关日常。'+(lead?'你刚才在查之前准备说的话大意是：“'+lead+'”。':'')+'如果刚才在谈某个人和'+S.me.name+'是什么关系，就只围绕这段关系和实际查到的内容继续。]',memCtx=selectRelevantMemory(c,note+' '+lead+' '+recent.map(x=>x.content).join(' '),3),sys=buildSystem(c,{selectiveMemory:true,memoryItems:memCtx.items})+memoryRetrievalPrompt(c,memCtx);const content=await chatAPI([{role:'system',content:sys},...recent,{role:'user',content:note+'\n'+continuity}],{aux:c.model==='aux'});
     applyAuxTags(content,c,id);let spySent=false;for(const rawLine of splitBubbles(content)){const l=cleanRolePunct(rawLine),_lt=(''+l).trim(),_mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);continue;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];continue;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))continue;await sleep(spySent?roleMessageGap(l):0);const mm=lineToMsg(l,c);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);spySent=true;save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}if(!opts.intent)S._spySeen[id]=Date.now();save();
     if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
   }catch(e){}}
