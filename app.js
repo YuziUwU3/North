@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v434 · 自然主动与当前活动';
+const APP_VER='v435 · 角色差异化防护';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -311,7 +311,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true, humanLike:true, initiative:true, currentActivity:true,
+    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true, humanLike:true, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -2115,6 +2115,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>通用活人感增强<br><small style="color:#888">理解上下文、按性格决定策略和消息节奏，并减少复述与重复模板</small></span><span class="sw ${S.settings.humanLike!==false?'on':''}" onclick="S.settings.humanLike=(S.settings.humanLike===false);save();render()"></span></div>
       <div class="it"><span>低频主动与自然回访<br><small style="color:#888">按角色主动度、当前状态和近期话题决定是否主动，不会到点机械催消息</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
+      <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
       <div class="it"><span>查他手机·刷新用副模型<br><small style="color:#888">开：用便宜的副模型生成ta手机内容（省钱）；关：用主模型（更稳更贴人设）。哪个刷得出、刷得好就用哪个</small></span><span class="sw ${S.settings.spyAux?'on':''}" onclick="S.settings.spyAux=!S.settings.spyAux;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -6191,6 +6192,42 @@ function humanLikeOn(){return !S.settings||S.settings.humanLike!==false;}
 function hlNorm(s){return String(s||'').toLowerCase().replace(/\[[^\]]*\]|【[^】]*】/g,'').replace(/[\s，。、！？!?,.~～…：:；;（）()「」『』“”'"\-—]/g,'');}
 function hlVisibleLines(content){return splitBubbles(content).map(x=>cleanRolePunct(x).trim()).filter(x=>x&&!/^\s*[\[【]/.test(x)&&!isOOCLine(x)&&!CTLLEAK.test(x));}
 function hlRecent(c){if(!c)return[];if(!Array.isArray(c._humanRecent))c._humanRecent=[];return c._humanRecent;}
+function personaGuardOn(){return humanLikeOn()&&(!S.settings||S.settings.personaGuard!==false);}
+function personaBehaviorProfile(c){const text=((c&&c.persona)||'')+' '+((c&&c.relation)||'')+' '+((c&&c.job)||''),t=(c&&c.traits)||{},scores={quiet:0,rational:0,warm:0,lively:0,sharp:0,classical:0,dominant:0,independent:0};
+  const hit=(k,re,n)=>{if(re.test(text))scores[k]+=n||3;};hit('quiet',/寡言|惜字|少话|沉默|高冷|冷淡|内敛|克制/,5);hit('rational',/理性|冷静|逻辑|严谨|成熟|稳重|医生|律师|程序员|研究|教授/,4);hit('warm',/温柔|体贴|耐心|治愈|细心|善解人意|暖/,5);hit('lively',/活泼|开朗|元气|话痨|逗比|爱笑|可爱|俏皮|搞笑/,5);hit('sharp',/毒舌|嘴硬|傲娇|刻薄|阴阳怪气|爱抬杠|犀利/,5);hit('classical',/古风|古代|王爷|将军|师尊|仙尊|陛下|公子|江湖|修仙/,7);hit('dominant',/强势|霸道|掌控|病娇|占有|上位|命令/,4);hit('independent',/独立|自由|疏离|边界|非恋爱/,3);if(/^(朋友|同事|同学|普通关系|陌生人)$/.test((c&&c.relation||'').trim()))scores.independent+=4;
+  const val=k=>t[k]==null?50:+t[k];scores.dominant+=(val('ctrl')+val('own')-100)/25;scores.warm+=(val('cling')-50)/35;scores.independent+=(50-val('cling'))/25;scores.lively+=(val('active')-50)/35;scores.quiet+=(50-val('active'))/30;
+  let type=Object.keys(scores).sort((a,b)=>scores[b]-scores[a])[0];if(scores[type]<2)type='balanced';const names={quiet:'寡言克制型',rational:'理性务实型',warm:'温柔照顾型',lively:'活泼外放型',sharp:'毒舌嘴硬型',classical:'古风含蓄型',dominant:'强势主导型',independent:'独立平等型',balanced:'均衡自然型'};
+  return{type,name:names[type],scores,verbosity:Math.max(0,Math.min(100,45+(val('active')-50)*.45+(type==='lively'?25:0)-(type==='quiet'?30:0))),warmth:Math.max(0,Math.min(100,50+(val('cling')-50)*.35+(type==='warm'?30:0)-(type==='sharp'?18:0))),directness:Math.max(0,Math.min(100,50+(type==='rational'||type==='dominant'?25:0)+(type==='quiet'?10:0)-(type==='classical'?18:0))),relation:(c&&c.relation)||''};}
+const PERSONA_MODE_GUIDE={
+  '克制直答':'先把答案或态度说清，只补一个必要细节，不热闹铺陈。','留白陪伴':'少说但不敷衍，用一个具体动作倾向或短句让对方感到你在。','低声追问':'只追问最关键的一点，不连环盘问。',
+  '先答后析':'先直接回答，再给简短理由或判断依据。','实际建议':'给一个能执行的小建议，并说明为什么适合当前情况。','具体追问':'问一个能推进事实判断的具体问题。',
+  '具体共情':'指出对方具体难受在哪里，再用你自己的方式接住。','温和照顾':'把关心落到休息、吃饭、身体或下一步安排中的一个点。','耐心追问':'温和问一个问题，让对方慢慢说，不代替对方下结论。',
+  '轻快接梗':'接住玩笑或情绪，用轻巧反应把话题往前推。','主动分享':'分享一个自己的小想法或当下反应，让交流双向。','俏皮反问':'用一个有性格的反问制造来回，但不能回避正题。',
+  '嘴硬关心':'表面别扭或嫌弃，实际把关心落到具体处，不突然变甜宠。','轻微抬杠':'抓住一个点轻轻反驳或吐槽，再给真实态度。','直球点破':'直接点出你判断到的核心，不绕标准安慰模板。',
+  '含蓄回应':'措辞克制有分寸，以含蓄态度承接，不堆网络热梗。','守礼关切':'先照顾边界和礼数，再表达关心。','简短点题':'用符合古风底色的简洁表达说中要点，不写长篇文言。',
+  '直接接管':'在对方需要帮助时明确接过一个具体问题，给出下一步。','明确要求':'清楚说出你希望对方现在做什么，并给出理由。','压低语气确认':'保持主导感，只确认最关键的事实或边界。',
+  '平等直答':'以平等朋友式口吻直接回应，不自动恋爱化。','克制关心':'有关心但不过度亲密，不使用恋人专属称呼和承诺。','分享观点':'说出自己的判断或偏好，让角色有独立立场。',
+  '具体承接':'抓住用户消息里最具体的一点回应。','直接回答':'先完成问题本身，再自然补充态度。','自然追问':'只问一个真正有用的问题，给对方继续说的空间。'};
+function personaModePool(profile,p){let pool={quiet:['克制直答','留白陪伴','低声追问'],rational:['先答后析','实际建议','具体追问'],warm:['具体共情','温和照顾','耐心追问'],lively:['轻快接梗','主动分享','俏皮反问'],sharp:['嘴硬关心','轻微抬杠','直球点破'],classical:['含蓄回应','守礼关切','简短点题'],dominant:['直接接管','明确要求','压低语气确认'],independent:['平等直答','克制关心','分享观点'],balanced:['具体承接','直接回答','自然追问']}[profile.type]||['具体承接','直接回答','自然追问'];
+  if(p.explicitStop)pool=profile.type==='dominant'?['压低语气确认','克制直答']:['克制直答','平等直答','简短点题'];
+  else if(/明确提问/.test(p.intent))pool=[...pool.filter(x=>/答|点题|点破/.test(x)),...pool.filter(x=>!/答|点题|点破/.test(x))];
+  else if(p.comfort)pool={quiet:['留白陪伴','低声追问'],rational:['实际建议','具体追问'],warm:['具体共情','温和照顾'],lively:['主动分享','轻快接梗'],sharp:['嘴硬关心','直球点破'],classical:['守礼关切','含蓄回应'],dominant:['直接接管','明确要求'],independent:['克制关心','平等直答'],balanced:['具体承接','自然追问']}[profile.type]||pool;
+  return[...new Set(pool)];}
+function personaChooseMode(c,p,profile){const pool=personaModePool(profile,p),used=hlRecent(c).slice(-4).map(x=>x.mode).filter(Boolean),available=pool.filter(x=>!used.slice(-2).includes(x)),fallback=pool.filter(x=>x!==used[used.length-1]),pick=available.length?available:(fallback.length?fallback:pool);return pick[activityHash(c.id+'|'+p.intent+'|'+hlRecent(c).length)%pick.length];}
+function personaApplyPlan(c,p){if(!personaGuardOn())return p;const profile=personaBehaviorProfile(c),mode=personaChooseMode(c,p,profile);p.personaProfile=profile;p.mode=mode;p.modeGuide=PERSONA_MODE_GUIDE[mode]||'';
+  if(!p.asked){if(profile.type==='quiet'&&!p.comfort){p.max=Math.min(p.max,2);p.min=Math.min(p.min,p.max);}else if(profile.type==='lively'&&(!p.activity||p.activity.busy<3)){p.max=Math.max(p.max,Math.min(5,+c.msgMax||4));if(!p.explicitStop&&!p.ambiguous)p.min=Math.min(2,p.max);}else if(profile.type==='rational'||profile.type==='independent'||profile.type==='classical'){p.max=Math.min(p.max,3);p.min=Math.min(p.min,p.max);}}
+  return p;}
+function personaLedger(){S._personaOutput=S._personaOutput||{};const k=memoryScopeKey();S._personaOutput[k]=S._personaOutput[k]||[];return S._personaOutput[k];}
+function personaGenericMarks(text){const defs=[['always','我会一直陪着你|我一直都在|一直在你身边'],['great','你已经很棒了|你已经做得很好'],['hug','抱抱你|给你一个抱抱|抱一下'],['overthink','别想太多|不要想太多'],['whenready','想说的时候再说|等你想说'],['whatever','不管发生什么'],['withme','有我在'],['heartache','心疼死了|好心疼你']];return defs.filter(x=>new RegExp(x[1]).test(text)).map(x=>x[0]);}
+function personaSignature(content,p,c){const lines=hlVisibleLines(content),opening=hlNorm(lines[0]||'').slice(0,12),marks=personaGenericMarks(lines.join(' ')),lens=lines.map(x=>hlNorm(x).length),bucket=lens.length?(Math.round(lens.reduce((a,b)=>a+b,0)/lens.length/6)*6):0;return{cid:c.id,time:Date.now(),type:p&&p.personaProfile&&p.personaProfile.type||'',mode:p&&p.mode||'',opening,marks,bubbles:lines.length,lenBucket:bucket,question:lines.some(x=>/[？?]/.test(x))};}
+function personaGuardFails(content,p,c){if(!personaGuardOn()||!p||!p.personaProfile)return[];const sig=personaSignature(content,p,c),fails=[],others=personaLedger().filter(x=>x.cid!==c.id&&Date.now()-x.time<7*86400000);if(sig.marks.length>=2)fails.push('堆叠了通用安慰或甜宠模板');
+  if(sig.opening.length>=6&&new Set(others.filter(x=>x.opening===sig.opening).map(x=>x.cid)).size>=2)fails.push('多个角色近期使用了相同开头');
+  if(sig.marks.some(m=>new Set(others.filter(x=>(x.marks||[]).includes(m)).map(x=>x.cid)).size>=2))fails.push('多个角色近期重复同一通用模板');
+  if(p.personaProfile.type==='quiet'&&!p.comfort&&!p.asked&&sig.bubbles>2)fails.push('寡言角色回复过度展开');
+  if(p.personaProfile.type==='classical'&&/yyds|绝绝子|狠狠爱|emo|拿捏了|宝宝/.test(content)&&!/yyds|绝绝子|狠狠爱|emo|拿捏|宝宝/.test((c.persona||'')+' '+(p.source||'')))fails.push('古风角色混入统一网络口吻');
+  if(p.personaProfile.type==='independent'&&!/恋人|情侣|爱人|老公|老婆/.test(p.personaProfile.relation||'')&&/宝宝|宝贝|老婆|老公|亲亲|抱抱你/.test(content))fails.push('非恋爱角色被统一恋爱化');return fails;}
+function personaRecord(c,p,content){if(!personaGuardOn()||!p||!p.personaProfile)return;const arr=personaLedger();arr.push(personaSignature(content,p,c));if(arr.length>160)arr.splice(0,arr.length-160);}
+function hlMetricRecord(c,v,rewritten){S._humanMetrics=S._humanMetrics||{};const k=memoryScopeKey()+'|'+c.id,m=S._humanMetrics[k]||(S._humanMetrics[k]={turns:0,failed:0,rewrites:0,reasons:{}});m.turns++;if(v&&!v.ok){m.failed++;(v.fails||[]).forEach(x=>m.reasons[x]=(m.reasons[x]||0)+1);}if(rewritten)m.rewrites++;m.lastAt=Date.now();}
 function hlInterpret(c,text,note){
   text=String(text||'').trim();const compact=text.replace(/\s+/g,'');
   const asked=explicitReplyCount(text),emotion=dialogueEmotionSnapshot(c),activity=(S.settings.currentActivity===false?null:currentRoleActivity(c)),bad=badMoodInContent(c,'')||emotion.intensity>=25,short=compact.length<=4;
@@ -6215,9 +6252,9 @@ function hlInterpret(c,text,note){
   else if(/解释|说清楚|认真|重要|怎么办|建议/.test(text)){min=Math.min(2,max);max=Math.max(min,Math.min(max,4));}
   if(!asked&&activity&&activity.busy>=3&&!comfort){max=Math.min(max,2);min=Math.min(min,max);}
   const recent=hlRecent(c).slice(-5),sameCounts=recent.slice(-2).length===2&&recent.slice(-2).every(x=>x.bubbles===recent[recent.length-1].bubbles);
-  return {intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,emotion,activity,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent};}
+  return personaApplyPlan(c,{intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,emotion,activity,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent});}
 function hlPlanPrompt(c,p){if(!p)return'';const recent=p.recent.length?p.recent.map(x=>'· '+x.strategy+'；'+x.bubbles+'条；开头：'+(x.opening||'无')).join('\n'):'· 暂无';
-  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。';}
+  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.personaProfile?'\n人物行为画像：'+p.personaProfile.name+'。本轮表达方式：'+p.mode+'。'+p.modeGuide:'')+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· “本轮表达方式”约束的是行为选择，不是让你把方式名称说出来；不要写成所有角色都能互换的标准安慰句。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。';}
 function hlChars(s){return new Set(hlNorm(s).split('').filter(Boolean));}
 function hlSimilarity(a,b){a=hlChars(a);b=hlChars(b);if(!a.size||!b.size)return 0;let n=0;a.forEach(x=>{if(b.has(x))n++;});return n/Math.max(a.size,b.size);}
 function hlValidate(content,p,c,userText){const lines=hlVisibleLines(content),fails=[];if(!p)return{ok:true,fails};
@@ -6227,9 +6264,10 @@ function hlValidate(content,p,c,userText){const lines=hlVisibleLines(content),fa
   const opening=hlNorm(lines[0]||'').slice(0,8),ros=hlRecent(c).slice(-3).map(x=>x.opening).filter(Boolean);if(opening.length>=4&&ros.length>=2&&ros.slice(-2).every(x=>x===opening))fails.push('连续使用相同开头');
   if(p.comfort&&lines.length===1&&hlNorm(lines[0]).length<16)fails.push('用户明显需要安慰，但回应过于敷衍');
   const noTags=!/[\[【](订票|送票|转账|红包|点外卖|送礼|约会)[\|｜]/.test(content);if(noTags&&/我(已经|刚刚|刚才)(给你)?(买好|订好|付了款|转了账|到你这里|到你楼下|看见你)/.test(content))fails.push('把未经确认的现实行动说成已经发生');
+  personaGuardFails(content,p,c).forEach(x=>fails.push(x));
   return {ok:!fails.length,fails:[...new Set(fails)].slice(0,3)};}
-function hlRecord(c,p,content){if(!p||!c)return;const lines=hlVisibleLines(content);if(!lines.length)return;const arr=hlRecent(c);arr.push({time:Date.now(),strategy:p.strategy,bubbles:lines.length,opening:hlNorm(lines[0]).slice(0,8)});if(arr.length>20)arr.splice(0,arr.length-20);}
-function hlRewriteNote(v,p){return '[系统纠正：刚才这版有这些问题：'+v.fails.join('；')+'。请按本轮行为计划重新回复。保持角色本人，不要解释纠错过程；保留必要功能标签和最前面的[心情|...]；改变重复的开头/结构，用具体内容回应。消息数量在'+p.min+'到'+p.max+'条之间自然决定，不要为了凑数拆句。]';}
+function hlRecord(c,p,content){if(!p||!c)return;const lines=hlVisibleLines(content);if(!lines.length)return;const arr=hlRecent(c);arr.push({time:Date.now(),strategy:p.strategy,mode:p.mode||'',personaType:p.personaProfile&&p.personaProfile.type||'',bubbles:lines.length,opening:hlNorm(lines[0]).slice(0,8)});if(arr.length>20)arr.splice(0,arr.length-20);personaRecord(c,p,content);}
+function hlRewriteNote(v,p){return '[系统纠正：刚才这版有这些问题：'+v.fails.join('；')+'。请按本轮行为计划重新回复。保持角色本人，不要解释纠错过程；保留必要功能标签和最前面的[心情|...]；'+(p.mode?('继续采用“'+p.mode+'”这种人物行为方式，但换成该角色自己的内容和口吻；'):'')+'改变重复的开头/结构，用具体内容回应。消息数量在'+p.min+'到'+p.max+'条之间自然决定，不要为了凑数拆句。]';}
 function cnNumVal(s){s=(''+s).trim();const m={'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};return /^\d+$/.test(s)?+s:(m[s]||0);}
 function explicitReplyCount(text){text=''+(text||'');let m=text.match(/(?:发|回|回复|说).{0,4}?([一二两三四五六七八九十1-9]|10)\s*条/);if(!m)m=text.match(/([一二两三四五六七八九十1-9]|10)\s*条.{0,4}?(?:消息|回复|泡泡)/);const n=m?cnNumVal(m[1]):0;return n>=1&&n<=10?n:0;}
 function visibleMoodTone(c){const s=''+((c&&c.mood)||'');if(/开心|高兴|很好|心动|甜|爱|喜欢|满足|安心|宠|想你|黏|温柔|软|暖|愉快|期待/.test(s))return 'good';if(/冷|气|烦|难过|委屈|失落|闷|低落|生气|不爽|吃醋|沉默|累|倦|心疼|担心|不安|失望/.test(s))return 'bad';return '';}
@@ -6535,7 +6573,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你现在的心情/心情条已经是不开心、闷、冷淡或吃醋，'+S.me.name+'正在认真追问你。可以嘴硬，可以不一次说完，但不要只说“没事/没有/没有不开心”。请重写这一轮：保留一行[心情|...]，用你的性格慢慢露出一点真实原因、在意点，或明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”。1到4条短微信，别一大段。]'},_pin],_md);
       if(fix&&!isRefusal(fix))content=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));
     }
-    if(_hlPlan){const _hv=hlValidate(content,_hlPlan,c,_userText);if(!_hv.ok){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:hlRewriteNote(_hv,_hlPlan)},_pin],_md);if(fix&&!isRefusal(fix)){const cleaned=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));if(hlValidate(cleaned,_hlPlan,c,_userText).ok)content=cleaned;}}}
+    if(_hlPlan){const _hv=hlValidate(content,_hlPlan,c,_userText);let _rewritten=false;if(!_hv.ok){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:hlRewriteNote(_hv,_hlPlan)},_pin],_md);if(fix&&!isRefusal(fix)){const cleaned=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));if(hlValidate(cleaned,_hlPlan,c,_userText).ok){content=cleaned;_rewritten=true;}}}hlMetricRecord(c,_hv,_rewritten);}
     if(_hlPlan)dialogueEmotionOnReply(c,content,_userText);
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
