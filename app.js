@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v431 · 情绪连续性增强';
+const APP_VER='v432 · 小号好友身份修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -433,7 +433,8 @@ function lifeNotePrompt(c){if(!isLover(c))return '';const arr=lifeNotes();if(!ar
   if(!picked.length)picked=arr.slice(0,3);else picked=picked.slice(0,6);
   if(!picked.length)return '';
   return '\n\n# '+S.me.name+'身上的小事簿（隐藏的生活痕迹）\n'+picked.map(n=>'· '+ymd(n.ts||0)+'：'+aboutMeNoteText(n.text)).join('\n')+'\n这些不是数据库条目，而是你对ta的印象来源。相关话题再次出现时，你会自然先观察ta现在的状态、记得ta之前受过什么影响；不要在可见消息里机械复述清单，也不要说你读取了小事簿。';}
-function dialogueEmotion(c){if(!c)return null;c._dialogueEmotion=c._dialogueEmotion||{};const key=(typeof actId==='function'?actId():'main');let st=c._dialogueEmotion[key];if(!st){const mv=typeof moodNow==='function'?moodNow(c):(c.moodVal==null?70:c.moodVal),reason=c.emotionTailReason||'';st=c._dialogueEmotion[key]={type:mv<45?'hurt':mv<62?'low':'neutral',intensity:Math.max(0,Math.min(100,(70-mv)*2)),cause:reason,startedAt:Date.now(),updatedAt:Date.now(),repair:0,probeCount:0,revealed:0,threads:[]};}if(!Array.isArray(st.threads))st.threads=[];return st;}
+function negatedBlockMention(text){return /(没|没有|从没|并没|根本没|不是|并不是).{0,5}(拉黑|删了|删除)|就没拉黑|没有把.{0,5}(拉黑|删除)/.test(String(text||''));}
+function dialogueEmotion(c){if(!c)return null;c._dialogueEmotion=c._dialogueEmotion||{};const key=(typeof actId==='function'?actId():'main');let st=c._dialogueEmotion[key];if(!st){const mv=typeof moodNow==='function'?moodNow(c):(c.moodVal==null?70:c.moodVal),reason=c.emotionTailReason||'';st=c._dialogueEmotion[key]={type:mv<45?'hurt':mv<62?'low':'neutral',intensity:Math.max(0,Math.min(100,(70-mv)*2)),cause:reason,startedAt:Date.now(),updatedAt:Date.now(),repair:0,probeCount:0,revealed:0,threads:[]};}if(!Array.isArray(st.threads))st.threads=[];const before=st.threads.length;st.threads=st.threads.filter(x=>!negatedBlockMention((x&&x.topic)||''));if(before!==st.threads.length||negatedBlockMention(st.cause)){const active=st.threads.filter(x=>x&&x.status!=='resolved');st.cause=active.length?active[active.length-1].topic:'';st.intensity=active.length?Math.min(+st.intensity||0,30):0;st.type=active.length?(st.type||'low'):'neutral';st.repair=active.length?(+st.repair||0):0;if(negatedBlockMention(c.mood))c.mood='';}return st;}
 function dialogueActiveThreads(c){const st=dialogueEmotion(c);return st?st.threads.filter(x=>x&&x.status!=='resolved'):[];}
 function dialogueEmotionSnapshot(c){const st=dialogueEmotion(c);if(!st)return{type:'neutral',intensity:0,cause:'',repair:0,probeCount:0,revealed:0,threads:[],userDistress:false};const hrs=Math.max(0,(Date.now()-(st.updatedAt||Date.now()))/3600000),active=dialogueActiveThreads(c);let intensity=Math.max(0,(+st.intensity||0)-hrs*(active.length?2:6));if(active.length){const floor=Math.max.apply(null,active.map(x=>Math.max(8,(+x.severity||1)*10-Math.max(0,(Date.now()-(x.updatedAt||x.createdAt||Date.now()))/3600000)*1.5)));intensity=Math.max(intensity,Math.min(45,floor));}return {type:st.type||'neutral',intensity:Math.round(intensity),cause:st.cause||'',repair:+st.repair||0,probeCount:+st.probeCount||0,revealed:+st.revealed||0,threads:active.slice(-3),userDistress:!!(st.userDistressUntil&&st.userDistressUntil>Date.now())};}
 function dialogueAddThread(c,topic,severity,type){const st=dialogueEmotion(c);if(!st||!topic)return null;const key=String(topic).replace(/\s+/g,'').slice(0,30),old=st.threads.find(x=>x.status!=='resolved'&&(x.key===key||x.topic.includes(topic)||topic.includes(x.topic)));if(old){old.updatedAt=Date.now();old.severity=Math.max(old.severity||1,severity||1);return old;}const t={id:uid(),key,topic:String(topic).slice(0,70),severity:severity||2,status:'open',createdAt:Date.now(),updatedAt:Date.now()};st.threads.push(t);if(st.threads.length>12)st.threads=st.threads.slice(-12);st.type=type||st.type;st.cause=t.topic;st.startedAt=Date.now();st.updatedAt=Date.now();st.repair=0;st.probeCount=0;st.revealed=0;return t;}
@@ -446,7 +447,7 @@ function emotionAfterForgive(c){if(!c)return;const now=Date.now();dialogueResolv
 function emotionOnUserMsg(id,m){if(!m)return;const c=getC(id);if(!c)return;const text=(m.content||'').trim();if(!text)return;const st=dialogueEmotion(c),now=Date.now();
   if(moodProbeText(text)){st.probeCount=Math.min(5,(+st.probeCount||0)+1);st.updatedAt=now;}
   const distress=/(我.{0,8}(哭|难过|委屈|不开心|崩溃|好累|受不了|生气了)|呜呜|😭|😢|别管我|不要你管|哄我|你不爱我|别冷着我)/.test(text)&&!/废物|有病|恶心|滚开|闭嘴/.test(text);if(distress){st.userDistressUntil=now+45*60000;if(!dialogueActiveThreads(c).length){st.type='worried';st.intensity=Math.max(+st.intensity||0,30);st.cause='担心'+S.me.name+'现在的情绪';}st.updatedAt=now;if(isMain()){c.moodVal=Math.min(moodNow(c),62);c.moodAt=now;c.mood='担心'+S.me.name+'，先想把ta哄好';}save();return;}
-  if(/滚|闭嘴|烦死|讨厌你|废物|有病|恶心|分手|拉黑|删了你|滚开|烦不烦|你很烦/.test(text)){dialogueAddThread(c,'被'+S.me.name+'这句话刺到了：'+text.slice(0,38),4,'hurt');st.intensity=Math.min(100,Math.max(+st.intensity||0,55)+18);st.updatedAt=now;if(isMain()){c.moodVal=Math.max(0,moodNow(c)-18);c.moodAt=now;c.emotionTailUntil=now+4*3600000;c.emotionTailReason=st.cause;}save();return;}
+  const noBlock=negatedBlockMention(text),attacked=/滚|闭嘴|烦死|讨厌你|废物|有病|恶心|分手|滚开|烦不烦|你很烦/.test(text)||(!noBlock&&/拉黑|删了你/.test(text));if(attacked){dialogueAddThread(c,'被'+S.me.name+'这句话刺到了：'+text.slice(0,38),4,'hurt');st.intensity=Math.min(100,Math.max(+st.intensity||0,55)+18);st.updatedAt=now;if(isMain()){c.moodVal=Math.max(0,moodNow(c)-18);c.moodAt=now;c.emotionTailUntil=now+4*3600000;c.emotionTailReason=st.cause;}save();return;}
   if(/对不起|我错了|别生气|哄你|抱抱|原谅我|不吵了|我解释|听我说/.test(text)&&dialogueActiveThreads(c).length){const t=dialogueActiveThreads(c).slice(-1)[0];if(t)t.status='repairing';st.repair=Math.min(85,(+st.repair||0)+(/解释|说清楚|我错了/.test(text)?28:16));st.intensity=Math.max(12,(+st.intensity||0)-10);st.type='softening';st.updatedAt=now;if(isMain()){c.moodVal=Math.min(65,moodNow(c)+6);c.moodAt=now;if(!c.emotionTailUntil||c.emotionTailUntil<now)c.emotionTailUntil=now+90*60000;}save();return;}
   if(/爱你|喜欢你|想你|抱抱|亲亲|陪你|别难过/.test(text)&&(+st.intensity||0)>0){st.repair=Math.min(75,(+st.repair||0)+8);st.intensity=Math.max(8,(+st.intensity||0)-5);st.updatedAt=now;save();}}
 const REMOVED_HOME_TYPE='home'+'invite';
@@ -497,7 +498,7 @@ function affNow(c){if(!c)return 1;let v=c.affection==null?affBase(c):+c.affectio
 function affStage(v){return v>=86?'很亲密':v>=70?'亲密':v>=50?'熟悉':v>=30?'靠近中':v>=15?'普通':'疏离';}
 function affTone(c){const v=affNow(c),nm=S.me.name;if(v>=86)return '你和'+nm+'已经非常亲密，像长期稳定伴侣，关心、占有欲、管着ta都可以自然一点，但仍按你的人设拿捏分寸。';if(v>=70)return '你已经很在意'+nm+'，会主动关心、吃醋、想靠近，语气比普通朋友亲密。';if(v>=50)return '你对'+nm+'比较熟悉，有明显好感，会自然照顾ta，但还不到无条件黏人。';if(v>=30)return '你对'+nm+'正在慢慢靠近，可以温和回应、偶尔关心，别一下子太亲密或太管束。';if(v>=15)return '你和'+nm+'只是普通关系，保持礼貌和一点距离，别过度管ta、别像恋人一样安排ta。';return '你对'+nm+'还很疏离或有点冷淡，少主动管束，少说亲密称呼，先观察ta。';}
 function affInterestHit(text,c){text=''+(text||'');const p=((c&&c.persona)||'')+' '+((c&&c.signature)||'')+' '+((c&&c.job)||'');const hits=['喜欢','爱好','兴趣','在意','珍惜','工作','职业','梦想','猫','音乐','电影','书','吃饭','睡觉','想你','谢谢','辛苦','对不起','抱抱','陪你','好看','帅','厉害'].filter(k=>text.includes(k)&&(p.includes(k)||/谢谢|辛苦|对不起|抱抱|陪你|想你|好看|帅|厉害/.test(k)));return hits.length;}
-function affDeltaFor(text,c){text=''+(text||'');if(!text.trim())return 0;let d=0;if(/谢谢|辛苦|想你|喜欢你|爱你|陪你|抱抱|哄你|对不起|错了|好看|帅|厉害|在乎你|心疼/.test(text))d+=1+Math.min(2,affInterestHit(text,c));if(/滚|烦死|讨厌你|闭嘴|别管我|拉黑|删除|分手|恶心|废物|有病|不想理你/.test(text))d-=2;if(/骗你|不需要你|关你什么事|你谁啊/.test(text))d-=1;if(d>3)d=3;if(d<-3)d=-3;return d;}
+function affDeltaFor(text,c){text=''+(text||'');if(!text.trim())return 0;let d=0;if(/谢谢|辛苦|想你|喜欢你|爱你|陪你|抱抱|哄你|对不起|错了|好看|帅|厉害|在乎你|心疼/.test(text))d+=1+Math.min(2,affInterestHit(text,c));const noBlock=negatedBlockMention(text);if(/滚|烦死|讨厌你|闭嘴|别管我|分手|恶心|废物|有病|不想理你/.test(text)||(!noBlock&&/拉黑|删除/.test(text)))d-=2;if(/骗你|不需要你|关你什么事|你谁啊/.test(text))d-=1;if(d>3)d=3;if(d<-3)d=-3;return d;}
 function affDailyGain(c){const k=ymd(Date.now());if(!c._affGain||c._affGain.date!==k)c._affGain={date:k,up:0};return c._affGain;}
 function maybeAffectionShift(id,c,lastUser,reply){if(!isMain()||!c||c.affectionLocked)return;const now=Date.now();if(now-(c._affAt||0)<180000)return;const txt=((lastUser&&msgToText(lastUser))||'')+'\n'+(reply||'');let d=affDeltaFor(txt,c);if(!d)return;if(d>0){const day=affDailyGain(c),left=Math.max(0,10-(+day.up||0));if(left<=0){c._affAt=now;save();return;}d=Math.min(d,left);day.up=(+day.up||0)+d;}c.affection=Math.max(1,Math.min(100,affNow(c)+d));c._affAt=now;save();}
 function meAge(){let n=+((S.me&&S.me.age)||18);if(!isFinite(n)||n<0)n=18;return Math.round(n);}
@@ -511,6 +512,11 @@ function mkey(cid){return isMain()?cid:cid+'#'+actId();}
 function addedHere(c){if(isMain())return true;return !!(c._added&&c._added[actId()]);}
 function syncBlocks(){const a=actId();S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};c.blocked=!!c._blk[a];});}
 function setBlk(c,v){c._blk=c._blk||{};c._blk[actId()]=v;c.blocked=v;}
+function friendMeta(c,create){if(!c)return null;if(isMain())return c;c._friendMeta=c._friendMeta||{};if(create&&!c._friendMeta[actId()])c._friendMeta[actId()]={};return c._friendMeta[actId()]||null;}
+function friendMetaGet(c,k){const map={blockedAt:'_blockedAt',readdedAt:'_readdedAt',readdKnown:'_readdKnown',blockDur:'_blockDur'};if(isMain())return c&&c[map[k]];const m=friendMeta(c,false);return m&&m[k];}
+function friendMetaSet(c,k,v){if(!c)return;if(isMain()){const map={blockedAt:'_blockedAt',readdedAt:'_readdedAt',readdKnown:'_readdKnown',blockDur:'_blockDur'};c[map[k]]=v;}else friendMeta(c,true)[k]=v;}
+function friendMetaClear(c){if(!c)return;if(isMain()){delete c._blockedAt;delete c._readdedAt;delete c._readdKnown;delete c._blockDur;}else if(c._friendMeta)delete c._friendMeta[actId()];}
+function altIdentityPrompt(c){const known=msgs(c.id).filter(m=>m&&m.type!=='sys').length>1;return '\n\n# 当前聊天身份（小号与大号严格分开）\n现在跟你聊天的是小号身份「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没有额外自我介绍）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观不变；但主账号里的恋爱关系、昵称、拉黑和重新添加记录都不属于这个小号，绝对不能带过来。\n- 只认当前小号聊天框里真实发生过的历史。'+(known?'你和这个小号【之前已经聊过】，上面的聊天记录就是你们的共同上下文；你认得ta，不能突然问“你谁”、不能说第一次见，也不能凭空说ta拉黑后又加回你。':'这是这个小号刚开始和你建立联系，按普通新网友的分寸慢慢认识。')+'\n- 你人设里原本的恋人/未婚妻/对象不是当前这个小号身份，除非当前聊天以后自然发展出自己的关系；不要把主账号的亲密回忆直接套过来。\n- 重要：你不能拉黑'+S.me.name+'，也不要输出[拉黑]。';}
 function initAccounts(){if(S.me.age==null)S.me.age=18;if(S.me.adultConsent==null)S.me.adultConsent=true;if(S.me.city==null)S.me.city='';if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[{id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||'',city:S.me.city||'',age:S.me.age,adultConsent:S.me.adultConsent!==false}];
   if(!S.me.active||!S.me.accounts.find(a=>a.id===S.me.active))S.me.active='main';
   S.me.accounts.forEach(a=>{if(a.city==null)a.city='';if(a.balance==null)a.balance=(a.id==='main'?(+S.me.balance||0):188);if(!a.bills)a.bills=(a.id==='main'?(S.me.bills||[]):[]);if(a.age==null)a.age=S.me.age||18;if(a.adultConsent==null)a.adultConsent=true;});
@@ -1087,9 +1093,10 @@ function buildSystem(c){
   {const mc=meHomeCity(),cc=charHomeCity(c);if(mc||cc)s+='\n\n# 所在地（用于机票、见面、天气和距离判断）\n'+S.me.name+'的所在地：'+(mc||'未填写')+'。\n你的所在地：'+(cc||'未填写')+'。\n如果你要订票去见'+S.me.name+'，通常应从【你的所在地】出发，飞到【'+S.me.name+'的所在地】；不要把'+S.me.name+'的城市当成你的城市。';}
   {const av=affNow(c);s+='\n\n# 你和'+S.me.name+'现在的关系分寸（隐藏设定，绝不能说出数值/好感度/攻略/进度条）\n当前阶段：'+affStage(av)+'。'+affTone(c)+'\n你只能把它表现成真实的人际距离：熟不熟、在不在意、会不会吃醋、愿不愿意主动关心。绝不要告诉ta这是系统数值，绝不要说"好感度增加/减少"。聊到你感兴趣、被认真对待、被哄好时可以慢慢软化；被冒犯、冷落、敷衍时可以自然变冷。';}
   if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
-  if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观都不变，身份不丢。但是：\n- 你人设里写的那个恋人/未婚妻/女朋友（不管叫什么名字），指的【不是】现在跟你聊天的这个人。哪怕名字相同，也要当成【完全不同的陌生人】，绝不要把对恋人的感情、回忆、亲密称呼（"宝贝"等）用到ta身上。\n- 你和ta【没有任何过往】，一切从这个聊天【从零开始】，就当是刚加上的陌生网友。要不要理ta、热情还是冷淡、慢慢熟还是保持距离，完全由你按人设和此刻感受决定。\n- 你心里其实是有恋人的人，对突然来搭讪的陌生人，本就该有分寸/警惕，别轻易交心。\n- 重要：你不能拉黑'+S.me.name+'，也不要输出[拉黑]。';
-  if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
-  if(c._readdedAt&&c._readdKnown)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，后来又重新把你加回好友。你是通过查手机/通讯录记录发现的，所以你知道这不是第一次添加，可以自然在意、追问或吃醋，但别说成刚认识。';
+  if(!_main)s+=altIdentityPrompt(c);
+  {const _ba=friendMetaGet(c,'blockedAt'),_ra=friendMetaGet(c,'readdedAt'),_rk=friendMetaGet(c,'readdKnown'),_bd=friendMetaGet(c,'blockDur');
+  if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(_ba?'，已经'+fmtDur(Date.now()-_ba):'')+'，你能感觉到被冷落/拒绝。';
+  if(_ra&&_rk)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(_bd?'（黑了'+_bd+'）':'')+'，后来又重新把你加回好友。你是通过查手机/通讯录记录发现的，所以你知道这不是第一次添加，可以自然在意、追问或吃醋，但别说成刚认识。';}
   if(c._recoveredAt&&Date.now()-c._recoveredAt<7*86400000)s+='\n\n# 重要\n'+S.me.name+'之前把你这个好友/角色删除过'+(c._deleteDur?'（删了'+c._deleteDur+'）':'')+'，后来又从好友找回里把你加回来了。你知道这不是第一次添加，你可以在意、追问或吃醋，但别说成第一次认识。';
   if(_main&&typeof _call!=='undefined'&&_call&&_call.state==='active'&&_call.id===c.id){
     const _ck=_call.kind==='video'?'视频':'语音',_cd=_call.dir==='incoming'?'这是你主动打给'+S.me.name+'、ta已经接听并接通了。':'这是'+S.me.name+'主动打给你、你已经接听并接通了。';
@@ -5003,7 +5010,7 @@ function ctListHTML(){const q=_ctSearch.trim().toLowerCase();
     <div class="meta"><div class="n">${esc(c.remark||c.name)}${c.blocked?' <span class=tag>已拉黑</span>':''}${_new}</div><div class="s">微信号：${esc(c.wxid||'')}</div></div><span class="v">›</span></div>`;};
   const addrow=c=>`<div class="row">${av(c.avatar,'sm')}<div class="meta"><div class="n">${esc(c.name)}</div><div class="s">微信号：${esc(c.wxid||'')}</div></div><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();altAdd('${c.id}')">添加</button></div>`;
   return list.map(row).join('')+(extra.length?'<div style="padding:6px 14px;color:#888;font-size:12px">搜索到（未添加）</div>'+extra.map(addrow).join(''):'');}
-function altAdd(id){const c=getC(id);if(!c)return;c._added=c._added||{};c._added[actId()]=true;setBlk(c,false);_ctSearch='';
+function altAdd(id){const c=getC(id);if(!c)return;c._added=c._added||{};c._added[actId()]=true;setBlk(c,false);friendMetaClear(c);_ctSearch='';
   msgs(id).push({role:'user',type:'sys',content:'✅ 你通过微信号添加了 '+c.name+'，你们已经是好友了，打个招呼吧',time:Date.now(),id:uid()});
   save();toast('已添加 '+c.name);openChat(id);
   scheduleReply(id,'[系统：'+S.me.name+'(一个陌生人)刚通过你的微信号把你加为好友。按你的人设和此刻心情，对这个陌生人作出第一反应（客气/冷淡/警惕/好奇都行），先回应一句，别热情过头。]');}
@@ -5026,7 +5033,7 @@ function openFriendRecovery(){purgeOldDeleted();const rec=recoverableFriends();
   openModal(`<h3>♻️ 好友找回</h3><div class="hint">这些是最近删掉的好友（你自己删的、或角色登你微信删的都算）。<b>3天内</b>可以找回、连聊天记录一起回来，过期永久消失。</div>`
    +(rec.length?rec.map(c=>{const left=Math.max(0,3*86400000-(Date.now()-_delStamp(c)));const lt=left>=86400000?Math.ceil(left/86400000)+'天内':left>=3600000?Math.ceil(left/3600000)+'小时内':'不到1小时';return `<div class="bill"><div style="flex:1">${av(c.avatar,'sm')} <span style="vertical-align:middle">${esc(c.remark||c.name)}</span><small style="display:block;color:#f0913b">⏳ ${lt}过期</small></div><button class="minibtn" style="background:#20b26c;color:#fff" onclick="recoverFriend('${c.id}')">找回</button></div>`;}).join(''):'<div class="empty">没有可找回的好友</div>')
    +`<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function recoverFriend(id){const c=S.contacts.find(x=>x.id===id);if(!c)return;const dt=_delStamp(c);c.deleted=false;c._deleteDur=dt?fmtDur(Date.now()-dt):'';c._recoveredAt=Date.now();c._recoverCount=(c._recoverCount||0)+1;delete c._delByChar;delete c._delAt;c._readdedAt=Date.now();save();msgs(id).push({role:'user',type:'sys',content:'你把好友「'+(c.remark||c.name)+'」找回来了（之前已经添加过一次，这是删除后重新添加）',time:Date.now(),id:uid()});toast('已找回「'+(c.remark||c.name)+'」');const rec=recoverableFriends();if(rec.length)openFriendRecovery();else{closeModal();render();}}
+function recoverFriend(id){const c=S.contacts.find(x=>x.id===id);if(!c)return;const dt=_delStamp(c);c.deleted=false;c._deleteDur=dt?fmtDur(Date.now()-dt):'';c._recoveredAt=Date.now();c._recoverCount=(c._recoverCount||0)+1;delete c._delByChar;delete c._delAt;friendMetaSet(c,'readdedAt',Date.now());save();msgs(id).push({role:'user',type:'sys',content:'你把好友「'+(c.remark||c.name)+'」找回来了（之前已经添加过一次，这是删除后重新添加）',time:Date.now(),id:uid()});toast('已找回「'+(c.remark||c.name)+'」');const rec=recoverableFriends();if(rec.length)openFriendRecovery();else{closeModal();render();}}
 function genCharPrompt(){openModal(`<h3>生成角色</h3><div class="hint">描述你想要的角色，越具体越好（名字、性别、身份、性格、和你的关系都能写）。</div>
   <div class="field"><textarea id="gc_q" rows="3" placeholder="例：温柔又强势的儿科医生哥哥，30岁，很宠我；或 高冷霸道总裁，是我的老板…"></textarea></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var q=($('#gc_q').value||'').trim();if(!q){toast('先描述一下嘛');return;}closeModal();genCharacter(q);})()">生成</button></div>`);}
@@ -5123,14 +5130,14 @@ async function delAccount(id){if(id==='main')return;if(!await uiConfirm('删除�
   if(actId()===id)switchAccount('main');
   S.me.accounts=(S.me.accounts||[]).filter(a=>a.id!==id);
   Object.keys(S.messages).forEach(k=>{if(k.endsWith('#'+id))delete S.messages[k];});
-  S.contacts.forEach(c=>{if(c._blk)delete c._blk[id];if(c._added)delete c._added[id];});
+  S.contacts.forEach(c=>{if(c._blk)delete c._blk[id];if(c._added)delete c._added[id];if(c._friendMeta)delete c._friendMeta[id];});
   save();accountMgr();}
 function cMark(c){let m='';if(c.gender==='男')m+='男';else if(c.gender==='女')m+='女';if(c.star)m+=(m?'·':'')+'⭐重点';if(c&&c._recoveredAt)m+=(m?'·':'')+'曾删除后找回/已重新添加';return m?'（'+m+'）':'';}
 function cWeight(c){return (c.star?2:0)+(c.gender==='男'?1:0);}
-function readdDiscoveryLine(c,since){if(!c||!c._readdedAt)return '';if(since&&c._readdedAt<=since)return '';return '·通讯录记录：她在'+fmtDT(c._readdedAt)+'重新通过了你的好友申请'+(c._blockDur?'（之前把你拉黑了'+c._blockDur+'）':'')+'，这是加回记录，不是第一次认识。\n';}
+function readdDiscoveryLine(c,since){const at=friendMetaGet(c,'readdedAt'),dur=friendMetaGet(c,'blockDur');if(!c||!at)return '';if(since&&at<=since)return '';return '·通讯录记录：她在'+fmtDT(at)+'重新通过了你的好友申请'+(dur?'（之前把你拉黑了'+dur+'）':'')+'，这是加回记录，不是第一次认识。\n';}
 function travelTicketDiscoveryLine(exceptId,markSeen){const arr=(S.travel&&S.travel.trips||[]).filter(tr=>tr.meet===false&&tr.payer==='me'&&tr.status==='upcoming').slice(-5);if(!arr.length)return '';let ch=false;if(markSeen)arr.forEach(tr=>{if(!tr._seenByChar&&(!tr.cid||tr.cid===exceptId)){tr._seenByChar=true;ch=true;}});if(ch)save(500);return '·她的云程机票：'+arr.map(tr=>tvMD(tr.date)+' '+tr.from+'→'+tr.to+'（她自己订票自己去玩，没有发代付）').join('、')+'\n';}
 function myActivity(exceptId,since){let s='';since=since||0;
-  const self=getC(exceptId);const _rl=readdDiscoveryLine(self,since);if(_rl){s+=_rl;if(self){self._readdKnown=true;save(500);}}
+  const self=getC(exceptId);const _rl=readdDiscoveryLine(self,since);if(_rl){s+=_rl;if(self){friendMetaSet(self,'readdKnown',true);save(500);}}
   s+=travelTicketDiscoveryLine(exceptId,true);
   const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm&&x.lm.time>since).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,3);
   if(others.length)s+='·她最近在跟这些人聊（附最近几句往来内容）：\n'+others.map(o=>{const nm=(o.c.remark||o.c.name);const recent=msgs(o.c.id).slice(-6).map(mm=>{const t=msgToText(mm);return t?((mm.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,42)):'';}).filter(Boolean).join('\n');return '【'+nm+cMark(o.c)+' '+hm(o.lm.time)+'】\n'+recent;}).join('\n')+'\n';
@@ -5733,7 +5740,7 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
 function isLover(c){if(!c||!isMain())return false;if(S.couple&&S.couple.cid===c.id)return true;return /恋人|男友|女友|男朋友|女朋友|老公|老婆|对象|未婚|爱人|情侣|伴侣|相恋|订婚|夫妻/.test((c.relation||'')+(c.persona||''));}
-function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){c._blockedAt=Date.now();adjMood(id,-30);}save();render();
+function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){friendMetaSet(c,'blockedAt',Date.now());adjMood(id,-30);}save();render();
   if(c.blocked){
     if(isLover(c)){toast('已拉黑，过会儿看「通讯录」ta会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}
     else toast('已拉黑');}}
@@ -5748,12 +5755,12 @@ async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return
 function friendReqText(raw,fb){let lines=splitBubbles(cleanReply(raw)).map(x=>cleanRolePunct((''+x).replace(/^[「"']+|[」"']+$/g,'').trim())).filter(x=>x&&!/^[\[【]/.test(x)&&!CTLLEAK.test(x)&&!isRefusal(x));let t=(lines[0]||fb||'是我，别拉黑我好不好…').replace(/\s+/g,' ').trim();return t.slice(0,32)||fb;}
 function openFriendRequests(){if(!S.friendRequests.length){toast('暂无新申请');return;}
   openModal(`<h3>新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);r.msg=friendReqText(r.msg,'是我，别拉黑我好不好…');return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){setBlk(c,false);c._readdedAt=Date.now();c._readdKnown=false;if(c._blockedAt)c._blockDur=fmtDur(Date.now()-c._blockedAt);c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
+function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){const ba=friendMetaGet(c,'blockedAt');setBlk(c,false);friendMetaSet(c,'readdedAt',Date.now());friendMetaSet(c,'readdKnown',false);if(ba)friendMetaSet(c,'blockDur',fmtDur(Date.now()-ba));c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
   S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');if(c&&!c.blocked)setTimeout(()=>scheduleReply(c.id,'[系统：'+S.me.name+'刚通过了你的好友申请。你终于被加回来了，马上发一条正常微信消息给她：可以委屈、着急、松口气或追问为什么拉黑你，但不要再输出好友验证格式，也不要只写心情。]'),500);}
 function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
 async function c_delete(id){const c=getC(id);
   if(!isMain()){if(!await uiConfirm('从当前小号「'+esc(S.me.name)+'」里删掉这个好友？\n（只影响这个小号，不动大号，之后还能搜微信号重新加回来）'))return;
-    if(c._added)delete c._added[actId()];if(c._blk)delete c._blk[actId()];delete S.messages[mkey(id)];syncBlocks();save();stack.pop();render();toast('已从这个小号移除');return;}
+    if(c._added)delete c._added[actId()];if(c._blk)delete c._blk[actId()];friendMetaClear(c);delete S.messages[mkey(id)];syncBlocks();save();stack.pop();render();toast('已从这个小号移除');return;}
   if(!await uiConfirm('删除这个角色？\n\n3天内可在「通讯录 → 好友找回」里恢复（连聊天记录一起回来）；超过3天才永久消失。'))return;c.deleted=true;c._delAt=Date.now();c._deleteCount=(c._deleteCount||0)+1;delete c._recoveredAt;/* 聊天记录先留着，找回时一并回来；3天后由 purgeOldDeleted 永久清掉 */
   if(S.couple){if(S.couple.gags)delete S.couple.gags[id];if(S.couple.gagAuth)S.couple.gagAuth=S.couple.gagAuth.filter(x=>x!==id);}// 删人时连带清掉对ta的禁言/授权,避免僵尸锁
   if(S.alter)Object.keys(S.alter).forEach(k=>{if(k.split('@').indexOf(id)>=0)delete S.alter[k];});// 清掉涉及ta的马甲聊天
@@ -6192,7 +6199,7 @@ function applyBlockIntent(content,c,id){
   if(/没(有)?(把你|你)?拉黑|别拉黑|不拉黑|才不.{0,4}拉黑|不(会|想|要|敢|至于|可能|能).{0,3}拉黑|怎么(会|可能).{0,3}拉黑|舍不得|拉黑我|逗你|开玩笑|吓唬|不会真(的)?拉/.test(t))return;
   if(!c.blocked&&/(把你|已经|已|给你|真|就)?拉黑(了|你)|拉黑你了|删了你|删除你(好友)?|拉进黑名单|把你删了|不想再(理|看到)你了|blocked? ?you/i.test(t))return;
   if(c.blocked&&c._blockedBy==='ta'&&isLover(c)&&/(把你)?加回(来)?|解除拉黑|不拉黑你了|原谅你了?|放你回来|重新加你|把你放出来/.test(t)){
-    setBlk(c,false);c._readdedAt=Date.now();c._readdKnown=true;
+    setBlk(c,false);friendMetaSet(c,'readdedAt',Date.now());friendMetaSet(c,'readdKnown',true);
     const mg={role:'assistant',type:'sys',content:(c.remark||c.name)+'把你加回来了',time:Date.now(),id:uid()};msgs(id).push(mg);
     save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}}
 // 记仇小本本：[记仇|事] 记一笔，[消气|关键词] 划掉一笔；在聊天和线下都生效，并从文本抹掉
@@ -7228,7 +7235,7 @@ function spyFocusData(id,focus){const f=focus||'';
   if(/定位|位置|在哪|在干|在做/.test(f)){return {label:'实时定位/状态',data:[curLoc()?'位置：'+curLoc():'',S.me.status?'她写的状态："'+S.me.status+'"':''].filter(Boolean).join('；')};}
   if(/(X|x|推特|微博)/.test(f)){const tw=(S.x&&S.x.tweets||[]).filter(t=>t.who==='me').slice(0,4);return {label:'X动态',data:tw.map(t=>'「'+t.text.slice(0,24)+'」').join('、')};}
   if(/浏览|百度|网页/.test(f)){const h=(S.browser&&S.browser.history||[]).slice(0,5).map(x=>x.q);return {label:'浏览器搜索',data:h.join('、')};}
-  if(/微信|聊天|跟谁|消息|谁聊|谁说|联系人/.test(f)){const self=getC(id);const extra=readdDiscoveryLine(self,0);if(extra&&self){self._readdKnown=true;save(500);}const others=S.contacts.filter(c=>!c.deleted&&c.id!==id).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,4);
+  if(/微信|聊天|跟谁|消息|谁聊|谁说|联系人/.test(f)){const self=getC(id);const extra=readdDiscoveryLine(self,0);if(extra&&self){friendMetaSet(self,'readdKnown',true);save(500);}const others=S.contacts.filter(c=>!c.deleted&&c.id!==id).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,4);
     const roleData=others.map(o=>{const nm=(o.c.remark||o.c.name);const recent=msgs(o.c.id).slice(-8).map(m=>{const t=msgToText(m);return t?('['+ymd(m.time||Date.now())+' '+hm(m.time||Date.now())+'] '+(m.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,50)):'';}).filter(Boolean).join('\n');return '【微信角色联系人｜她和 '+nm+cMark(o.c)+' 的聊天（最新 '+ymd(o.lm.time)+' '+hm(o.lm.time)+'）】\n'+recent;}).join('\n\n');
     return {label:'微信聊天',data:(extra?extra+'\n':'')+[roleData,phoneFriendWechatDump(8)].filter(Boolean).join('\n\n')};}
   // 没指明具体看啥 → 只瞄一眼大概（位置+状态）
