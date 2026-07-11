@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v423 · 小剧场房间升级';
+const APP_VER='v424 · 小剧场事件修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -3808,7 +3808,8 @@ function mgrCurrentTurn(r){const o=r&&r.turnOrder||[];return o.length?o[Math.max
 function mgrSetTurn(r,key){const o=r.turnOrder||[];const i=o.indexOf(key);r.turnIndex=i>=0?i:0;}
 function mgrAdvanceTurn(r){const o=r.turnOrder||[];if(!o.length)return '';r.turnIndex=((r.turnIndex||0)+1)%o.length;return mgrCurrentTurn(r);}
 function mgrSystem(r,text,id){return mgrAddRoomMsg(r,{id:id||uid(),kind:'sys',name:'系统',text,time:Date.now()});}
-function mgrRoomCue(kind){if(!(S.settings&&S.settings.sound))return;try{ensureAudio();if(!_audio)return;if(_audio.state!=='running')_audio.resume().catch(()=>{});const now=_audio.currentTime,g=_audio.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.exponentialRampToValueAtTime(kind==='start'?0.12:0.07,now+.03);g.gain.exponentialRampToValueAtTime(0.0001,now+.55);g.connect(_audio.destination);[kind==='start'?523:392,kind==='start'?659:494].forEach((f,i)=>{const o=_audio.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,now+i*.13);o.connect(g);o.start(now+i*.13);o.stop(now+i*.13+.18);});}catch(_){}}
+function mgrSeenEvent(r,id){if(!r||!id)return false;r._seenEvents=r._seenEvents||{};if(r._seenEvents[id])return true;r._seenEvents[id]=Date.now();const ks=Object.keys(r._seenEvents);if(ks.length>500)ks.sort((a,b)=>r._seenEvents[a]-r._seenEvents[b]).slice(0,ks.length-500).forEach(k=>delete r._seenEvents[k]);return false;}
+function mgrRoomCue(kind){return;}
 function openMixedGamePicker(k){const g=mgrGame(k),roles=S.contacts.filter(c=>!c.deleted&&!c.blocked),p=phoneFriendState(),pfs=p.friends||[];
   openModal(`<h3>${g.e} ${esc(g.n)} · 多人房</h3><div class="hint">先做稳定版：可多选角色和小手机真人好友。真人会收到房间邀请卡，全部点准备后房主才能开始。第一版完整支持「即兴小剧场」，其他游戏先接入等待室。</div>
     <div class="field"><label>虚拟角色</label><div class="section">${roles.length?roles.map(c=>`<label class="avline" style="font-weight:400">${av(c.avatar,'sm')}<span style="flex:1">${esc(c.remark||c.name)}</span><span class="sw" data-mgr-role="${c.id}" onclick="this.classList.toggle('on')"></span></label>`).join(''):'<div class="hint" style="padding:8px">暂无可邀请角色</div>'}</div></div>
@@ -3820,12 +3821,14 @@ function mgrCreateRoom(k){const roles=[...document.querySelectorAll('[data-mgr-r
   mgrRooms().unshift(r);save();closeModal();pfs.forEach(pid=>mgrSendPf(pid,r,{type:'game_room_invite',hostId:r.hostId,hostName:r.hostName,roleNames:r.roleNames,pfNames:r.pfNames,created:r.created}));go('mgroom',{id});}
 function mgrSendPf(pid,r,pl){const body=pfPack(Object.assign({roomId:r.id,game:r.game,title:r.title},pl||{}));if(body)sendPhoneFriendBody(pid,body,{silent:true});}
 function mgrBroadcast(r,pl,exclude){(r.pfIds||[]).forEach(pid=>{if(pid!==exclude)mgrSendPf(pid,r,pl);});}
-function mgrStatePayload(r,extra){return Object.assign({type:'game_room_state',status:r.status,startedAt:r.startedAt||0,drama:r.drama||null,turnOrder:r.turnOrder||[],turnIndex:r.turnIndex||0,members:r.members||{}},extra||{});}
+function mgrStatePayload(r,extra){return Object.assign({type:'game_room_state',eid:uid(),status:r.status,startedAt:r.startedAt||0,drama:r.drama||null,turnOrder:r.turnOrder||[],turnIndex:r.turnIndex||0,members:r.members||{}},extra||{});}
 function mgrBroadcastState(r,extra){if(r&&r.host)mgrBroadcast(r,mgrStatePayload(r,extra));}
 function mgrApplyState(r,pl){if(!r||!pl)return;if(pl.status)r.status=pl.status;if(pl.startedAt)r.startedAt=pl.startedAt;if(pl.drama)r.drama=pl.drama;if(Array.isArray(pl.turnOrder))r.turnOrder=pl.turnOrder;if(pl.turnIndex!=null)r.turnIndex=+pl.turnIndex||0;if(pl.members&&typeof pl.members==='object')r.members=Object.assign(r.members||{},pl.members);}
 function pfHandleGamePayload(m){const pl=pfMsgPayload(m);if(!pl||!pl.type||String(pl.type).indexOf('game_room_')!==0||!pl.roomId)return;const p=phoneFriendState(),me=p.id,from=(''+m.from).toUpperCase(),to=(''+m.to).toUpperCase();let r=mgrRoom(pl.roomId);
   if(pl.type==='game_room_invite'&&from!==me){if(!r){r={id:pl.roomId,game:pl.game,title:pl.title||mgrGame(pl.game).n,hostId:from,hostName:pl.hostName||pfNameById(from)||from,host:false,status:'lobby',readyMe:false,created:pl.created||Date.now(),roleIds:[],pfIds:[from],roleNames:pl.roleNames||[],pfNames:pl.pfNames||[],members:{},msgs:[],busy:false};r.members.host={name:r.hostName,kind:'host',ready:true};r.members.me={name:S.me.name,kind:'me',ready:false};mgrRooms().unshift(r);}return;}
   if(!r)return;
+  if(from===me)return;
+  if(mgrSeenEvent(r,pl.eid||m.id))return;
   if(pl.type==='game_room_join'){const pid=(''+(pl.playerId||from)).toUpperCase(),key=mgrPlayerKey('pf',pid);r.members[key]=r.members[key]||{kind:'pf',name:pl.playerName||pfNameById(pid)||pid};r.members[key].joined=true;mgrSystem(r,(r.members[key].name||'玩家')+'进入了房间',pl.eid);if(r.host){mgrBroadcast(r,Object.assign({},pl,{relay:true}),pid);mgrBroadcastState(r);}save();if(cur().p==='mgroom'&&cur().id===r.id)render();return;}
   if(pl.type==='game_room_leave'){const pid=(''+(pl.playerId||from)).toUpperCase(),key=mgrPlayerKey('pf',pid),nm=(r.members&&r.members[key]&&r.members[key].name)||pl.playerName||pfNameById(pid)||'玩家';if(r.members&&r.members[key])r.members[key].joined=false;mgrSystem(r,nm+'离开了房间',pl.eid);if(r.host){mgrBroadcast(r,Object.assign({},pl,{relay:true}),pid);mgrBroadcastState(r);}save();if(cur().p==='mgroom'&&cur().id===r.id)render();return;}
   if(pl.type==='game_room_ready'){const pid=(''+(pl.playerId||from)).toUpperCase(),key=pid===me?'me':mgrPlayerKey('pf',pid);r.members[key]=r.members[key]||{kind:'pf',name:pl.playerName||pfNameById(pid)||pid};r.members[key].ready=true;r.members[key].joined=true;mgrSystem(r,(r.members[key].name||'玩家')+'已准备',pl.eid);if(r.host)mgrBroadcastState(r);save();if(cur().p==='mgroom'&&cur().id===r.id)render();return;}
