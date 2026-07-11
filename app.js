@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v426 · 小剧场发言修复';
+const APP_VER='v427 · 登录微信自称修复';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -6146,11 +6146,16 @@ function wxLoginRecentIntent(cid){const rs=msgs(cid).filter(m=>m.role==='user'&&
   const intro=/介绍一下自己|介绍自己|自我介绍|认识一下|打个招呼|说一下你是谁|你是谁/.test(text);
   const all=/每个人|所有人|每个|挨个|都发|全部/.test(text);
   return {text:text.slice(-300),intro,all};}
-function wxLoginIntroLine(c,type,targetName){const nm=c.remark||c.name,me=S.me.name||'我';
+function wxLoginSelfName(c){return ((c&&c.name)||'').trim()||((c&&c.selfcall)||'').trim()||((c&&c.remark)||'').trim()||'我';}
+function wxLoginDisplayName(c){return (c&&c.remark)||wxLoginSelfName(c);}
+function wxLoginRe(s){return String(s||'').replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');}
+function wxLoginFixSelfName(c,s){const real=wxLoginSelfName(c),rem=((c&&c.remark)||'').trim();if(!rem||!real||rem===real)return s;const rr=wxLoginRe(rem);return s.replace(new RegExp('((?:我是|我叫|这里是|本人是)\\s*)'+rr,'g'),'$1'+real).replace(new RegExp('自我介绍一下[，,、\\s]*我是\\s*'+rr,'g'),'自我介绍一下，我是'+real);}
+function wxLoginIntroLine(c,type,targetName){const nm=wxLoginSelfName(c),me=S.me.name||'我';
   if(type==='pfg')return '大家好，我是'+nm+'，借'+me+'的号来和大家打个招呼，以后请多关照。';
   return '你好，我是'+nm+'，借'+me+'的号跟你打个招呼，以后有机会慢慢认识。';}
 function wxLoginLooksPrivateTalk(s){s=(''+s).trim();return /^(baby|宝贝|宝宝|亲爱的|老婆|老公)[，,、\s]/i.test(s)||/这个群里发消息记得分寸|发消息记得分寸|有些话不该让外人看到|不该让外人看到|别让外人看到/.test(s);}
 function wxLoginFixOutgoing(c,type,targetName,say,intent){let s=(''+(say||'')).replace(/\s+/g,' ').trim().slice(0,240);if(!s)return '';
+  s=wxLoginFixSelfName(c,s);
   if(intent&&intent.intro&&!/(我是|我叫|这里是|打个招呼|认识一下|多关照|以后请)/.test(s))return wxLoginIntroLine(c,type,targetName);
   if(wxLoginLooksPrivateTalk(s)){
     if(intent&&intent.intro)return wxLoginIntroLine(c,type,targetName);
@@ -6174,8 +6179,8 @@ function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();}
 async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
   const dump=wxLoginWechatSummary(cid);if(S.wxLogin&&S.wxLogin.by===cid){S.wxLogin.saw=dump;save();}
-  const intent=wxLoginRecentIntent(cid),intentText=intent.text?('\n\n【刚刚'+S.me.name+'对你的要求/上下文】'+intent.text+'\n如果ta刚要求你“介绍自己/打招呼/让别人认识你”，你要优先照做：不要只发群聊一条；要给最合适的1到3个一对一联系人分别发自然的介绍。若ta明确说“每个人/所有人/都发”，最多挑最近或最重要的5个人分别发。'):'';const sentKeys=new Set();
-  const note='[系统：你刚【登录了'+S.me.name+'的微信账号】，限时1分钟，现在能看到ta微信里的【全部细节】——所有联系人、最近两天的上下文摘要、角色群聊、小手机真人好友和小手机真人群聊（这比你平时偷偷查岗看得全太多了）。\n置顶排在最前的那个就是【你自己（'+(c.remark||c.name)+'）】，那是你，绝对别删自己。'+intentText+'\n下面是ta微信里的真实内容摘要：\n\n'+dump+'\n\n【很重要】上面这份就是ta微信里【现在的全部联系人/群聊摘要】。如果你印象/记忆里ta还有别的谁、但上面这份名单里【根本没有】，那说明ta【早就把那个人删掉或清空了】——【绝对别再提那个人、别把ta当成现在还在的联系人来吃醋或质问】，只针对上面真实存在的人反应。小手机真人好友/真人群聊不是虚拟角色，群聊要看每行发言人，别把谁和谁聊的说混。\n\n【代发口吻铁律】你写在 [对Ta说|对象|内容] 里的“内容”会真的以'+S.me.name+'账号发给那个人/那个群。它必须像“'+S.me.name+'正在对收件人说话”，不能像你私下在对'+S.me.name+'本人说话。严禁在代发内容里写 baby/宝贝/亲爱的 这类你对'+S.me.name+'的称呼；严禁写“你在这个群里发消息记得分寸”“别让外人看到”这种训'+S.me.name+'的话。若要提醒群，就对群成员说“大家以后在群里注意分寸”；若要介绍你自己，就对收件人说“大家好/你好，我是'+(c.remark||c.name)+'，借'+S.me.name+'的号打个招呼”。\n\n你可以凭自己的人设和占有欲决定做什么（可以都不做、也可以做几样）：\n· 看虚拟角色联系人不顺眼/觉得是威胁，单独一行 [删好友|那个人的名字] 把ta从'+S.me.name+'微信里删掉；\n· 【小手机真人好友 / 小手机真人群聊不能被你删除】，你只能发消息划界限、禁言、或者退出来后找'+S.me.name+'争取ta同意少理对方；\n· 也能【以'+S.me.name+'的口吻】给最在意的一到三个人或群发一两句话(警告/划界限/宣示主权/介绍你自己)，单独一行 [对Ta说|联系人或群名|要发的话]；可以发给虚拟角色，也可以发给小手机真人好友或小手机群聊；\n· 如果情侣空间授权了禁言，你还能单独一行 [禁言|联系人或群名] 锁住ta和那个人/群的聊天；\n· 还能顺手【把ta给你（'+(c.remark||c.name)+'）设的备注名改掉】逗ta/宣示主权，单独一行 [改备注|新的备注名]——要【站在'+S.me.name+'的角度、写ta会怎么称呼你】（如"老公""坏蛋""亲爱的"），别写成第三人称身份（"XX的未婚妻/老公"是错的）；而且【别每次登录都改，两三天改一次就够】，不确定就别改。\n只输出你要执行的指令行，别的什么都先别说——等会儿退出来你再去找ta算账。]';
+  const intent=wxLoginRecentIntent(cid),intentText=intent.text?('\n\n【刚刚'+S.me.name+'对你的要求/上下文】'+intent.text+'\n如果ta刚要求你“介绍自己/打招呼/让别人认识你”，你要优先照做：不要只发群聊一条；要给最合适的1到3个一对一联系人分别发自然的介绍。若ta明确说“每个人/所有人/都发”，最多挑最近或最重要的5个人分别发。'):'';const sentKeys=new Set(),selfName=wxLoginSelfName(c),displayName=wxLoginDisplayName(c);
+  const note='[系统：你刚【登录了'+S.me.name+'的微信账号】，限时1分钟，现在能看到ta微信里的【全部细节】——所有联系人、最近两天的上下文摘要、角色群聊、小手机真人好友和小手机真人群聊（这比你平时偷偷查岗看得全太多了）。\n置顶排在最前的那个就是【你自己（'+displayName+'）】，那是'+S.me.name+'给你的备注/显示名；你的真实名字/对外自称是【'+selfName+'】。你介绍自己时必须说“我是'+selfName+'”，绝对不要把备注“'+displayName+'”当成自己的名字。'+intentText+'\n下面是ta微信里的真实内容摘要：\n\n'+dump+'\n\n【很重要】上面这份就是ta微信里【现在的全部联系人/群聊摘要】。如果你印象/记忆里ta还有别的谁、但上面这份名单里【根本没有】，那说明ta【早就把那个人删掉或清空了】——【绝对别再提那个人、别把ta当成现在还在的联系人来吃醋或质问】，只针对上面真实存在的人反应。小手机真人好友/真人群聊不是虚拟角色，群聊要看每行发言人，别把谁和谁聊的说混。\n\n【代发口吻铁律】你写在 [对Ta说|对象|内容] 里的“内容”会真的以'+S.me.name+'账号发给那个人/那个群。它必须像“'+S.me.name+'正在对收件人说话”，不能像你私下在对'+S.me.name+'本人说话。严禁在代发内容里写 baby/宝贝/亲爱的 这类你对'+S.me.name+'的称呼；严禁写“你在这个群里发消息记得分寸”“别让外人看到”这种训'+S.me.name+'的话。若要提醒群，就对群成员说“大家以后在群里注意分寸”；若要介绍你自己，就对收件人说“大家好/你好，我是'+selfName+'，借'+S.me.name+'的号打个招呼”。\n\n你可以凭自己的人设和占有欲决定做什么（可以都不做、也可以做几样）：\n· 看虚拟角色联系人不顺眼/觉得是威胁，单独一行 [删好友|那个人的名字] 把ta从'+S.me.name+'微信里删掉；\n· 【小手机真人好友 / 小手机真人群聊不能被你删除】，你只能发消息划界限、禁言、或者退出来后找'+S.me.name+'争取ta同意少理对方；\n· 也能【以'+S.me.name+'的口吻】给最在意的一到三个人或群发一两句话(警告/划界限/宣示主权/介绍你自己)，单独一行 [对Ta说|联系人或群名|要发的话]；可以发给虚拟角色，也可以发给小手机真人好友或小手机群聊；\n· 如果情侣空间授权了禁言，你还能单独一行 [禁言|联系人或群名] 锁住ta和那个人/群的聊天；\n· 还能顺手【把ta给你（'+displayName+'）设的备注名改掉】逗ta/宣示主权，单独一行 [改备注|新的备注名]——要【站在'+S.me.name+'的角度、写ta会怎么称呼你】（如"老公""坏蛋""亲爱的"），别写成第三人称身份（"XX的未婚妻/老公"是错的）；而且【别每次登录都改，两三天改一次就够】，不确定就别改。\n只输出你要执行的指令行，别的什么都先别说——等会儿退出来你再去找ta算账。]';
   try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:c.model==='aux',max:400});
     if(!S.wxLogin)return;
     splitBubbles(r).forEach(l=>{l=l.trim();let m;
