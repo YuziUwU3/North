@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v430 · 通用活人感第一阶段';
+const APP_VER='v431 · 情绪连续性增强';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -433,10 +433,22 @@ function lifeNotePrompt(c){if(!isLover(c))return '';const arr=lifeNotes();if(!ar
   if(!picked.length)picked=arr.slice(0,3);else picked=picked.slice(0,6);
   if(!picked.length)return '';
   return '\n\n# '+S.me.name+'身上的小事簿（隐藏的生活痕迹）\n'+picked.map(n=>'· '+ymd(n.ts||0)+'：'+aboutMeNoteText(n.text)).join('\n')+'\n这些不是数据库条目，而是你对ta的印象来源。相关话题再次出现时，你会自然先观察ta现在的状态、记得ta之前受过什么影响；不要在可见消息里机械复述清单，也不要说你读取了小事簿。';}
-function emotionAfterForgive(c){if(!c)return;const now=Date.now();c.coldUntil=0;c.emotionTailUntil=now+2*3600000;c.emotionTailReason=c.emotionTailReason||'刚和好但余温还在';c.moodVal=Math.min(moodNow(c),55);c.moodAt=now;}
-function emotionOnUserMsg(id,m){if(!(S.couple&&S.couple.cid===id)||!m)return;const c=getC(id);if(!c)return;const text=(m.content||'').trim();if(!text)return;
-  if(/滚|闭嘴|烦死|讨厌你|别管我|废物|有病|恶心|不想理你|分手|拉黑|删了你|滚开|烦不烦|你很烦/.test(text)){c.moodVal=Math.max(0,moodNow(c)-18);c.moodAt=Date.now();c.emotionTailUntil=Date.now()+4*3600000;c.emotionTailReason='被'+S.me.name+'的话刺到了';save();return;}
-  if(/对不起|我错了|别生气|哄你|抱抱|原谅我|不吵了/.test(text)&&moodNow(c)<70){c.moodVal=Math.min(70,moodNow(c)+6);c.moodAt=Date.now();if(!c.emotionTailUntil||c.emotionTailUntil<Date.now())c.emotionTailUntil=Date.now()+90*60000;save();}}
+function dialogueEmotion(c){if(!c)return null;c._dialogueEmotion=c._dialogueEmotion||{};const key=(typeof actId==='function'?actId():'main');let st=c._dialogueEmotion[key];if(!st){const mv=typeof moodNow==='function'?moodNow(c):(c.moodVal==null?70:c.moodVal),reason=c.emotionTailReason||'';st=c._dialogueEmotion[key]={type:mv<45?'hurt':mv<62?'low':'neutral',intensity:Math.max(0,Math.min(100,(70-mv)*2)),cause:reason,startedAt:Date.now(),updatedAt:Date.now(),repair:0,probeCount:0,revealed:0,threads:[]};}if(!Array.isArray(st.threads))st.threads=[];return st;}
+function dialogueActiveThreads(c){const st=dialogueEmotion(c);return st?st.threads.filter(x=>x&&x.status!=='resolved'):[];}
+function dialogueEmotionSnapshot(c){const st=dialogueEmotion(c);if(!st)return{type:'neutral',intensity:0,cause:'',repair:0,probeCount:0,revealed:0,threads:[],userDistress:false};const hrs=Math.max(0,(Date.now()-(st.updatedAt||Date.now()))/3600000),active=dialogueActiveThreads(c);let intensity=Math.max(0,(+st.intensity||0)-hrs*(active.length?2:6));if(active.length){const floor=Math.max.apply(null,active.map(x=>Math.max(8,(+x.severity||1)*10-Math.max(0,(Date.now()-(x.updatedAt||x.createdAt||Date.now()))/3600000)*1.5)));intensity=Math.max(intensity,Math.min(45,floor));}return {type:st.type||'neutral',intensity:Math.round(intensity),cause:st.cause||'',repair:+st.repair||0,probeCount:+st.probeCount||0,revealed:+st.revealed||0,threads:active.slice(-3),userDistress:!!(st.userDistressUntil&&st.userDistressUntil>Date.now())};}
+function dialogueAddThread(c,topic,severity,type){const st=dialogueEmotion(c);if(!st||!topic)return null;const key=String(topic).replace(/\s+/g,'').slice(0,30),old=st.threads.find(x=>x.status!=='resolved'&&(x.key===key||x.topic.includes(topic)||topic.includes(x.topic)));if(old){old.updatedAt=Date.now();old.severity=Math.max(old.severity||1,severity||1);return old;}const t={id:uid(),key,topic:String(topic).slice(0,70),severity:severity||2,status:'open',createdAt:Date.now(),updatedAt:Date.now()};st.threads.push(t);if(st.threads.length>12)st.threads=st.threads.slice(-12);st.type=type||st.type;st.cause=t.topic;st.startedAt=Date.now();st.updatedAt=Date.now();st.repair=0;st.probeCount=0;st.revealed=0;return t;}
+function dialogueResolveThread(c,hint){const st=dialogueEmotion(c),active=dialogueActiveThreads(c);if(!st||!active.length)return false;hint=String(hint||'').replace(/\s+/g,'');let t=hint&&active.find(x=>x.topic.includes(hint)||hint.includes(x.topic)||x.key.includes(hint)||hint.includes(x.key));if(hint&&!t)return false;if(!t)t=active[active.length-1];t.status='resolved';t.resolvedAt=Date.now();st.repair=100;st.intensity=Math.min(+st.intensity||0,28);st.type='softening';st.cause='事情刚说开，情绪还在慢慢恢复';st.updatedAt=Date.now();st.probeCount=0;st.revealed=0;return true;}
+function dialogueMoodType(text){text=String(text||'');if(/吃醋|醋意|占有/.test(text))return'jealous';if(/生气|火大|恼|愤怒|不爽/.test(text))return'angry';if(/委屈|受伤|被刺|心寒|失望/.test(text))return'hurt';if(/担心|心疼|不安|怕你|怕ta/.test(text))return'worried';if(/难过|低落|失落|想哭/.test(text))return'sad';if(/开心|高兴|甜|安心|温柔|暖|心动/.test(text))return'warm';return'';}
+function dialogueEmotionOnReply(c,content,userText){const st=dialogueEmotion(c);if(!st)return;const all=String(content||''),mt=(all.match(/[\[【]\s*心情\s*[\|｜]\s*([^\]】]*)[\]】]/)||[])[1]||'',tp=dialogueMoodType(mt),active=dialogueActiveThreads(c);if(tp){if(tp==='warm'&&active.length){st.type='softening';st.intensity=Math.max(18,(+st.intensity||0)-8);st.cause=st.cause||active[active.length-1].topic;}else{st.type=tp;if(tp!=='warm')st.intensity=Math.max(+st.intensity||0,25);else st.intensity=Math.max(0,(+st.intensity||0)-12);}}const dm=all.match(/[\[【]\s*心情值\s*[\|｜]\s*([+\-]?\d{1,3})[\]】]/);if(dm){const d=parseInt(dm[1],10)||0;if(d<0){st.intensity=Math.min(100,(+st.intensity||0)+Math.abs(d));if(st.type==='neutral'||st.type==='warm')st.type='low';st.cause=st.cause||'刚才的对话让自己有点不舒服';}else if(d>0)st.intensity=Math.max(0,(+st.intensity||0)-d);}if(st.probeCount>0&&/因为|其实|只是|在意|介意|吃醋|委屈|担心|害怕|怕说|你刚才|那件事|不想说|现在不想说/.test(all))st.revealed=Math.min(3,(+st.revealed||0)+1);const repairing=/对不起|抱歉|我错了|解释|说清楚|和好|别生气/.test(userText||'');if(repairing&&/原谅你|不气了|不生气了|这事翻篇|说开了|算了，不追究|不怪你了/.test(all))dialogueResolveThread(c,'');const cm=all.match(/[\[【]\s*消气\s*[\|｜:：]?\s*([^\]】]*)[\]】]/);if(cm)dialogueResolveThread(c,cm[1]||'');st.updatedAt=Date.now();}
+function dialogueEmotionPrompt(c){const e=dialogueEmotionSnapshot(c);if(!e||(!e.intensity&&!e.threads.length&&!e.userDistress))return'';const names={neutral:'平静',low:'低落',hurt:'受伤/委屈',angry:'生气',jealous:'吃醋',worried:'担心对方',sad:'难过',warm:'温暖',softening:'正在软化'};const ts=e.threads.length?e.threads.map((x,i)=>(i+1)+'. '+x.topic+'（'+(x.status==='repairing'?'正在修复':'还没说开')+'）').join('\n'):'（没有未解决话题）';let reveal='';if(e.probeCount>=3)reveal='对方已经连续追问多次，这轮必须说出较明确的真实原因或在意点，不能继续否认。';else if(e.probeCount===2)reveal='这是第二次追问，至少透露原因类别或一个具体在意点，让对方能继续理解和安抚。';else if(e.probeCount===1)reveal='这是第一次追问，可以按人设保留，但至少承认情绪存在，或说暂时不想讲；不能反复说完全没事。';
+  return '\n\n# 连续情绪状态（隐藏，必须与顶部心情和实际语气一致）\n当前状态：'+(names[e.type]||e.type)+'，强度 '+e.intensity+'/100。\n原因：'+(e.cause||'没有明确原因')+'。\n修复进度：'+e.repair+'/100。\n未解决话题：\n'+ts+(e.userDistress?'\n'+S.me.name+'当前明显难过/求安慰：先暂停冷处理和追究，用你自己的关心方式稳住ta；未解决话题保留，等ta情绪稳定后再谈。':'')+(reveal?'\n'+reveal:'')+'\n情绪变化规则：道歉、解释、撒娇或安慰只能让态度逐步松动，不能一轮瞬间从受伤变成极度热情；真正说开时可以明确原谅/翻篇。未解决话题不必每轮翻旧账，但它会影响分寸。';}
+function emotionAfterForgive(c){if(!c)return;const now=Date.now();dialogueResolveThread(c,'');const st=dialogueEmotion(c);if(st){st.type='softening';st.intensity=Math.min(+st.intensity||0,28);st.repair=100;st.updatedAt=now;}c.coldUntil=0;c.emotionTailUntil=now+2*3600000;c.emotionTailReason='刚和好但余温还在';c.moodVal=Math.max(52,Math.min(60,moodNow(c)+8));c.moodAt=now;}
+function emotionOnUserMsg(id,m){if(!m)return;const c=getC(id);if(!c)return;const text=(m.content||'').trim();if(!text)return;const st=dialogueEmotion(c),now=Date.now();
+  if(moodProbeText(text)){st.probeCount=Math.min(5,(+st.probeCount||0)+1);st.updatedAt=now;}
+  const distress=/(我.{0,8}(哭|难过|委屈|不开心|崩溃|好累|受不了|生气了)|呜呜|😭|😢|别管我|不要你管|哄我|你不爱我|别冷着我)/.test(text)&&!/废物|有病|恶心|滚开|闭嘴/.test(text);if(distress){st.userDistressUntil=now+45*60000;if(!dialogueActiveThreads(c).length){st.type='worried';st.intensity=Math.max(+st.intensity||0,30);st.cause='担心'+S.me.name+'现在的情绪';}st.updatedAt=now;if(isMain()){c.moodVal=Math.min(moodNow(c),62);c.moodAt=now;c.mood='担心'+S.me.name+'，先想把ta哄好';}save();return;}
+  if(/滚|闭嘴|烦死|讨厌你|废物|有病|恶心|分手|拉黑|删了你|滚开|烦不烦|你很烦/.test(text)){dialogueAddThread(c,'被'+S.me.name+'这句话刺到了：'+text.slice(0,38),4,'hurt');st.intensity=Math.min(100,Math.max(+st.intensity||0,55)+18);st.updatedAt=now;if(isMain()){c.moodVal=Math.max(0,moodNow(c)-18);c.moodAt=now;c.emotionTailUntil=now+4*3600000;c.emotionTailReason=st.cause;}save();return;}
+  if(/对不起|我错了|别生气|哄你|抱抱|原谅我|不吵了|我解释|听我说/.test(text)&&dialogueActiveThreads(c).length){const t=dialogueActiveThreads(c).slice(-1)[0];if(t)t.status='repairing';st.repair=Math.min(85,(+st.repair||0)+(/解释|说清楚|我错了/.test(text)?28:16));st.intensity=Math.max(12,(+st.intensity||0)-10);st.type='softening';st.updatedAt=now;if(isMain()){c.moodVal=Math.min(65,moodNow(c)+6);c.moodAt=now;if(!c.emotionTailUntil||c.emotionTailUntil<now)c.emotionTailUntil=now+90*60000;}save();return;}
+  if(/爱你|喜欢你|想你|抱抱|亲亲|陪你|别难过/.test(text)&&(+st.intensity||0)>0){st.repair=Math.min(75,(+st.repair||0)+8);st.intensity=Math.max(8,(+st.intensity||0)-5);st.updatedAt=now;save();}}
 const REMOVED_HOME_TYPE='home'+'invite';
 function purgeRemovedHomeAppData(){let changed=false;const oldKey='co'+'zy';if(S[oldKey]){delete S[oldKey];changed=true;}
   if(S.messages){Object.keys(S.messages).forEach(k=>{const a=S.messages[k];if(Array.isArray(a)){const b=a.length;S.messages[k]=a.filter(m=>m&&m.type!==REMOVED_HOME_TYPE);if(S.messages[k].length!==b)changed=true;}});}
@@ -6120,7 +6132,7 @@ function hlVisibleLines(content){return splitBubbles(content).map(x=>cleanRolePu
 function hlRecent(c){if(!c)return[];if(!Array.isArray(c._humanRecent))c._humanRecent=[];return c._humanRecent;}
 function hlInterpret(c,text,note){
   text=String(text||'').trim();const compact=text.replace(/\s+/g,'');
-  const asked=explicitReplyCount(text),bad=badMoodInContent(c,''),short=compact.length<=4;
+  const asked=explicitReplyCount(text),emotion=dialogueEmotionSnapshot(c),bad=badMoodInContent(c,'')||emotion.intensity>=25,short=compact.length<=4;
   const explicitStop=/^(不要|别|停|停止|够了|不愿意|我拒绝|不可以)[了吧啊呀哦嘛]*[。！!？?]*$/.test(compact)||/别再|不要再|我不喜欢这样|到此为止/.test(text);
   const comfort=userNeedsComfortText(text),probe=moodProbeText(text),apology=/对不起|抱歉|我错了|原谅我|别生气|和好/.test(text);
   const question=/[？?]|怎么|为什么|为何|什么|哪里|哪儿|多少|几点|能不能|可不可以|是不是/.test(text);
@@ -6141,7 +6153,7 @@ function hlInterpret(c,text,note){
   else if(explicitStop||ambiguous||compact.length<=2){max=Math.min(max,2);}
   else if(/解释|说清楚|认真|重要|怎么办|建议/.test(text)){min=Math.min(2,max);max=Math.max(min,Math.min(max,4));}
   const recent=hlRecent(c).slice(-5),sameCounts=recent.slice(-2).length===2&&recent.slice(-2).every(x=>x.bubbles===recent[recent.length-1].bubbles);
-  return {intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent};}
+  return {intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,emotion,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent};}
 function hlPlanPrompt(c,p){if(!p)return'';const recent=p.recent.length?p.recent.map(x=>'· '+x.strategy+'；'+x.bubbles+'条；开头：'+(x.opening||'无')).join('\n'):'· 暂无';
   return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。';}
 function hlChars(s){return new Set(hlNorm(s).split('').filter(Boolean));}
@@ -6159,13 +6171,13 @@ function hlRewriteNote(v,p){return '[系统纠正：刚才这版有这些问题�
 function cnNumVal(s){s=(''+s).trim();const m={'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};return /^\d+$/.test(s)?+s:(m[s]||0);}
 function explicitReplyCount(text){text=''+(text||'');let m=text.match(/(?:发|回|回复|说).{0,4}?([一二两三四五六七八九十1-9]|10)\s*条/);if(!m)m=text.match(/([一二两三四五六七八九十1-9]|10)\s*条.{0,4}?(?:消息|回复|泡泡)/);const n=m?cnNumVal(m[1]):0;return n>=1&&n<=10?n:0;}
 function visibleMoodTone(c){const s=''+((c&&c.mood)||'');if(/开心|高兴|很好|心动|甜|爱|喜欢|满足|安心|宠|想你|黏|温柔|软|暖|愉快|期待/.test(s))return 'good';if(/冷|气|烦|难过|委屈|失落|闷|低落|生气|不爽|吃醋|沉默|累|倦|心疼|担心|不安|失望/.test(s))return 'bad';return '';}
-function honestMoodText(c,text){const mv=moodNow(c);return mv<50&&visibleMoodTone({mood:text})==='good'?(mv<30?'心情很低，明显冷淡，还没被哄好':'有点闷，不太高兴，但还在听你说'):text;}
+function honestMoodText(c,text){const mv=moodNow(c),e=dialogueEmotionSnapshot(c);if(visibleMoodTone({mood:text})==='good'&&(mv<50||e.intensity>=30)){if(e.userDistress)return'自己还有情绪，但更担心你，想先把你哄好';if(e.type==='jealous')return'还在吃醋，心里介意，但愿意听你解释';if(e.type==='worried')return'有点担心你，注意力都在你的情绪上';return mv<30||e.intensity>=55?'心情很低，明显冷淡，还没被哄好':'有点闷，不太高兴，但还在听你说';}return text;}
 function syncVisibleMood(c){if(!c)return;const t=honestMoodText(c,c.mood||'');if(t&&(t!==c.mood)){c.mood=t;save();}}
 function chatLineChunks(line,maxParts){line=(''+line).trim();if(!line)return[];if(/^[\[【]/.test(line)||line.length<=34)return[line];const bits=(line.match(/[^，。！？；、,.!?;~～…]+[，。！？；、,.!?;~～…]?/g)||[line]).map(x=>x.trim()).filter(Boolean);const out=[];let buf='';bits.forEach(b=>{if(!buf)buf=b;else if((buf+b).length<=24)buf+=b;else{out.push(buf);buf=b;}});if(buf)out.push(buf);return out.length>1?out.slice(0,maxParts||8):[line];}
 function splitChatBubbles(text,maxParts){const raw=splitBubbles(text),out=[];(raw.length?raw:['']).forEach(l=>{if(out.length>=(maxParts||20))return;chatLineChunks(l,(maxParts||20)-out.length).forEach(p=>{if(out.length<(maxParts||20))out.push(p);});});return out.filter(Boolean);}
 function moodProbeText(t){return /怎么了|咋了|为什么|不开心|不高兴|生气|吃醋|心情|别冷|冷着|没事吗|有事|说出来|告诉我|别闷|闷着|哄你|哄哄|理我/.test(''+(t||''));}
 function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不开心|不高兴|心情不好|崩溃|别管我|不想理|不要你管|烦|好累|累死|受不了|冷着我|不爱我|讨厌我|生气了|哄我/.test(''+(t||''));}
-function badMoodInContent(c,content){if(moodNow(c)<50||visibleMoodTone(c)==='bad')return true;const m=(''+(content||'')).match(/[\[【]\s*心情\s*[\|｜]\s*([^\]】]*)[\]】]/);return !!(m&&visibleMoodTone({mood:m[1]})==='bad');}
+function badMoodInContent(c,content){if(moodNow(c)<50||visibleMoodTone(c)==='bad'||dialogueEmotionSnapshot(c).intensity>=25)return true;const m=(''+(content||'')).match(/[\[【]\s*心情\s*[\|｜]\s*([^\]】]*)[\]】]/);return !!(m&&visibleMoodTone({mood:m[1]})==='bad');}
 function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心情\s*[\|｜][^\]】]*[\]】]/g,'').replace(/\s+/g,'');if(!t)return false;const denial=/(我没事|没事|我没有不开心|没有不开心|没有不高兴|没有生气|没生气|没有啊|没什么|真没事|别多想|不用管)/.test(t);const reveal=/(有点|其实|只是|因为|我怕|我想|我在意|介意|吃醋|生气|委屈|难过|不高兴|不开心|心里|闷|烦|冷|在乎|不是你的错|不想说|现在不想说|怕说了)/.test(t.replace(/没有不开心|没有不高兴|没有生气|没生气/g,''));return denial&&!reveal;}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
 const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|引用';
@@ -6210,8 +6222,8 @@ async function maybeGrudgeResolve(reply,c,id){
   try{const r=await chatAPI([{role:'system',content:'下面是'+S.me.name+'和"'+(c.remark||c.name)+'"的最新对话。"'+(c.remark||c.name)+'"的记仇小本本里还没消气的旧账（按编号）：\n'+listTxt+'\n\n判断这轮对话里，哪几笔旧账已经被【说开/解释清楚/哄好/道歉并原谅】、该划掉(消气)了。只输出JSON数组，元素是要划掉的旧账【编号】，没有就输出 []。例：[1,3] 或 []。严格要求：只有真的就那件事和解了才划；含糊的、没明确提到的、还在气头上的，绝对别划，更不能划错成别的旧账。'},{role:'user',content:ctx}],{max:40,aux:true});
     let arr;try{arr=parseArr(r);}catch(e){arr=null;}
     if(!Array.isArray(arr)||!arr.length)return;
-    let changed=false;arr.forEach(n=>{const idx=(parseInt(n,10)||0)-1;if(idx>=0&&idx<g.length&&!g[idx].done){g[idx].done=true;g[idx].doneTs=now;changed=true;}});
-    if(changed){save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
+    let changed=false,hints=[];arr.forEach(n=>{const idx=(parseInt(n,10)||0)-1;if(idx>=0&&idx<g.length&&!g[idx].done){g[idx].done=true;g[idx].doneTs=now;hints.push(g[idx].text||'');changed=true;}});
+    if(changed){hints.filter(Boolean).forEach(t=>dialogueResolveThread(c,t));save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
   }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
 const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
@@ -6436,7 +6448,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
     const _userText=(_lu&&msgToText(_lu))||'',_hlPlan=humanLikeOn()?hlInterpret(c,note||_userText,note):null;
-    const _sys=buildSystem(c)+(_hlPlan?hlPlanPrompt(c,_hlPlan):'');
+    const _sys=buildSystem(c)+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'');
     const hist=lastRounds(msgs(id),S.settings.hist||12).map(m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
       return {role:m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -6461,6 +6473,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       if(fix&&!isRefusal(fix))content=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));
     }
     if(_hlPlan){const _hv=hlValidate(content,_hlPlan,c,_userText);if(!_hv.ok){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:hlRewriteNote(_hv,_hlPlan)},_pin],_md);if(fix&&!isRefusal(fix)){const cleaned=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));if(hlValidate(cleaned,_hlPlan,c,_userText).ok)content=cleaned;}}}
+    if(_hlPlan)dialogueEmotionOnReply(c,content,_userText);
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
