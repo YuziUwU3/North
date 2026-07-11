@@ -8,6 +8,7 @@ const supabase = createClient(
 
 const MODELS = [
   { id: "claude-opus-4-8", owned_by: "anthropic" },
+  { id: "claude-opus-4-6", owned_by: "anthropic" },
   { id: "claude-sonnet-4-6", owned_by: "anthropic" },
   { id: "claude-haiku-4-5", owned_by: "anthropic" },
   { id: "gemini-3.5-flash", owned_by: "google" },

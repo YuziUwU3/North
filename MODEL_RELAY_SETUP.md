@@ -4,7 +4,7 @@
 
 支持：
 
-- Claude：`claude-opus-4-8`、`claude-sonnet-4-6`、`claude-haiku-4-5`
+- Claude：`claude-opus-4-8`、`claude-opus-4-6`、`claude-sonnet-4-6`、`claude-haiku-4-5`
 - Gemini：`gemini-3.5-flash`、`gemini-2.5-pro`、`gemini-2.5-flash`
 - OpenAI 聊天：如 `gpt-5.4-mini`、`gpt-5.4-nano`
 - OpenAI 生图：`gpt-image-2`

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { anthropicStreamToOpenAI, anthropicToOpenAI, openAIToAnthropic, providerForModel } from "../supabase/functions/model-relay/providers.js";
 
 assert.equal(providerForModel("claude-sonnet-4-6"), "anthropic");
+assert.equal(providerForModel("claude-opus-4-6"), "anthropic");
 assert.equal(providerForModel("gemini-3.5-flash"), "gemini");
 assert.equal(providerForModel("gpt-5.4-mini"), "openai");
 
