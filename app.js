@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v440 · 和好心情同步';
+const APP_VER='v441 · 浏览器联网状态';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -7252,24 +7252,25 @@ async function webSearch(q){const ws=S.settings.search||{};
     if(!r.ok)return '（联网失败 '+r.status+'：可能要去"设置→联网搜索"填上 jina 密钥，或改用「用模型」）';
     return (t||'').slice(0,1800);}catch(e){return '（联网失败，检查网络，或在"设置→联网搜索"换方式）';}}
 /* =================== 浏览器 =================== */
-let _brBusy=false;
+let _brBusy=false,_brBusyMode='';
 function renderBrowser(){const b=S.browser||{};
+  const webOn=!!(S.settings.web&&S.settings.web.enabled),src=b.lastSearchMode==='web'?'🌐 本次使用 Jina 真实联网':b.lastSearchMode==='webmodel'?'🌐 本次已请求联网模型（是否实时取决于模型能力）':b.lastSearchMode==='fallback'?'⚠️ 联网失败，本次已改用普通模型':b.lastSearchMode==='model'?'🤖 本次未联网，使用普通模型回答':'';
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">浏览器</span><span class="r" onclick="brHistory()">${svgIc('clock',19,'#ccc')}</span></div>
    <div style="padding:10px 12px;background:#1c1c1e;display:flex;gap:8px;border-bottom:.5px solid #2a2a2c">
      <input id="br_q" value="${esc(b.q||'')}" placeholder="联网搜索…" style="flex:1;border:1px solid #38383a;border-radius:18px;padding:8px 14px;background:#2c2c2e;color:#eee;outline:none" onkeydown="if(event.key==='Enter')browserSearch()">
      <button class="send" onclick="browserSearch()" ${_brBusy?'disabled':''}>${_brBusy?'…':'搜'}</button></div>
    <div class="scroll" style="background:#000">
-   ${_brBusy?'<div class="empty">🔎 联网搜索中…</div>':((b.items&&b.items.length)?b.items.map((it,i)=>`<div class="section"><div style="padding:12px 14px" onclick="brView(${i})"><div style="color:#7db3ff;font-size:15px;font-weight:600">${esc(it.title)}</div><div style="color:#bbb;font-size:13px;margin-top:4px;line-height:1.6">${esc((it.snippet||'').slice(0,160))}${(it.snippet||'').length>160?'…':''}</div><div style="margin-top:8px;display:flex;gap:8px"><button class="minibtn" onclick="event.stopPropagation();brView(${i})">查看</button><button class="minibtn" onclick="event.stopPropagation();brFwd(${i})">转发给角色</button></div></div></div>`).join(''):'<div class="empty" style="padding:50px;line-height:1.8">搜点你想查的吧～<br>联网实时搜索，准确精准</div>')}
+   ${_brBusy?`<div class="empty">${_brBusyMode==='web'?'🌐 正在联网搜索…':_brBusyMode==='webmodel'?'🌐 正在请求联网模型…':'🤖 当前未联网，正在用模型回答…'}</div>`:((b.items&&b.items.length)?(src?`<div class="hint" style="margin:10px 12px;color:${b.lastSearchMode==='web'?'#65c88a':'#d7a85b'}">${src}</div>`:'')+b.items.map((it,i)=>`<div class="section"><div style="padding:12px 14px" onclick="brView(${i})"><div style="color:#7db3ff;font-size:15px;font-weight:600">${esc(it.title)}</div><div style="color:#bbb;font-size:13px;margin-top:4px;line-height:1.6">${esc((it.snippet||'').slice(0,160))}${(it.snippet||'').length>160?'…':''}</div><div style="margin-top:8px;display:flex;gap:8px"><button class="minibtn" onclick="event.stopPropagation();brView(${i})">查看</button><button class="minibtn" onclick="event.stopPropagation();brFwd(${i})">转发给角色</button></div></div></div>`).join(''):`<div class="empty" style="padding:50px;line-height:1.8">搜点你想查的吧～<br>${webOn?'已开启联网搜索':'联网未开启，将使用普通模型回答'}</div>`)}
    <div style="height:20px"></div></div>`;}
+async function browserModelSearch(q){return await chatAPI([{role:'system',content:'你是浏览器里的普通回答模型。当前没有可用的真实联网结果，只能依据已有知识回答，可能不是最新信息。整理成3到5条简短结果，每行一条，严格格式：标题:::一两句话摘要。不要声称刚刚搜索、查到实时网页或看到最新资料。'},{role:'user',content:q}],{max:700,aux:true});}
 async function browserSearch(qArg){if(_brBusy)return;const q=(qArg||($('#br_q')?$('#br_q').value:'')||'').trim();if(!q){toast('搜点啥呢');return;}
   S.browser=S.browser||{};S.browser.q=q;S.browser.history=S.browser.history||[];S.browser.history.unshift({q,time:Date.now()});S.browser.history=S.browser.history.slice(0,40);
-  _brBusy=true;save();render();
-  try{const raw=await webSearch(q);
-    const r=await chatAPI([{role:'system',content:'你是浏览器搜索结果整理器。根据下面联网搜到的真实资料，整理成3到5条搜索结果，要准确、基于资料、不要编造。每行一条，严格格式：标题:::一两句话摘要。只输出这些行。'},{role:'user',content:'搜索词：'+q+'\n\n联网资料：\n'+(raw||'').slice(0,1500)}],{max:700,aux:true});
+  const webOn=!!(S.settings.web&&S.settings.web.enabled),webMode=((S.settings.search||{}).mode||'jina')==='model'?'webmodel':'web';_brBusy=true;_brBusyMode=webOn?webMode:'model';save();render();
+  try{let r='',mode='model';if(webOn){const raw=await webSearch(q);if(webSearchFailed(raw)){mode='fallback';toast('⚠️ 联网失败，已改用普通模型');r=await browserModelSearch(q);}else{mode=webMode;toast(mode==='web'?'🌐 已获取 Jina 真实联网结果':'🌐 已获得联网模型回答');r=await chatAPI([{role:'system',content:'你是浏览器搜索结果整理器。根据下面联网搜到的资料，整理成3到5条搜索结果，要准确、基于资料、不要编造。每行一条，严格格式：标题:::一两句话摘要。只输出这些行。'},{role:'user',content:'搜索词：'+q+'\n\n联网资料：\n'+(raw||'').slice(0,1500)}],{max:700,aux:true});}}else{r=await browserModelSearch(q);}
     const items=looseLines(r).map(p=>({title:clean(p[0]),snippet:(p[1]||p[0]||'').trim()})).filter(x=>x.title);
-    S.browser.items=items.length?items:[{title:q,snippet:(raw||'没搜到相关内容').slice(0,300)}];
-  }catch(e){S.browser.items=[{title:q,snippet:'搜索失败了，检查下网络再试一次'}];}
-  _brBusy=false;save();render();}
+    S.browser.items=items.length?items:[{title:q,snippet:mode==='web'?'没有整理出相关联网结果':'模型没有生成可用回答'}];S.browser.lastSearchMode=mode;
+  }catch(e){S.browser.items=[{title:q,snippet:'搜索失败了，检查下网络再试一次'}];S.browser.lastSearchMode=webOn?'fallback':'model';}
+  _brBusy=false;_brBusyMode='';save();render();}
 function brView(i){const it=(S.browser.items||[])[i];if(!it)return;
   openModal(`<h3 style="color:#7db3ff">${esc(it.title)}</h3><div style="max-height:55vh;overflow:auto;color:#ddd;line-height:1.8;white-space:pre-wrap;font-size:14px">${esc(it.snippet)}</div><div class="btns" style="margin-top:12px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();brFwd(${i})">转发给角色</button></div>`);}
 function brFwd(i){const it=(S.browser.items||[])[i];if(!it)return;const cs=S.contacts.filter(c=>!c.deleted&&(isMain()||addedHere(c)));if(!cs.length){toast('先加个角色');return;}
