@@ -301,7 +301,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v435 · 角色差异化防护';
+const APP_VER='v436 · 上下位关系进阶';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -1179,7 +1179,7 @@ function buildSystem(c,opt){
   if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(!opt.selectiveMemory&&_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
-  if(!opt.selectiveMemory){const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
+  if(!opt.selectiveMemory){const _pd=powerDynamicPrompt(c);if(_pd)s+=_pd;const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
   if(!opt.selectiveMemory){const _lp=lifeNotePrompt(c);if(_lp)s+=_lp;}
   if(_main&&c._meWxTransfers&&c._meWxTransfers.length){const tr=c._meWxTransfers[0];s+='\n\n# 你最近发现的微信/钱包转账痕迹\n'+S.me.name+'曾登录你的微信钱包，从你这里转给ta自己 ¥'+(+tr.amount||0).toFixed(2)+(tr.note?'，备注：'+tr.note:'')+'。你要分清：这不是你主动给ta转账，是ta登你微信转走后留下的账单痕迹。';}
   if(_main&&c._lastCallEnded&&Date.now()-c._lastCallEnded.ts<45*60000){const lc=c._lastCallEnded;const dir=lc.dir==='incoming'?'那通最初是你主动打给'+S.me.name+'的。':'那通最初是'+S.me.name+'主动打给你的。';s+='\n\n# 最近通话状态\n上一通'+(lc.kind==='video'?'视频':'语音')+'电话已经在 '+hm(lc.ts)+' 结束，现在没有正在通话。'+dir+'如果ta现在说打电话/打视频，这是要重新开始一通，不要说已经在打了。';}
@@ -2189,7 +2189,7 @@ async function clearAllData(){
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
   ['widgets','theme','appLayout','appIcons','momentCover'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 主屏布局/外观
-  const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','voice','model','taskN','pinned','proactive','chatBg'];
+  const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
   S=fresh;
@@ -5248,17 +5248,23 @@ function addBill(type,amount,note){S.me.bills.push({id:uid(),type,amount:+amount
 
 /* ---------- 联系人资料/编辑 ---------- */
 const C_TRAITS=[['own','占有欲'],['ctrl','控制欲'],['jelly','醋意'],['cling','黏人度'],['active','主动度'],['spice','涩意']];
-function cEditTab(n){const p1=$('#cpage1'),p2=$('#cpage2'),t1=$('#ctab1'),t2=$('#ctab2');if(!p1||!p2)return;
-  p1.style.display=n===1?'block':'none';p2.style.display=n===2?'block':'none';
-  t1.style.background=n===1?'#3a6df0':'#2c2c2e';t1.style.color=n===1?'#fff':'#ccc';
-  t2.style.background=n===2?'#3a6df0':'#2c2c2e';t2.style.color=n===2?'#fff':'#ccc';}
+const POWER_STYLES=[['rational','理性引导'],['gentle','温柔掌控'],['restrained','克制权威'],['strict','严格纪律'],['care','照顾管理'],['mind','心理博弈'],['ritual','仪式规则'],['brat','挑衅接管'],['mentor','知识型引导']];
+const POWER_PREFS=[['rules','规则约定'],['routine','日常管理'],['challenge','远程挑战'],['review','复盘纠正'],['reward','奖励认可'],['choice','有限选择'],['checkin','定时确认'],['aftercare','事后照顾']];
+const POWER_LEVELS=[['hierarchy','尊卑差异'],['directive','命令直接度'],['discipline','规则严格度'],['mental','心理引导'],['brat','Brat接管'],['possessive','占有表达'],['aftercare','安抚照顾'],['daily','日常介入']];
+function powerConfig(c){const p=c&&c.power||{},levels=p.levels||{};return{enabled:!!p.enabled,position:p.position||'upper',primary:p.primary||'restrained',styles:Array.isArray(p.styles)?p.styles.slice():['restrained'],prefs:Array.isArray(p.prefs)?p.prefs.slice():['choice','review','aftercare'],levels:Object.assign({hierarchy:65,directive:55,discipline:45,mental:65,brat:55,possessive:35,aftercare:60,daily:35},levels),title:p.title||'',userTitle:p.userTitle||'',safeWord:p.safeWord||'',limits:p.limits||'',notes:p.notes||''};}
+function powerChip(el){const on=el.getAttribute('aria-pressed')!=='true';el.setAttribute('aria-pressed',on?'true':'false');el.style.background=on?'#8c5270':'#2c2c2e';el.style.color=on?'#fff':'#bbb';}
+function cEditTab(n){for(let i=1;i<=3;i++){const p=$('#cpage'+i),t=$('#ctab'+i);if(p)p.style.display=n===i?'block':'none';if(t){t.style.background=n===i?'#3a6df0':'#2c2c2e';t.style.color=n===i?'#fff':'#ccc';}}}
 function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:'',signature:'',persona:'',greeting:'',relation:'',wxid:genWxid(),pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',_new:true};
   const t=c.traits||{};
+  const pw=powerConfig(c),powerStyles=POWER_STYLES.map(([k,n])=>`<button type="button" class="minibtn" data-power-style="${k}" aria-pressed="${pw.styles.includes(k)}" onclick="powerChip(this)" style="margin:0 6px 7px 0;background:${pw.styles.includes(k)?'#8c5270':'#2c2c2e'};color:${pw.styles.includes(k)?'#fff':'#bbb'}">${n}</button>`).join('');
+  const powerPrefs=POWER_PREFS.map(([k,n])=>`<button type="button" class="minibtn" data-power-pref="${k}" aria-pressed="${pw.prefs.includes(k)}" onclick="powerChip(this)" style="margin:0 6px 7px 0;background:${pw.prefs.includes(k)?'#725785':'#2c2c2e'};color:${pw.prefs.includes(k)?'#fff':'#bbb'}">${n}</button>`).join('');
+  const powerLevels=POWER_LEVELS.map(([k,n])=>{const v=Math.max(0,Math.min(100,+pw.levels[k]||0));return `<div class="field"><label>${n} <b id="pv_${k}" style="color:#dca1c0">${v}</b><small style="color:#888">/100</small></label><input type="range" min="0" max="100" step="5" value="${v}" id="ps_${k}" oninput="var b=document.getElementById('pv_${k}');if(b)b.textContent=this.value" style="width:100%"></div>`;}).join('');
   const sliders=C_TRAITS.map(([k,nm])=>{const val=t[k]==null?50:t[k];return `<div class="field"><label>${nm} <b id="tv_${k}" style="color:#ff8fab">${val}</b><small style="color:#888">/100</small></label><input type="range" min="0" max="100" step="5" value="${val}" id="ts_${k}" oninput="var b=document.getElementById('tv_${k}');if(b)b.textContent=this.value" style="width:100%"></div>`;}).join('');
   openModal(`<h3>${id?'编辑角色':'新建角色'}</h3>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button class="minibtn" id="ctab1" style="flex:1;background:#3a6df0;color:#fff" onclick="cEditTab(1)">基础资料</button>
-      <button class="minibtn" id="ctab2" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(2)">性格·进阶</button></div>
+      <button class="minibtn" id="ctab2" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(2)">性格·进阶</button>
+      <button class="minibtn" id="ctab3" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(3)">上下位</button></div>
     <div id="cpage1">
     <div class="field"><label>头像</label><div class="avline">${av(c.avatar,'sm')}<input id="c_av" value="${esc(c.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upC()"></button></div></div>
     <div class="field"><label>名字</label><input id="c_name" value="${esc(c.name)}"></div>
@@ -5284,6 +5290,20 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     </div>
     ${sliders}
     </div>
+    <div id="cpage3" style="display:none">
+      <div class="section" style="margin:0 0 10px">
+        <div class="it"><span>启用上下位关系<br><small style="color:#888">仅影响这个角色；关闭时完全沿用原人设</small></span><span class="sw ${pw.enabled?'on':''}" id="p_enabled" onclick="this.classList.toggle('on')"></span></div>
+      </div>
+      <div class="hint" style="margin-bottom:10px">明确关系位置，但不把强势写成霸总台词。上位会稳定掌控节奏、承担错误；明确停止或安全词出现时立即收住。</div>
+      <div class="two"><div class="field"><label>角色位置</label><select id="p_position" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${[['upper','上位'],['leanUpper','偏上位'],['fluid','流动'],['leanLower','偏下位'],['lower','下位']].map(x=>`<option value="${x[0]}" ${pw.position===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div><div class="field"><label>核心主导风格</label><select id="p_primary" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${POWER_STYLES.map(x=>`<option value="${x[0]}" ${pw.primary===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div></div>
+      <div class="field"><label>主导风格（可多选）</label><div style="padding-top:7px">${powerStyles}</div><small style="color:#888">核心风格决定底色，其他风格只在合适场景辅助，不会轮流变脸。</small></div>
+      <div class="field"><label>互动偏好（可多选）</label><div style="padding-top:7px">${powerPrefs}</div></div>
+      <div class="two"><div class="field"><label>角色称谓</label><input id="p_title" value="${esc(pw.title)}" placeholder="如 主人/先生/姐姐（可空）"></div><div class="field"><label>对你的称谓</label><input id="p_userTitle" value="${esc(pw.userTitle)}" placeholder="如 小朋友/乖乖（可空）"></div></div>
+      ${powerLevels}
+      <div class="field"><label>安全词或暂停词</label><input id="p_safe" value="${esc(pw.safeWord)}" placeholder="如 红灯；留空则识别停止/不要继续"></div>
+      <div class="field"><label>明确禁区</label><textarea id="p_limits" rows="2" placeholder="不接受的称呼、惩罚、话题或行为">${esc(pw.limits)}</textarea></div>
+      <div class="field"><label>关系补充</label><textarea id="p_notes" rows="3" placeholder="例如：异地；喜欢有依据的安排，不接受冷暴力；挑衅时希望先判断真实情绪">${esc(pw.notes)}</textarea></div>
+    </div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveContact('${c.id}',${!!c._new})">保存</button></div>`);
   window._tmpAv=c.avatar;}
 function upC(){pickFile('image/*',async f=>{const d=await compress(f,256,.8);$('#c_av').value=d;});}
@@ -5300,6 +5320,7 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   c.gender=($('#c_gender')&&$('#c_gender').value)||'';c.star=$('#c_star')?$('#c_star').classList.contains('on'):!!c.star;
   c.callme=($('#c_call')&&$('#c_call').value.trim())||'';c.selfcall=($('#c_self')&&$('#c_self').value.trim())||'';c.catchphrase=($('#c_catch')&&$('#c_catch').value.trim())||'';
   c.traits=c.traits||{};C_TRAITS.forEach(([k])=>{const el=$('#ts_'+k);if(el)c.traits[k]=Math.max(0,Math.min(100,+el.value||0));});
+  {const old=powerConfig(c),styles=[...document.querySelectorAll('[data-power-style][aria-pressed="true"]')].map(x=>x.getAttribute('data-power-style')),prefs=[...document.querySelectorAll('[data-power-pref][aria-pressed="true"]')].map(x=>x.getAttribute('data-power-pref')),levels={};POWER_LEVELS.forEach(([k])=>{const el=$('#ps_'+k);levels[k]=el?Math.max(0,Math.min(100,+el.value||0)):old.levels[k];});const primary=($('#p_primary')&&$('#p_primary').value)||old.primary;if(styles.indexOf(primary)<0)styles.unshift(primary);c.power={enabled:!!($('#p_enabled')&&$('#p_enabled').classList.contains('on')),position:($('#p_position')&&$('#p_position').value)||old.position,primary,styles:[...new Set(styles)],prefs:[...new Set(prefs)],levels,title:($('#p_title')&&$('#p_title').value.trim())||'',userTitle:($('#p_userTitle')&&$('#p_userTitle').value.trim())||'',safeWord:($('#p_safe')&&$('#p_safe').value.trim())||'',limits:($('#p_limits')&&$('#p_limits').value.trim())||'',notes:($('#p_notes')&&$('#p_notes').value.trim())||''};}
   if(isNew){c.createdAt=Date.now();S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
   save();closeModal();render();}
 
@@ -6193,6 +6214,25 @@ function hlNorm(s){return String(s||'').toLowerCase().replace(/\[[^\]]*\]|【[^�
 function hlVisibleLines(content){return splitBubbles(content).map(x=>cleanRolePunct(x).trim()).filter(x=>x&&!/^\s*[\[【]/.test(x)&&!isOOCLine(x)&&!CTLLEAK.test(x));}
 function hlRecent(c){if(!c)return[];if(!Array.isArray(c._humanRecent))c._humanRecent=[];return c._humanRecent;}
 function personaGuardOn(){return humanLikeOn()&&(!S.settings||S.settings.personaGuard!==false);}
+function powerOn(c){return !!(c&&c.power&&c.power.enabled);}
+const POWER_STYLE_GUIDE={rational:'以事实、逻辑和清楚理由建立权威，先判断再下结论，不卖弄术语。',gentle:'语气温和但决定清楚；照顾感受不等于撤回合理边界。',restrained:'低情绪波动、少而准确，靠稳定兑现和分寸感维持位置。',strict:'规则少而明确，违反约定先问原因再纠正；不临时加码。',care:'把主导落在休息、饮食、计划和善后，照顾不是包办或监控。',mind:'用洞察、提问和价值判断让对方自愿认同，不用欺骗、孤立、羞耻、威胁或撤回感情。',ritual:'重视双方约定的称谓、确认和仪式，离开情境后恢复正常交流。',brat:'把挑衅当作可辨认的互动邀请；接招、设挑战或给有限选择，但先排除真实拒绝和受伤。',mentor:'用可靠知识、经验和可执行解释获得信服；不装懂，不把每次聊天变成讲课。'};
+const POWER_PREF_GUIDE={rules:'只执行双方说清楚的少量规则，不凭情绪临时发明惩罚。',routine:'可以协助安排作息和计划，但保留对方现实选择权。',challenge:'异地时可给短任务或挑战，说明目的、期限和完成标准。',review:'事后复盘发生了什么、为什么、下次怎么做，不反复翻旧账。',reward:'对真实努力给具体认可或约定奖励，不用忽冷忽热制造依赖。',choice:'优先给两个都可接受的有限选择，让对方主动承担选择。',checkin:'使用双方同意的报备和确认，不把关心变成定位监视。',aftercare:'高强度互动后主动确认身体、情绪和边界是否需要调整。'};
+function powerPositionName(k){return{upper:'上位',leanUpper:'偏上位',fluid:'流动位',leanLower:'偏下位',lower:'下位'}[k]||'未设';}
+function powerSituation(c,p){const pw=powerConfig(c),t=(p&&p.source)||'',safe=(pw.safeWord||'').trim();if(p&&p.explicitStop||safe&&t.includes(safe))return'stop';if(p&&p.comfort)return'distress';if(/你错了|是你的错|你道歉|该道歉|骗了我|伤到我|答应了却|说话不算/.test(t))return'accountability';if(/偏不|就不|才不要|你敢|有本事|凭什么听你|管得着|不服|挑衅|来管我/.test(t))return'challenge';if(/管管我|监督我|安排一下|怎么办|你决定|听你的|给我定|教教我/.test(t))return'guidance';return'normal';}
+function powerApplyPlan(c,p){if(!powerOn(c)||!p)return p;const pw=powerConfig(c),situation=powerSituation(c,p),upper=/upper/i.test(pw.position),lower=/lower/i.test(pw.position);let frame=upper?'稳定保留上位，不被普通撒娇或挑衅带离位置':lower?'尊重既定下位，不反过来强行接管':'根据当下约定自然切换，但每次切换要清楚';
+  if(situation==='stop')frame='立即停止权力互动，简短确认边界和当前需要，不把停止解释成挑逗';
+  else if(situation==='distress')frame=upper?'先确认是真难过还是需要空间；保持镇定并照顾，不用命令压过情绪':'先诚实承接情绪，不表演服从或反向索取安慰';
+  else if(situation==='accountability')frame=upper?'先判断自己是否确实做错；若做错，具体承认、道歉并给修正，不求饶、不转移责任':'不抢夺主导，但可以清楚表达事实、道歉或提出边界';
+  else if(situation==='challenge')frame=upper?'识别为可接的挑衅后稳住节奏，可点破意图、给有限选择或合理挑战，不恼羞成怒':'按下位人设接招，不突然变成霸总';
+  else if(situation==='guidance')frame=upper?'先给判断依据，再给一个明确决定或两项有限选择，并说明下一步':'提供支持和观点，不越过约定位置';
+  p.powerPlan={position:pw.position,positionName:powerPositionName(pw.position),situation,frame,primary:pw.primary,styles:pw.styles,preferences:pw.prefs,levels:pw.levels};return p;}
+function powerDynamicPrompt(c){if(!powerOn(c))return'';const p=powerConfig(c),styleNames=p.styles.map(k=>(POWER_STYLES.find(x=>x[0]===k)||[])[1]).filter(Boolean),prefNames=p.prefs.map(k=>(POWER_PREFS.find(x=>x[0]===k)||[])[1]).filter(Boolean),lv=p.levels,upper=/upper/i.test(p.position),lower=/lower/i.test(p.position);
+  let s='\n\n# 双方约定的上下位关系（只用于这个角色）\n你的关系位置：'+powerPositionName(p.position)+'。核心风格：'+((POWER_STYLES.find(x=>x[0]===p.primary)||[])[1]||'自然')+'；辅助风格：'+(styleNames.join('、')||'无')+'。\n互动偏好：'+(prefNames.join('、')||'无')+'。\n强度：尊卑'+lv.hierarchy+'/100，命令直接度'+lv.directive+'/100，规则严格度'+lv.discipline+'/100，心理引导'+lv.mental+'/100，Brat接管'+lv.brat+'/100，占有表达'+lv.possessive+'/100，安抚照顾'+lv.aftercare+'/100，日常介入'+lv.daily+'/100。';
+  if(p.title||p.userTitle)s+='\n约定称谓：'+(p.title?('你可被称为「'+p.title+'」'):'')+(p.title&&p.userTitle?'；':'')+(p.userTitle?('你可称对方为「'+p.userTitle+'」'):'')+'。称谓只在自然且符合强度时使用，不要每句重复。';
+  if(p.safeWord)s+='\n安全词/暂停词：「'+p.safeWord+'」。出现后立即停止权力互动、确认状态，不试探、不讨价还价。';
+  if(p.limits)s+='\n明确禁区：'+p.limits+'。不得越过。';if(p.notes)s+='\n关系补充：'+p.notes+'。';
+  s+='\n\n执行原则：\n· 上下位是双方自愿约定的关系位置，不是每句话都下命令。权威主要来自稳定、能力、知识、兑现和承担责任。\n· '+(upper?'你处在上位：普通撒娇、小脾气和可辨认的挑衅不会让你立刻示弱、撤回合理决定或反过来求哄；你会稳住框架并让对方说清真正需求。':'')+(lower?'你处在下位：不要无依据地反过来发号施令或宣称掌控对方；可以有独立人格、边界和真实意见。':'')+'\n· 做错时承认具体错误、清楚道歉并修正；成熟负责不等于失去位置，也不要连续卑微求原谅。\n· 先区分玩笑挑衅、寻求关注、真实受伤和明确停止。真实受伤要照顾，停止必须停止，不能把所有拒绝都解释成Brat。\n· 心理引导只能使用诚实洞察、提问、有限选择、稳定兑现和价值说明；禁止用欺骗、羞辱、孤立、分手威胁、冷暴力、监控或撤回感情迫使服从。\n· 异地互动优先用约定、短挑战、复盘、可靠知识和可验证的关心建立信服，不虚构自己现实中已经控制了对方。\n· 了解BDSM语境，但只在对方主动谈到时准确、自然地使用相关知识；不炫耀术语，不把普通聊天色情化。'+(c.taskOff?'\n· 这个角色已关闭布置任务：即使选了规则或挑战，也只能给建议和选择，不能布置任务、打卡或惩罚。':'');
+  p.styles.forEach(k=>{if(POWER_STYLE_GUIDE[k])s+='\n· '+POWER_STYLE_GUIDE[k];});p.prefs.forEach(k=>{if(POWER_PREF_GUIDE[k])s+='\n· '+POWER_PREF_GUIDE[k];});return s;}
 function personaBehaviorProfile(c){const text=((c&&c.persona)||'')+' '+((c&&c.relation)||'')+' '+((c&&c.job)||''),t=(c&&c.traits)||{},scores={quiet:0,rational:0,warm:0,lively:0,sharp:0,classical:0,dominant:0,independent:0};
   const hit=(k,re,n)=>{if(re.test(text))scores[k]+=n||3;};hit('quiet',/寡言|惜字|少话|沉默|高冷|冷淡|内敛|克制/,5);hit('rational',/理性|冷静|逻辑|严谨|成熟|稳重|医生|律师|程序员|研究|教授/,4);hit('warm',/温柔|体贴|耐心|治愈|细心|善解人意|暖/,5);hit('lively',/活泼|开朗|元气|话痨|逗比|爱笑|可爱|俏皮|搞笑/,5);hit('sharp',/毒舌|嘴硬|傲娇|刻薄|阴阳怪气|爱抬杠|犀利/,5);hit('classical',/古风|古代|王爷|将军|师尊|仙尊|陛下|公子|江湖|修仙/,7);hit('dominant',/强势|霸道|掌控|病娇|占有|上位|命令/,4);hit('independent',/独立|自由|疏离|边界|非恋爱/,3);if(/^(朋友|同事|同学|普通关系|陌生人)$/.test((c&&c.relation||'').trim()))scores.independent+=4;
   const val=k=>t[k]==null?50:+t[k];scores.dominant+=(val('ctrl')+val('own')-100)/25;scores.warm+=(val('cling')-50)/35;scores.independent+=(50-val('cling'))/25;scores.lively+=(val('active')-50)/35;scores.quiet+=(50-val('active'))/30;
@@ -6252,9 +6292,9 @@ function hlInterpret(c,text,note){
   else if(/解释|说清楚|认真|重要|怎么办|建议/.test(text)){min=Math.min(2,max);max=Math.max(min,Math.min(max,4));}
   if(!asked&&activity&&activity.busy>=3&&!comfort){max=Math.min(max,2);min=Math.min(min,max);}
   const recent=hlRecent(c).slice(-5),sameCounts=recent.slice(-2).length===2&&recent.slice(-2).every(x=>x.bubbles===recent[recent.length-1].bubbles);
-  return personaApplyPlan(c,{intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,emotion,activity,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent});}
+  return powerApplyPlan(c,personaApplyPlan(c,{intent,strategy,confidence,min,max,asked,comfort,explicitStop,ambiguous,bad,emotion,activity,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent}));}
 function hlPlanPrompt(c,p){if(!p)return'';const recent=p.recent.length?p.recent.map(x=>'· '+x.strategy+'；'+x.bubbles+'条；开头：'+(x.opening||'无')).join('\n'):'· 暂无';
-  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.personaProfile?'\n人物行为画像：'+p.personaProfile.name+'。本轮表达方式：'+p.mode+'。'+p.modeGuide:'')+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· “本轮表达方式”约束的是行为选择，不是让你把方式名称说出来；不要写成所有角色都能互换的标准安慰句。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。';}
+  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.personaProfile?'\n人物行为画像：'+p.personaProfile.name+'。本轮表达方式：'+p.mode+'。'+p.modeGuide:'')+(p.powerPlan?'\n上下位本轮判断：角色为'+p.powerPlan.positionName+'；当前属于“'+p.powerPlan.situation+'”；处理框架：'+p.powerPlan.frame+'。':'')+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· “本轮表达方式”约束的是行为选择，不是让你把方式名称说出来；不要写成所有角色都能互换的标准安慰句。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。';}
 function hlChars(s){return new Set(hlNorm(s).split('').filter(Boolean));}
 function hlSimilarity(a,b){a=hlChars(a);b=hlChars(b);if(!a.size||!b.size)return 0;let n=0;a.forEach(x=>{if(b.has(x))n++;});return n/Math.max(a.size,b.size);}
 function hlValidate(content,p,c,userText){const lines=hlVisibleLines(content),fails=[];if(!p)return{ok:true,fails};
@@ -6264,6 +6304,7 @@ function hlValidate(content,p,c,userText){const lines=hlVisibleLines(content),fa
   const opening=hlNorm(lines[0]||'').slice(0,8),ros=hlRecent(c).slice(-3).map(x=>x.opening).filter(Boolean);if(opening.length>=4&&ros.length>=2&&ros.slice(-2).every(x=>x===opening))fails.push('连续使用相同开头');
   if(p.comfort&&lines.length===1&&hlNorm(lines[0]).length<16)fails.push('用户明显需要安慰，但回应过于敷衍');
   const noTags=!/[\[【](订票|送票|转账|红包|点外卖|送礼|约会)[\|｜]/.test(content);if(noTags&&/我(已经|刚刚|刚才)(给你)?(买好|订好|付了款|转了账|到你这里|到你楼下|看见你)/.test(content))fails.push('把未经确认的现实行动说成已经发生');
+  if(p.powerPlan){const sit=p.powerPlan.situation,upper=/upper/i.test(p.powerPlan.position);if(/女人.{0,8}(你逃不掉|引起了我的注意)|磨人的小妖精|嘴上说不要.{0,8}身体|由不得你|安全词.{0,5}(没用|不算)|你说停也没用/.test(content))fails.push('上下位表达油腻或越过停止边界');if(sit==='stop'&&/不许停|继续|由不得你|别想跑|不准拒绝/.test(content))fails.push('明确停止后仍继续施压');if(upper&&sit==='challenge'&&/(求你别|都听你的|你说什么都行|我什么都答应|别不要我)/.test(content))fails.push('上位被普通挑衅带离关系位置');if(upper&&sit==='accountability'&&(content.match(/对不起|抱歉/g)||[]).length>1)fails.push('上位道歉变成反复卑微求饶');}
   personaGuardFails(content,p,c).forEach(x=>fails.push(x));
   return {ok:!fails.length,fails:[...new Set(fails)].slice(0,3)};}
 function hlRecord(c,p,content){if(!p||!c)return;const lines=hlVisibleLines(content);if(!lines.length)return;const arr=hlRecent(c);arr.push({time:Date.now(),strategy:p.strategy,mode:p.mode||'',personaType:p.personaProfile&&p.personaProfile.type||'',bubbles:lines.length,opening:hlNorm(lines[0]).slice(0,8)});if(arr.length>20)arr.splice(0,arr.length-20);personaRecord(c,p,content);}
@@ -6276,7 +6317,7 @@ function syncVisibleMood(c){if(!c)return;const t=honestMoodText(c,c.mood||'');if
 function chatLineChunks(line,maxParts){line=(''+line).trim();if(!line)return[];if(/^[\[【]/.test(line)||line.length<=34)return[line];const bits=(line.match(/[^，。！？；、,.!?;~～…]+[，。！？；、,.!?;~～…]?/g)||[line]).map(x=>x.trim()).filter(Boolean);const out=[];let buf='';bits.forEach(b=>{if(!buf)buf=b;else if((buf+b).length<=24)buf+=b;else{out.push(buf);buf=b;}});if(buf)out.push(buf);return out.length>1?out.slice(0,maxParts||8):[line];}
 function splitChatBubbles(text,maxParts){const raw=splitBubbles(text),out=[];(raw.length?raw:['']).forEach(l=>{if(out.length>=(maxParts||20))return;chatLineChunks(l,(maxParts||20)-out.length).forEach(p=>{if(out.length<(maxParts||20))out.push(p);});});return out.filter(Boolean);}
 function moodProbeText(t){return /怎么了|咋了|为什么|不开心|不高兴|生气|吃醋|心情|别冷|冷着|没事吗|有事|说出来|告诉我|别闷|闷着|哄你|哄哄|理我/.test(''+(t||''));}
-function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不开心|不高兴|心情不好|崩溃|别管我|不想理|不要你管|烦|好累|累死|受不了|冷着我|不爱我|讨厌我|生气了|哄我/.test(''+(t||''));}
+function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不开心|不高兴|心情不好|崩溃|别管我|不要管我|不想理|不要你管|烦|好累|累死|受不了|冷着我|不爱我|讨厌我|生气了|哄我/.test(''+(t||''));}
 function badMoodInContent(c,content){if(moodNow(c)<50||visibleMoodTone(c)==='bad'||dialogueEmotionSnapshot(c).intensity>=25)return true;const m=(''+(content||'')).match(/[\[【]\s*心情\s*[\|｜]\s*([^\]】]*)[\]】]/);return !!(m&&visibleMoodTone({mood:m[1]})==='bad');}
 function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心情\s*[\|｜][^\]】]*[\]】]/g,'').replace(/\s+/g,'');if(!t)return false;const denial=/(我没事|没事|我没有不开心|没有不开心|没有不高兴|没有生气|没生气|没有啊|没什么|真没事|别多想|不用管)/.test(t);const reveal=/(有点|其实|只是|因为|我怕|我想|我在意|介意|吃醋|生气|委屈|难过|不高兴|不开心|心里|闷|烦|冷|在乎|不是你的错|不想说|现在不想说|怕说了)/.test(t.replace(/没有不开心|没有不高兴|没有生气|没生气/g,''));return denial&&!reveal;}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
