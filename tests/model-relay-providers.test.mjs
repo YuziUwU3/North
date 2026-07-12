@@ -19,6 +19,19 @@ assert.equal(request.messages[0].role, "user");
 assert.equal(request.messages[0].content, "Hello");
 assert.equal(request.max_tokens, 300);
 
+const visionRequest = openAIToAnthropic({
+  model: "claude-opus-4-6",
+  messages: [{ role: "user", content: [
+    { type: "image_url", image_url: { url: "data:image/jpeg;base64,QUJD" } },
+    { type: "text", text: "Describe it" },
+  ] }],
+  max_tokens: 420,
+});
+assert.equal(visionRequest.messages[0].content[0].type, "image");
+assert.equal(visionRequest.messages[0].content[0].source.media_type, "image/jpeg");
+assert.equal(visionRequest.messages[0].content[0].source.data, "QUJD");
+assert.equal(visionRequest.messages[0].content[1].text, "Describe it");
+
 const response = anthropicToOpenAI({
   id: "msg_123",
   content: [{ type: "text", text: "Hi" }],

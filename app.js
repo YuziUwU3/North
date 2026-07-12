@@ -305,7 +305,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v456 · 识图重试与全群气泡美化';
+const APP_VER='v457 · Claude原生识图与回复等待';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -363,11 +363,11 @@ function pfMsgStoreKey(){try{return '__pf_messages_'+((S&&S.me&&S.me.phoneFriend
 function _imgReplacer(k,v){
   // 重量级文字(聊天记录)也搬进大空间：只有确认入库后才在存档里换成占位，绝不丢消息
   if(k==='messages'&&v&&typeof v==='object'&&v===S.messages){let blob;try{blob=JSON.stringify(v);}catch(_){blob=null;}
-    if(blob&&blob.length>20000){if(_heavy.messages!==blob){_heavy.messages=blob;imgPut('__messages',blob).then(()=>{_heavyReady.add('messages');save(0);}).catch(()=>{});}
+    if(blob&&blob.length>20000){if(_heavy.messages!==blob){_heavy.messages=blob;_heavyReady.delete('messages');imgPut('__messages',blob).then(()=>{if(_heavy.messages===blob){_heavyReady.add('messages');save(0);}}).catch(()=>{});}
       if(_heavyReady.has('messages'))return {__idb:'messages'};}}
   const pf=S&&S.me&&S.me.phoneFriend;
   if(k==='messages'&&pf&&v&&typeof v==='object'&&v===pf.messages){let blob;try{blob=JSON.stringify(v);}catch(_){blob=null;}
-    if(blob&&blob.length>20000){const key=pfMsgStoreKey(),rk='pfMessages:'+key;if(_heavy[rk]!==blob){_heavy[rk]=blob;imgPut(key,blob).then(()=>{_heavyReady.add(rk);save(0);}).catch(()=>{});}
+    if(blob&&blob.length>20000){const key=pfMsgStoreKey(),rk='pfMessages:'+key;if(_heavy[rk]!==blob){_heavy[rk]=blob;_heavyReady.delete(rk);imgPut(key,blob).then(()=>{if(_heavy[rk]===blob){_heavyReady.add(rk);save(0);}}).catch(()=>{});}
       if(_heavyReady.has(rk))return {__idb:'phoneFriendMessages',id:pf.id};}}
   if(isBigImg(v)){let key=_imgRev.get(v);
     if(!key){key='i'+(_imgSeq++)+Date.now().toString(36);_imgRev.set(v,key);_imgCache[key]=v;imgPut(key,v).then(()=>{_imgReady.add(key);}).catch(()=>{});}
@@ -377,11 +377,13 @@ function _imgReplacer(k,v){
 function _rehydrate(o){if(!o||typeof o!=='object')return;for(const k in o){const v=o[k];
     if(typeof v==='string'){if(v.indexOf('idb:')===0)o[k]=_imgCache[v.slice(4)]||v;}
     else if(v&&typeof v==='object')_rehydrate(v);}}
+function mergeBootMessages(restored,live){restored=restored&&typeof restored==='object'?restored:{};if(!live||typeof live!=='object')return restored;for(const k of Object.keys(live)){if(k==='__idb'||!Array.isArray(live[k])||!live[k].length)continue;const dst=Array.isArray(restored[k])?restored[k]:(restored[k]=[]),seen=new Set(dst.map(m=>m&&m.id).filter(Boolean));for(const m of live[k]){if(!m)continue;if(m.id&&seen.has(m.id))continue;dst.push(m);if(m.id)seen.add(m.id);}dst.sort((a,b)=>(+a.time||0)-(+b.time||0));}return restored;}
+function repairStaleVisionStates(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(m&&m.type==='image'&&m.role==='user'&&m.visionState==='pending'&&!_visionTasks.has(m.id)){m.visionState='failed';m.visionError='上次识图被页面刷新中断，点图片下方可重试';changed=true;}});}}catch(_){}return changed;}
 async function bootImages(){try{_imgCache=await imgAll();_imgRev=new Map();_imgReady=new Set();for(const k in _imgCache){_imgRev.set(_imgCache[k],k);_imgReady.add(k);}
     // 回填搬进大空间的聊天记录
-    if(S.messages&&S.messages.__idb==='messages'){const b=await imgGet('__messages');if(b){try{S.messages=JSON.parse(b);_heavy.messages=b;_heavyReady.add('messages');}catch(_){S.messages={};}}else{S.messages={};}}
+    if(S.messages&&S.messages.__idb==='messages'){const live=S.messages,added=Object.keys(live).some(k=>k!=='__idb'&&Array.isArray(live[k])&&live[k].length),b=await imgGet('__messages');if(b){try{S.messages=mergeBootMessages(JSON.parse(b),live);if(added){_heavy.messages='';_heavyReady.delete('messages');save(0);}else{_heavy.messages=b;_heavyReady.add('messages');}}catch(_){S.messages=mergeBootMessages({},live);}}else{S.messages=mergeBootMessages({},live);}}
     {const p=S.me&&S.me.phoneFriend;if(p&&p.messages&&p.messages.__idb==='phoneFriendMessages'){const key='__pf_messages_'+(p.messages.id||p.id||'main'),b=await imgGet(key);if(b){try{p.messages=JSON.parse(b);_heavy['pfMessages:'+key]=b;_heavyReady.add('pfMessages:'+key);}catch(_){p.messages={};p.lastSync=0;p._forceFullSync=1;}}else{p.messages={};p.lastSync=0;p._forceFullSync=1;}}else if(p&&p.messages&&p.messages.__idb){p.messages={};p.lastSync=0;p._forceFullSync=1;}}
-    _rehydrate(S);}catch(e){}}
+    _rehydrate(S);if(repairStaleVisionStates())save(0);}catch(e){}}
 async function fullBackupState(){if(_bootImagesPromise)try{await _bootImagesPromise;}catch(_){}let c=null;if(S.messages&&S.messages.__idb==='messages'){const b=await imgGet('__messages');if(b){c=JSON.parse(JSON.stringify(S));try{c.messages=JSON.parse(b);}catch(_){c.messages={};}}}
   const base=c||S,p=base.me&&base.me.phoneFriend;if(p&&p.messages&&p.messages.__idb==='phoneFriendMessages'){const b=await imgGet('__pf_messages_'+(p.messages.id||p.id||'main'));if(b){if(!c)c=JSON.parse(JSON.stringify(S));try{c.me.phoneFriend.messages=JSON.parse(b);}catch(_){c.me.phoneFriend.messages={};}}}
   return c||S;}
@@ -630,33 +632,59 @@ async function chatAPI(messages,opt){opt=opt||{};let a=S.settings.chat;
   return chatResultText(messages,opt,d);
 }
 function uniq(arr){const out=[];(arr||[]).forEach(x=>{x=(x||'').trim();if(x&&!out.includes(x))out.push(x);});return out;}
-function visionModels(a){const ch=S.settings.chat||{};return (a&&a.model)?uniq([a.model]):uniq([ch.model,'gpt-4o','gpt-4o-mini']);}
-function visionImagePart(dataURL,variant){
-  if(variant==='string')return {type:'image_url',image_url:dataURL};
-  if(variant==='anthropic'){const m=(''+dataURL).match(/^data:([^;]+);base64,(.+)$/);return m?{type:'image',source:{type:'base64',media_type:m[1],data:m[2]}}:{type:'image_url',image_url:{url:dataURL}};}
-  return {type:'image_url',image_url:variant==='detail'?{url:dataURL,detail:'auto'}:{url:dataURL}};
-}
+let _visionLast={},_visionModelCache={};
+function visionModels(a,extra){const ch=S.settings.chat||{};return uniq([a&&a.model,a&&a.fallbackModel,a&&a.lastGoodModel,...(extra||[]),ch.model]);}
+function visionImagePart(dataURL,detail){return {type:'image_url',image_url:detail===false?{url:dataURL}:{url:dataURL,detail:'auto'}};}
 function visionNoImageText(t){return /没有.{0,8}(附带|附上|收到|提供|看到).{0,6}(图片|图像|照片)|未.{0,6}(附带|收到|提供).{0,6}(图片|图像|照片)|没.{0,6}(附图|图片|图像|照片)|看不到.{0,5}(图片|图像|照片)|no image|image.{0,12}not (provided|attached|found)|without an image/i.test(''+(t||''));}
-async function visionPost(base,key,model,dataURL,prompt,variant){
+function roleImageFailureText(t){return visionNoImageText(t)||/(图片|照片|图像).{0,10}(没显示|显示不出|识别失败|解析失败|看不清|看不到|没出来)|没.{0,5}(显示|识别|解析).{0,5}(图片|照片|图像)/i.test(''+(t||''));}
+function visionText(d){let c=d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+  if(Array.isArray(c))c=c.map(x=>x&&((x.type==='text'&&x.text)||x.text)||'').join('\n');
+  if(typeof c==='string'&&c.trim())return c.trim();
+  if(Array.isArray(d&&d.content)){const t=d.content.map(x=>x&&x.type==='text'?(x.text||''):'').join('\n').trim();if(t)return t;}
+  return typeof(d&&d.output_text)==='string'?d.output_text.trim():'';}
+function visionData(dataURL){const m=(''+dataURL).match(/^data:(image\/(?:jpeg|png|gif|webp));base64,(.+)$/i);return m?{media:m[1].toLowerCase(),data:m[2]}:null;}
+function visionNativeURL(base){let b=(''+base).replace(/\/+$/,'').replace(/\/chat\/completions$/i,'');return /\/v1$/i.test(b)?b+'/messages':b+'/v1/messages';}
+function visionIsClaude(model){return /^claude(?:-|\.|$)/i.test(''+model);}
+function visionErrKind(status,text){text=(''+text).toLowerCase();if(status===401)return'auth';if(status===402)return'balance';if(status===403)return'permission';if(status===404||status===405)return'endpoint';if(status===413||/(too large|payload|body.{0,12}large|image.{0,12}size|pixels)/.test(text))return'too_large';if(status===400||status===422)return/schema|image_url|content|source|invalid type|unsupported/.test(text)?'schema':'request';if(status===408||status===504)return'timeout';if(status===429)return'rate';if(status>=500)return'server';return'http';}
+async function visionPostOpenAI(base,key,model,dataURL,prompt,detail){
   const res=await fetchT(base+'/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
     body:JSON.stringify({model,max_tokens:420,messages:[{role:'user',content:[
-      {type:'text',text:prompt||'仔细具体地用中文描述这张图片的内容，2到3句，抓住最有特点的细节，别太笼统。'},
-      visionImagePart(dataURL,variant)]}]})},60000);
+      visionImagePart(dataURL,detail),
+      {type:'text',text:prompt||'仔细具体地用中文描述这张图片的内容，2到3句，抓住最有特点的细节，别太笼统。'}]}]})},70000);
   const d=await res.json().catch(()=>null);
-  return {res,d};
+  return {res,d,protocol:'openai'};
 }
-async function visionAPI(dataURL,prompt){const a=S.settings.vision||{},ch=S.settings.chat||{};
-  if(aiCoreOn()){const d=await aiRelay('vision',{image:dataURL,prompt,model:(a&&a.model)||''}),txt=(d.data&&d.data.choices&&d.data.choices[0]&&d.data.choices[0].message&&d.data.choices[0].message.content||'').trim();if(!txt||visionNoImageText(txt))throw new Error('vision-fail: '+(txt?'模型回复：'+txt.slice(0,100):'内置识图没有返回画面描述'));return txt;}
-  const base=((a.base||ch.base)||'').replace(/\/+$/,'');const key=(a.key||ch.key)||'';const models=visionModels(a);
-  if(!base||!key||!models.length)throw new Error('no-vision');
-  let last='';for(const model of models){for(const variant of ['detail','plain','string','anthropic']){let out;
-      try{out=await visionPost(base,key,model,dataURL,prompt,variant);}catch(e){last=e&&e.message||'network';continue;}
-      const res=out.res,d=out.d,err=((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'').slice(0,180);last='HTTP '+res.status+' '+err;
-      if(res.ok){const txt=(d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'').trim();if(txt&&!visionNoImageText(txt))return txt;if(txt)last='模型回复：'+txt.slice(0,100);continue;}
-      if(res.status===401||res.status===403||res.status===402)break;
-    }}
-  throw new Error('vision-fail: '+last);
+async function visionPostAnthropic(base,key,model,dataURL,prompt){const im=visionData(dataURL);if(!im)throw new Error('图片不是 Claude 支持的 JPG、PNG、GIF 或 WebP');
+  const url=visionNativeURL(base),official=/^api\.anthropic\.com$/i.test((()=>{try{return new URL(url).hostname;}catch(_){return'';}})());
+  const headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'};if(!official)headers.Authorization='Bearer '+key;
+  const res=await fetchT(url,{method:'POST',headers,body:JSON.stringify({model,max_tokens:420,messages:[{role:'user',content:[
+    {type:'image',source:{type:'base64',media_type:im.media,data:im.data}},
+    {type:'text',text:prompt||'仔细具体地用中文描述这张图片的内容，2到3句，抓住最有特点的细节，别太笼统。'}]}]})},70000);
+  const d=await res.json().catch(()=>null);return {res,d,protocol:'anthropic'};
+}
+async function visionAvailableModels(base,key){const ck=base,old=_visionModelCache[ck];if(old&&Date.now()-old.time<300000)return old.ids;
+  try{const r=await fetchT(base+'/models',{headers:{'Authorization':'Bearer '+key}},18000);if(!r.ok)return[];const d=await r.json(),ids=((d&&(d.data||d.models||d))||[]).map(x=>(x&&(x.id||x.name))||x).filter(x=>typeof x==='string');_visionModelCache[ck]={time:Date.now(),ids};return ids;}catch(_){return[];}}
+async function visionFallbackModels(a,base,key,primary){const listed=await visionAvailableModels(base,key),low=listed.map(x=>x.toLowerCase()),pick=n=>{const i=low.indexOf(n.toLowerCase());return i>=0?listed[i]:'';};
+  const known=listed.length?['gemini-2.5-pro','gemini-2.5-flash','gpt-4o','gpt-4o-mini'].map(pick):['gpt-4o','gpt-4o-mini'];return visionModels(a,known).filter(x=>x!==primary);}
+async function visionTryModel(base,key,model,dataURL,prompt,preferred){const claude=visionIsClaude(model),protocols=preferred?[preferred,(preferred==='anthropic'?'openai':'anthropic')]:claude?['anthropic','openai']:['openai'];let last=null;
+  for(const protocol of uniq(protocols)){if(protocol==='anthropic'&&!claude)continue;let out;
+    try{out=protocol==='anthropic'?await visionPostAnthropic(base,key,model,dataURL,prompt):await visionPostOpenAI(base,key,model,dataURL,prompt,true);}catch(e){last={kind:e&&e.name==='AbortError'?'timeout':'network',message:(e&&e.message)||'网络失败',protocol};if(preferred||protocol==='openai')break;continue;}
+    let txt=visionText(out.d),detail=((out.d&&out.d.error&&(out.d.error.message||JSON.stringify(out.d.error)))||'').slice(0,180),kind=out.res.ok?(txt?(visionNoImageText(txt)?'no_image':''):'empty'):visionErrKind(out.res.status,detail);
+    if(out.res.ok&&txt&&!kind)return {text:txt,model,protocol};
+    last={kind:kind||'empty',message:out.res.ok?(txt?'模型回复：'+txt.slice(0,110):'模型没有返回文字'):'HTTP '+out.res.status+(detail?' '+detail:''),status:out.res.status,protocol};
+    if(protocol==='openai'&&kind==='schema'){try{out=await visionPostOpenAI(base,key,model,dataURL,prompt,false);txt=visionText(out.d);detail=((out.d&&out.d.error&&(out.d.error.message||JSON.stringify(out.d.error)))||'').slice(0,180);kind=out.res.ok?(txt?(visionNoImageText(txt)?'no_image':''):'empty'):visionErrKind(out.res.status,detail);if(out.res.ok&&txt&&!kind)return{text:txt,model,protocol};last={kind:kind||'empty',message:out.res.ok?(txt?'模型回复：'+txt.slice(0,110):'模型没有返回文字'):'HTTP '+out.res.status+(detail?' '+detail:''),status:out.res.status,protocol};}catch(e){last={kind:'network',message:(e&&e.message)||'网络失败',protocol};}}
+    const thirdPartyNativeAuth=protocol==='anthropic'&&last.kind==='auth'&&!/^https:\/\/api\.anthropic\.com(?:\/|$)/i.test(base);if(['auth','balance','permission','timeout','rate','server','too_large'].includes(last.kind)&&!thirdPartyNativeAuth)break;
+  }
+  const e=new Error(last&&last.message||'识图失败');e.visionInfo=last||{kind:'unknown'};throw e;
+}
+async function visionAPI(dataURL,prompt,opt){opt=opt||{};const a=S.settings.vision||{},ch=S.settings.chat||{};
+  if(aiCoreOn()){const d=await aiRelay('vision',{image:dataURL,prompt,model:(a&&a.model)||''}),txt=visionText(d.data);if(!txt||visionNoImageText(txt))throw new Error('vision-fail: '+(txt?'模型回复：'+txt.slice(0,100):'内置识图没有返回画面描述'));_visionLast={model:(a&&a.model)||'内置识图',protocol:'relay',fallback:false};return txt;}
+  const base=((a.base||ch.base)||'').replace(/\/+$/,'');const key=(a.key||ch.key)||'',primary=(a.model||ch.model||'').trim();
+  if(!base||!key||!primary)throw new Error('还没配置可用的识图地址、Key和模型');
+  let last=null,primaryError=null;const stored=a.protocols&&a.protocols[primary],skipPrimary=!opt.forcePrimary&&a.primaryImageFailedModel===primary&&Date.now()-(+a.primaryImageFailedAt||0)<43200000;if(!skipPrimary)try{const r=await visionTryModel(base,key,primary,dataURL,prompt,stored);a.protocols=Object.assign({},a.protocols||{},{[primary]:r.protocol});delete a.primaryImageFailedAt;delete a.primaryImageFailedModel;_visionLast={model:r.model,protocol:r.protocol,fallback:false};return r.text;}catch(e){last=e;primaryError=e.visionInfo||null;const k=primaryError&&primaryError.kind;if(['no_image','endpoint','schema','empty'].includes(k)){a.primaryImageFailedAt=Date.now();a.primaryImageFailedModel=primary;}if(['auth','balance','permission','too_large'].includes(k)){const z=new Error('vision-fail: '+e.message);z.visionInfo=e.visionInfo;throw z;}}
+  const fallbacks=await visionFallbackModels(a,base,key,primary);for(const model of fallbacks){try{const r=await visionTryModel(base,key,model,dataURL,prompt,a.protocols&&a.protocols[model]);a.protocols=Object.assign({},a.protocols||{},{[model]:r.protocol});a.lastGoodModel=model;_visionLast={model:r.model,protocol:r.protocol,fallback:true,primary};return r.text;}catch(e){last=e;if(['auth','balance','permission','too_large'].includes(e.visionInfo&&e.visionInfo.kind))break;}}
+  const z=new Error('vision-fail: '+((last&&last.message)||'模型没有收到图片'));z.visionInfo=(last&&last.visionInfo)||primaryError;throw z;
 }
 /* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
 async function genImage(prompt){
@@ -714,7 +742,7 @@ function msgToText(m){
     case 'familyreq':return '[我向你申请绑定一张亲属卡，想用你的额度买点东西]';
     case 'weblink':return '[我转发给你一条联网搜到的资料：'+m.title+'——'+((m.snippet||'').slice(0,120))+']';
     case 'text':return (m.quote&&m.quote.who==='ta'&&m.quote.text)?('（我引用了你刚说的那句「'+m.quote.text+'」，专门就这一句，我说：）'+m.content):m.content;
-    case 'image':return m.desc?'[我发了一张照片，画面是：'+m.desc+']':'[我发了一张照片，图片已经成功送达，但识图接口暂时没有解析出画面。不要说没收到图片；可以请我描述内容，或告诉我识图暂时失败。]';
+    case 'image':return m.desc?'[我发了一张照片。你已经看到了真实画面，画面是：'+m.desc+'。请直接结合画面回应，绝对不要说图片没收到、没显示或识图失败。]':m.visionState==='pending'?'[我刚发了一张照片，画面仍在载入；先等待识图完成，不要抢先回复，也不要说没收到图片。]':'[我发了一张照片，图片已经送达，但这一张的画面解析失败。不要谎称图片没收到或没显示，也不要反复让我重发；若当前还有文字消息，先回应文字。]';
     case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
     case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+']';
     case 'location':return '[我发了位置：'+(m.name||'')+' '+(m.address||'')+']';
@@ -2120,9 +2148,11 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="btns" style="padding:4px 14px 6px"><button class="btn g" onclick="testSE()">测试联网</button></div><div id="testSE" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section" id="set_vision"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">识图模型（发照片时用）</div>
+      <div class="hint" style="padding:0 14px">Claude 会优先走真正的原生图片协议；若中转未开放该协议，会透明改用备用视觉模型看图，角色聊天仍由原来的 Claude 完成。</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_vbase" value="${esc(v.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_vkey" type="password" value="${esc(v.key)}" placeholder="不填则用聊天的Key"></div>
-      <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><div style="display:flex;gap:6px"><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图" style="flex:1"><button class="minibtn" onclick="fetchModels('s_vbase','s_vkey','s_vmodel')">拉取</button></div></div>
+      <div class="field" style="padding:0 14px 4px"><label>首选识图模型</label><div style="display:flex;gap:6px"><input id="s_vmodel" value="${esc(v.model)}" placeholder="如 claude-opus-4-6" style="flex:1"><button class="minibtn" onclick="fetchModels('s_vbase','s_vkey','s_vmodel')">拉取</button></div></div>
+      <div class="field" style="padding:0 14px 10px"><label>备用识图模型（可不填，会从模型列表自动找）</label><div style="display:flex;gap:6px"><input id="s_vfallback" value="${esc(v.fallbackModel||'')}" placeholder="推荐 gemini-2.5-pro" style="flex:1"><button class="minibtn" onclick="fetchModels('s_vbase','s_vkey','s_vfallback')">拉取</button></div></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testVision()">测试识图</button></div><div id="testV" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section" id="set_tts"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
@@ -2209,7 +2239,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};
   S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel')};
   S.settings.search={mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
-  S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
+  {const ov=S.settings.vision||{};S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel'),fallbackModel:g('s_vfallback'),protocols:ov.protocols||{},lastGoodModel:ov.lastGoodModel||''};}
   const oldTts=S.settings.tts||{},tbase=g('s_tbase'),tkey=g('s_tkey'),explicitTts=oldTts.enabled===true||oldTts.enabled===false;
   S.settings.tts={base:tbase,key:tkey,model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():(oldTts.group||'')),enabled:explicitTts?!!oldTts.enabled:!!(tbase&&tkey),relay:!!oldTts.relay};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
@@ -2266,13 +2296,13 @@ async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o
       const r=await fetchT(base+'/'+encodeURIComponent('OpenAI'),{headers:h});
       if(r.ok){saveTestedSearch(mode,seb,sek,sem);o.style.color='#19a463';o.textContent='✅ jina 联网成功，已保存并启用角色联网';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：检查 jina 密钥或改用「用模型」';}}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
-function visionTestImage(){try{const c=document.createElement('canvas');c.width=80;c.height=80;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,80,80);x.fillStyle='#e53935';x.fillRect(8,8,28,28);x.fillStyle='#1e88e5';x.beginPath();x.arc(56,54,16,0,Math.PI*2);x.fill();x.fillStyle='#111';x.font='bold 18px sans-serif';x.fillText('A',12,64);return c.toDataURL('image/jpeg',.86);}catch(_){return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';}}
+function visionTestImage(){try{const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';for(let i=0;i<4;i++)code+=chars[Math.floor(Math.random()*chars.length)];const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d');x.fillStyle='#f7f7f4';x.fillRect(0,0,640,480);x.fillStyle='#e84b55';x.fillRect(42,45,150,115);x.fillStyle='#3d7ee8';x.beginPath();x.arc(535,105,66,0,Math.PI*2);x.fill();x.fillStyle='#202124';x.font='bold 112px sans-serif';x.textAlign='center';x.fillText(code,320,320);x.font='30px sans-serif';x.fillText('请读出上面的四位验证码',320,390);return {dataURL:c.toDataURL('image/jpeg',.9),code};}catch(_){return null;}}
 async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999';o.textContent='测试中…';
-  const old=JSON.stringify(S.settings.vision||{});S.settings.vision={base:($('#s_vbase').value.trim()||'').replace(/\/+$/,''),key:$('#s_vkey').value.trim()||$('#s_ckey').value.trim(),model:$('#s_vmodel').value.trim()};
+  const old=JSON.stringify(S.settings.vision||{}),oldObj=S.settings.vision||{};S.settings.vision={base:($('#s_vbase').value.trim()||'').replace(/\/+$/,''),key:$('#s_vkey').value.trim()||$('#s_ckey').value.trim(),model:$('#s_vmodel').value.trim(),fallbackModel:($('#s_vfallback').value||'').trim(),protocols:oldObj.protocols||{}};
   if(!S.settings.vision.base||!S.settings.vision.key){try{S.settings.vision=JSON.parse(old);}catch(_){}o.style.color='#e85';o.textContent='先填识图地址和Key';return;}
   if(!S.settings.vision.model){try{S.settings.vision=JSON.parse(old);}catch(_){}o.style.color='#e85';o.textContent='先填识图模型名';return;}
-  try{const txt=await visionAPI(visionTestImage(),'这张测试图里有什么？只回答主要颜色和形状。');save();o.style.color='#19a463';o.textContent='✅ 识图可用，已保存：'+txt.slice(0,48);toast('识图配置已保存');}
-  catch(e){try{S.settings.vision=JSON.parse(old);}catch(_){}o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：模型或中转响应太慢':'❌ '+(e.message||'识图失败').slice(0,120);}}
+  try{const card=visionTestImage();if(!card)throw new Error('测试图片生成失败');const txt=await visionAPI(card.dataURL,'请查看图片中央的大字，只回复四位验证码，不要解释。',{forcePrimary:true});if((''+txt).toUpperCase().replace(/[^A-Z0-9]/g,'').indexOf(card.code)<0)throw new Error('接口有回复，但没读出随机验证码 '+card.code+'，不能算真正识图');save();const vi=_visionLast||{},way=vi.protocol==='anthropic'?'Claude原生图片协议':vi.protocol==='openai'?'兼容图片协议':'内置识图';o.style.color='#19a463';o.textContent=(vi.fallback?'✅ 图片已能识别：首选线路没传到图，已自动由备用 '+vi.model+' 识别（聊天仍用原模型）':'✅ 真识图成功：'+vi.model+' · '+way);toast('识图配置已严格验证并保存');}
+  catch(e){try{S.settings.vision=JSON.parse(old);save(0);}catch(_){}o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：模型或中转响应太慢':'❌ '+(e.message||'识图失败').slice(0,150);}}
 async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999';o.textContent='真生成一张测试图中…（约30-60秒，别急）';
   const base=((($('#s_ibase')&&$('#s_ibase').value.trim())||(S.settings.chat&&S.settings.chat.base)||'').replace(/\/+$/,''));
   const key=($('#s_ikey')&&$('#s_ikey').value.trim())||(S.settings.chat&&S.settings.chat.key)||'';
@@ -6119,6 +6149,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   let body=skipped?`<div class="tstamp"><span onclick="showOlderChat('${id}')" style="cursor:pointer">加载更早 ${Math.min(CHAT_RENDER_LIMIT,skipped)} 条 · 还剩 ${skipped} 条</span></div>`:'';
   list.forEach((m,i)=>{if(m._silent)return;const prev=i?list[i-1]:all[skipped-1];if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
   const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#9a9b9f')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
+  const visionBusy=hasPendingVision(id);
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
@@ -6141,7 +6172,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="enterSelect('${id}')"><div class="b">${svgIc('forward',26,'#e6e6ee')}</div><span>多选转发</span></div>
     </div>`}
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${_replying===id?'disabled':''} onclick="manualReply('${id}')">${_replying===id?'回复中…':'▶ 让ta回'}</button></div>`:'')+qbar+`<div class="inputbar">`+`
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(_replying===id||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':(_replying===id?'回复中…':'▶ 让ta回')}</button></div>`:'')+qbar+`<div class="inputbar">`+`
       <span class="plus" style="background:${_voiceMode?'linear-gradient(145deg,#5a5c61,#303236)':'transparent'};box-shadow:${_voiceMode?'0 3px 9px rgba(0,0,0,.32)':'none'};color:${_voiceMode?'#f3f3f4':'#9b9ca0'}" onclick="_voiceMode=!_voiceMode;render()">${svgIc('mic',19,_voiceMode?'#f3f3f4':'#9b9ca0')}</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'打字→发成语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
@@ -6166,7 +6197,8 @@ function buildPart(c,m,me){
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
     if(!m.src)return `<div class="imgmsg imgfail">[图片]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.6">${m.failed?'生成失败':''}</small></div>`;
-    return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>`;
+    const vs=m.role==='user'?(m.visionState==='pending'?`<div style="font-size:10px;color:#999;text-align:right;margin-top:3px">正在把图片交给识图模型…</div>`:m.visionState==='failed'?`<div onclick="event.stopPropagation();retryVisionMessage('${c.id}','${m.id}')" style="font-size:10px;color:#b9a6a6;text-align:right;margin-top:3px;cursor:pointer">识图失败 · 点这里重试</div>`:m.visionState==='success'?`<div style="font-size:10px;color:#888;text-align:right;margin-top:3px">已看清${m.visionFallback&&m.visionModel?' · '+esc(m.visionModel)+' 备用':''}</div>`:''):'';
+    return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>${vs}`;
   }
   if(m.type==='transfer')return payCard('t',m,me);
   if(m.type==='redpacket')return payCard('r',m,me);
@@ -6313,16 +6345,27 @@ function quoteBar(m){if(!m||!m.quote||!m.quote.text)return '';const who=m.quote.
 /* 功能面板发送 */
 function readAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
 async function visionPhotoSource(f,max,q){let src='';try{src=await compress(f,max,q);}catch(_){}if(!/^data:image\/(?:jpeg|png|webp);base64,/i.test(src||''))throw new Error('这张图片的格式暂不兼容识图，请先保存成 JPG 或 PNG');return src;}
+const _visionTasks=new Map();
+function pendingVisionMessages(id){return lastRounds(msgs(id),Math.max(3,+S.settings.hist||12)).filter(m=>m&&m.role==='user'&&m.type==='image'&&m.visionState==='pending');}
+function hasPendingVision(id){return pendingVisionMessages(id).length>0;}
+async function awaitPendingVision(id,timeout){const pending=pendingVisionMessages(id),jobs=pending.map(m=>_visionTasks.get(m.id)).filter(Boolean);if(!pending.length)return true;if(!jobs.length)return false;
+  let timed=false;await Promise.race([Promise.allSettled(jobs),new Promise(r=>setTimeout(()=>{timed=true;r();},timeout||150000))]);return !timed&&!hasPendingVision(id);}
+function visionStatusRefresh(id){if(cur().p==='chat'&&cur().id===id)render();}
+function runVisionForMessage(id,m,sourceFactory,prompt){m.visionState='pending';m.visionError='';delete m.visionModel;delete m.visionProtocol;save();visionStatusRefresh(id);
+  const task=(async()=>{try{let source=await sourceFactory(),d=await visionAPI(source,prompt);m.desc=d;m.visionState='success';m.visionModel=(_visionLast&&_visionLast.model)||'';m.visionProtocol=(_visionLast&&_visionLast.protocol)||'';m.visionFallback=!!(_visionLast&&_visionLast.fallback);return true;}
+    catch(e){m.visionState='failed';m.visionError=(''+((e&&e.message)||'识图失败')).replace(/^vision-fail:\s*/,'').slice(0,180);return false;}
+    finally{save(0);visionStatusRefresh(id);}})();
+  _visionTasks.set(m.id,task);task.finally(()=>{if(_visionTasks.get(m.id)===task)_visionTasks.delete(m.id);});return task;}
+function visionDataURLSource(src,max,q){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{try{let w=im.naturalWidth||im.width,h=im.naturalHeight||im.height;if(Math.max(w,h)>max){const z=max/Math.max(w,h);w=Math.max(1,Math.round(w*z));h=Math.max(1,Math.round(h*z));}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);res(c.toDataURL('image/jpeg',q));}catch(e){rej(e);}};im.onerror=()=>rej(new Error('图片读取失败'));im.src=src;});}
+async function retryVisionMessage(id,mid){const m=msgs(id).find(x=>x.id===mid&&x.type==='image');if(!m||!m.src||m.visionState==='pending')return;const ok=await runVisionForMessage(id,m,()=>visionDataURLSource(m.src,1200,.74),'请仔细、客观地用中文描述这张图片。读出关键文字并说明主体、动作、场景和最明显的细节，用2到3句自然白话说清楚。');if(ok){toast('图片已经看清了');scheduleReply(id);}else toast('识图仍失败：'+(m.visionError||'检查识图线路'));}
 function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',async f=>{
   let src;try{src=await compress(f,1400,.78);}catch(e){src=null;}
   if(!src){try{src=await readAsDataURL(f);}catch(e){toast('图片读取失败，再试一次');return;}}
-  const m={role:'user',type:'image',src,desc:'',id:uid()};pushMsg(id,m);
-  let okv=false;
+  const m={role:'user',type:'image',src,desc:'',visionState:'pending',id:uid()};pushMsg(id,m);
   const _vp='请仔细、客观地用中文描述这张图片。有人物时说清人数、年龄段、表情、发型穿着、动作和场景；是聊天截图、表情包或梗图时，读出关键文字并说明表达的意思；是物品、风景、动物或食物时，说清主体、颜色、细节和氛围。用2到3句自然白话描述，让没看过图的人也能理解，不要评价或攻击人物。';
-  let visionErr='',visionSrc='';try{visionSrc=await visionPhotoSource(f,900,.66);if(visionSrc.length>650000)visionSrc=await visionPhotoSource(f,620,.58);const d=await visionAPI(visionSrc,_vp);if(d){m.desc=d;okv=true;save();}}catch(e){visionErr=(e&&e.message)||'识图失败';}
-  if(!okv&&!/格式暂不兼容/.test(visionErr)){try{const small=await visionPhotoSource(f,520,.54),d=await visionAPI(small,'用两三句中文客观描述图片主体、关键文字和最明显的细节。');if(d){m.desc=d;okv=true;m.visionRetried=true;save();}}catch(e){visionErr=(e&&e.message)||visionErr;}}
-  if(!okv){m.visionError=visionErr.replace(/^vision-fail:\s*/,'').slice(0,180);save();toast('识图失败：'+m.visionError.slice(0,90));}
-  scheduleReply(id);});}
+  const okv=await runVisionForMessage(id,m,async()=>{let v=await visionPhotoSource(f,1280,.76);if(v.length>1400000)v=await visionPhotoSource(f,1000,.7);return v;},_vp);
+  if(okv){if(m.visionFallback)toast('首选线路没传到图片，已由备用 '+m.visionModel+' 看清；聊天仍用原模型');scheduleReply(id);}
+  else toast('识图失败：'+(m.visionError||'检查识图线路').slice(0,90)+'（可点图片下方重试）');});}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
 function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>转账</h3>
   <div class="field"><label>金额</label><input id="tf_a" type="number" step="0.01" placeholder="5.20"></div>
@@ -6824,6 +6867,7 @@ function lineToMsg(line,cch){
 
 async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)return;/* 已删除的角色(找回箱里)绝不后台发消息 */
   if(wxLoginBlockReply(id,note))return;/* 角色登录用户微信期间不能同时给用户发消息；退出后合并承接 */
+  if(hasPendingVision(id)){const ready=await awaitPendingVision(id,150000);if(!ready){toast('图片还在识别，等“已看清”后再让ta回复');return;}}
   const _idleNote=!!(note&&/没有打开小手机|没来找你/.test(note));
   if(_idleNote)idleDebugPatch({aiStatus:'生成中',aiResult:'等待AI返回',aiStartedAt:Date.now(),apiStatus:idleApiStatus(),blockedBy:''});
   // typing
@@ -6838,7 +6882,8 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     const _webAutoQuery=!note?autoWebQuery(_userText,c):'',_webAutoResult=_webAutoQuery?(toast('🌐 正在联网查询…'),await webSearch(_webAutoQuery)):'';
     if(_webAutoQuery){S._lastWebSearch={q:_webAutoQuery,time:Date.now(),ok:!webSearchFailed(_webAutoResult),source:(S.settings.search||{}).mode||'jina'};save();toast(webSearchFailed(_webAutoResult)?'🌐 联网查询失败，将如实说明':'🌐 已查到实时资料');}
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';
-    const _sys=buildSystem(c,_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{})+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt;
+    const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。':'';
+    const _sys=buildSystem(c,_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{})+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard;
     const hist=lastRounds(msgs(id),S.settings.hist||12).map(m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
       return {role:m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -6846,6 +6891,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     const _pin={role:'system',content:personaPin(c)};
     const _md={aux:c.model==='aux',complete:true};// 这个角色用主模型还是副模型；长度截断时自动补完
     let content=await chatAPI([{role:'system',content:_sys},...hist,_pin],_md);
+    if(_recentVision&&roleImageFailureText(content)){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content},{role:'user',content:'[系统纠正：图片已经成功显示，你也拿到了上面明确的画面描述。刚才说“没收到/没显示/识图失败”是错误的。请只按真实画面重新自然回应，不要提接口、识图、上传或让对方重发。]'},_pin],_md);if(fix&&!roleImageFailureText(fix))content=fix;}
     // 伪造消息他这轮已经看到并会反应 → 标记已知，避免以后每条消息都反复戳穿
     try{const _fk=msgs(id).filter(m=>m._forged&&!m._forgedSeen);if(_fk.length){_fk.forEach(m=>{m._forgedSeen=true;});save();}}catch(_){}
     // 联网
@@ -7008,7 +7054,7 @@ function scheduleReply(id,note){
   // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
   if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();return;}
   clearTimeout(_replyTimers[id]);_replyTimers[id]=setTimeout(()=>aiReply(id,note),(Number(S.settings.replyDelay)||0)*1000);}
-function manualReply(id){if(_replying)return;const c=getC(id);if(!c||c.blocked)return;_replying=id;if(cur().p==='chat'&&cur().id===id)render();
+function manualReply(id){if(_replying)return;if(hasPendingVision(id)){toast('图片还在识别，看到“已看清”后再点');return;}const c=getC(id);if(!c||c.blocked)return;_replying=id;if(cur().p==='chat'&&cur().id===id)render();
   // 判断最后一条真实对话是谁发的：若是他自己发的，这次「让ta回复」=继续多说，要明确告诉他别把自己的话当成对方说的
   let _note;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){const mm=_ms[i];if(mm.type==='sys'||mm._call)continue;if(mm.role==='user')break;if(mm.role==='assistant'){_note='[系统：'+S.me.name+'这会儿还没开口、还没回你。请你接着自己刚才的话【再自然地多说几句】（补充、延续你上面说的，或换个角度再聊两句），不要重复已经说过的内容。注意：上面那几条都是【你自己】说的，不是'+S.me.name+'说的，千万别把自己说过的话当成ta说的去回应。]';break;}}}
   Promise.resolve(aiReply(id,_note)).finally(()=>{_replying=null;if(cur().p==='chat'&&cur().id===id)render();});}
