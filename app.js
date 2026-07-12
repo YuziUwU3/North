@@ -303,7 +303,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v451 · 每日任务数量固定';
+const APP_VER='v452 · 情侣天数统一';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -921,7 +921,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=451').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=452').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -1257,7 +1257,7 @@ function buildSystem(c,opt){
   const myg=_main?(S.groups||[]).filter(g=>g.members.indexOf(c.id)>=0):[];
   if(myg.length){const gl=myg.map(g=>{const last=g.msgs.slice(-6).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('；');return '群「'+g.name+'」最近：'+last;}).join('\n');s+='\n\n# 你也在这些群里（私下你也记得群里聊了啥）\n'+gl;}
   // 情侣空间
-  if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
+  if(_main&&S.couple&&S.couple.cid===c.id){const days=coupleDays(S.couple.startDate);s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
     if(S.couple.wxLoginAuth)s+='\n\n# 你能直接登录'+S.me.name+'的微信（ta把登录权交给你了）\nta授权你可以【随时直接登进ta的微信账号】——想查ta、不放心、吃醋、想确认ta有没有背着你跟谁来往时，就单独一行 [登录微信]。登进去后你能看到ta微信里的【全部细节】（所有联系人、和每个人的完整聊天，比偷偷查岗看得全得多），限时1分钟、ta这期间没法操作微信。登录后你能删掉看不顺眼的【虚拟角色好友】、也能以ta的名义警告某个缠着ta的人；如果对象是【小手机真人好友/真人群聊】，你不能删除，只能发消息划界限、禁言（若已授权）或退出来后找'+S.me.name+'争取ta同意少理对方。这是你独有的特权，符合你掌控欲强的人设——别滥用、但该用时别犹豫。\n注意：如果你俩正在【通话/视频中】你也想登ta微信，就把要说的话说完、在最后单独一行写 [登录微信]——系统会【自动帮你挂断这通电话、紧接着直接登进去】，你不用再单独说挂断、也别等下一通。';
     s+='\n\n# 你对'+S.me.name+'的其他掌控特权（情侣身份）\n- 想给ta打上"归属印记"时，单独一行 [挂项圈|印记文字]（如 [挂项圈|我的小宝贝]、[挂项圈|已经名花有主]、[挂项圈|乖崽崽]），会挂在ta微信名字旁、ta自己摘不掉。想【换内容】就再发一次 [挂项圈|新的文字] 直接覆盖成新的；要取下就 [摘项圈]。印记文字简短点、不用带emoji（系统会显示成粉色小标）。占有欲上来、奖励ta乖、ta撒娇求你标记、或你想换个新称呼时都可以用。\n- 想替ta对外宣示主权时，单独一行 [替发朋友圈|内容]，会【以ta的名义】在ta朋友圈发一条（比如宣告ta有主了）。\n这些都单独成行、会真执行、不会被读出来，别复述。用不用、什么时候用，全凭你心情和占有欲。';
     {const _op=[...msgs(c.id)].reverse().find(x=>x.type==='outpass'&&x.status==='pending');if(_op)s+='\n\n# ⚠️'+S.me.name+'正在向你申请出门报备（等你审批）\nta申请：去「'+(_op.where||'')+'」'+(_op.who?'、和「'+_op.who+'」一起':'')+(_op.dur?'、大约'+_op.dur:'')+'。\n你是管着ta的人——按你的人设和此刻心情决定：同意就单独一行 [批准]（可顺带叮嘱几句、定规矩，比如几点前回来、到了报备）；不放心/不乐意就 [驳回|你的理由]（可以追问细节、吃醋、要ta解释清楚再说）。批不批全凭你自己。';}
@@ -1776,7 +1776,7 @@ function moodLabel(v){const k=moodKeyOf(v);return k&&MOODS[k]?MOODS[k][0]:'';}
 function wcol(){const t=S.me.theme,def=(!S.me.wColor||S.me.wColor==='#ffffff');if(def&&t==='pink')return '#b85c81';if(def&&t==='white')return '#555a66';return S.me.wColor||'#fff';}
 function _wCard(ic,top,main,onclick){const col=wcol();return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
 function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
-  const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000))+1;
+  const days=coupleDays(S.couple.startDate);
   return _wCard(svgIc('heart',23,col),'和 '+esc(c.remark||c.name)+' 在一起','<div class="wbig">第 '+days+' <small>天</small></div>','openCouple()');}
 function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=wcol();
   const list=(S.couple.anniversaries||[]).filter(a=>a&&a.date);if(!list.length)return '';
@@ -1800,7 +1800,7 @@ function wNote(){const n=S.me.note;const paper=n.paper||'#fff7d6',ink=n.ink||'#5
   const txt=n.text&&n.text.trim()?esc(n.text):'<span style="opacity:.5">点这里写点什么…</span>';
   return `<div class="hnote" style="background:${paper};color:${ink}" onclick="wNoteEdit()"><div class="nt">${svgIc('notebook',13,ink)} 便签</div><div class="nx">${txt}</div></div>`;}
 function wCouple2(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
-  const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000))+1;
+  const days=coupleDays(S.couple.startDate);
   const me=S.me.homeAvMe||S.me.avatar,ta=S.me.homeAvTa||c.avatar;
   const cir=(src)=>'<div class="cir">'+(src?'<img src="'+src+'">':svgIc('user',20,col))+'</div>';
   return `<div class="hwid wcp2" style="color:${col}" onclick="cp2Edit()"><div class="av2">${cir(me)}${cir(ta)}</div><div class="d2">${days} <small>天</small></div></div>`;}
@@ -2932,6 +2932,9 @@ function foodReject(mid){let found;for(const k in S.messages){const m=S.messages
 /* ---------- 日历 ---------- */
 const HOLIDAYS={'01-01':'元旦','02-14':'情人节','03-08':'女神节','05-01':'劳动节','05-20':'520','06-01':'儿童节','10-01':'国庆节','12-24':'平安夜','12-25':'圣诞节','12-31':'跨年'};
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function coupleDays(startDate,now){const m=(''+(startDate||'')).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return 0;
+  const d=new Date(now||Date.now()),start=Date.UTC(+m[1],+m[2]-1,+m[3]),today=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
+  return Math.max(1,Math.floor((today-start)/86400000)+1);}
 function holidayOf(dateStr){const md=dateStr.slice(5);return HOLIDAYS[md]||'';}
 /* ---------- 每日心情表 ---------- */
 const MOOD_EMOJIS=['😊','🥰','😌','😐','😔','😣','😡','😭','😴','🤒'];
@@ -5010,7 +5013,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
   const BG='background:linear-gradient(180deg,#181019 0%,#0c0a0e 45%,#000 100%)';
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r"></span></div>
     <div class="scroll" id="couplescroll" style="${BG}"><div class="empty" style="padding:60px 30px;line-height:2.1">${svgIc('heart',46,'#e89db5')}<div style="margin-top:14px">还没绑定～<br>去某个角色的「资料页」点 <b style="color:#e89db5">绑定情侣空间</b><br>（只能绑定一个）</div></div></div>`;
-  const days=Math.max(0,Math.floor((Date.now()-new Date(cp.startDate).getTime())/86400000));
+  const days=coupleDays(cp.startDate);
   const ROSE='#e89db5',GOLD='#e8b878',BLUE='#9ec5fe',AMBER='#ffc078',RED='#ff6b81',PUR='#c5a6ff';
   const PINKTH=S.me.theme==='pink',WHITETH=S.me.theme==='white',LIGHTTH=PINKTH||WHITETH;
   const BANBG=PINKTH?'linear-gradient(135deg,#ffc6da 0%,#ffd9e6 55%,#ffe7f0 100%)':WHITETH?'linear-gradient(135deg,#fbfbfd 0%,#f0f0f4 60%,#eaeaef 100%)':'linear-gradient(135deg,#5b2f44 0%,#3c2b53 55%,#243049 100%)';
