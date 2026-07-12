@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({});
-for (const name of ["ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "ttsKissText", "ttsVoiceProfile"]) {
+for (const name of ["ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "ttsKissText", "ttsShapeByCue", "ttsVoiceProfile"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -46,17 +46,19 @@ assert.equal(context.ttsCueKind("emotion: angry"), "tense");
 assert.equal(context.ttsCueKind("surprised"), "surprised");
 assert.equal(context.ttsAutoCue("Tell me why you lied to me.", null), "tense");
 assert.equal(context.ttsKissText("Kiss me."), "Kiss me.");
+assert.equal(context.ttsShapeByCue("Don't move.", "tense"), "Don't move.");
 
 assert.deepEqual(
   JSON.parse(JSON.stringify(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }))),
-  { speed: 1.03, vol: 1.12, pitch: 0, emotion: "neutral" },
+  { speed: 1, vol: 1, pitch: 0, emotion: "angry" },
 );
 assert.equal(context.ttsVoiceProfile("No way!", { cue: "surprised" }).pitch, 0);
-assert.equal(context.ttsVoiceProfile("I am hurt.", { cue: "sad" }).emotion, "neutral");
+assert.equal(context.ttsVoiceProfile("I am hurt.", { cue: "sad" }).emotion, "sad");
 for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted", "whisper", "kiss"]) {
   const profile = context.ttsVoiceProfile("Keep my voice.", { cue });
   assert.equal(profile.pitch, 0, `${cue} changed pitch`);
-  assert.equal(profile.emotion, "neutral", `${cue} changed voice identity`);
+  assert.equal(profile.speed, 1, `${cue} changed speed`);
+  assert.equal(profile.vol, 1, `${cue} changed volume`);
 }
 
 assert.match(source, /model:'speech-02-turbo',voice_setting:vp/);

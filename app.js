@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v468 · 原声情绪语音';
+const APP_VER='v469 · 原声情绪分离';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -876,9 +876,9 @@ function ttsSafeProsody(base,o){let s=String(base||'').trim();if(!s)return '';s=
   const emo=ttsEmotionHint(s,o),cn=hasCN(s);if(cn&&emo==='soft')s=s.replace(/别哭[，,]?/,'别哭，').replace(/我在[。!！]?$/,'我在。');if(cn&&emo==='sleepy')s=s.replace(/晚安[。!！]?$/,'晚安……');return s.replace(/\s+/g,' ').trim();}
 function ttsKissText(s){return String(s||'').trim();}
 function ttsTagProsody(s,kind,cue){if(!s||!kind||!cue)return s;if(cue==='kiss')return ttsKissText(s);const tag=(kind==='minimax')?{laugh:'(laughs)',soft:'(sighs)',sleepy:'(breath)'}:{laugh:'[laughs]',soft:'[sighs]',warm:'[softly]',tense:'[firmly]',sleepy:'[whispers]'};const lead=tag[cue]||'';return lead?(lead+' '+s):s;}
-function ttsShapeByCue(s,cue){s=String(s||'').trim();if(!s)return '';if(cue==='tense'){let x=s;if(hasCN(x))x=x.replace(/，你/g,'……你').replace(/你到底/g,'你，到底').replace(/。$/,'？');else{const q=/\b(?:why|what|how|when|where|who|which|do you|did you|are you|will you|tell me)\b/i.test(x);x=x.replace(/\.\s*$/,q?'?':'!');if(!/[?!]$/.test(x))x+=q?'?':'!';}if(hasCN(x)&&!/[？?！!]$/.test(x))x+='？';return x;}return s;}
+function ttsShapeByCue(s,cue){return String(s||'').trim();}
 function ttsPerformanceText(text,o,tts,opt){const base=ttsCleanBase(text);if(!base)return '';let s=ttsSafeProsody(base,o),explicit=ttsCueKind(opt&&opt.cue),cue=explicit||ttsAutoCue(base,o);s=ttsShapeByCue(s,cue);if([...s].length>VOICE_MAX_CHARS&&[...base].length<=VOICE_MAX_CHARS)return base;return s;}
-function ttsVoiceProfile(text,opt){const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(text,null);const p={speed:1,vol:1,pitch:0,emotion:'neutral'};if(cue==='tense'){p.speed=1.03;p.vol=1.12;}else if(cue==='soft'){p.speed=.97;p.vol=.96;}else if(cue==='sleepy'){p.speed=.94;p.vol=.92;}else if(cue==='warm'||cue==='kiss'){p.speed=.98;p.vol=.98;}else if(cue==='laugh'){p.speed=1.02;p.vol=1.04;}else if(cue==='surprised'){p.speed=1.03;p.vol=1.06;}else if(cue==='fearful'){p.speed=1.01;p.vol=.98;}else if(cue==='disgusted'){p.speed=.99;p.vol=1.02;}return p;}
+function ttsVoiceProfile(text,opt){const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(text,null),p={speed:1,vol:1,pitch:0,emotion:'neutral'};if(cue==='tense')p.emotion='angry';else if(cue==='soft')p.emotion='sad';else if(cue==='laugh')p.emotion='happy';else if(cue==='surprised')p.emotion='surprised';else if(cue==='fearful')p.emotion='fearful';else if(cue==='disgusted')p.emotion='disgusted';return p;}
 // 通话朗读：外语角色只读外语原文。英/韩用"剔除所有中文字符"的硬办法，
 // 不依赖模型有没有写对括号，所以中文翻译永远不会被读出来。
 const CJK_RE=/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g;
@@ -997,7 +997,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=468').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=469').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -7516,7 +7516,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     content=content.replace(/[\[【]\s*发推\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{publishRoleTweet(c,tx);return '';});
     content=content.replace(/[\[【]\s*(转账|红包)\s*[\|｜:：]([0-9.]+)\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,kind,amt,note)=>{const ty=(kind==='红包'?'redpacket':'transfer'),av=+amt||0;if(msgs(_call.id).some(x=>x.role==='assistant'&&x.type===ty&&Math.abs((+x.amount||0)-av)<0.01&&Date.now()-(x.time||0)<180000))return '';/* 3分钟内同额转账/红包不重复 */const tc={role:'assistant',type:ty,amount:av,note:(note||'').trim(),received:false,id:uid(),time:Date.now()};msgs(_call.id).push(tc);notifyIncoming(c,tc);save();return '';});
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
-    const _requestedVoiceCue=ttsRequestedCue(_luc&&msgToText(_luc)),_turnVoiceCue=_requestedVoiceCue||_callCueTag||ttsAutoCue(content,c);
+    const _requestedVoiceCue=(_luc&&_call._voiceCueMsg!==_luc.id)?ttsRequestedCue(msgToText(_luc)):'',_turnVoiceCue=_requestedVoiceCue||_callCueTag||ttsAutoCue(content,c);if(_requestedVoiceCue&&_luc)_call._voiceCueMsg=_luc.id;
     bubbleNaturalRequest(_luc&&msgToText(_luc),c);content=applyBubbleTags(content,c);
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,_call.id))extractControl(content,c,_statedPwd);}
     maybeSpyIntent(content,c,_call.id,_luc);
