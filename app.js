@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v462 · 柔化情绪回暖';
+const APP_VER='v463 · 真人感语音表演';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -865,6 +865,15 @@ document.addEventListener('click',()=>{if(S.me.stepOn&&!_stepOn)resumeSteps();},
 /* ===== 语音 ===== */
 function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh'};return o.voice;}
 function stripSpoken(t){return (t||'').replace(/[（(【][^）)】]*[）)】]/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();}
+function ttsCleanBase(text){return stripSpoken(text).replace(/[\u{1f300}-\u{1faff}\u2600-\u27bf]/gu,'').replace(/\s+/g,' ').replace(/([。！？!?]){3,}/g,'$1$1').trim();}
+function ttsStyleKind(tts){const base=String((tts&&tts.base)||'').toLowerCase(),model=String(ttsUseRelay()?'speech-02-turbo':((tts&&tts.model)||'')).toLowerCase();if(ttsUseRelay())return '';if(/minimax/.test(base)&&/speech-2\.8/.test(model))return 'minimax';if(/elevenlabs/.test(base)&&/(^|[_-])v?3|eleven.*3/.test(model))return 'bracket';if(/fish\.?audio/.test(base)&&/(^|[_-])(s2|speech.*2|fish.*2)/.test(model))return 'bracket';return '';}
+function ttsEmotionHint(text,o){const s=(String(text||'')+' '+String((o&&o.mood)||'')).replace(/\s+/g,'');if(/哈哈|嘿嘿|笑死|好笑|笑了|开心|高兴|甜|宠|撒娇/.test(s))return 'laugh';if(/哭|难过|委屈|心疼|别哭|不开心|崩溃|好累|受不了|担心|怕你/.test(s))return 'soft';if(/想你|爱你|抱抱|亲亲|乖|靠近|过来|陪你|哄你|晚安/.test(s))return 'warm';if(/生气|吃醋|不爽|闭嘴|滚|质问|解释清楚/.test(s))return 'tense';if(/困|睡|晚安|闭眼|睡吧|哄睡/.test(s))return 'sleepy';return '';}
+function ttsHasLead(s){return /^(嗯|唔|喂|乖|好|别|过来|听话|宝|宝宝|老婆|老公|先生|小姐|嘘|欸|诶)[，。…、\s]?/.test(s);}
+function ttsSafeProsody(base,o){let s=String(base||'').trim();if(!s)return '';s=s.replace(/([。！？!?])(?=\S)/g,'$1 ').replace(/([，、；;：:])(?=\S)/g,'$1 ').replace(/\.{3,}|…{2,}/g,'……').replace(/([吧呢啊呀哦嘛])([。！？!?])(?=\S)/g,'$1$2 ');
+  const emo=ttsEmotionHint(s,o),cn=hasCN(s);if(cn&&!ttsHasLead(s)&&s.length>=4){if(emo==='soft'||emo==='sleepy')s='嗯……'+s;else if(emo==='warm')s='嗯，'+s;else if(emo==='laugh'&&!/^哈/.test(s))s='嗯，'+s;}
+  if(cn&&emo==='soft')s=s.replace(/别哭[，,]?/,'别哭，').replace(/我在[。!！]?$/,'我在。');if(cn&&emo==='sleepy')s=s.replace(/晚安[。!！]?$/,'晚安……');return s.replace(/\s+/g,' ').trim();}
+function ttsTagProsody(s,kind,emo){if(!s||!kind)return s;const tag=(kind==='minimax')?{laugh:'(laughs)',soft:'(sighs)',warm:'(breath)',tense:'(breath)',sleepy:'(breath)'}:{laugh:'[laughs]',soft:'[sighs]',warm:'[softly]',tense:'[firmly]',sleepy:'[whispers]'};const lead=tag[emo]||'';return lead?(lead+' '+s):s;}
+function ttsPerformanceText(text,o,tts){const base=ttsCleanBase(text);if(!base)return '';let s=ttsSafeProsody(base,o),kind=ttsStyleKind(tts),emo=ttsEmotionHint(base,o);if(kind)s=ttsTagProsody(s,kind,emo);if([...s].length>VOICE_MAX_CHARS&&[...base].length<=VOICE_MAX_CHARS)return base;return s;}
 // 通话朗读：外语角色只读外语原文。英/韩用"剔除所有中文字符"的硬办法，
 // 不依赖模型有没有写对括号，所以中文翻译永远不会被读出来。
 const CJK_RE=/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g;
@@ -940,7 +949,7 @@ async function _ttsOnce(t,vid,tts){let r;
   let detail='';try{const j=await r.clone().json();const d=j&&j.detail;detail=(d&&(d.status||d.message))||(typeof d==='string'?d:'')||(j&&j.message)||'';}catch(e){try{detail=(await r.text()||'').slice(0,80);}catch(_){}}
   return {err:r.status+(detail?(' · '+detail):'')};}
 // 语音自动重试：偶发的 401/429/网络抖动(尤其 ElevenLabs 免费版)会让头一两条没声，这里悄悄退避重试，最多3次都失败才弹提示
-async function ttsArr(text,o,opt){opt=opt||{};const t=stripSpoken(text);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;const tts=ttsCfg();
+async function ttsArr(text,o,opt){opt=opt||{};const tts=ttsCfg(),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;
   if(!ttsApiOn())return null;const vid=(v&&v.ttsVoice)||(tts&&tts.voice)||'';
   if(ttsUseRelay()){
     try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;if(!opt.quiet)toast('语音API错误 '+((res&&res.err)||'无音频'));return null;}
@@ -953,7 +962,7 @@ async function ttsArr(text,o,opt){opt=opt||{};const t=stripSpoken(text);if(!t)re
 async function decodeBuf(ab){if(!ab)return null;try{initAudio();if(!_audio)return null;return await _audio.decodeAudioData(ab.slice(0));}catch(e){return null;}}
 async function speak(text,o){const v=o?getVoice(o):null;
   if(ttsApiOn()){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);}return;}
-  const t=stripSpoken(text);if(!t||!('speechSynthesis'in window))return;
+  const t=ttsSafeProsody(ttsCleanBase(text),o);if(!t||!('speechSynthesis'in window))return;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
@@ -981,7 +990,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=456').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=463').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -7439,7 +7448,7 @@ function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec((
 function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
   stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;const um={role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session};msgs(id).push(um);behaviorOnUserMsg(id,um);lifeNoteOnUserMsg(id,um);emotionOnUserMsg(id,um);save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}if(_call&&callOnUserSay(m.content||''))return;callAI();});}
 function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
-async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(text);
+async function speakWait(text,c){const v=c?getVoice(c):null;const t=ttsSafeProsody(ttsCleanBase(text),c);
   if(!t)return new Promise(r=>setTimeout(r,1100));
   if(ttsApiOn()){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);}return;}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(res,Math.max(2500,t.length*200));}catch(e){res();}});}
