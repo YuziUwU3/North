@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v469 · 原声情绪分离';
+const APP_VER='v470 · Speech 2.8原生表演';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -636,7 +636,7 @@ function ttsExternalOn(t){return !!(t&&t.base&&t.key);}
 function ttsRelayOn(t){return !!(t&&t.relay&&aiCoreUrl());}
 function ttsEnabled(t){return !!(t&&t.enabled!==false&&(t.enabled===true||(t.enabled==null&&(ttsRelayOn(t)||ttsExternalOn(t)))));}
 function ttsApiOn(){const t=ttsCfg();return !!(ttsEnabled(t)&&(ttsRelayOn(t)||ttsExternalOn(t)));}
-function ttsUseRelay(){const t=ttsCfg();return !!(ttsEnabled(t)&&ttsRelayOn(t));}
+function ttsUseRelay(){const t=ttsCfg();return !!(ttsEnabled(t)&&ttsRelayOn(t)&&!ttsExternalOn(t));}
 function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}catch(_){}if(!id){id='ph_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('yibei_ai_uid',id);}catch(_){}}return id;}
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
@@ -871,14 +871,12 @@ function ttsEmotionHint(text,o){const s=(String(text||'')+' '+String((o&&o.mood)
 function ttsCueKind(cue){cue=String(cue||'').replace(/^(?:语气|tone|emotion)\s*[:：]?/i,'').trim().toLowerCase();if(!cue)return '';if(/中性|平静|自然|neutral|calm|normal/.test(cue))return 'neutral';if(/亲|kiss|mwah|啵|mua/.test(cue))return 'kiss';if(/惊讶|震惊|surpris|shock/.test(cue))return 'surprised';if(/害怕|恐惧|fear|scared|afraid/.test(cue))return 'fearful';if(/厌恶|嫌弃|disgust|revolted/.test(cue))return 'disgusted';if(/笑|开心|高兴|laugh|giggle|happy|excited|playful/.test(cue))return 'laugh';if(/叹|委屈|难过|心疼|悲伤|sigh|sad|hurt|upset/.test(cue))return 'soft';if(/低声|耳语|悄悄|气声|whisper|breathy|困|睡|sleepy/.test(cue))return 'sleepy';if(/强硬|严肃|愤怒|凶|firm|stern|tense|angry|mad|furious|吃醋|生气|质问|逼问|反问|压着|questioning|interrogate/.test(cue))return 'tense';if(/温柔|宠溺|亲密|soft|warm|gentle|tender|affection|哄|撒娇|贴近/.test(cue))return 'warm';return '';}
 function ttsAutoCue(text,o){const s=(String(text||'')+' '+String((o&&o.mood)||'')).replace(/\s+/g,' ');if(/亲亲|亲一下|亲一口|亲你|吻|啵|\b(?:kiss(?: me| you)?|mwah|mua)\b/i.test(s))return 'kiss';if(/生气|吃醋|不爽|凶一点|凶我|严厉点|大声点|压低声音|你说呢|解释清楚|为什么|凭什么|怎么回事|到底|嗯？|哼|质问|逼问|反问|\b(?:angry|mad|furious|jealous|be mean|meaner|be stern|sound stern|sound angry|lower your voice|raise your voice|tell me why|explain yourself|how dare|don't lie)\b/i.test(s))return 'tense';if(/惊讶|震惊|\b(?:surprised|shocked|no way)\b/i.test(s))return 'surprised';if(/害怕|恐惧|\b(?:afraid|scared|fearful|terrified)\b/i.test(s))return 'fearful';if(/厌恶|嫌弃|\b(?:disgusted|disgusting|revolting)\b/i.test(s))return 'disgusted';if(/难过|委屈|伤心|\b(?:sad|hurt|upset|heartbroken|crying)\b/i.test(s))return 'soft';if(/晚安|睡吧|闭眼|困|哄睡|\b(?:whisper|breathy|sleepy|sleep|good night|close your eyes)\b/i.test(s))return 'sleepy';if(/开心|高兴|兴奋|\b(?:happy|excited|laugh|laughing|playful)\b/i.test(s))return 'laugh';return '';}
 function ttsRequestedCue(text){const s=String(text||'');if(/凶一点|凶我|严厉一点|强硬一点|大声一点|提高音量|压低声音|质问我|逼问我|生气一点|\b(?:be mean(?:er)?|be stern(?:er)?|sound angry|act angry|get angry|raise your voice|speak louder|lower your voice|question me|interrogate me|scold me)\b/i.test(s))return '质问';if(/温柔一点|轻一点|小声一点|耳语|气声|\b(?:be gentle|softer|speak softly|lower the volume|whisper|breathy)\b/i.test(s))return '低声';if(/开心一点|笑一下|\b(?:sound happy|be happy|laugh|giggle)\b/i.test(s))return '开心';if(/难过一点|委屈一点|\b(?:sound sad|be sad|sound hurt)\b/i.test(s))return '难过';return '';}
-function ttsHasLead(s){return /^(嗯|唔|喂|乖|好|别|过来|听话|宝|宝宝|老婆|老公|先生|小姐|嘘|欸|诶)[，。…、\s]?/.test(s);}
 function ttsSafeProsody(base,o){let s=String(base||'').trim();if(!s)return '';s=s.replace(/([。！？!?])(?=\S)/g,'$1 ').replace(/([，、；;：:])(?=\S)/g,'$1 ').replace(/\.{3,}|…{2,}/g,'……').replace(/([吧呢啊呀哦嘛])([。！？!?])(?=\S)/g,'$1$2 ');
   const emo=ttsEmotionHint(s,o),cn=hasCN(s);if(cn&&emo==='soft')s=s.replace(/别哭[，,]?/,'别哭，').replace(/我在[。!！]?$/,'我在。');if(cn&&emo==='sleepy')s=s.replace(/晚安[。!！]?$/,'晚安……');return s.replace(/\s+/g,' ').trim();}
-function ttsKissText(s){return String(s||'').trim();}
-function ttsTagProsody(s,kind,cue){if(!s||!kind||!cue)return s;if(cue==='kiss')return ttsKissText(s);const tag=(kind==='minimax')?{laugh:'(laughs)',soft:'(sighs)',sleepy:'(breath)'}:{laugh:'[laughs]',soft:'[sighs]',warm:'[softly]',tense:'[firmly]',sleepy:'[whispers]'};const lead=tag[cue]||'';return lead?(lead+' '+s):s;}
-function ttsShapeByCue(s,cue){return String(s||'').trim();}
-function ttsPerformanceText(text,o,tts,opt){const base=ttsCleanBase(text);if(!base)return '';let s=ttsSafeProsody(base,o),explicit=ttsCueKind(opt&&opt.cue),cue=explicit||ttsAutoCue(base,o);s=ttsShapeByCue(s,cue);if([...s].length>VOICE_MAX_CHARS&&[...base].length<=VOICE_MAX_CHARS)return base;return s;}
-function ttsVoiceProfile(text,opt){const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(text,null),p={speed:1,vol:1,pitch:0,emotion:'neutral'};if(cue==='tense')p.emotion='angry';else if(cue==='soft')p.emotion='sad';else if(cue==='laugh')p.emotion='happy';else if(cue==='surprised')p.emotion='surprised';else if(cue==='fearful')p.emotion='fearful';else if(cue==='disgusted')p.emotion='disgusted';return p;}
+function tts2p8Interjection(s,rawCue){s=String(s||'').trim();const cue=String(rawCue||'').toLowerCase();if(!s||!cue)return s;let tag='',before=false;if(/亲亲|亲吻|kiss|mwah|啵|mua/.test(cue))tag='(lip-smacking)';else if(/轻笑|chuckle|giggle/.test(cue))tag='(chuckle)';else if(/大笑|laughs|laugh/.test(cue))tag='(laughs)';else if(/叹气|sigh/.test(cue)){tag='(sighs)';before=true;}else if(/吸气|inhale/.test(cue)){tag='(inhale)';before=true;}else if(/呼气|exhale/.test(cue)){tag='(exhale)';before=true;}else if(/喘息|pant/.test(cue))tag='(pant)';else if(/哭泣|crying/.test(cue)){tag='(crying)';before=true;}return tag?(before?(tag+' '+s):(s+' '+tag)):s;}
+function tts2p8IsInterjectionCue(cue){return /亲亲|亲吻|kiss|mwah|啵|mua|轻笑|chuckle|giggle|大笑|laughs|laugh|叹气|sigh|吸气|inhale|呼气|exhale|喘息|pant|哭泣|crying/i.test(String(cue||''));}
+function ttsPerformanceText(text,o,tts,opt){const base=ttsCleanBase(text);if(!base)return '';let s=ttsSafeProsody(base,o);if(ttsStyleKind(tts)==='minimax'&&opt&&opt.cue&&opt.interjection!==false)s=tts2p8Interjection(s,opt.cue);if([...s].length>VOICE_MAX_CHARS&&[...base].length<=VOICE_MAX_CHARS)return base;return s;}
+function ttsVoiceProfile(text,opt,tts){const p={speed:1,vol:1,pitch:0};if(ttsStyleKind(tts)!=='minimax'||tts2p8IsInterjectionCue(opt&&opt.cue))return p;const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(text,null);if(cue==='tense')p.emotion='angry';else if(cue==='soft')p.emotion='sad';else if(cue==='laugh')p.emotion='happy';else if(cue==='surprised')p.emotion='surprised';else if(cue==='fearful')p.emotion='fearful';else if(cue==='disgusted')p.emotion='disgusted';return p;}
 // 通话朗读：外语角色只读外语原文。英/韩用"剔除所有中文字符"的硬办法，
 // 不依赖模型有没有写对括号，所以中文翻译永远不会被读出来。
 const CJK_RE=/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g;
@@ -939,11 +937,11 @@ async function audioDataToBuf(audio){if(!audio)return null;
 function audioBufToDataUrl(ab,type){try{const bytes=ab instanceof Uint8Array?ab:new Uint8Array(ab||[]);let bin='',step=0x8000;for(let i=0;i<bytes.length;i+=step)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+step));return 'data:'+(type||'audio/mpeg')+';base64,'+btoa(bin);}catch(e){return '';}}
 async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
 async function _ttsOnce(t,vid,tts,opt){let r;
-  if(ttsUseRelay()){const vp=ttsVoiceProfile(t,opt),d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:vp});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab)return {err:'内置AI无音频'};return {buf:ab};}
+  if(ttsUseRelay()){const vp=ttsVoiceProfile(t,opt,tts),d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:vp});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab)return {err:'内置AI无音频'};return {buf:ab};}
   if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
     r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
   else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
-  else if(/minimax/i.test(tts.base)){const gid=(tts.group||'').trim(),vp=ttsVoiceProfile(t,opt);
+  else if(/minimax/i.test(tts.base)){const gid=(tts.group||'').trim(),vp=ttsVoiceProfile(t,opt,tts);
     const url=tts.base.replace(/\/+$/,'')+'/v1/t2a_v2'+(gid?('?GroupId='+encodeURIComponent(gid)):'');
     r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'speech-02-turbo',text:t,stream:false,language_boost:'auto',voice_setting:{voice_id:vid||'male-qn-qingse',speed:vp.speed,vol:vp.vol,pitch:vp.pitch,emotion:vp.emotion},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}})});
     if(r.ok){const j=await r.json();const audio=j&&j.data&&(j.data.audio||j.data.audio_file||j.data.audio_url);
@@ -997,7 +995,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=469').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=470').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -1369,7 +1367,7 @@ function buildSystem(c,opt){
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
   s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。';
-  if((S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0)s+='\n- 语音格式补充：只要你想让这条变成语音，就必须把整条消息单独写成 [语音|要说的话]；语音内容最多'+VOICE_MAX_CHARS+'字，太长就改成普通文字分开发；不要把要说的话另起一条普通文字，也不要在标签前后加解释、引号或冒号。\n- 语音情绪：根据这句话真正的情绪，在末尾选择隐藏语气，如 [语音|I miss you|语气:温柔]、[语音|Tell me why you did that.|语气:质问]、[语音|I am fine.|语气:中性]。当'+S.me.name+'明确让你凶一点、生气一点、温柔一点、低声说或亲一下时【必须】写对应语气；生气、吃醋、质问、哄人、难过、惊讶、害怕、嫌弃、亲密互动等情绪明显时也应主动写。可用：中性、温柔、开心、难过、愤怒、质问、惊讶、害怕、厌恶、低声、亲亲。语气标签是隐藏控制，不要在正常聊天里解释它。';
+  if((S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0)s+='\n- 语音格式补充：只要你想让这条变成语音，就必须把整条消息单独写成 [语音|要说的话]；语音内容最多'+VOICE_MAX_CHARS+'字，太长就改成普通文字分开发；不要把要说的话另起一条普通文字，也不要在标签前后加解释、引号或冒号。\n- 语音情绪：根据这句话真正的情绪，在末尾选择隐藏语气，如 [语音|I miss you|语气:温柔]、[语音|Tell me why you did that.|语气:质问]、[语音|I am fine.|语气:中性]。当'+S.me.name+'明确让你凶一点、生气一点、温柔一点、低声说或亲一下时【必须】写对应语气；生气、吃醋、质问、难过、惊讶、害怕或嫌弃明显时也应主动写。可用：中性、温柔、开心、难过、愤怒、质问、惊讶、害怕、厌恶、低声。只有真的发生对应声音动作时才用：亲亲、轻笑、大笑、叹气、吸气、呼气、哭泣；不要把普通温柔自动写成亲亲，也不要把普通难过自动写成叹气。语气标签是隐藏控制，不要在正常聊天里解释它。';
   if((S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0)s+='\n- 语音表演补充：生气、吃醋、逼问、反问、要ta解释时，可以用 [语音|你到底为什么这样|语气:质问]；情侣亲密互动、亲亲、哄人贴近时，可以用 [语音|亲一下|语气:亲亲]。语气标签是隐藏控制，不要把“语气:”写进正常聊天内容。';
   s+='\n- 当'+S.me.name+'给你发红包时：愿意领取也用一行 [收款]，不想领就用 [拒收]；领取后红包卡片会显示已领取，不要重复收同一个红包。';
   s+='\n- 情绪被追问时：如果你的心情条/内心已经是不开心、吃醋、低落、生气、委屈、冷淡，'+S.me.name+'问“怎么了/是不是不开心/别冷着我/为什么这样”等，你可以嘴硬、可以慢慢说，但不能一直只回“没事/没有/没有不开心”。第一次可以压着，第二次以后要露出一点真实原因或在意点，或者明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”，让ta能继续哄你、慢慢挖出来。';
@@ -2207,7 +2205,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testVision()">测试识图</button></div><div id="testV" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section" id="set_tts"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
-      <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，把角色「语音音色」引擎切成 API：<br>· <b>MiniMax 海螺（推荐·国内·便宜·克隆很真）</b>：开了内置AI后不用在这里填Key，模型默认 speech-02-turbo；每个角色可填不同 voice_id，点“拉取我的全部音色”可选系统音色和已克隆音色。<br>· <b>旧直连模式</b>：不开内置AI时，才需要在这里填接口地址和Key。</div>
+      <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，把角色「语音音色」引擎切成 API：<br>· <b>MiniMax 海螺（推荐·国内·便宜·克隆很真）</b>：只用内置AI时模型固定 speech-02-turbo；每个角色可填不同 voice_id。<br>· <b>Speech 2.8 直连</b>：填写下面的 MiniMax 地址和Key后，会明确优先使用这里选择的 2.8 模型，不会再被内置语音覆盖。</div>
       <div class="it"><span>启用语音API<br><small style="color:#888">开：角色语音条和电话使用内置或外置API音色；关：使用手机系统音。</small></span><span class="sw ${ttsEnabled(S.settings.tts||{})?'on':''}" onclick="S.settings.tts=S.settings.tts||{};S.settings.tts.enabled=!ttsEnabled(S.settings.tts);save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.minimaxi.com 或 api.elevenlabs.io"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
@@ -2387,7 +2385,7 @@ const VOICE_PRESETS=[
 function mergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
   toast('正在拉取音色…');
-  try{if(aiCoreOn()){const d=await aiRelay('tts_voices',{});_voiceList=mergeVoicePresets((d&&d.voices)||[]);_voiceQ='';showVoicePicker();return;}
+  try{if(ttsUseRelay()){const d=await aiRelay('tts_voices',{});_voiceList=mergeVoicePresets((d&&d.voices)||[]);_voiceQ='';showVoicePicker();return;}
     if(!/minimax/i.test(base)){toast('这个只支持海螺(MiniMax)，地址要填 api.minimaxi.com');return;}
     if(!key){toast('先填上面的 API Key，或打开 AI账户里的“使用内置AI”');return;}
     const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
@@ -7456,7 +7454,7 @@ function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec((
 function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
   stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;const um={role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session};msgs(id).push(um);behaviorOnUserMsg(id,um);lifeNoteOnUserMsg(id,um);emotionOnUserMsg(id,um);save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}if(_call&&callOnUserSay(m.content||''))return;callAI();});}
 function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
-async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;const t=ttsSafeProsody(ttsCleanBase(text),c),vp=ttsVoiceProfile(text,opt);
+async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;const t=ttsSafeProsody(ttsCleanBase(text),c),vp=ttsVoiceProfile(text,opt,ttsCfg());
   if(!t)return new Promise(r=>setTimeout(r,1100));
   if(ttsApiOn()){const ab=await ttsArr(text,c,opt);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);}return;}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=(+v.rate||1)*vp.speed;u.pitch=(+v.pitch||1)+vp.pitch*.08;u.volume=Math.max(0,Math.min(1,vp.vol));if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(res,Math.max(2500,t.length*200));}catch(e){res();}});}
@@ -7470,7 +7468,7 @@ async function callAI(sysNote,opts){if(!_call)return;
   try{const hist=lastRounds(msgs(c.id),S.settings.hist||12).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'user',content:sysNote});
     const _lang=(getVoice(c).lang||'zh');const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
-    let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。\n- 每轮先判断你真正要用的声音情绪，并在最前面单独写一行隐藏控制：[通话语气|中性/温柔/开心/难过/愤怒/质问/惊讶/害怕/厌恶/低声/亲亲]，只选一个最贴切的。'+S.me.name+'明确要求你凶一点、严厉一点、压低声音、提高音量、温柔一点时必须照做；不要口头答应了却仍选中性。这个标签不会显示或读出。';
+    let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。\n- 每轮先判断你真正要用的声音情绪，并在最前面单独写一行隐藏控制：[通话语气|中性/温柔/开心/难过/愤怒/质问/惊讶/害怕/厌恶/低声]，只选一个最贴切的。'+S.me.name+'明确要求你凶一点、严厉一点、压低声音、提高音量、温柔一点时必须照做；不要口头答应了却仍选中性。真的发生声音动作时才可改选亲亲、轻笑、大笑、叹气、吸气、呼气或哭泣；普通温柔不是亲亲，普通难过也不是叹气。这个标签不会显示或读出。';
     cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
     if(_call.dir==='incoming')cf+='\n- 通话方向：这通电话是你主动打给'+S.me.name+'，ta只是接听；之后提起时绝对不要说成ta打给你。';
     else if(_call.dir==='outgoing')cf+='\n- 通话方向：这通电话是'+S.me.name+'主动打给你，你只是接听；之后提起时绝对不要说成你打给ta。';
@@ -7531,7 +7529,7 @@ async function callAI(sysNote,opts){if(!_call)return;
       const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p);
       if(isTrans){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;/* 同一句原文只认第一条翻译，多余/重复的翻译行(不管半角全角)直接丢掉 */return;}
       units.push({orig:p,trans:''});});
-    let _prevP='';
+    let _prevP='',_voiceInterjectionUsed=false;
     for(const u of units){if(!_call||_call.session!==sess)return;
       if(u.orig===_prevP)continue;/* 跳过和上一句完全相同的（防止发两遍） */
       _prevP=u.orig;
@@ -7540,7 +7538,7 @@ async function callAI(sysNote,opts){if(!_call)return;
       save();
       _call.sub={who:'them',text:u.orig+(u.trans?'\n'+u.trans:'')};updateCallSub();
       const spoken=pickSpoken(u.orig,_vlang);
-      if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c,{cue:_turnVoiceCue});await sleep(950);}else await sleep(Math.max(1700,u.orig.length*150));}
+      if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed});_voiceInterjectionUsed=true;await sleep(950);}else await sleep(Math.max(1700,u.orig.length*150));}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}

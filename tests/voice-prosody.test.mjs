@@ -35,8 +35,8 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-const context = vm.createContext({});
-for (const name of ["ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "ttsKissText", "ttsShapeByCue", "ttsVoiceProfile"]) {
+const context = vm.createContext({ ttsUseRelay: () => false });
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsVoiceProfile"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -45,25 +45,59 @@ assert.equal(context.ttsRequestedCue("Please whisper and speak softly."), "低�
 assert.equal(context.ttsCueKind("emotion: angry"), "tense");
 assert.equal(context.ttsCueKind("surprised"), "surprised");
 assert.equal(context.ttsAutoCue("Tell me why you lied to me.", null), "tense");
-assert.equal(context.ttsKissText("Kiss me."), "Kiss me.");
-assert.equal(context.ttsShapeByCue("Don't move.", "tense"), "Don't move.");
+assert.equal(context.tts2p8Interjection("Come here.", "亲亲"), "Come here. (lip-smacking)");
+assert.equal(context.tts2p8Interjection("I missed you.", "叹气"), "(sighs) I missed you.");
+assert.equal(context.tts2p8Interjection("I missed you.", "难过"), "I missed you.");
 
+const minimax28 = { base: "https://api.minimax.io", model: "speech-2.8-turbo" };
+const minimax02 = { base: "https://api.minimax.io", model: "speech-02-turbo" };
+context.ttsCleanBase = (x) => String(x || "").trim();
+context.ttsSafeProsody = (x) => x;
+context.VOICE_MAX_CHARS = 300;
+vm.runInContext(functionSource("ttsPerformanceText"), context);
+assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "亲亲" }), "Come here. (lip-smacking)");
+assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "亲亲", interjection: false }), "Come here.");
+assert.equal(context.ttsPerformanceText("Come here.", null, minimax02, { cue: "亲亲" }), "Come here.");
 assert.deepEqual(
-  JSON.parse(JSON.stringify(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }))),
+  JSON.parse(JSON.stringify(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax28))),
   { speed: 1, vol: 1, pitch: 0, emotion: "angry" },
 );
-assert.equal(context.ttsVoiceProfile("No way!", { cue: "surprised" }).pitch, 0);
-assert.equal(context.ttsVoiceProfile("I am hurt.", { cue: "sad" }).emotion, "sad");
+assert.equal(context.ttsVoiceProfile("No way!", { cue: "surprised" }, minimax28).pitch, 0);
+assert.equal(context.ttsVoiceProfile("I am hurt.", { cue: "sad" }, minimax28).emotion, "sad");
+assert.equal(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax02).emotion, undefined);
+assert.equal(context.ttsVoiceProfile("Come here.", { cue: "亲亲" }, minimax28).emotion, undefined);
+assert.equal(context.ttsVoiceProfile("I miss you.", { cue: "warm" }, minimax28).emotion, undefined);
+assert.equal(JSON.stringify({ emotion: context.ttsVoiceProfile("I miss you.", { cue: "warm" }, minimax28).emotion }), "{}");
+assert.equal(JSON.parse(JSON.stringify({ emotion: context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax28).emotion })).emotion, "angry");
 for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted", "whisper", "kiss"]) {
-  const profile = context.ttsVoiceProfile("Keep my voice.", { cue });
+  const profile = context.ttsVoiceProfile("Keep my voice.", { cue }, minimax28);
   assert.equal(profile.pitch, 0, `${cue} changed pitch`);
   assert.equal(profile.speed, 1, `${cue} changed speed`);
   assert.equal(profile.vol, 1, `${cue} changed volume`);
 }
 
 assert.match(source, /model:'speech-02-turbo',voice_setting:vp/);
+assert.match(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
+assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
 assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSetting\(setting\) \}/);
 assert.match(backend, /if \(chars > 300\)/);
+
+const route = { enabled: true, relay: false, base: "https://api.minimax.io", key: "sk-direct" };
+const routeContext = vm.createContext({
+  ttsCfg: () => route,
+  aiCoreUrl: () => "https://relay.test/functions/v1/phone-ai",
+});
+for (const name of ["ttsExternalOn", "ttsRelayOn", "ttsEnabled", "ttsUseRelay"]) {
+  vm.runInContext(functionSource(name), routeContext);
+}
+assert.equal(routeContext.ttsUseRelay(), false, "external MiniMax must stay external");
+route.relay = true;
+assert.equal(routeContext.ttsUseRelay(), false, "external credentials must not be shadowed by relay");
+route.base = "";
+route.key = "";
+assert.equal(routeContext.ttsUseRelay(), true, "relay should be used only without external credentials");
+
+assert.match(source, /model:tts\.model\|\|'speech-02-turbo'/);
 
 console.log("voice prosody tests passed");
