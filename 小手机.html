@@ -142,8 +142,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .panel .it span{font-size:11px;color:#666;}
 /* 朋友圈 */
 .mcover{height:220px;background:#18181a;position:relative;overflow:hidden;cursor:pointer;}
-.mcover .coverfill{position:absolute;inset:-18px;background-position:center;background-size:cover;filter:blur(18px);opacity:.58;transform:scale(1.08);}
-.mcover .coverfull{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;}
+.mcover .coverfull{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
 .mcover:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.03),rgba(0,0,0,.2));pointer-events:none;}
 .mcover .me{position:absolute;z-index:2;right:14px;bottom:10px;display:flex;align-items:flex-end;gap:10px;}
 .mcover .me .nm{color:#fff;font-weight:600;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,.3);margin-bottom:24px;}
@@ -162,7 +161,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .mpost .tm{font-size:11px;color:#bbb;}
 .mpost .acts{font-size:18px;color:#5b6b9c;cursor:pointer;}
 .mpost .likes{background:#f7f7f7;border-radius:6px;padding:6px 9px;font-size:13px;color:#5b6b9c;margin-top:7px;}
-.mpost .likes .like-label{display:inline-block;margin-right:6px;color:#8d96ad;font-size:11px;letter-spacing:.08em;}
+.mpost .likes .moment-heart{display:inline-flex;width:15px;height:15px;margin-right:6px;vertical-align:-2px;filter:drop-shadow(0 2px 4px rgba(225,103,151,.28));}
+.mpost .likes .moment-heart svg{width:100%;height:100%;display:block;}
 .mpost .cmts{background:#f7f7f7;border-radius:0 0 6px 6px;padding:4px 9px;}
 .mpost .cmt{font-size:13px;color:#333;padding:3px 0;}.mpost .cmt b{color:#5b6b9c;font-weight:600;}
 /* 我的钱包 */
@@ -224,6 +224,17 @@ body{background:#000;padding:0;}
 .msg.me .bubble{background:linear-gradient(135deg,#ffd6e8,#ffc0d6);color:#6b2942;}
 .bubble.bpretty{background:var(--bbg)!important;color:var(--bfg)!important;border-radius:var(--br,16px)!important;box-shadow:var(--bshadow,0 4px 14px rgba(0,0,0,.14));border:1px solid var(--bborder,rgba(255,255,255,.24));padding:9px 13px;isolation:isolate;}
 .bubble.bpretty.bglow{box-shadow:0 0 13px var(--bglow,rgba(255,160,205,.58)),0 5px 15px rgba(0,0,0,.16)}
+.msg .avatar.av-round{border-radius:50%!important;}
+.bubble .bicon{position:absolute;right:-7px;top:-8px;width:19px;height:19px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.22));}
+.msg.me .bubble .bicon{right:auto;left:-7px;}
+.bubble .bicon svg{width:100%;height:100%;display:block;overflow:visible;}
+.bicon-picker{display:flex;gap:7px;flex-wrap:wrap;margin:7px 0 3px;}
+.bicon-choice{width:38px;height:38px;border-radius:12px;border:1px solid #3a3b40;background:#25262a;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--bic,#e777a5);}
+.bicon-choice.on{border-color:#d784a8;background:#342730;box-shadow:0 0 0 2px rgba(215,132,168,.18);}
+.bicon-choice .none-mark{width:15px;height:1.5px;background:#85868d;transform:rotate(-35deg);border-radius:2px;}
+.bicon-choice svg{width:20px;height:20px;display:block;}
+.bicon-preview{display:flex;width:20px;height:20px;color:var(--bic,#e777a5);}
+.bicon-preview svg{width:100%;height:100%;}
 .bubble{color:#ececec;}
 .bubble.recalled{background:transparent!important;color:#8a8a90!important;font-size:12px;padding:3px 6px;}
 .pfrecalled{text-align:center;color:#8a8a90;font-size:13px;line-height:1.5;margin:14px 0 10px;}
@@ -585,7 +596,7 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="app.js?v=455" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=456" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="ai-account.js?v=413"></script>
 </body>
 </html>

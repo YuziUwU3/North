@@ -41,6 +41,7 @@ function phoneFriendState(){S.me=S.me||{};const p=S.me.phoneFriend||(S.me.phoneF
   if(!p.groupRemarks||typeof p.groupRemarks!=='object')p.groupRemarks={};
   if(!p.friendRead||typeof p.friendRead!=='object')p.friendRead={};
   if(!p.groupRead||typeof p.groupRead!=='object')p.groupRead={};
+  if(!p.groupBubbleStyles||typeof p.groupBubbleStyles!=='object')p.groupBubbleStyles={};
   if(!p.clearBefore||typeof p.clearBefore!=='object')p.clearBefore={};
   if(!p.groupClearBefore||typeof p.groupClearBefore!=='object')p.groupClearBefore={};
   return p;}
@@ -225,6 +226,7 @@ async function phoneFriendDeleteFriend(id){id=(''+id).toUpperCase();const f=phon
 function phoneFriendGroupManage(gid){const g=pfGroupById(gid)||{group_id:gid,name:'小手机群聊'};
   openModal(`<h3>${esc(pfGroupDisplayName(g))}</h3>
     <div class="it" onclick="phoneFriendGroupRemark('${gid}')"><span>群聊备注</span><span class="v">${esc((phoneFriendState().groupRemarks||{})[gid]||'未设置')} ›</span></div>
+    <div class="it" onclick="pfGroupBubbleList('${gid}')"><span>群聊气泡美化</span><span class="v">每个人单独设置 ›</span></div>
     <div class="it" onclick="phoneFriendInviteToGroupModal('${gid}')"><span>邀请小手机好友进群</span><span class="v">›</span></div>
     <div class="it danger" onclick="phoneFriendClearGroup('${gid}')"><span>清空群聊天记录</span><span class="v">›</span></div>
     <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
@@ -278,15 +280,15 @@ function phoneFriendSendImage(id){const p=$('#pfpanel');if(p)p.classList.remove(
 function phoneFriendGroupSendImage(gid){const p=$('#pfgpanel');if(p)p.classList.remove('show');pickFile('image/*',async f=>{let src;try{src=await compress(f,620,.68);}catch(e){try{src=await readAsDataURL(f);}catch(_){toast('图片读取失败');return;}}let body=pfImagePack(src);if(!body||body.length>PHONE_FRIEND_BODY_MAX){try{src=await compress(f,420,.58);body=pfImagePack(src);}catch(_){body='';}}if(!body||body.length>PHONE_FRIEND_BODY_MAX){toast('图片太大，换一张小一点的');return;}sendPhoneFriendGroupBody(gid,body);});}
 function pfPanelHTML(id){const stk=S.me.stickers||[];return `<div class="panel" id="pfpanel"><div class="pgrid"><div class="it" onclick="phoneFriendSendImage('${id}')"><div class="b">${svgIc('image',26,'#e6e6ee')}</div><span>相册</span></div><div class="it" onclick="document.getElementById('pfpanel').classList.remove('show');phoneFriendTransferModal('${id}','transfer')"><div class="b">${svgIc('money',26,'#e6e6ee')}</div><span>转账</span></div><div class="it" onclick="document.getElementById('pfpanel').classList.remove('show');phoneFriendTransferModal('${id}','redpacket')"><div class="b">${svgIc('redpacket',26,'#e6e6ee')}</div><span>红包</span></div><div class="it" onclick="addSticker()"><div class="b">${svgIc('smile',26,'#e6e6ee')}</div><span>添加表情</span></div></div><div class="ppage" style="padding-top:0"><div class="estk">${stk.map((s,i)=>`<div class="s" onclick="phoneFriendSendSticker('${id}',${i})"><span class="x" onclick="event.stopPropagation();pfDeleteSticker(${i},'pfpanel')">×</span><img src="${s.img}"><small>${esc(s.meaning||'')}</small></div>`).join('')||'<div style="color:#666;font-size:12px;padding:8px">还没有自定义表情，点「添加表情」上传</div>'}</div></div></div>`;}
 function pfGroupPanelHTML(gid){const stk=S.me.stickers||[];return `<div class="panel" id="pfgpanel"><div class="pgrid"><div class="it" onclick="phoneFriendGroupSendImage('${gid}')"><div class="b">${svgIc('image',26,'#e6e6ee')}</div><span>相册</span></div><div class="it" onclick="document.getElementById('pfgpanel').classList.remove('show');phoneFriendGroupTransferModal('${gid}','transfer')"><div class="b">${svgIc('money',26,'#e6e6ee')}</div><span>转账</span></div><div class="it" onclick="document.getElementById('pfgpanel').classList.remove('show');phoneFriendGroupTransferModal('${gid}','redpacket')"><div class="b">${svgIc('redpacket',26,'#e6e6ee')}</div><span>红包</span></div><div class="it" onclick="addSticker()"><div class="b">${svgIc('smile',26,'#e6e6ee')}</div><span>添加表情</span></div></div><div class="ppage" style="padding-top:0"><div class="estk">${stk.map((s,i)=>`<div class="s" onclick="phoneFriendGroupSendSticker('${gid}',${i})"><span class="x" onclick="event.stopPropagation();pfDeleteSticker(${i},'pfgpanel')">×</span><img src="${s.img}"><small>${esc(s.meaning||'')}</small></div>`).join('')||'<div style="color:#666;font-size:12px;padding:8px">还没有自定义表情，点「添加表情」上传</div>'}</div></div></div>`;}
-function pfBubblePart(m,me){if(m&&m.recalled)return `<div class="bubble recalled">已撤回一条消息</div>`;const p=pfMsgPayload(m);if(!p){if(String(m.text||'').indexOf('[PF|')===0)return `<div class="bubble">[消息]</div>`;return `<div class="bubble ${pfMentionsMe(m)&&!me?'mention':''}">${esc(m.text)}</div>`;}
+function pfBubblePart(m,me,bstyle){if(m&&m.recalled)return `<div class="bubble recalled">已撤回一条消息</div>`;const p=pfMsgPayload(m);if(!p){if(String(m.text||'').indexOf('[PF|')===0)return bubbleSingleHTML('[消息]','',bstyle,me);return bubbleSingleHTML(m.text,pfMentionsMe(m)&&!me?'mention':'',bstyle,me);}
   if(p.type==='game_room_invite'){const g=mgrGame(p.game);return `<div class="card" style="width:250px;background:linear-gradient(145deg,#172033,#251f38);border:1px solid #4b5a78;box-shadow:0 8px 20px rgba(0,0,0,.22)" onclick="event.stopPropagation();openMixedGameRoom('${p.roomId}')"><div style="padding:13px"><div style="font-size:11px;color:#aeb9d4;margin-bottom:6px">${svgIc('dice',13,'#aeb9d4')} 多人游戏房间</div><div style="font-size:16px;color:#fff;font-weight:700">${esc(p.title||((g.e||'')+' '+g.n))}</div><div style="font-size:12px;color:#a9b1c5;line-height:1.6;margin-top:7px">房主：${esc(p.hostName||'小手机好友')}<br>等待所有真人玩家准备</div></div><div class="cfoot" style="color:#9fb0d8;background:rgba(255,255,255,.06)">点击进入房间</div></div>`;}
   if(p.type==='group_invite'){const st=m.inviteStatus||'',done=st==='accepted'||st==='declined';return `<div class="card" style="width:250px;background:linear-gradient(145deg,#291d34,#1c2636);border:1px solid #51415f" ${done||me?'':`onclick="event.stopPropagation()"`}><div style="padding:13px"><div style="font-size:11px;color:#d9b8ff;margin-bottom:6px">${svgIc('users',13,'#d9b8ff')} 小手机群聊邀请</div><div style="font-size:16px;color:#fff;font-weight:700">${esc(p.groupName||'小手机群聊')}</div><div style="font-size:12px;color:#b8b0c6;line-height:1.6;margin-top:7px">${me?'已发送邀请':'邀请人：'+esc(p.inviterName||'小手机好友')}</div>${(!me&&!done)?`<div style="display:flex;gap:8px;margin-top:12px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();pfGroupInviteAccept('${m.id}','${p.inviteId}',true)">同意</button><button class="minibtn" onclick="event.stopPropagation();pfGroupInviteAccept('${m.id}','${p.inviteId}',false)">拒绝</button></div>`:st?`<div style="font-size:12px;color:#9ea0aa;margin-top:10px">${st==='accepted'?'已同意':'已拒绝'}</div>`:''}</div><div class="cfoot" style="color:#bda8d8;background:rgba(255,255,255,.06)">群聊邀请</div></div>`;}
-  if(p.type==='game_room_ready'||p.type==='game_room_start'||p.type==='game_room_chat')return `<div class="bubble">${esc(pfMsgPreview(m))}</div>`;
+  if(p.type==='game_room_ready'||p.type==='game_room_start'||p.type==='game_room_chat')return bubbleSingleHTML(pfMsgPreview(m),'',bstyle,me);
   if(p.type==='sticker')return `<div class="stickermsg">${isImg(p.img)?`<img src="${p.img}">`:''}${p.meaning?`<div class="stkm">${esc(p.meaning)}</div>`:''}${!me?`<button class="minibtn pfcollect" onclick="event.stopPropagation();pfSaveSticker('${m.id}')">收藏</button>`:''}</div>`;
   if(p.type==='image')return `<div class="imagemsg" onclick="event.stopPropagation();viewImg('${p.img||''}')">${isImg(p.img)?`<img src="${p.img}">`:'[图片]'}</div>`;
   if(p.type==='transfer'||p.type==='redpacket'){const red=p.type==='redpacket',done=!!m.received,kind=red?'r':'t',cls='cpay '+(done?'done':kind),ic=svgIc(red?'redpacket':'money',30,'#fff'),rn=m.receivedBy?pfNameById(m.receivedBy):'对方',t1=done?(me?esc(rn+'已收'):'已收款'):(red?esc(p.note||'恭喜发财'):'¥'+(+p.amount).toFixed(2)),t2=done?'¥'+(+p.amount).toFixed(2):(red?'领取红包':esc(p.note||'转账')),handler=(!me&&!done)?`onclick="event.stopPropagation();pfReceivePay('${m.id}')"`:'',mark=(me&&done)?`<div class="paystatus">${red?'已领取':'已收款'}</div>`:'';
     return `<div class="card" ${handler}><div class="${cls}"><div class="big">${ic}</div><div><div class="t1">${t1}</div><div class="t2">${t2}</div></div></div><div class="cfoot">微信${red?'红包':'转账'}</div></div>${mark}`;}
-  return `<div class="bubble">${esc(pfMsgPreview(m))}</div>`;}
+  return bubbleSingleHTML(pfMsgPreview(m),'',bstyle,me);}
 function pfRecalledRow(){return '<div class="pfrecalled">已撤回一条消息</div>';}
 function pfReceivePay(mid){const p=phoneFriendState();let found=null,kind='friend',name='小手机好友';
   Object.keys(p.messages||{}).some(id=>{const m=pfMsgList(p.messages,id).find(x=>x.id===mid);if(m){const f=phoneFriendById(id);found=m;name=f?pfFriendDisplayName(f):id;return true;}return false;});
@@ -303,7 +305,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v455 · 朋友圈简洁布局与识图保存';
+const APP_VER='v456 · 识图重试与全群气泡美化';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -645,7 +647,7 @@ async function visionPost(base,key,model,dataURL,prompt,variant){
   return {res,d};
 }
 async function visionAPI(dataURL,prompt){const a=S.settings.vision||{},ch=S.settings.chat||{};
-  if(aiCoreOn()){const d=await aiRelay('vision',{image:dataURL,prompt,model:(a&&a.model)||''});return (d.data&&d.data.choices&&d.data.choices[0]&&d.data.choices[0].message&&d.data.choices[0].message.content||'').trim();}
+  if(aiCoreOn()){const d=await aiRelay('vision',{image:dataURL,prompt,model:(a&&a.model)||''}),txt=(d.data&&d.data.choices&&d.data.choices[0]&&d.data.choices[0].message&&d.data.choices[0].message.content||'').trim();if(!txt||visionNoImageText(txt))throw new Error('vision-fail: '+(txt?'模型回复：'+txt.slice(0,100):'内置识图没有返回画面描述'));return txt;}
   const base=((a.base||ch.base)||'').replace(/\/+$/,'');const key=(a.key||ch.key)||'';const models=visionModels(a);
   if(!base||!key||!models.length)throw new Error('no-vision');
   let last='';for(const model of models){for(const variant of ['detail','plain','string','anthropic']){let out;
@@ -924,7 +926,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=455').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=456').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -1172,7 +1174,7 @@ function buildSystem(c,opt){
   if(!taskRelationAllowed(c))s+='\n\n# 布置任务权限（重要）\n你和'+S.me.name+'当前不是情侣关系，因此你没有给ta布置任务、惩罚任务、打卡、检讨或强制安排的权限。可以像普通关系一样提出建议或邀请，但不能把建议说成ta必须完成的任务。';
   else if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
   else s+='\n\n# 每日任务固定规则（重要）\n任务只能由「任务便签」每天统一生成一次，总数固定为 '+taskDailyCount(c)+' 条。聊天和通话中都不能口头追加任务、临时加罚、改数量或另立必须完成的新要求；你只能催促、验收和讨论便签里已经存在的任务。其他想法可以自然建议，但不能当作任务。';
-  s+='\n\n# 微信气泡外观\n'+S.me.name+'可以让你更换【你自己发出的微信气泡】。ta说清想要的颜色、字体色或形状时，单独输出一行 [换气泡|气泡颜色|字体颜色|形状]，系统会真的更换，不要把指令念出来。颜色可写粉色、浅蓝、薄荷、紫色、白色、黑色或#六位色值；形状写方形、圆润或胶囊；没有要求的项写不改。气泡不使用Emoji或角落装饰。这个指令只改你自己的气泡，不改'+S.me.name+'的。';
+  s+='\n\n# 微信气泡外观\n'+S.me.name+'可以让你更换【你自己发出的微信气泡】。ta说清想要的颜色、字体色、形状或小图标时，单独输出一行 [换气泡|气泡颜色|字体颜色|形状|图标]，系统会真的更换，不要把指令念出来。颜色可写粉色、浅蓝、薄荷、紫色、白色、黑色或#六位色值；形状写方形、圆润或胶囊；图标只能写爱心、星芒、蝴蝶结、花瓣、月光或无；没有要求的项写不改。图标是精致矢量装饰，不使用Emoji。这个指令只改你自己的气泡，不改'+S.me.name+'的。';
   if(!_main)s+=altIdentityPrompt(c);
   {const _ba=friendMetaGet(c,'blockedAt'),_ra=friendMetaGet(c,'readdedAt'),_rk=friendMetaGet(c,'readdKnown'),_bd=friendMetaGet(c,'blockDur');
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(_ba?'，已经'+fmtDur(Date.now()-_ba):'')+'，你能感觉到被冷落/拒绝。';
@@ -3622,8 +3624,8 @@ function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机�
   let body='';arr.forEach((m,i)=>{
     const prev=i?arr[i-1]:null;if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;
     if(m.recalled){body+=pfRecalledRow();return;}
-    const me=m.from===p.id,ff=phoneFriendById(m.from),rs=me?pfReadStatus(m,'group',gid):'',rec=me?`<span class="pfrecall" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','group','${gid}')">撤回</span>`:'',at=me?'':`onpointerdown="pfAtStart(event,'${gid}','${m.from}')" onpointerup="pfAtEnd()" onpointercancel="pfAtEnd()" onpointerleave="pfAtEnd()" title="长按@"`;
-    body+=`<div class="msg ${me?'me':'them'}"><span ${at}>${me?av(S.me.avatar):pfAvatarHTML(ff||{phone_id:m.from,display_name:pfNameById(m.from)})}</span><div class="col">${me?'':`<div style="font-size:11px;color:#888;margin:0 0 2px 4px">${esc(pfNameById(m.from)||'成员')}</div>`}${pfBubblePart(m,me)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`;
+    const me=m.from===p.id,sid=me?'me':(''+m.from).toUpperCase(),bs=pfGroupBubbleCfg(gid,sid),ac=bs&&bs.avatar==='round'?'av-round':'',ff=phoneFriendById(m.from),rs=me?pfReadStatus(m,'group',gid):'',rec=me?`<span class="pfrecall" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','group','${gid}')">撤回</span>`:'',at=me?'':`onpointerdown="pfAtStart(event,'${gid}','${m.from}')" onpointerup="pfAtEnd()" onpointercancel="pfAtEnd()" onpointerleave="pfAtEnd()" title="长按@"`;
+    body+=`<div class="msg ${me?'me':'them'}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:pfNameById(m.from)},ac)}</span><div class="col">${me?'':`<div style="font-size:11px;color:#888;margin:0 0 2px 4px">${esc(pfNameById(m.from)||'成员')}</div>`}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`;
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfgGagKey(gid)];
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(pfGroupDisplayName(g))}</span><span class="r" onclick="phoneFriendGroupManage('${gid}')">⋯</span></div>
@@ -3799,12 +3801,12 @@ function grelAdd(id){const g=S.groups.find(x=>x.id===id);if(!g)return;g.rels=g.r
   g.rels.push({mode:_grelMode,a,b,rel,story});_grelPick=[];save();groupRels(id);toast('已添加关系');}
 function grelDel(id,i){const g=S.groups.find(x=>x.id===id);if(!g||!g.rels)return;g.rels.splice(i,1);save();groupRels(id);}
 function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
-  const c=me?null:getC(m.senderId);const av0=me?av(S.me.avatar):`<span onclick="event.stopPropagation();gPat('${g.id}','${m.senderId}')" style="cursor:pointer" title="拍一拍">${av(c?c.avatar:'🙂')}</span>`;const nm=me?'':`<div style="font-size:11px;color:#888;margin-bottom:2px">${esc(gnm(g,m.senderId))}</div>`;
+  const c=me?null:getC(m.senderId),_gbl=groupBubbleLook(g,m.senderId),_gbi=groupBubbleIcon(g,m.senderId),_gav=groupBubbleAvatarClass(g,m.senderId);const av0=me?av(S.me.avatar,_gav):`<span onclick="event.stopPropagation();gPat('${g.id}','${m.senderId}')" style="cursor:pointer" title="拍一拍">${av(c?c.avatar:'🙂',_gav)}</span>`;const nm=me?'':`<div style="font-size:11px;color:#888;margin-bottom:2px">${esc(gnm(g,m.senderId))}</div>`;
   const q=m.q?`<div style="background:rgba(120,120,130,.2);border-left:2px solid #999;border-radius:5px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:#999;max-width:210px;${me?'margin-left:auto':''}">${esc(m.q.who)}：${esc((m.q.text||'').slice(0,30))}</div>`:'';
   let inner;
   if(m.type==='transfer'||m.type==='redpacket'){const rp=m.type==='redpacket';const got=m.received;
     inner=`<div class="card"${me?'':` style="cursor:pointer" onclick="event.stopPropagation();gGrab('${g.id}','${m.id}')"`}><div class="cpay" style="background:${rp?(got?'#caa15a':'#f0a73b'):(got?'#7fae8f':'#36b06a')}"><div class="big">${svgIc(rp?'redpacket':'money',30,'#fff')}</div><div><div class="t1">¥${(+m.amount).toFixed(2)}</div><div class="t2">${esc(m.note||(rp?'恭喜发财':'给你转账'))}</div></div></div><div class="cfoot">${me?'已发出':(got?'已领取':(rp?'点击领取红包':'点击收款'))}</div></div>`;
-  }else inner=`${q}<div class="bubble">${esc(m.content)}</div>`;
+  }else inner=`${q}<div class="bubble${_gbl.cls}"${_gbl.css?` style="${_gbl.css}"`:''}>${_gbi}${esc(m.content)}</div>`;
   const selecting=_gmsel&&_gmsel.id===g.id;
   const tick=selecting?`<span style="align-self:center;font-size:20px;margin:0 4px;color:${_gmsel.ids.includes(m.id)?'#07c160':'#666'}">${_gmsel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const click=selecting?`onclick="gToggleSel('${m.id}')"`:`onclick="gMsgMenu('${g.id}','${m.id}')"`;
@@ -3883,6 +3885,7 @@ function groupInfo(id){const g=S.groups.find(x=>x.id===id);const resp=g.responde
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:64px;flex:0 0 auto;font-size:13px;color:#bbb">${esc(S.me.name)}(我)</span><input id="gnick_me" value="${esc((g.nicks&&g.nicks.me)||'')}" placeholder="我的群昵称" style="flex:1"></div>
     ${g.members.map(cid=>{const c=getC(cid);return c?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:64px;flex:0 0 auto;font-size:13px;color:#bbb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</span><input id="gnick_${cid}" value="${esc((g.nicks&&g.nicks[cid])||'')}" placeholder="ta的群昵称" style="flex:1"></div>`:'';}).join('')}
   </div>
+  <button class="btn p" style="margin-bottom:8px;background:#7d688f" onclick="closeModal();groupBubbleList('${id}')">群聊气泡美化（每个人单独设置）</button>
   <button class="btn p" style="margin-bottom:8px;background:#19a463" onclick="closeModal();groupRels('${id}')">群关系网（结构化设置·谁和谁什么关系）</button>
   <div class="field"><label>补充关系（自由文字，选填）</label><textarea id="g_rel" rows="2" placeholder="也可以直接打一段，例如：两个人是死对头，都喜欢同一个人。">${esc(g.relations||'')}</textarea></div>
   <button class="btn p" style="margin-bottom:8px" onclick="saveGroup('${id}')">保存设置</button>
@@ -5919,44 +5922,89 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
 const BUBBLE_SHAPES={square:6,soft:16,pill:24};
 const BUBBLE_PRESETS={
-  strawberry:{meBg:'linear-gradient(135deg,#fff5fa,#ffb8d8)',meText:'#b83f78',themBg:'linear-gradient(135deg,#fff8fb,#ffd1e5)',themText:'#a74672',meShape:'soft',themShape:'soft',glow:true},
-  cake:{meBg:'linear-gradient(135deg,#fffdf0,#ffe49a)',meText:'#926236',themBg:'linear-gradient(135deg,#fffbea,#ffd98a)',themText:'#805b35',meShape:'soft',themShape:'soft',glow:true},
-  panda:{meBg:'linear-gradient(135deg,#f2fbff,#9edfff)',meText:'#347da3',themBg:'linear-gradient(135deg,#f5fbff,#b8e7ff)',themText:'#386f91',meShape:'soft',themShape:'soft',glow:true},
-  mint:{meBg:'linear-gradient(135deg,#effffa,#9ff1e5)',meText:'#238d84',themBg:'linear-gradient(135deg,#f2fffd,#b9f5ec)',themText:'#297f78',meShape:'pill',themShape:'pill',glow:true},
-  classic:{meBg:'#95ec69',meText:'#0b3b18',themBg:'#ffffff',themText:'#111111',meShape:'square',themShape:'square',glow:false},
-  night:{meBg:'linear-gradient(135deg,#45484f,#26282d)',meText:'#f0f0f2',themBg:'linear-gradient(135deg,#292b30,#17181b)',themText:'#d7d8dc',meShape:'soft',themShape:'soft',glow:false}
+  strawberry:{meBg:'linear-gradient(135deg,#fff5fa,#ffb8d8)',meText:'#b83f78',themBg:'linear-gradient(135deg,#fff8fb,#ffd1e5)',themText:'#a74672',meShape:'soft',themShape:'soft',meIcon:'heart',themIcon:'flower',meIconColor:'#df6f9f',themIconColor:'#e79abb',glow:true},
+  cake:{meBg:'linear-gradient(135deg,#fffdf0,#ffe49a)',meText:'#926236',themBg:'linear-gradient(135deg,#fffbea,#ffd98a)',themText:'#805b35',meShape:'soft',themShape:'soft',meIcon:'star',themIcon:'bow',meIconColor:'#c88b3e',themIconColor:'#d59b55',glow:true},
+  panda:{meBg:'linear-gradient(135deg,#f2fbff,#9edfff)',meText:'#347da3',themBg:'linear-gradient(135deg,#f5fbff,#b8e7ff)',themText:'#386f91',meShape:'soft',themShape:'soft',meIcon:'star',themIcon:'moon',meIconColor:'#579fc6',themIconColor:'#6c9fc0',glow:true},
+  mint:{meBg:'linear-gradient(135deg,#effffa,#9ff1e5)',meText:'#238d84',themBg:'linear-gradient(135deg,#f2fffd,#b9f5ec)',themText:'#297f78',meShape:'pill',themShape:'pill',meIcon:'flower',themIcon:'star',meIconColor:'#36a99e',themIconColor:'#50b9ad',glow:true},
+  classic:{meBg:'#95ec69',meText:'#0b3b18',themBg:'#ffffff',themText:'#111111',meShape:'square',themShape:'square',meIcon:'none',themIcon:'none',glow:false},
+  night:{meBg:'linear-gradient(135deg,#45484f,#26282d)',meText:'#f0f0f2',themBg:'linear-gradient(135deg,#292b30,#17181b)',themText:'#d7d8dc',meShape:'soft',themShape:'soft',meIcon:'moon',themIcon:'star',meIconColor:'#c6cad8',themIconColor:'#9ea5b8',glow:false}
 };
+const BUBBLE_ICONS={none:'无',heart:'爱心',star:'星芒',bow:'蝴蝶结',flower:'花瓣',moon:'月光'};
 function bubbleCfg(c){return c&&c.bubbleStyle||null;}
 function bubbleSafeColor(v,fb){v=(''+(v||'')).trim();return /^#[0-9a-f]{6}$/i.test(v)||/^linear-gradient\([#0-9a-z(),.%\s-]+\)$/i.test(v)?v:fb;}
+function bubbleIconColor(v,fb){v=(''+(v||'')).trim();return /^#[0-9a-f]{6}$/i.test(v)?v:fb;}
+function bubbleIconSVG(kind,color,cls){if(!kind||kind==='none')return '';color=bubbleIconColor(color,'#e777a5');let p='';
+  if(kind==='heart')p='<path fill="currentColor" d="M12 21s-7.4-4.4-9.7-9.1C.4 8 2.4 4.5 6.1 4.2c2.1-.2 4.1.9 5.9 3 1.8-2.1 3.8-3.2 5.9-3 3.7.3 5.7 3.8 3.8 7.7C19.4 16.6 12 21 12 21z"/>';
+  else if(kind==='star')p='<path fill="currentColor" d="m12 2 2.5 6.1L21 10.5l-5.2 4.1.2 6.7-4-3.7-4 3.7.2-6.7L3 10.5l6.5-2.4L12 2z"/>';
+  else if(kind==='bow')p='<path fill="currentColor" d="M10.3 9.1C8.1 5.7 3.2 4 2.4 7.5c-.7 3 3.3 4.7 7.4 4.3v1c-4.1-.4-8.1 1.3-7.4 4.3.8 3.5 5.7 1.8 7.9-1.6.5.5 1 .7 1.7.7s1.2-.2 1.7-.7c2.2 3.4 7.1 5.1 7.9 1.6.7-3-3.3-4.7-7.4-4.3v-1c4.1.4 8.1-1.3 7.4-4.3-.8-3.5-5.7-1.8-7.9 1.6-.5-.5-1-.7-1.7-.7s-1.2.2-1.7.7z"/><circle cx="12" cy="12.3" r="2.7" fill="#fff" fill-opacity=".7"/>';
+  else if(kind==='flower')p='<g fill="currentColor"><ellipse cx="12" cy="5.2" rx="3" ry="4"/><ellipse cx="18.5" cy="10" rx="3" ry="4" transform="rotate(72 18.5 10)"/><ellipse cx="16" cy="17.5" rx="3" ry="4" transform="rotate(144 16 17.5)"/><ellipse cx="8" cy="17.5" rx="3" ry="4" transform="rotate(216 8 17.5)"/><ellipse cx="5.5" cy="10" rx="3" ry="4" transform="rotate(288 5.5 10)"/></g><circle cx="12" cy="12" r="3" fill="#fff" fill-opacity=".78"/>';
+  else if(kind==='moon')p='<path fill="currentColor" d="M18.8 16.7A8.5 8.5 0 0 1 8.1 5.2 8.7 8.7 0 1 0 18.8 16.7z"/><circle cx="18.5" cy="6" r="1.5" fill="currentColor"/><circle cx="20.5" cy="10" r=".8" fill="currentColor"/>';
+  if(!p)return '';return `<span class="${cls||'bicon'}" style="color:${color}" title="${BUBBLE_ICONS[kind]||''}"><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg></span>`;}
+function bubbleIconPicker(prefix,v,color){return `<input type="hidden" id="${prefix}_icon" value="${v||'none'}"><div class="bicon-picker">${Object.keys(BUBBLE_ICONS).map(k=>`<button type="button" class="bicon-choice ${k===(v||'none')?'on':''}" data-bicon="${prefix}" data-kind="${k}" style="--bic:${bubbleIconColor(color,'#e777a5')}" onclick="bubbleIconChoose('${prefix}','${k}')" title="${BUBBLE_ICONS[k]}">${k==='none'?'<span class="none-mark"></span>':bubbleIconSVG(k,color,'bicon-preview')}</button>`).join('')}</div>`;}
+function bubbleIconChoose(prefix,kind){const i=$('#'+prefix+'_icon');if(i)i.value=kind;document.querySelectorAll('[data-bicon="'+prefix+'"]').forEach(x=>x.classList.toggle('on',x.getAttribute('data-kind')===kind));}
 function bubbleLook(c,me){const b=bubbleCfg(c);if(!b)return {cls:'',css:''};const pre=me?'me':'them',bg=bubbleSafeColor(b[pre+'Bg'],me?'#ffc0d6':'#2c2c2e'),fg=bubbleSafeColor(b[pre+'Text'],me?'#6b2942':'#ececec'),shape=BUBBLE_SHAPES[b[pre+'Shape']]||16,glow=b.glow?' bglow':'';
   return {cls:' bpretty'+glow,css:`--bbg:${bg};--bfg:${fg};--br:${shape}px;--bglow:${bubbleGlowColor(bg)}`};}
+function bubbleIconFor(c,me){const b=bubbleCfg(c);if(!b)return '';const pre=me?'me':'them';return bubbleIconSVG(b[pre+'Icon']||'none',b[pre+'IconColor']||'#e777a5');}
+function bubbleAvatarClass(c,me){const b=bubbleCfg(c);return b&&b[(me?'me':'them')+'Avatar']==='round'?'av-round':'';}
+function groupBubbleCfg(g,sid){return g&&g.bubbleStyles&&g.bubbleStyles[sid]||null;}
+function bubbleSingleLook(b,me){if(!b)return {cls:'',css:''};const bg=bubbleSafeColor(b.bg,me?'#95ec69':'#2c2c2e'),fg=bubbleSafeColor(b.text,me?'#0b3b18':'#ececec'),shape=BUBBLE_SHAPES[b.shape]||16,glow=b.glow?' bglow':'';return {cls:' bpretty'+glow,css:`--bbg:${bg};--bfg:${fg};--br:${shape}px;--bglow:${bubbleGlowColor(bg)}`};}
+function bubbleSingleHTML(text,extra,b,me){const l=bubbleSingleLook(b,me),i=b?bubbleIconSVG(b.icon||'none',b.iconColor||'#e777a5'):'';return `<div class="bubble${extra?' '+extra:''}${l.cls}"${l.css?` style="${l.css}"`:''}>${i}${esc(text)}</div>`;}
+function groupBubbleLook(g,sid){return bubbleSingleLook(groupBubbleCfg(g,sid),sid==='me');}
+function groupBubbleIcon(g,sid){const b=groupBubbleCfg(g,sid);return b?bubbleIconSVG(b.icon||'none',b.iconColor||'#e777a5'):'';}
+function groupBubbleAvatarClass(g,sid){const b=groupBubbleCfg(g,sid);return b&&b.avatar==='round'?'av-round':'';}
 function bubbleGlowColor(bg){const m=(''+bg).match(/#[0-9a-f]{6}/i);return m?m[0]+'88':'rgba(255,160,205,.58)';}
 function bubbleShapeOpts(v){return [['square','原来方形'],['soft','圆润可爱'],['pill','胶囊圆角']].map(x=>`<option value="${x[0]}" ${v===x[0]?'selected':''}>${x[1]}</option>`).join('');}
+function bubbleAvatarOpts(v){return [['original','原来的圆角'],['round','正圆形']].map(x=>`<option value="${x[0]}" ${v===x[0]?'selected':''}>${x[1]}</option>`).join('');}
 function bubbleSolid(v,fb){const m=(''+(v||'')).match(/#[0-9a-f]{6}/i);return m?m[0]:fb;}
 function bubbleStyleOpen(id){const c=getC(id);if(!c)return;const b=c.bubbleStyle||BUBBLE_PRESETS.strawberry;
-  openModal(`<h3>微信气泡美化</h3><div class="hint">只影响你和这个角色的微信。双方气泡、字体、形状和小装饰都能分开设置；角色也可以在聊天里更换ta自己的气泡。</div>
+  openModal(`<h3>微信气泡美化</h3><div class="hint">只影响你和这个角色的微信。双方气泡、字体、头像形状和非 Emoji 小图标都能分开设置；角色也可以在聊天里更换ta自己的气泡。</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 13px">${[['strawberry','草莓粉'],['cake','奶油黄'],['panda','雾霾蓝'],['mint','薄荷青'],['night','夜空灰'],['classic','微信原版']].map(x=>`<button class="minibtn" onclick="bubblePreset('${id}','${x[0]}')">${x[1]}</button>`).join('')}</div>
-  <div class="section"><div style="padding:11px 13px;color:#c9cacf;font-weight:600">我的气泡</div><div class="two"><div class="field"><label>气泡颜色</label><input id="bs_mbg" type="color" value="${bubbleSolid(b.meBg,'#ffc0d6')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="bs_mtx" type="color" value="${bubbleSolid(b.meText,'#6b2942')}" style="height:42px;padding:3px"></div></div><div class="field"><label>形状</label><select id="bs_mshape">${bubbleShapeOpts(b.meShape||'soft')}</select></div></div>
-  <div class="section" style="margin-top:10px"><div style="padding:11px 13px;color:#aeb0b5;font-weight:600">对方气泡</div><div class="two"><div class="field"><label>气泡颜色</label><input id="bs_tbg" type="color" value="${bubbleSolid(b.themBg,'#2c2c2e')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="bs_ttx" type="color" value="${bubbleSolid(b.themText,'#ececec')}" style="height:42px;padding:3px"></div></div><div class="field"><label>形状</label><select id="bs_tshape">${bubbleShapeOpts(b.themShape||'soft')}</select></div></div>
+  <div class="section"><div style="padding:11px 13px;color:#c9cacf;font-weight:600">我的气泡</div><div class="two"><div class="field"><label>气泡颜色</label><input id="bs_mbg" type="color" value="${bubbleSolid(b.meBg,'#ffc0d6')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="bs_mtx" type="color" value="${bubbleSolid(b.meText,'#6b2942')}" style="height:42px;padding:3px"></div></div><div class="two"><div class="field"><label>气泡形状</label><select id="bs_mshape">${bubbleShapeOpts(b.meShape||'soft')}</select></div><div class="field"><label>头像形状</label><select id="bs_mavatar">${bubbleAvatarOpts(b.meAvatar||'original')}</select></div></div><div class="field"><label>气泡小图标（矢量图，不是 Emoji）</label>${bubbleIconPicker('bs_m',b.meIcon||'none',b.meIconColor||'#df6f9f')}<input id="bs_mic" type="color" value="${bubbleIconColor(b.meIconColor,'#df6f9f')}" style="height:38px;padding:3px"></div></div>
+  <div class="section" style="margin-top:10px"><div style="padding:11px 13px;color:#aeb0b5;font-weight:600">对方气泡</div><div class="two"><div class="field"><label>气泡颜色</label><input id="bs_tbg" type="color" value="${bubbleSolid(b.themBg,'#2c2c2e')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="bs_ttx" type="color" value="${bubbleSolid(b.themText,'#ececec')}" style="height:42px;padding:3px"></div></div><div class="two"><div class="field"><label>气泡形状</label><select id="bs_tshape">${bubbleShapeOpts(b.themShape||'soft')}</select></div><div class="field"><label>头像形状</label><select id="bs_tavatar">${bubbleAvatarOpts(b.themAvatar||'original')}</select></div></div><div class="field"><label>气泡小图标（矢量图，不是 Emoji）</label>${bubbleIconPicker('bs_t',b.themIcon||'none',b.themIconColor||'#e79abb')}<input id="bs_tic" type="color" value="${bubbleIconColor(b.themIconColor,'#e79abb')}" style="height:38px;padding:3px"></div></div>
   <div class="it"><span>柔光效果</span><span class="sw ${b.glow?'on':''}" id="bs_glow" onclick="this.classList.toggle('on')"></span></div>
   <div class="btns"><button class="btn g" onclick="bubbleReset('${id}')">恢复默认</button><button class="btn p" onclick="bubbleStyleSave('${id}')">保存</button></div>`);}
 function bubblePreset(id,key){const c=getC(id),p=BUBBLE_PRESETS[key];if(!c||!p)return;c.bubbleStyle=Object.assign({},p);save();render();bubbleStyleOpen(id);toast('已套用气泡主题');}
 function bubbleReset(id){const c=getC(id);if(!c)return;delete c.bubbleStyle;save();closeModal();render();toast('已恢复默认气泡');}
-function bubbleStyleSave(id){const c=getC(id);if(!c)return;c.bubbleStyle={meBg:$('#bs_mbg').value,meText:$('#bs_mtx').value,themBg:$('#bs_tbg').value,themText:$('#bs_ttx').value,meShape:$('#bs_mshape').value,themShape:$('#bs_tshape').value,glow:$('#bs_glow').classList.contains('on')};save();closeModal();render();toast('气泡美化已保存');}
+function bubbleStyleSave(id){const c=getC(id);if(!c)return;c.bubbleStyle={meBg:$('#bs_mbg').value,meText:$('#bs_mtx').value,themBg:$('#bs_tbg').value,themText:$('#bs_ttx').value,meShape:$('#bs_mshape').value,themShape:$('#bs_tshape').value,meAvatar:$('#bs_mavatar').value,themAvatar:$('#bs_tavatar').value,meIcon:$('#bs_m_icon').value,themIcon:$('#bs_t_icon').value,meIconColor:$('#bs_mic').value,themIconColor:$('#bs_tic').value,glow:$('#bs_glow').classList.contains('on')};save();closeModal();render();toast('气泡美化已保存');}
+function groupBubbleList(id){const g=S.groups.find(x=>x.id===id);if(!g)return;const people=[{id:'me',name:S.me.name,avatar:S.me.avatar}].concat(g.members.map(cid=>{const c=getC(cid);return c?{id:cid,name:c.remark||c.name,avatar:c.avatar}:null;}).filter(Boolean));
+  openModal(`<h3>群聊气泡美化</h3><div class="hint">这个群里的每个人都能单独设置，换到另一个群不会串色。</div>${people.map(p=>{const b=groupBubbleCfg(g,p.id),bg=bubbleSolid(b&&b.bg,p.id==='me'?'#95ec69':'#2c2c2e');return `<div class="section"><div class="it" onclick="groupBubbleEdit('${id}','${p.id}')">${av(p.avatar,'sm '+groupBubbleAvatarClass(g,p.id))}<span style="flex:1">${esc(p.name)}${p.id==='me'?'（我）':''}</span><span style="width:30px;height:22px;border-radius:${BUBBLE_SHAPES[b&&b.shape]||8}px;background:${bg};border:1px solid rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center">${b?bubbleIconSVG(b.icon||'none',b.iconColor||'#e777a5','bicon-preview'):''}</span><span class="v">›</span></div></div>`;}).join('')}<button class="btn g" style="margin-top:10px" onclick="groupInfo('${id}')">返回群设置</button>`);}
+function groupBubbleBase(sid,b){const me=sid==='me';return Object.assign({bg:me?'#95ec69':'#2c2c2e',text:me?'#0b3b18':'#ececec',shape:'square',avatar:'original',icon:'none',iconColor:'#e777a5',glow:false},b||{});}
+function groupBubbleEdit(id,sid){const g=S.groups.find(x=>x.id===id);if(!g)return;const c=sid==='me'?null:getC(sid),nm=sid==='me'?S.me.name:((c&&(c.remark||c.name))||'成员'),b=groupBubbleBase(sid,groupBubbleCfg(g,sid));
+  openModal(`<h3>${esc(nm)}的群聊气泡</h3><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px">${[['strawberry','草莓粉'],['cake','奶油黄'],['panda','雾霾蓝'],['mint','薄荷青'],['night','夜空灰'],['classic','微信原版']].map(x=>`<button class="minibtn" onclick="groupBubblePreset('${id}','${sid}','${x[0]}')">${x[1]}</button>`).join('')}</div>
+  <div class="two"><div class="field"><label>气泡颜色</label><input id="gbs_bg" type="color" value="${bubbleSolid(b.bg,sid==='me'?'#95ec69':'#2c2c2e')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="gbs_tx" type="color" value="${bubbleSolid(b.text,sid==='me'?'#0b3b18':'#ececec')}" style="height:42px;padding:3px"></div></div>
+  <div class="two"><div class="field"><label>气泡形状</label><select id="gbs_shape">${bubbleShapeOpts(b.shape)}</select></div><div class="field"><label>头像形状</label><select id="gbs_avatar">${bubbleAvatarOpts(b.avatar)}</select></div></div>
+  <div class="field"><label>非 Emoji 小图标</label>${bubbleIconPicker('gbs',b.icon,b.iconColor)}<input id="gbs_ic" type="color" value="${bubbleIconColor(b.iconColor,'#e777a5')}" style="height:38px;padding:3px"></div>
+  <div class="it"><span>柔光效果</span><span class="sw ${b.glow?'on':''}" id="gbs_glow" onclick="this.classList.toggle('on')"></span></div>
+  <div class="btns"><button class="btn g" onclick="groupBubbleReset('${id}','${sid}')">恢复默认</button><button class="btn p" onclick="groupBubbleSave('${id}','${sid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="groupBubbleList('${id}')">返回成员列表</button>`);}
+function groupBubblePreset(id,sid,key){const g=S.groups.find(x=>x.id===id),p=BUBBLE_PRESETS[key];if(!g||!p)return;const pre=sid==='me'?'me':'them';g.bubbleStyles=g.bubbleStyles||{};g.bubbleStyles[sid]={bg:p[pre+'Bg'],text:p[pre+'Text'],shape:p[pre+'Shape'],avatar:'original',icon:p[pre+'Icon']||'none',iconColor:p[pre+'IconColor']||'#e777a5',glow:!!p.glow};save();groupBubbleEdit(id,sid);}
+function groupBubbleSave(id,sid){const g=S.groups.find(x=>x.id===id);if(!g)return;g.bubbleStyles=g.bubbleStyles||{};g.bubbleStyles[sid]={bg:$('#gbs_bg').value,text:$('#gbs_tx').value,shape:$('#gbs_shape').value,avatar:$('#gbs_avatar').value,icon:$('#gbs_icon').value,iconColor:$('#gbs_ic').value,glow:$('#gbs_glow').classList.contains('on')};save();closeModal();render();toast('群聊气泡已保存');}
+function groupBubbleReset(id,sid){const g=S.groups.find(x=>x.id===id);if(!g)return;if(g.bubbleStyles)delete g.bubbleStyles[sid];save();groupBubbleList(id);toast('已恢复这个成员的默认样式');}
+function pfGroupBubbleMap(gid){const p=phoneFriendState();p.groupBubbleStyles=p.groupBubbleStyles||{};return p.groupBubbleStyles[gid]||(p.groupBubbleStyles[gid]={});}
+function pfGroupBubbleCfg(gid,sid){return pfGroupBubbleMap(gid)[sid]||null;}
+function pfGroupMemberIds(g){const p=phoneFriendState(),a=(g&&g.members||[]).map(x=>(''+(typeof x==='string'?x:(x.phone_id||x.id||''))).toUpperCase()).filter(x=>x&&x!==p.id);return uniq(a);}
+function pfGroupBubbleList(gid){const p=phoneFriendState(),g=pfGroupById(gid)||{members:[]},people=[{id:'me',name:S.me.name,avatar:S.me.avatar}].concat(pfGroupMemberIds(g).map(id=>{const f=phoneFriendById(id);return{id,name:pfNameById(id)||id,avatar:phoneFriendAvatar(f)};}));
+  openModal(`<h3>群聊气泡美化</h3><div class="hint">只改变你本机看到的样式。群里每个人都能单独设置，不会修改对方的数据。</div>${people.map(x=>{const b=pfGroupBubbleCfg(gid,x.id),bg=bubbleSolid(b&&b.bg,x.id==='me'?'#95ec69':'#2c2c2e');return `<div class="section"><div class="it" onclick="pfGroupBubbleEdit('${gid}','${x.id}')">${av(x.avatar,'sm '+(b&&b.avatar==='round'?'av-round':''))}<span style="flex:1">${esc(x.name)}${x.id==='me'?'（我）':''}</span><span style="width:30px;height:22px;border-radius:${BUBBLE_SHAPES[b&&b.shape]||8}px;background:${bg};border:1px solid rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center">${b?bubbleIconSVG(b.icon||'none',b.iconColor||'#e777a5','bicon-preview'):''}</span><span class="v">›</span></div></div>`;}).join('')}<button class="btn g" style="margin-top:10px" onclick="phoneFriendGroupManage('${gid}')">返回群设置</button>`);}
+function pfGroupBubbleEdit(gid,sid){const b=groupBubbleBase(sid,pfGroupBubbleCfg(gid,sid)),nm=sid==='me'?S.me.name:(pfNameById(sid)||sid);openModal(`<h3>${esc(nm)}的群聊气泡</h3><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px">${[['strawberry','草莓粉'],['cake','奶油黄'],['panda','雾霾蓝'],['mint','薄荷青'],['night','夜空灰'],['classic','微信原版']].map(x=>`<button class="minibtn" onclick="pfGroupBubblePreset('${gid}','${sid}','${x[0]}')">${x[1]}</button>`).join('')}</div>
+  <div class="two"><div class="field"><label>气泡颜色</label><input id="pgbs_bg" type="color" value="${bubbleSolid(b.bg,sid==='me'?'#95ec69':'#2c2c2e')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="pgbs_tx" type="color" value="${bubbleSolid(b.text,sid==='me'?'#0b3b18':'#ececec')}" style="height:42px;padding:3px"></div></div><div class="two"><div class="field"><label>气泡形状</label><select id="pgbs_shape">${bubbleShapeOpts(b.shape)}</select></div><div class="field"><label>头像形状</label><select id="pgbs_avatar">${bubbleAvatarOpts(b.avatar)}</select></div></div><div class="field"><label>非 Emoji 小图标</label>${bubbleIconPicker('pgbs',b.icon,b.iconColor)}<input id="pgbs_ic" type="color" value="${bubbleIconColor(b.iconColor,'#e777a5')}" style="height:38px;padding:3px"></div><div class="it"><span>柔光效果</span><span class="sw ${b.glow?'on':''}" id="pgbs_glow" onclick="this.classList.toggle('on')"></span></div><div class="btns"><button class="btn g" onclick="pfGroupBubbleReset('${gid}','${sid}')">恢复默认</button><button class="btn p" onclick="pfGroupBubbleSave('${gid}','${sid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="pfGroupBubbleList('${gid}')">返回成员列表</button>`);}
+function pfGroupBubblePreset(gid,sid,key){const p=BUBBLE_PRESETS[key];if(!p)return;const pre=sid==='me'?'me':'them';pfGroupBubbleMap(gid)[sid]={bg:p[pre+'Bg'],text:p[pre+'Text'],shape:p[pre+'Shape'],avatar:'original',icon:p[pre+'Icon']||'none',iconColor:p[pre+'IconColor']||'#e777a5',glow:!!p.glow};save();pfGroupBubbleEdit(gid,sid);}
+function pfGroupBubbleSave(gid,sid){pfGroupBubbleMap(gid)[sid]={bg:$('#pgbs_bg').value,text:$('#pgbs_tx').value,shape:$('#pgbs_shape').value,avatar:$('#pgbs_avatar').value,icon:$('#pgbs_icon').value,iconColor:$('#pgbs_ic').value,glow:$('#pgbs_glow').classList.contains('on')};save();closeModal();render();toast('群聊气泡已保存');}
+function pfGroupBubbleReset(gid,sid){delete pfGroupBubbleMap(gid)[sid];save();pfGroupBubbleList(gid);toast('已恢复这个成员的默认样式');}
 const BUBBLE_COLOR_NAMES={粉色:'#ffc5df',浅粉:'#ffd9e9',深粉:'#d9699e',红色:'#ef7b88',橙色:'#ffbd7a',黄色:'#ffe59a',奶黄:'#fff0b8',绿色:'#aee6a2',薄荷:'#a9eee2',蓝色:'#a9dcff',浅蓝:'#c9ebff',深蓝:'#6489c8',紫色:'#d5b8ef',浅紫:'#ead8f7',白色:'#ffffff',黑色:'#222228',灰色:'#b9bdc6',透明:'#ffffff'};
 function bubbleNamedColor(v,fb){v=(''+(v||'')).replace(/色$/,'色').trim();if(/^#[0-9a-f]{6}$/i.test(v))return v;const k=Object.keys(BUBBLE_COLOR_NAMES).find(n=>v===n||v.includes(n));return k?BUBBLE_COLOR_NAMES[k]:fb;}
 function bubbleShapeKey(v,fb){v=''+(v||'');return /方|原版|直角/.test(v)?'square':/胶囊|很圆|圆形/.test(v)?'pill':/圆|柔|可爱/.test(v)?'soft':fb;}
-function bubbleRoleChange(c,bg,fg,shape,silent){if(!c)return false;const base=Object.assign({meBg:'linear-gradient(135deg,#ffd6e8,#ffc0d6)',meText:'#6b2942',themBg:'#2c2c2e',themText:'#ececec',meShape:'square',themShape:'square',glow:false},c.bubbleStyle||{});let changed=false;
+function bubbleRoleChange(c,bg,fg,shape,icon,silent){if(!c)return false;const base=Object.assign({meBg:'linear-gradient(135deg,#ffd6e8,#ffc0d6)',meText:'#6b2942',themBg:'#2c2c2e',themText:'#ececec',meShape:'square',themShape:'square',themIcon:'none',themIconColor:'#e79abb',glow:false},c.bubbleStyle||{});let changed=false;
   if(bg&&bg!=='不改'){const v=bubbleNamedColor(bg,base.themBg);if(v!==base.themBg){base.themBg=v;changed=true;}}
   if(fg&&fg!=='不改'){const v=bubbleNamedColor(fg,base.themText);if(v!==base.themText){base.themText=v;changed=true;}}
   if(shape&&shape!=='不改'){const v=bubbleShapeKey(shape,base.themShape);if(v!==base.themShape){base.themShape=v;changed=true;}}
+  if(icon&&icon!=='不改'){const map={爱心:'heart',星芒:'star',星星:'star',蝴蝶结:'bow',花瓣:'flower',小花:'flower',月光:'moon',月亮:'moon',无:'none',不要:'none'};const v=map[icon]||base.themIcon;if(v!==base.themIcon){base.themIcon=v;changed=true;}}
   if(changed){base.glow=true;c.bubbleStyle=base;save();if(!silent)toast((c.remark||c.name)+'换了新的微信气泡');if(cur().p==='chat'&&cur().id===c.id)setTimeout(render,40);}return changed;}
-function applyBubbleTags(content,c){return (content||'').replace(/[[【]\s*换气泡\s*[|｜:：]\s*([^|｜\]】]*)\s*[|｜]\s*([^|｜\]】]*)\s*[|｜]\s*([^|｜\]】]*)(?:\s*[|｜]\s*[^\]】]*)?[\]】]/g,(m,bg,fg,shape)=>{bubbleRoleChange(c,bg,fg,shape);return '';});}
+function applyBubbleTags(content,c){return (content||'').replace(/[[【]\s*换气泡\s*[|｜:：]\s*([^|｜\]】]*)\s*[|｜]\s*([^|｜\]】]*)\s*[|｜]\s*([^|｜\]】]*)(?:\s*[|｜]\s*([^\]】]*))?[\]】]/g,(m,bg,fg,shape,icon)=>{bubbleRoleChange(c,bg,fg,shape,icon);return '';});}
 function bubbleNaturalRequest(text,c){text=''+(text||'');if(!/气泡/.test(text)||!/你(的|自己)|对方|ta|TA/.test(text)||!/换|改|设|用|弄|变/.test(text))return false;let bg='',fg='',shape='';
   const cm=text.match(/气泡(?:颜色)?[^，。；\n]{0,10}?(粉色|浅粉|深粉|红色|橙色|黄色|奶黄|绿色|薄荷|蓝色|浅蓝|深蓝|紫色|浅紫|白色|黑色|灰色|#[0-9a-fA-F]{6})/);if(cm)bg=cm[1];
   const fm=text.match(/(?:字体|文字)(?:颜色)?[^，。；\n]{0,10}?(粉色|浅粉|深粉|红色|橙色|黄色|奶黄|绿色|薄荷|蓝色|浅蓝|深蓝|紫色|浅紫|白色|黑色|灰色|#[0-9a-fA-F]{6})/);if(fm)fg=fm[1];
   const sm=text.match(/(原来方形|方形|直角|圆润|圆角|胶囊|很圆)/);if(sm)shape=sm[1];
-  return (bg||fg||shape)?bubbleRoleChange(c,bg,fg,shape,true):false;}
+  const im=text.match(/(爱心|星芒|星星|蝴蝶结|花瓣|小花|月光|月亮|不要图标|无图标)/);const icon=im?(im[1].includes('不要')||im[1].includes('无')?'无':im[1]):'';
+  return (bg||fg||shape||icon)?bubbleRoleChange(c,bg,fg,shape,icon,true):false;}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
 function isLover(c){if(!c||!isMain())return false;if(S.couple&&S.couple.cid===c.id)return true;return /恋人|男友|女友|男朋友|女朋友|老公|老婆|对象|未婚|爱人|情侣|伴侣|相恋|订婚|夫妻/.test((c.relation||'')+(c.persona||''));}
 function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){friendMetaSet(c,'blockedAt',Date.now());adjMood(id,-30);}save();render();
@@ -6111,9 +6159,9 @@ function bubbleRow(c,m){
   const ts=m.time?`<div class="msgt">${hm(m.time)}</div>`:'';
   const quotable=(S.settings.quoteOn!==false)&&!selecting&&(m.type==='text'||m.type==='voice');
   const lp=quotable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
-  return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar)}</span><div class="col" ${h}${lp}>${inner}${ts}</div></div>`;}
+  return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar,bubbleAvatarClass(c,me))}</span><div class="col" ${h}${lp}>${inner}${ts}</div></div>`;}
 function buildPart(c,m,me){
-  const _bl=bubbleLook(c,me);
+  const _bl=bubbleLook(c,me),_bi=bubbleIconFor(c,me);
   if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#ff8fab,#b8a4e3)"><div class="big">🎧</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">🎵 点击进入一起听</div></div>`;
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
@@ -6142,7 +6190,7 @@ function buildPart(c,m,me){
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">${svgIc('money',30,'#fff')}</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">${svgIc('refresh',30,'#fff')}</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
   if(m.type==='voice'){const dur=m.dur||Math.max(1,Math.round((m.content||'').length/3)),wide=Math.min(60+dur*8,200),loading=voiceTtsPending(m);
-    return quoteBar(m)+`<div class="bubble voiceb${loading?' loading':''}${_bl.cls}" style="min-width:${wide}px;${_bl.css}" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();${loading?'':`vtoggle('${m.id}')`}"><span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
+    return quoteBar(m)+`<div class="bubble voiceb${loading?' loading':''}${_bl.cls}" style="min-width:${wide}px;${_bl.css}" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();${loading?'':`vtoggle('${m.id}')`}">${_bi}<span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
   if(m.type==='sticker'){return `<div class="stickermsg"><img src="${m.img}">${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;}
   if(m.type==='familycard'){const bnd=m.bound;
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e8527f;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
@@ -6160,7 +6208,7 @@ function buildPart(c,m,me){
     return `<div class="card" style="width:252px;background:linear-gradient(145deg,#101821,#172233);border:1px solid #435267;box-shadow:0 8px 22px rgba(0,0,0,.22)"><div style="padding:13px 13px 12px"><div style="color:#9db0c6;font-size:11px;margin-bottom:7px;display:flex;align-items:center;gap:6px;letter-spacing:.5px">${svgIc('mask',13,'#9db0c6')} 角色扮演房间 · ${esc(who)}</div><div style="color:#eef3f8;font-size:15px;font-weight:700;line-height:1.35">${esc(m.title||'本次剧情')}</div><div style="color:#9fb0c0;font-size:12px;margin-top:7px;line-height:1.65">${roles}${m.when?('<br>时间：'+esc(m.when)) : ''}</div></div><div class="cfoot" style="color:#8fa0b6;background:rgba(255,255,255,.05)">${esc(st)}</div></div><div style="display:flex;gap:6px;margin-top:5px"><button class="minibtn" style="background:#243447;color:#fff" onclick="event.stopPropagation();openRoleplayFromCard('${m.roomId||c.id}')">${m.finished?'查看存档':'进入剧情'}</button></div>`;}
   if(m.type==='gameinvite'){const st=m.status;const playing=st==='accepted';
     return `<div class="card" style="width:240px;background:#1d2342;border:1px solid #4a5bb0"><div style="padding:12px"><div style="color:#9db4ff;font-size:11px;margin-bottom:4px">🎮 游戏邀请</div><div style="color:#e3e9ff;font-size:14px;font-weight:600">${esc(m.ge||'')} ${esc(m.gname||'一起玩')}</div><div style="color:#aab6e8;font-size:12px;margin-top:5px">想拉你进游戏空间一起玩～</div></div><div class="cfoot" style="color:#8fa0d8">${st==='accepted'?'ta答应啦🎮':st==='declined'?'ta这会儿不想玩':'等ta同意…'}</div></div>${playing?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#5b6bd6;color:#fff" onclick="event.stopPropagation();enterGameNow('${c.id}','${m.game}')">▶ 进入游戏</button></div>`:''}`;}
-  return quoteBar(m)+`<div class="bubble${_bl.cls}"${_bl.css?` style="${_bl.css}"`:''}>${esc(m.content)}</div>`;}
+  return quoteBar(m)+`<div class="bubble${_bl.cls}"${_bl.css?` style="${_bl.css}"`:''}>${_bi}${esc(m.content)}</div>`;}
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   if(voiceTtsPending(m)){refreshVoiceBubble(m);return;}
   audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
@@ -6264,14 +6312,16 @@ function quoteBar(m){if(!m||!m.quote||!m.quote.text)return '';const who=m.quote.
 
 /* 功能面板发送 */
 function readAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
+async function visionPhotoSource(f,max,q){let src='';try{src=await compress(f,max,q);}catch(_){}if(!/^data:image\/(?:jpeg|png|webp);base64,/i.test(src||''))throw new Error('这张图片的格式暂不兼容识图，请先保存成 JPG 或 PNG');return src;}
 function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',async f=>{
   let src;try{src=await compress(f,1400,.78);}catch(e){src=null;}
   if(!src){try{src=await readAsDataURL(f);}catch(e){toast('图片读取失败，再试一次');return;}}
   const m={role:'user',type:'image',src,desc:'',id:uid()};pushMsg(id,m);
   let okv=false;
-  const _vp='仔细、具体地用中文描述这张图，抓住最有特点/最好笑/最关键的细节：\n· 有人物：说清性别、年龄段、长相和颜值（好看/普通/丑/凶/搞笑/油腻等，如实直说别回避别客气）、表情神态、发型穿着、正在做什么、给人的感觉。\n· 是表情包/梗图/搞笑图/截图：点明是哪种、在表达什么梗或情绪。\n· 是物品/风景/动物/食物/自拍：说清是什么、什么样子、氛围。\n用2到3句白话说清楚，让没看过图的人也能脑补出画面，别只说"一个人""一张图"这种笼统的。';
-  let visionErr='';try{const d=await visionAPI(src,_vp);if(d){m.desc=d;okv=true;save();}}catch(e){visionErr=(e&&e.message)||'识图失败';}
-  if(!okv)toast('识图失败：'+visionErr.replace(/^vision-fail:\s*/,'').slice(0,90));
+  const _vp='请仔细、客观地用中文描述这张图片。有人物时说清人数、年龄段、表情、发型穿着、动作和场景；是聊天截图、表情包或梗图时，读出关键文字并说明表达的意思；是物品、风景、动物或食物时，说清主体、颜色、细节和氛围。用2到3句自然白话描述，让没看过图的人也能理解，不要评价或攻击人物。';
+  let visionErr='',visionSrc='';try{visionSrc=await visionPhotoSource(f,900,.66);if(visionSrc.length>650000)visionSrc=await visionPhotoSource(f,620,.58);const d=await visionAPI(visionSrc,_vp);if(d){m.desc=d;okv=true;save();}}catch(e){visionErr=(e&&e.message)||'识图失败';}
+  if(!okv&&!/格式暂不兼容/.test(visionErr)){try{const small=await visionPhotoSource(f,520,.54),d=await visionAPI(small,'用两三句中文客观描述图片主体、关键文字和最明显的细节。');if(d){m.desc=d;okv=true;m.visionRetried=true;save();}}catch(e){visionErr=(e&&e.message)||visionErr;}}
+  if(!okv){m.visionError=visionErr.replace(/^vision-fail:\s*/,'').slice(0,180);save();toast('识图失败：'+m.visionError.slice(0,90));}
   scheduleReply(id);});}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
 function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>转账</h3>
@@ -6779,7 +6829,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
   // typing
   let typingEl;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){
     const stick=nearBottom(cb);
-    cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
+    cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
     if(stick)cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
@@ -7645,7 +7695,7 @@ function momentTools(){const n=(S.visitors||[]).length;openModal(`<h3>朋友圈<
   <button class="btn g" onclick="closeModal();refreshMoments()">刷新朋友圈</button>
   <button class="btn g" style="margin-top:12px" onclick="closeModal()">取消</button>`);}
 function wxMoments(){
-  const src=S.me.momentCover||'';const cover=src?`<div class="coverfill" style="background-image:url(${src})"></div><img class="coverfull" src="${src}">`:'';
+  const src=S.me.momentCover||'';const cover=src?`<img class="coverfull" src="${src}">`:'';
   return `<div class="mcover" onclick="changeCover()">${cover}<div class="me"><div class="nm">${esc(S.me.name)}</div>${av(S.me.avatar,'lg')}</div></div>
     ${(function(){const ms=S.moments.filter(p=>(p.acct||'main')===actId());return ms.length?ms.map(momentHTML).join(''):'<div class="empty">'+(isMain()?'还没有朋友圈，点右上角「＋」刷新或发表':'这个身份的朋友圈还是空的～')+'</div>';})()}
     <div style="height:20px"></div>`;}
@@ -7658,7 +7708,7 @@ function momentHTML(p){const author=p.authorId==='me'?S.me:getC(p.authorId);if(!
     ${p.images&&p.images.length?`<div class="imgs ${p.images.length===1?'one':''}">${p.images.map(im=>`<div class="ph" onclick="viewImg('${im}')"><img src="${im}"></div>`).join('')}</div>`:''}
     ${(p.authorId==='me'&&p.visible&&p.visible.length)?`<div style="font-size:11px;color:#888;margin-top:3px">仅 ${p.visible.map(id=>{const cc=getC(id);return cc?esc(cc.remark||cc.name):'?';}).join('、')} 可见</div>`:''}
     <div class="ft"><div class="tm">${ago(p.time)}</div><div class="acts" onclick="momentMenu('${p.id}')">···</div></div>
-    ${p.likes&&p.likes.length?`<div class="likes"><span class="like-label">赞</span>${p.likes.map(l=>esc(l)).join('，')}</div>`:''}
+    ${p.likes&&p.likes.length?`<div class="likes"><span class="moment-heart"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#e777a5" d="M12 21s-7.4-4.4-9.7-9.1C.4 8 2.4 4.5 6.1 4.2c2.1-.2 4.1.9 5.9 3 1.8-2.1 3.8-3.2 5.9-3 3.7.3 5.7 3.8 3.8 7.7C19.4 16.6 12 21 12 21z"/></svg></span>${p.likes.map(l=>esc(l)).join('，')}</div>`:''}
     ${p.comments&&p.comments.length?`<div class="cmts">${p.comments.map((cm,ci)=>`<div class="cmt" onclick="replyComment('${p.id}',${ci})"><b>${esc(cm.name)}：</b>${esc(cm.text)}</div>`).join('')}</div>`:''}
   </div></div>`;}
 function momentMenu(pid){const p=S.moments.find(x=>x.id===pid);
