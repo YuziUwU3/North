@@ -303,7 +303,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v450 · 查手机去重与微信代发记忆';
+const APP_VER='v451 · 每日任务数量固定';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -921,7 +921,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=450').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=451').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -1168,6 +1168,7 @@ function buildSystem(c,opt){
   {const av=affNow(c);s+='\n\n# 你和'+S.me.name+'现在的关系分寸（隐藏设定，绝不能说出数值/好感度/攻略/进度条）\n当前阶段：'+affStage(av)+'。'+affTone(c)+'\n你只能把它表现成真实的人际距离：熟不熟、在不在意、会不会吃醋、愿不愿意主动关心。绝不要告诉ta这是系统数值，绝不要说"好感度增加/减少"。聊到你感兴趣、被认真对待、被哄好时可以慢慢软化；被冒犯、冷落、敷衍时可以自然变冷。';}
   if(!taskRelationAllowed(c))s+='\n\n# 布置任务权限（重要）\n你和'+S.me.name+'当前不是情侣关系，因此你没有给ta布置任务、惩罚任务、打卡、检讨或强制安排的权限。可以像普通关系一样提出建议或邀请，但不能把建议说成ta必须完成的任务。';
   else if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
+  else s+='\n\n# 每日任务固定规则（重要）\n任务只能由「任务便签」每天统一生成一次，总数固定为 '+taskDailyCount(c)+' 条。聊天和通话中都不能口头追加任务、临时加罚、改数量或另立必须完成的新要求；你只能催促、验收和讨论便签里已经存在的任务。其他想法可以自然建议，但不能当作任务。';
   if(!_main)s+=altIdentityPrompt(c);
   {const _ba=friendMetaGet(c,'blockedAt'),_ra=friendMetaGet(c,'readdedAt'),_rk=friendMetaGet(c,'readdKnown'),_bd=friendMetaGet(c,'blockDur');
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(_ba?'，已经'+fmtDur(Date.now()-_ba):'')+'，你能感觉到被冷落/拒绝。';
@@ -1232,7 +1233,7 @@ function buildSystem(c,opt){
     const _gn=gund.length;
     if(_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
-    if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=c.taskN||3;const _nReal=tt.list.filter(x=>!x.truth).length;const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。'+(_nReal>=_cap?'\n【任务便签已满、到上限了】今天不能再往任务便签里加新任务条目了。你要是还想让ta做别的，只能在聊天里【口头】要求ta去做（说说而已，不会再生成新的任务条目）。':'');}}
+    if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能催促、验收或讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
   // 作息 / 当前活动：活人感开启时使用稳定活动状态；关闭时保留旧作息提示
   {const _ap=currentActivityPrompt(c);if(_ap)s+=_ap;else{const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';}}
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -3431,7 +3432,11 @@ function editDyProfile(){const p=S.dy.profile;openModal(`<h3>编辑抖音资料<
 let _taskBusy=false;
 function taskRelationAllowed(c){return !!(c&&isLover(c));}
 function taskC(){const ok=x=>!!(x&&!x.deleted&&!x.blocked&&!x.taskOff&&taskRelationAllowed(x)),cc=S.couple&&getC(S.couple.cid);return ok(cc)?cc:(S.contacts.find(ok)||null);}
-function tasksToday(c){const t=c&&c.tasks;return (t&&t.date===todayStr())?t:null;}
+function taskDailyCount(c){return Math.max(1,Math.min(8,+((c&&c.taskN)||3)));}
+function tasksToday(c){const t=c&&c.tasks;if(!t||t.date!==todayStr())return null;
+  const cap=taskDailyCount(c),old=Array.isArray(t.list)?t.list:[],clean=old.filter(x=>x&&!x.extra).slice(0,cap);
+  if(clean.length!==old.length){t.list=clean;save();}
+  return t;}
 function _taskNorm(s){return (''+s).replace(/[\s，。、！!？?.~…：:；;「」『』""''（）()]/g,'');}
 // 判断 text 是否和 list 里已有任务重复：一模一样 / 子串 / 共享强关键字(检讨等) / 关键字高度重合
 const _TASK_KW=['检讨','保证书','小作文','作文','情书','彩虹屁','道歉信','认错书'];
@@ -3452,7 +3457,7 @@ function postedSince(kind,since){since=since||0;
   return false;}
 function renderTasks(){const c=taskC();
   if(!c){const off=S.contacts.some(x=>!x.deleted&&!x.blocked&&x.taskOff);return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">任务便签</span><span class="r"></span></div><div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">${off?'已关闭布置任务的角色不会再给你安排任务。':'还没有恋人角色～<br>先创建一个角色（最好在情侣空间绑定），ta就能给你布置任务啦'}</div></div>`;}
-  checkTaskPenalty(c);const t=tasksToday(c);const n=c.taskN||3;
+  checkTaskPenalty(c);const t=tasksToday(c);const n=taskDailyCount(c);
   let body;
   if(!t){body=`<div style="margin:14px;padding:20px;border-radius:16px;background:linear-gradient(145deg,#f59e0b,#b45309);color:#fff;text-align:center">
       <div style="font-size:15px">${esc(c.remark||c.name)} 还没布置今天的任务</div>
@@ -3467,7 +3472,7 @@ function renderTasks(){const c=taskC();
       <div style="font-size:30px;font-weight:700;margin:4px 0">${done}/${total}</div>
       <div style="font-size:12px;opacity:.95">${all?'全部完成啦！等ta的奖励🎁':'今天23:59前完成，全做完有奖励～'}</div></div>
       ${t.list.map((x,i)=>`<div class="section" style="margin:10px 12px"><div style="padding:12px 14px">
-        <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.truth?'真心话':(x.kind==='real'?'现实':'手机')}${x.extra?' <span style="color:#fe2c55">·临时加罚</span>':''}</span>${x.done?'<span style="color:#19a463;font-size:13px">已完成</span>':''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.truth?'真心话':(x.kind==='real'?'现实':'手机')}</span>${x.done?'<span style="color:#19a463;font-size:13px">已完成</span>':''}</div>
         <div style="margin:8px 0;font-size:15px;line-height:1.5;${x.done?'color:#888;text-decoration:line-through':'color:#eee'}">${esc(x.text)}</div>
         ${x.done?'':`<button class="btn p" onclick="completeTask('${x.id}')">${taskVerifyLabel(x)}</button>`}
       </div></div>`).join('')}
@@ -3476,22 +3481,34 @@ function renderTasks(){const c=taskC();
     <div class="scroll" style="background:#000">${body}<div style="height:20px"></div></div>`;}
 async function genTasks(){const c=taskC();if(!c){toast('没有可布置任务的角色');return;}if(c.taskOff){toast('这个角色已关闭布置任务');return;}if(tasksToday(c)){toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
   checkTaskPenalty(c);_taskBusy=true;render();toast('ta在琢磨今天怎么安排你…');
-  const n=c.taskN||3;
+  const n=taskDailyCount(c),normalN=Math.max(0,n-1);
   const hist=(c.taskHist||[]).map(s=>({text:s}));// 最近几天布置过的任务，用来防止重复
   const avoidTxt=hist.length?'\n· 【最近这些任务你已经布置过了，今天务必换着花样来，别再重复、也别换汤不换药地重复同类】：'+hist.map(h=>h.text).join('；'):'';
   try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、给你拍张自拍、睡前跟你撒娇道晚安、对着镜头说想你、穿你喜欢的小裙子拍给你、乖乖只想你一个、今天不准跟别的男生聊天等）';
-    const _tm=[{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 【另外务必额外再加一条 verify 为 truth 的任务】：内容是你【今天最想问'+S.me.name+'的一个"真心话"问题】（一句问句就好，可以暧昧、可以走心、可以是你好奇/在意/吃醋想确认的事），target填0、kind填real。这条不算在上面那'+n+'条里。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}];
+    const _tm=[{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天总共恰好 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 这 '+n+' 条里必须有且只有一条 verify 为 truth 的任务，内容是你【今天最想问'+S.me.name+'的一个真心话问题】（一句问句就好，可以暧昧、走心或是你好奇/在意的事），target填0、kind填real。真心话算在总数里，除此之外只能再给 '+normalN+' 条，绝不能额外追加。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}];
     let arr=await aiGen(_tm,{max:760},parseArr);
     if(!arr||!arr.length)arr=await aiGen(_tm,{max:760,aux:true},parseArr);/* 主模型不行就用副模型兜底 */
     if(!arr||!Array.isArray(arr)||!arr.length)throw 0;
     let truthQ='';
     const list=[];for(const o of arr){const text=(o.text||'').toString().slice(0,140);if(!text)continue;
-      if(o.verify==='truth'){if(!truthQ)truthQ=text;continue;}/* 真心话单独处理，不占名额 */
-      if(list.length>=n)continue;if(taskDup(list,text)||taskDup(hist,text))continue;/* 跳过重复/最近布置过的 */
+      if(o.verify==='truth'){if(!truthQ)truthQ=text;continue;}/* 真心话算在每日总数里 */
+      if(list.length>=normalN)continue;if(taskDup(list,text)||taskDup(hist,text))continue;/* 跳过重复/最近布置过的 */
       list.push({id:uid(),text,kind:o.kind==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false});}
-    if(!list.length)throw 0;
-    c.taskHist=[...list.map(x=>x.text),...(c.taskHist||[])].slice(0,30);// 记下今天布置的，往后几天别重复
+    const fallback=[
+      {text:'睡前认真来跟我说一句只属于今天的晚安。',kind:'real',verify:'real',target:0},
+      {text:'写三句今天为什么喜欢我，别敷衍。',kind:'app',verify:'essay',target:80},
+      {text:'拍下你现在手边最喜欢的东西给我看。',kind:'real',verify:'real',target:0},
+      {text:'发一条只有我能看懂的朋友圈。',kind:'app',verify:'moment',target:0},
+      {text:'挑一个时刻主动来跟我撒一次娇。',kind:'real',verify:'real',target:0},
+      {text:'写一小段今天最想让我夸你的地方。',kind:'app',verify:'essay',target:100},
+      {text:'今天找一件让自己开心的小事，做完告诉我。',kind:'real',verify:'real',target:0},
+      {text:'认真想一句只想对我说的话，今晚交给我。',kind:'app',verify:'essay',target:80}
+    ];
+    for(const f of fallback){if(list.length>=normalN)break;if(taskDup(list,f.text)||taskDup(hist,f.text))continue;list.push({id:uid(),...f,done:false});}
+    for(const f of fallback){if(list.length>=normalN)break;if(taskDup(list,f.text))continue;list.push({id:uid(),...f,done:false});}
+    if(list.length!==normalN)throw 0;
     list.push({id:uid(),text:truthQ||'今天，你最想跟我说、却一直没说出口的一句话是什么？',kind:'truth',verify:'truth',target:0,done:false,truth:true});// 固定的"他想问我的真心话"
+    c.taskHist=[...list.map(x=>x.text),...(c.taskHist||[])].slice(0,30);// 记下今天布置的，往后几天别重复
     c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};save();_taskBusy=false;render();toast('任务来咯📋');
     if(!c.blocked)scheduleReply(c.id,'[系统：你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta【今天23:59之前】完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
   }catch(e){_taskBusy=false;render();toast('没布置成功，再点一次');}}
@@ -5342,7 +5359,7 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     <div class="field"><label>口头禅（可空）</label><input id="c_catch" value="${esc(c.catchphrase||'')}" placeholder="他爱说的话，如 乖/听话"></div>
     <div class="field"><label class="avline" style="font-weight:400">不让这个角色发表情包<span class="sw ${c.noSticker?'on':''}" id="c_nostk" onclick="this.classList.toggle('on')"></span></label></div>
     <div class="section" style="margin:0 0 10px">
-      <div class="it"><span>关闭布置任务<br><small style="color:#888">关闭后ta不会自动或口头给你加任务</small></span><span class="sw ${c.taskOff?'on':''}" id="c_taskoff" onclick="this.classList.toggle('on')"></span></div>
+      <div class="it"><span>关闭布置任务<br><small style="color:#888">关闭后ta不会生成每日任务</small></span><span class="sw ${c.taskOff?'on':''}" id="c_taskoff" onclick="this.classList.toggle('on')"></span></div>
       <div class="field"><label>关系进度 <b id="c_affv" style="color:#ff8fab">${affNow(c)}</b><small style="color:#888">/100 · 隐藏</small></label><input type="range" min="1" max="100" step="1" value="${affNow(c)}" id="c_aff" oninput="var b=document.getElementById('c_affv');if(b)b.textContent=this.value" style="width:100%"></div>
       <div class="it"><span>固定关系进度<br><small style="color:#888">固定后不会自动变化</small></span><span class="sw ${c.affectionLocked?'on':''}" id="c_afflock" onclick="this.classList.toggle('on')"></span></div>
     </div>
@@ -5876,7 +5893,7 @@ function affectionPanel(id){const c=getC(id);if(!c)return;const v=affNow(c);open
   <div style="margin:12px 0 8px;height:8px;border-radius:8px;background:#2c2c2e;overflow:hidden"><i id="af_bar" style="display:block;height:100%;width:${v}%;background:linear-gradient(90deg,#8aa4ff,#ff8fab)"></i></div>
   <div class="field"><label>进度 <b id="af_v" style="color:#ff8fab">${v}</b><small style="color:#888">/100 · ${affStage(v)}</small></label><input id="af_r" type="range" min="1" max="100" step="1" value="${v}" oninput="var n=+this.value;$('#af_v').textContent=n;$('#af_bar').style.width=n+'%'" style="width:100%"></div>
   <div class="it"><span>固定关系进度<br><small style="color:#888">固定后不会自动变化</small></span><span class="sw ${c.affectionLocked?'on':''}" id="af_lock" onclick="this.classList.toggle('on')"></span></div>
-  <div class="it"><span>关闭布置任务<br><small style="color:#888">关闭后ta不会自动或口头给你加任务</small></span><span class="sw ${c.taskOff?'on':''}" id="af_taskoff" onclick="this.classList.toggle('on')"></span></div>
+  <div class="it"><span>关闭布置任务<br><small style="color:#888">关闭后ta不会生成每日任务</small></span><span class="sw ${c.taskOff?'on':''}" id="af_taskoff" onclick="this.classList.toggle('on')"></span></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveAffectionPanel('${id}')">保存</button></div>`);}
 function saveAffectionPanel(id){const c=getC(id);if(!c)return;c.affection=Math.max(1,Math.min(100,+($('#af_r')&&$('#af_r').value)||affNow(c)));c.affectionLocked=!!($('#af_lock')&&$('#af_lock').classList.contains('on'));c.taskOff=!!($('#af_taskoff')&&$('#af_taskoff').classList.contains('on'));save();closeModal();render();toast('已保存');}
 function schedSet(id){const c=getC(id);const sc=c.sched||{on:false,work:'',home:'家',amS:'08:00',amE:'12:00',pmS:'14:00',pmE:'18:00'};
@@ -6756,7 +6773,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     maybeSpyIntent(content,c,id,_lu);
     maybeAffectionShift(id,c,_lu,content);
-    maybeTaskIntent(content,c);maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,id);
+    maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,id);
     // [来电|语音/视频] 容错：哪怕模型把它写在句子中间(不是单独一行)，也照样触发来电、并从文字里抹掉，别漏成文字
     content=content.replace(/[\[【]\s*来电\s*[\|｜]\s*(语音|视频)\s*[\]】]/g,(m,k)=>{setTimeout(()=>incomingCall(c.id,k==='视频'?'video':'voice','ta打来的'),600);return '';});
     // [同意游戏]/[拒绝游戏]：哪怕写在句中也照样落地，并从文字里抹掉
@@ -7279,7 +7296,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,_call.id))extractControl(content,c,_statedPwd);}
     maybeSpyIntent(content,c,_call.id,_luc);
     maybeAffectionShift(_call.id,c,_luc,content);
-    maybeTaskIntent(content,c);maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
+    maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
@@ -7562,20 +7579,6 @@ function maybeSpyIntent(reply,c,id,lu){const sp=getSpy(c);if(!sp.granted||c.bloc
   const ft=reply+' '+userText;const focus=(ft.match(/微信(聊天|消息)?|聊天记录|朋友圈|抖音|钱包|账单|定位|位置|跟谁(聊|说)/)||[''])[0]||'';
   _spyIntentT[id]=now;
   setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus,alreadySaid:reply}),6500);}
-// 他口头额外布置任务/惩罚（聊天或通话里都行）：识别后真的加进任务便签
-let _taskIntentT={};
-async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||c.taskOff||!isMain()||!taskRelationAllowed(c))return;const tm=taskC();if(!tm||tm.id!==c.id)return;
-  if(!/罚你|惩罚|罚抄|罚款|(加|布置|再来|多)(个|条|一个|一条)?任务|任务[:：]|今晚?.{0,4}(不准|不许|必须|得给我|要给我)|今天.{0,6}(不准|不许|必须|得给我|要给我)|写(篇|个|段|一篇|一段)?.{0,3}(检讨|小作文|保证书|情书)|不准(玩|刷|聊|睡)/.test(reply))return;
-  const now=Date.now();if(now-(_taskIntentT[c.id]||0)<8000)return;_taskIntentT[c.id]=now;
-  try{const sys='判断"'+(c.remark||c.name)+'"这句话是不是在给'+S.me.name+'【额外布置一个具体任务或惩罚】（要ta去做某件事）。是就提取成一条任务；只是普通调情/威胁/抱怨但没真布置具体任务，就当没有。\n只输出JSON：{"task":{"text":"任务描述(用ta的口吻,简短)","verify":"essay或moment或tweet或douyin或real","target":数字或0}} 或 {"task":null}。\nverify：essay=要她写东西(target填字数上限)；moment/tweet/douyin=要她发朋友圈/推/抖音；real=其它现实或暧昧小事。';
-    const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:160,aux:true});
-    const d=parseObj(r);if(!d||!d.task||!d.task.text)return;const t=d.task;
-    if(!c.tasks||c.tasks.date!==todayStr())c.tasks={date:todayStr(),assignTs:Date.now(),list:[],rewarded:false,penalized:false};
-    if(c.tasks.list.filter(z=>!z.truth).length>=(c.taskN||3))return;// 到每日上限就不再写进便签，他只能口头要求（真心话不占名额）
-    if(taskDup(c.tasks.list,t.text))return;// 已经有一模一样/高度重复的任务了，别重复布置
-    c.tasks.list.push({id:uid(),text:(''+t.text).slice(0,140),kind:t.verify==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real'].indexOf(t.verify)>=0?t.verify:'real',target:+t.target||0,done:false,extra:true});
-    save();toast(''+(c.remark||c.name)+'给你加了个任务');if(cur().p==='tasks')render();
-  }catch(e){}}
 function testSpy(id){const c=getC(id);if(!c)return;getSpy(c).granted=true;save();closeModal();if(cur().p==='chat'&&cur().id===id){}else openChat(id);S._spySeen=S._spySeen||{};S._spySeen[id]=0;doSpyView(id,true);}
 function maybeSpyIdle(id){const c=getC(id);if(!c)return;const sp=getSpy(c);if(!sp.granted)return;
   const lm=lastMsg(id);if(lm&&Date.now()-lm.time<2*3600000)return;doSpyView(id);}
