@@ -305,7 +305,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v457 · Claude原生识图与回复等待';
+const APP_VER='v458 · 高级礼物卡与丝滑消息';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -1344,6 +1344,11 @@ function cur(){return stack[stack.length-1];}
 function renderPageKey(c){if(!c)return'';if(c.p==='chat')return'chat:'+c.id;if(c.p==='pfchat')return'pfchat:'+c.id;if(c.p==='pfgroup')return'pfgroup:'+c.gid;if(c.p==='group')return'group:'+c.id;if(c.p==='mgroom')return'mgroom:'+c.id;if(c.p==='hischat')return'hischat:'+c.id+':'+c.fid;if(c.p==='dydm')return'dydm:'+c.id;return c.p;}
 function renderScrollTarget(c){if(!c)return null;if(c.p==='hischat'&&c.fid==='__me')return{id:'hisselflog',stick:true};const map={settings:['settingsscroll',0],couple:['couplescroll',0],chat:['chatbg',1],pfchat:['pfchatbg',1],pfgroup:['pfgroupbg',1],group:['chatbg',1],mgroom:['mgrbg',1],alter:['alterbg',1],tale:['talebox',1],dread:['dreadbox',1],xdm:['xdmbox',1],dydm:['dydmbox',1],shopcs:['csbox',1],off:['offbg',1],rp:['rpbg',1],jail:['jailbox',1],gs:['gsbg',1],hischat:['hischatlog',1]};const x=map[c.p];return x?{id:x[0],stick:!!x[1]}:null;}
 function nearBottom(el){return !el||Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight)<80;}
+function appendChatHTML(cb,html,opt){if(!cb||!html)return null;opt=opt||{};const stick=nearBottom(cb),typing=opt.replaceTyping?cb.querySelector('#typing'):null;let node=null;
+  if(typing&&typing.isConnected){typing.insertAdjacentHTML('afterend',html);node=typing.nextElementSibling;typing.remove();}
+  else{cb.insertAdjacentHTML('beforeend',html);node=cb.lastElementChild;}
+  if(node&&node.classList&&node.classList.contains('msg')&&opt.animate!==false)node.classList.add('msg-enter');
+  if(stick)requestAnimationFrame(()=>{try{cb.scrollTo({top:cb.scrollHeight,behavior:opt.smooth===false?'auto':'smooth'});}catch(_){cb.scrollTop=cb.scrollHeight;}});return node;}
 function captureRenderScroll(c){const t=renderScrollTarget(c);if(!t)return null;const el=document.getElementById(t.id);if(!el)return{key:renderPageKey(c),id:t.id,had:false};const bottom=Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight);return{key:renderPageKey(c),id:t.id,had:true,top:el.scrollTop,bottom,nearBottom:bottom<80};}
 function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;const el=document.getElementById(t.id);if(!el)return;const same=st&&st.had&&st.key===renderPageKey(c)&&st.id===t.id;if(t.stick){if(!same||st.nearBottom)el.scrollTop=el.scrollHeight;else el.scrollTop=st.top;}else if(same){el.scrollTop=st.top;}}
 function render(){
@@ -2754,7 +2759,7 @@ function giftFlow(i){const p=S.shop.results[i];if(!p)return;window._gp=p;pickTar
 function giftTo(id){const p=window._gp;if(!p)return;if(+p.price>S.me.balance){toast('余额不够');return;}
   addBill('out',+p.price,'送'+(getC(id).remark||getC(id).name)+'：'+p.name);
   pushMsg(id,{role:'user',type:'gift',name:p.name,price:+p.price,shop:p.shop||'',from:'me',received:false,id:uid()});
-  adjMood(id,8);closeModal();toast('已送出，等对方收下 🎁');scheduleReply(id);}
+  adjMood(id,8);closeModal();toast('已送出，等对方收下');scheduleReply(id);}
 function lastGift(id){return [...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='gift'&&x.from==='me'&&!x.received&&!x.declined);}
 function payFlow(i){const p=S.shop.results[i];if(!p)return;window._pp=p;pickTarget(payTo);}
 function payTo(id){const p=window._pp;if(!p)return;
@@ -2943,8 +2948,8 @@ function parcelDeliver(cid,name,price,kind,opts){opts=opts||{};name=(''+(name||'
 function giftSend(cid,name,price){if(!cid)return;const c=getC(cid);name=(''+(name||'礼物')).slice(0,30);price=+price||0;
   if(msgs(cid).some(x=>x.role==='assistant'&&x.type==='gift'&&x.name===name&&Date.now()-(x.time||0)<180000))return;/* 3分钟内同样礼物不重复送(防挂电话后再送一次) */
   parcelDeliver(cid,name,price,'gift');
-  if(c)msgs(cid).push({role:'assistant',type:'gift',name,price,from:'ta',shipping:true,id:uid(),time:Date.now()});
-  save();const cu=cur();if(cu&&((cu.p==='chat'&&cu.id===cid)||cu.p==='wechat'))render();}
+  const gm=c?{role:'assistant',type:'gift',name,price,from:'ta',shipping:true,id:uid(),time:Date.now()}:null;if(gm)msgs(cid).push(gm);
+  save();const cu=cur();if(cu&&cu.p==='chat'&&cu.id===cid&&gm){const cb=$('#chatbg');if(cb)appendChatHTML(cb,bubbleRow(c,gm),{replaceTyping:true});}else if(cu&&cu.p==='wechat')render();}
 function checkGiftDelivery(){if(!isMain())return;const now=Date.now();let ch=false;const gb=S.giftbox||[];
   gb.forEach(g=>{if(!g.delivered&&now>=g.arriveTs){g.delivered=true;ch=true;const c=getC(g.cid);const k=g.kind||'gift';const who=c?(c.remark||c.name):'ta';
     if(k==='food'){const sm={role:'user',type:'sys',content:'🛵 '+who+'帮你付的外卖「'+g.name+'」送到了，趁热吃~',time:Date.now(),id:uid()};if(g.cid){msgs(g.cid).push(sm);if(c&&!c.blocked)scheduleReply(g.cid,'[系统：你帮'+S.me.name+'付钱点的外卖「'+g.name+'」刚送到ta那儿了。自然地宠ta、叮嘱ta趁热吃一句，一两句。]');}playDing();return;}
@@ -6208,8 +6213,8 @@ function buildPart(c,m,me){
   if(m.type==='ticket'&&m.trip)return tvTicketCardHTML(m.trip,getC(m.trip.cid));
   if(m.type==='dice')return `<div style="font-size:46px;line-height:1">${['','⚀','⚁','⚂','⚃','⚄','⚅'][m.value]||'🎲'}<span style="font-size:15px;color:#999;margin-left:6px">${m.value}点</span></div>`;
   if(m.type==='gift'){const pend=(m.from==='ta'&&!m.received&&!m.declined&&!m.shipping);
-    const t2=m.shipping?'📦 已寄出·明天到你信箱📮':m.declined?(m.from==='ta'?'已拒收':'对方拒收·已退回'):m.received?(m.from==='ta'?'已领取':'对方已收下'):(m.from==='ta'?'点击领取礼物':'¥'+(+m.price).toFixed(2)+' · 待对方收下');
-    return `<div class="card"><div class="cpay" style="background:${(m.received||m.declined)?'#d9b48a':'#ee5a6f'}"><div class="big">🎁</div><div><div class="t1">${esc(m.name)}</div><div class="t2">${t2}</div></div></div><div class="cfoot">${m.shop?esc(m.shop)+' · ':''}礼物</div></div>${pend?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#ee5a6f;color:#fff" onclick="event.stopPropagation();receiveGift('${m.id}')">领取</button><button class="minibtn" onclick="event.stopPropagation();rejectGift('${m.id}')">拒收</button></div>`:''}`;}
+    const status=m.shipping?'已寄出 · 明日送达信箱':m.declined?(m.from==='ta'?'已拒收':'对方拒收 · 已退回'):m.received?(m.from==='ta'?'已领取':'对方已收下'):(m.from==='ta'?'等待领取':'待对方收下'),price=(+m.price||0)>0?'¥'+(+m.price).toFixed(2):'专属赠礼';
+    return `<div class="giftcard"><div class="giftmain"><div class="giftline">${svgIc('gift',30,'#d7d7dc',1.35)}</div><div class="giftcopy"><div class="gifteyebrow">PRIVATE GIFT</div><div class="giftname">${esc(m.name)}</div><div class="giftmeta">${price}　·　${status}</div></div></div><div class="giftfoot"><span>${m.shop?esc(m.shop):'私人赠礼'}</span><span>GIFT DELIVERY</span></div></div>${pend?`<div style="display:flex;gap:7px;margin-top:6px"><button class="minibtn" style="background:#e7e7ea;color:#1c1c1f;border:0" onclick="event.stopPropagation();receiveGift('${m.id}')">领取</button><button class="minibtn" style="background:#25262a;color:#aaa;border:1px solid #3b3c41" onclick="event.stopPropagation();rejectGift('${m.id}')">拒收</button></div>`:''}`;}
   if(m.type==='food'){const pend=(m.from==='ta'&&!m.received&&!m.declined&&(m.arrived||!m.deliverAt));const delivering=(m.from==='me'&&m.received&&m.deliverAt&&!m.delivered)||(m.from==='ta'&&m.deliverAt&&!m.arrived&&!m.received&&!m.declined);
     const t2=m.declined?'已拒收·已退款':delivering?'配送中…约15分钟':m.received?(m.from==='me'?'已送达·ta吃上了':'已签收'):(m.from==='ta'?'已送达·点击签收':'¥'+(+m.price).toFixed(2)+'·等ta收');
     return `<div class="card"><div class="cpay" style="background:${(m.received||m.declined)?'#d9b48a':'#ffb83b'}"><div class="big">${svgIc('food',30,'#fff')}</div><div><div class="t1">${esc(m.name)}</div><div class="t2">${t2}</div></div></div><div class="cfoot">${m.shop?esc(m.shop)+' · ':''}外卖订单</div></div>${pend?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#ffb83b;color:#fff" onclick="event.stopPropagation();foodReceive('${m.id}')">签收</button><button class="minibtn" onclick="event.stopPropagation();foodReject('${m.id}')">拒收</button></div>`:''}`;}
@@ -6872,9 +6877,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
   if(_idleNote)idleDebugPatch({aiStatus:'生成中',aiResult:'等待AI返回',aiStartedAt:Date.now(),apiStatus:idleApiStatus(),blockedBy:''});
   // typing
   let typingEl;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){
-    const stick=nearBottom(cb);
-    cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
-    if(stick)cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}}
+    typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
     const _userText=(_lu&&msgToText(_lu))||'',_hlPlan=humanLikeOn()?hlInterpret(c,note||_userText,note):null;
@@ -6902,7 +6905,6 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     // 文字聊天突然飙英文/出戏 → 自动用纯中文重说一次（只查文字，[语音|外语|中文]的外语在标签内不算，不影响外语语音）
     if(_chatDrift(content)){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你刚才在微信文字里蹦出了成句的英文/外语。这是中文文字聊天，请用【纯中文】把刚才想说的重说一遍，自然口语、保持角色，绝不许出现成句英文或外语。（要发外语语音可以用 [语音|外语原文|中文翻译] 格式，但普通文字必须纯中文。）]'},_pin],_md);if(fix&&!_chatDrift(fix))content=fix;}
     content=cleanRolePunct(content.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));/* 兜底剔掉混进来的AI客服腔行 */
-    if(typingEl)typingEl.remove();
     const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
     if(moodProbeText(_lu&&msgToText(_lu))&&badMoodInContent(c,content)&&badMoodDodge(content)){
       const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你现在的心情/心情条已经是不开心、闷、冷淡或吃醋，'+S.me.name+'正在认真追问你。可以嘴硬，可以不一次说完，但不要只说“没事/没有/没有不开心”。请重写这一轮：保留一行[心情|...]，用你的性格慢慢露出一点真实原因、在意点，或明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”。1到4条短微信，别一大段。]'},_pin],_md);
@@ -6961,7 +6963,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
-      const voiceTag=parseVoiceTagLine(line);if(voiceTag){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq),vt=cleanRolePunct(voiceTag.text||''),tr=cleanRolePunct(voiceTag.trans||''),tooLong=[...vt].length>VOICE_MAX_CHARS;const vm=(vf0===0||tooLong)?{role:'assistant',type:'text',content:tr||vt,time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:vt,trans:tr,time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(vm.type==='voice'&&ttsApiOn())vm._ttsLoading=true;if(vm.type==='voice')setTimeout(()=>warmVoiceMsg(vm,c),80);if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));if(stick)cb.scrollTop=cb.scrollHeight;}}continue;}
+      const voiceTag=parseVoiceTagLine(line);if(voiceTag){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq),vt=cleanRolePunct(voiceTag.text||''),tr=cleanRolePunct(voiceTag.trans||''),tooLong=[...vt].length>VOICE_MAX_CHARS;const vm=(vf0===0||tooLong)?{role:'assistant',type:'text',content:tr||vt,time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:vt,trans:tr,time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(vm.type==='voice'&&ttsApiOn())vm._ttsLoading=true;if(vm.type==='voice')setTimeout(()=>warmVoiceMsg(vm,c),80);if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){appendChatHTML(cb,bubbleRow(c,vm),{replaceTyping:true});typingEl=null;}}continue;}
       mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pnm=pend.name||mm[2]||'商品';const ppr=pend.price||+mm[1]||0;const pc={role:'assistant',type:'paid',price:ppr,name:pnm,id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);
         const _isFood=pend.kind==='food'||/^外卖/.test(pend.shop||'');
         if(_isFood){S.giftbox=S.giftbox||[];S.giftbox.push({id:uid(),cid:id,name:pnm,price:ppr,kind:'food',buyTs:Date.now(),arriveTs:Date.now()+900000,delivered:false});msgs(id).push({role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'帮你付了外卖「'+pnm+'」，配送中（约15分钟送达）',time:Date.now(),id:uid()});}
@@ -6999,8 +7001,9 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
         msg.time=Date.now();msg.id=uid();msgs(id).push(msg);save();
         if(msg.type==='image')photoTail=3;
         notifyIncoming(c,msg);
-        if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));if(stick)cb.scrollTop=cb.scrollHeight;}}
+        if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){appendChatHTML(cb,bubbleRow(c,msg),{replaceTyping:true});typingEl=null;}}
         else if(cur().p==='wechat')render();}}
+    if(typingEl&&typingEl.isConnected)typingEl.remove();
     if(_hlPlan&&got){hlRecord(c,_hlPlan,content);save();}
     if(_idleNote){idleDiag(got?'AI回复已生成':'AI回复为空');idleDebugPatch({aiStatus:'已调用',aiResult:got?'已生成角色消息':'AI回复为空',aiFinishedAt:Date.now(),blockedBy:got?'':'AI回复为空'});}
   }catch(e){if(typingEl)typingEl.remove();
