@@ -303,7 +303,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v452 · 情侣天数统一';
+const APP_VER='v453 · 微信气泡美化';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -921,7 +921,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=452').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=453').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -1169,6 +1169,7 @@ function buildSystem(c,opt){
   if(!taskRelationAllowed(c))s+='\n\n# 布置任务权限（重要）\n你和'+S.me.name+'当前不是情侣关系，因此你没有给ta布置任务、惩罚任务、打卡、检讨或强制安排的权限。可以像普通关系一样提出建议或邀请，但不能把建议说成ta必须完成的任务。';
   else if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
   else s+='\n\n# 每日任务固定规则（重要）\n任务只能由「任务便签」每天统一生成一次，总数固定为 '+taskDailyCount(c)+' 条。聊天和通话中都不能口头追加任务、临时加罚、改数量或另立必须完成的新要求；你只能催促、验收和讨论便签里已经存在的任务。其他想法可以自然建议，但不能当作任务。';
+  s+='\n\n# 微信气泡外观\n'+S.me.name+'可以让你更换【你自己发出的微信气泡】。ta说清想要的颜色、字体色、形状或装饰时，单独输出一行 [换气泡|气泡颜色|字体颜色|形状|装饰]，系统会真的更换，不要把指令念出来。颜色可写粉色、浅蓝、薄荷、紫色、白色、黑色或#六位色值；形状写方形、圆润或胶囊；装饰写草莓、小猫、熊猫、蛋糕、蝴蝶结、星星、花朵、云朵或无；没有要求的项写不改。这个指令只改你自己的气泡，不改'+S.me.name+'的。';
   if(!_main)s+=altIdentityPrompt(c);
   {const _ba=friendMetaGet(c,'blockedAt'),_ra=friendMetaGet(c,'readdedAt'),_rk=friendMetaGet(c,'readdKnown'),_bd=friendMetaGet(c,'blockDur');
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(_ba?'，已经'+fmtDur(Date.now()-_ba):'')+'，你能感觉到被冷落/拒绝。';
@@ -2219,7 +2220,7 @@ async function clearAllData(){
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
   ['widgets','theme','appLayout','appIcons','momentCover'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 主屏布局/外观
-  const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg'];
+  const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
   S=fresh;
@@ -5842,6 +5843,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       ${isMain()?`<div class="it" onclick="bindCouple('${id}')"><span>情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>`:''}
       <div class="it" onclick="schedSet('${id}')"><span>作息时间表</span><span class="v">${(c.sched&&c.sched.on)?'已启用 ›':'未设 ›'}</span></div>
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
+      <div class="it" onclick="bubbleStyleOpen('${id}')"><span>微信气泡美化</span><span class="v">${c.bubbleStyle?'已设置 ›':'默认 ›'}</span></div>
       ${isMain()?`<div class="it"><span>ta的微信号</span><span class="v">${esc(c.wxid||'')}</span></div>
       <div class="it" onclick="hisLoginOpen('${id}')"><span style="color:#c5a6ff">登录ta的微信</span><span class="v">用ta微信号+锁屏密码 ›</span></div>
       <div class="it" onclick="hisReset('${id}')"><span style="color:#fa8a5c">清空ta微信数据（重新测试）</span><span class="v">›</span></div>`:''}
@@ -5913,6 +5915,50 @@ function saveSched(id){const c=getC(id);c.sched={on:$('#sc_on').classList.contai
 function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div class="hint">上传一张图，或留空恢复默认。</div>
   <div class="btns"><button class="btn g" onclick="getC('${id}').chatBg='';save();closeModal();toast('已恢复默认')">恢复默认</button>
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
+const BUBBLE_SHAPES={square:6,soft:16,pill:24};
+const BUBBLE_DECOS={none:'',strawberry:'🍓 ˚♡',cat:'🐱 ✦',panda:'🐼 ♡',cake:'🧁 ✧',bow:'🎀 ˚',star:'⭐ ✦',flower:'🌸 ♡',cloud:'☁️ ✧'};
+const BUBBLE_PRESETS={
+  strawberry:{meBg:'linear-gradient(135deg,#fff5fa,#ffb8d8)',meText:'#b83f78',themBg:'linear-gradient(135deg,#fff8fb,#ffd1e5)',themText:'#a74672',meShape:'soft',themShape:'soft',meDeco:'strawberry',themDeco:'strawberry',glow:true},
+  cake:{meBg:'linear-gradient(135deg,#fffdf0,#ffe49a)',meText:'#926236',themBg:'linear-gradient(135deg,#fffbea,#ffd98a)',themText:'#805b35',meShape:'soft',themShape:'soft',meDeco:'cake',themDeco:'cat',glow:true},
+  panda:{meBg:'linear-gradient(135deg,#f2fbff,#9edfff)',meText:'#347da3',themBg:'linear-gradient(135deg,#f5fbff,#b8e7ff)',themText:'#386f91',meShape:'soft',themShape:'soft',meDeco:'panda',themDeco:'panda',glow:true},
+  mint:{meBg:'linear-gradient(135deg,#effffa,#9ff1e5)',meText:'#238d84',themBg:'linear-gradient(135deg,#f2fffd,#b9f5ec)',themText:'#297f78',meShape:'pill',themShape:'pill',meDeco:'cat',themDeco:'bow',glow:true},
+  classic:{meBg:'#95ec69',meText:'#0b3b18',themBg:'#ffffff',themText:'#111111',meShape:'square',themShape:'square',meDeco:'none',themDeco:'none',glow:false},
+  night:{meBg:'linear-gradient(135deg,#453052,#6a416f)',meText:'#ffeaf7',themBg:'linear-gradient(135deg,#252936,#34394b)',themText:'#eaf1ff',meShape:'soft',themShape:'soft',meDeco:'star',themDeco:'cloud',glow:true}
+};
+function bubbleCfg(c){return c&&c.bubbleStyle||null;}
+function bubbleSafeColor(v,fb){v=(''+(v||'')).trim();return /^#[0-9a-f]{6}$/i.test(v)||/^linear-gradient\([#0-9a-z(),.%\s-]+\)$/i.test(v)?v:fb;}
+function bubbleLook(c,me){const b=bubbleCfg(c);if(!b)return {cls:'',css:'',deco:''};const pre=me?'me':'them',bg=bubbleSafeColor(b[pre+'Bg'],me?'#ffc0d6':'#2c2c2e'),fg=bubbleSafeColor(b[pre+'Text'],me?'#6b2942':'#ececec'),shape=BUBBLE_SHAPES[b[pre+'Shape']]||16,deco=BUBBLE_DECOS[b[pre+'Deco']]||'',glow=b.glow?' bglow':'';
+  return {cls:' bpretty'+glow,css:`--bbg:${bg};--bfg:${fg};--br:${shape}px;--bglow:${bubbleGlowColor(bg)}`,deco:esc(deco)};}
+function bubbleGlowColor(bg){const m=(''+bg).match(/#[0-9a-f]{6}/i);return m?m[0]+'88':'rgba(255,160,205,.58)';}
+function bubbleShapeOpts(v){return [['square','原来方形'],['soft','圆润可爱'],['pill','胶囊圆角']].map(x=>`<option value="${x[0]}" ${v===x[0]?'selected':''}>${x[1]}</option>`).join('');}
+function bubbleDecoOpts(v){return Object.keys(BUBBLE_DECOS).map(k=>`<option value="${k}" ${v===k?'selected':''}>${k==='none'?'无装饰':BUBBLE_DECOS[k]}</option>`).join('');}
+function bubbleSolid(v,fb){const m=(''+(v||'')).match(/#[0-9a-f]{6}/i);return m?m[0]:fb;}
+function bubbleStyleOpen(id){const c=getC(id);if(!c)return;const b=c.bubbleStyle||BUBBLE_PRESETS.strawberry;
+  openModal(`<h3>微信气泡美化</h3><div class="hint">只影响你和这个角色的微信。双方气泡、字体、形状和小装饰都能分开设置；角色也可以在聊天里更换ta自己的气泡。</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 13px">${[['strawberry','🍓草莓'],['cake','🧁蛋糕'],['panda','🐼蓝熊'],['mint','🐱薄荷'],['night','⭐夜空'],['classic','微信原版']].map(x=>`<button class="minibtn" onclick="bubblePreset('${id}','${x[0]}')">${x[1]}</button>`).join('')}</div>
+  <div class="section"><div style="padding:11px 13px;color:#ff9fbd;font-weight:600">我的气泡</div><div class="two"><div class="field"><label>气泡颜色</label><input id="bs_mbg" type="color" value="${bubbleSolid(b.meBg,'#ffc0d6')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="bs_mtx" type="color" value="${bubbleSolid(b.meText,'#6b2942')}" style="height:42px;padding:3px"></div></div><div class="two"><div class="field"><label>形状</label><select id="bs_mshape">${bubbleShapeOpts(b.meShape||'soft')}</select></div><div class="field"><label>角落装饰</label><select id="bs_mdeco">${bubbleDecoOpts(b.meDeco||'none')}</select></div></div></div>
+  <div class="section" style="margin-top:10px"><div style="padding:11px 13px;color:#9ec5fe;font-weight:600">对方气泡</div><div class="two"><div class="field"><label>气泡颜色</label><input id="bs_tbg" type="color" value="${bubbleSolid(b.themBg,'#2c2c2e')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="bs_ttx" type="color" value="${bubbleSolid(b.themText,'#ececec')}" style="height:42px;padding:3px"></div></div><div class="two"><div class="field"><label>形状</label><select id="bs_tshape">${bubbleShapeOpts(b.themShape||'soft')}</select></div><div class="field"><label>角落装饰</label><select id="bs_tdeco">${bubbleDecoOpts(b.themDeco||'none')}</select></div></div></div>
+  <div class="it"><span>柔光效果</span><span class="sw ${b.glow?'on':''}" id="bs_glow" onclick="this.classList.toggle('on')"></span></div>
+  <div class="btns"><button class="btn g" onclick="bubbleReset('${id}')">恢复默认</button><button class="btn p" onclick="bubbleStyleSave('${id}')">保存</button></div>`);}
+function bubblePreset(id,key){const c=getC(id),p=BUBBLE_PRESETS[key];if(!c||!p)return;c.bubbleStyle=Object.assign({},p);save();render();bubbleStyleOpen(id);toast('已套用气泡主题');}
+function bubbleReset(id){const c=getC(id);if(!c)return;delete c.bubbleStyle;save();closeModal();render();toast('已恢复默认气泡');}
+function bubbleStyleSave(id){const c=getC(id);if(!c)return;c.bubbleStyle={meBg:$('#bs_mbg').value,meText:$('#bs_mtx').value,themBg:$('#bs_tbg').value,themText:$('#bs_ttx').value,meShape:$('#bs_mshape').value,themShape:$('#bs_tshape').value,meDeco:$('#bs_mdeco').value,themDeco:$('#bs_tdeco').value,glow:$('#bs_glow').classList.contains('on')};save();closeModal();render();toast('气泡美化已保存');}
+const BUBBLE_COLOR_NAMES={粉色:'#ffc5df',浅粉:'#ffd9e9',深粉:'#d9699e',红色:'#ef7b88',橙色:'#ffbd7a',黄色:'#ffe59a',奶黄:'#fff0b8',绿色:'#aee6a2',薄荷:'#a9eee2',蓝色:'#a9dcff',浅蓝:'#c9ebff',深蓝:'#6489c8',紫色:'#d5b8ef',浅紫:'#ead8f7',白色:'#ffffff',黑色:'#222228',灰色:'#b9bdc6',透明:'#ffffff'};
+function bubbleNamedColor(v,fb){v=(''+(v||'')).replace(/色$/,'色').trim();if(/^#[0-9a-f]{6}$/i.test(v))return v;const k=Object.keys(BUBBLE_COLOR_NAMES).find(n=>v===n||v.includes(n));return k?BUBBLE_COLOR_NAMES[k]:fb;}
+function bubbleShapeKey(v,fb){v=''+(v||'');return /方|原版|直角/.test(v)?'square':/胶囊|很圆|圆形/.test(v)?'pill':/圆|柔|可爱/.test(v)?'soft':fb;}
+function bubbleDecoKey(v,fb){v=''+(v||'');const map={草莓:'strawberry',猫:'cat',熊猫:'panda',蛋糕:'cake',蝴蝶结:'bow',星:'star',花:'flower',云:'cloud',无:'none',不要:'none'};const k=Object.keys(map).find(n=>v.includes(n));return k?map[k]:fb;}
+function bubbleRoleChange(c,bg,fg,shape,deco,silent){if(!c)return false;const base=Object.assign({meBg:'linear-gradient(135deg,#ffd6e8,#ffc0d6)',meText:'#6b2942',themBg:'#2c2c2e',themText:'#ececec',meShape:'square',themShape:'square',meDeco:'none',themDeco:'none',glow:false},c.bubbleStyle||{});let changed=false;
+  if(bg&&bg!=='不改'){const v=bubbleNamedColor(bg,base.themBg);if(v!==base.themBg){base.themBg=v;changed=true;}}
+  if(fg&&fg!=='不改'){const v=bubbleNamedColor(fg,base.themText);if(v!==base.themText){base.themText=v;changed=true;}}
+  if(shape&&shape!=='不改'){const v=bubbleShapeKey(shape,base.themShape);if(v!==base.themShape){base.themShape=v;changed=true;}}
+  if(deco&&deco!=='不改'){const v=bubbleDecoKey(deco,base.themDeco);if(v!==base.themDeco){base.themDeco=v;changed=true;}}
+  if(changed){base.glow=true;c.bubbleStyle=base;save();if(!silent)toast((c.remark||c.name)+'换了新的微信气泡');if(cur().p==='chat'&&cur().id===c.id)setTimeout(render,40);}return changed;}
+function applyBubbleTags(content,c){return (content||'').replace(/[[【]\s*换气泡\s*[|｜:：]\s*([^|｜\]】]*)\s*[|｜]\s*([^|｜\]】]*)\s*[|｜]\s*([^|｜\]】]*)\s*[|｜]\s*([^\]】]*)[\]】]/g,(m,bg,fg,shape,deco)=>{bubbleRoleChange(c,bg,fg,shape,deco);return '';});}
+function bubbleNaturalRequest(text,c){text=''+(text||'');if(!/气泡/.test(text)||!/你(的|自己)|对方|ta|TA/.test(text)||!/换|改|设|用|弄|变/.test(text))return false;let bg='',fg='',shape='',deco='';
+  const cm=text.match(/气泡(?:颜色)?[^，。；\n]{0,10}?(粉色|浅粉|深粉|红色|橙色|黄色|奶黄|绿色|薄荷|蓝色|浅蓝|深蓝|紫色|浅紫|白色|黑色|灰色|#[0-9a-fA-F]{6})/);if(cm)bg=cm[1];
+  const fm=text.match(/(?:字体|文字)(?:颜色)?[^，。；\n]{0,10}?(粉色|浅粉|深粉|红色|橙色|黄色|奶黄|绿色|薄荷|蓝色|浅蓝|深蓝|紫色|浅紫|白色|黑色|灰色|#[0-9a-fA-F]{6})/);if(fm)fg=fm[1];
+  const sm=text.match(/(原来方形|方形|直角|圆润|圆角|胶囊|很圆)/);if(sm)shape=sm[1];const dm=text.match(/(草莓|熊猫|小猫|猫咪|猫|蛋糕|蝴蝶结|星星|花朵|云朵|不要装饰|无装饰)/);if(dm)deco=dm[1];
+  return (bg||fg||shape||deco)?bubbleRoleChange(c,bg,fg,shape,deco,true):false;}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
 function isLover(c){if(!c||!isMain())return false;if(S.couple&&S.couple.cid===c.id)return true;return /恋人|男友|女友|男朋友|女朋友|老公|老婆|对象|未婚|爱人|情侣|伴侣|相恋|订婚|夫妻/.test((c.relation||'')+(c.persona||''));}
 function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){friendMetaSet(c,'blockedAt',Date.now());adjMood(id,-30);}save();render();
@@ -6069,6 +6115,7 @@ function bubbleRow(c,m){
   const lp=quotable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
   return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar)}</span><div class="col" ${h}${lp}>${inner}${ts}</div></div>`;}
 function buildPart(c,m,me){
+  const _bl=bubbleLook(c,me);
   if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#ff8fab,#b8a4e3)"><div class="big">🎧</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">🎵 点击进入一起听</div></div>`;
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
@@ -6097,7 +6144,7 @@ function buildPart(c,m,me){
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">${svgIc('money',30,'#fff')}</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">${svgIc('refresh',30,'#fff')}</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
   if(m.type==='voice'){const dur=m.dur||Math.max(1,Math.round((m.content||'').length/3)),wide=Math.min(60+dur*8,200),loading=voiceTtsPending(m);
-    return quoteBar(m)+`<div class="bubble voiceb${loading?' loading':''}" style="min-width:${wide}px" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();${loading?'':`vtoggle('${m.id}')`}"><span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
+    return quoteBar(m)+`<div class="bubble voiceb${loading?' loading':''}${_bl.cls}" style="min-width:${wide}px;${_bl.css}" data-deco="${_bl.deco}" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();${loading?'':`vtoggle('${m.id}')`}"><span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
   if(m.type==='sticker'){return `<div class="stickermsg"><img src="${m.img}">${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;}
   if(m.type==='familycard'){const bnd=m.bound;
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e8527f;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
@@ -6115,7 +6162,7 @@ function buildPart(c,m,me){
     return `<div class="card" style="width:252px;background:linear-gradient(145deg,#101821,#172233);border:1px solid #435267;box-shadow:0 8px 22px rgba(0,0,0,.22)"><div style="padding:13px 13px 12px"><div style="color:#9db0c6;font-size:11px;margin-bottom:7px;display:flex;align-items:center;gap:6px;letter-spacing:.5px">${svgIc('mask',13,'#9db0c6')} 角色扮演房间 · ${esc(who)}</div><div style="color:#eef3f8;font-size:15px;font-weight:700;line-height:1.35">${esc(m.title||'本次剧情')}</div><div style="color:#9fb0c0;font-size:12px;margin-top:7px;line-height:1.65">${roles}${m.when?('<br>时间：'+esc(m.when)) : ''}</div></div><div class="cfoot" style="color:#8fa0b6;background:rgba(255,255,255,.05)">${esc(st)}</div></div><div style="display:flex;gap:6px;margin-top:5px"><button class="minibtn" style="background:#243447;color:#fff" onclick="event.stopPropagation();openRoleplayFromCard('${m.roomId||c.id}')">${m.finished?'查看存档':'进入剧情'}</button></div>`;}
   if(m.type==='gameinvite'){const st=m.status;const playing=st==='accepted';
     return `<div class="card" style="width:240px;background:#1d2342;border:1px solid #4a5bb0"><div style="padding:12px"><div style="color:#9db4ff;font-size:11px;margin-bottom:4px">🎮 游戏邀请</div><div style="color:#e3e9ff;font-size:14px;font-weight:600">${esc(m.ge||'')} ${esc(m.gname||'一起玩')}</div><div style="color:#aab6e8;font-size:12px;margin-top:5px">想拉你进游戏空间一起玩～</div></div><div class="cfoot" style="color:#8fa0d8">${st==='accepted'?'ta答应啦🎮':st==='declined'?'ta这会儿不想玩':'等ta同意…'}</div></div>${playing?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#5b6bd6;color:#fff" onclick="event.stopPropagation();enterGameNow('${c.id}','${m.game}')">▶ 进入游戏</button></div>`:''}`;}
-  return quoteBar(m)+`<div class="bubble">${esc(m.content)}</div>`;}
+  return quoteBar(m)+`<div class="bubble${_bl.cls}"${_bl.css?` style="${_bl.css}" data-deco="${_bl.deco}"`:''}>${esc(m.content)}</div>`;}
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   if(voiceTtsPending(m)){refreshVoiceBubble(m);return;}
   audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
@@ -6457,7 +6504,7 @@ function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不�
 function badMoodInContent(c,content){if(moodNow(c)<50||visibleMoodTone(c)==='bad'||dialogueEmotionSnapshot(c).intensity>=25)return true;const m=(''+(content||'')).match(/[\[【]\s*心情\s*[\|｜]\s*([^\]】]*)[\]】]/);return !!(m&&visibleMoodTone({mood:m[1]})==='bad');}
 function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心情\s*[\|｜][^\]】]*[\]】]/g,'').replace(/\s+/g,'');if(!t)return false;const denial=/(我没事|没事|我没有不开心|没有不开心|没有不高兴|没有生气|没生气|没有啊|没什么|真没事|别多想|不用管)/.test(t);const reveal=/(有点|其实|只是|因为|我怕|我想|我在意|介意|吃醋|生气|委屈|难过|不高兴|不开心|心里|闷|烦|冷|在乎|不是你的错|不想说|现在不想说|怕说了)/.test(t.replace(/没有不开心|没有不高兴|没有生气|没生气/g,''));return denial&&!reveal;}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|引用';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|引用|换气泡';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline','角色扮演':'roleplay','角色扮演软件':'roleplay','扮演':'roleplay','剧情':'roleplay','play':'roleplay','PLAY':'roleplay','规则怪谈':'tale','规则怪谈软件':'tale','怪谈':'tale','规则':'tale','惊悚抉择':'dread','惊悚抉择软件':'dread','惊悚选择':'dread','惊悚选择软件':'dread','恐怖选择':'dread','恐怖选择软件':'dread','惊辣选择':'dread','惊辣选择软件':'dread','精辣选择':'dread','精辣选择软件':'dread','抉择':'dread','音乐':'music','音乐软件':'music','听歌':'music','歌曲':'music','歌':'music','一起听':'music'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -6772,6 +6819,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
+    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     maybeSpyIntent(content,c,id,_lu);
@@ -6803,7 +6851,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
       if(photoTail>0&&isPhotoPromptFragment(line)){photoTail--;continue;}
       if(/^\[联网\|/.test(line))continue;
       if(/^\[\s*放行\s*\]$/.test(line)){idleForceRelease(id,'role');continue;}
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏|换气泡)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=honestMoodText(c,mm[1]);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -7296,6 +7344,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     content=content.replace(/[\[【]\s*发推\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{publishRoleTweet(c,tx);return '';});
     content=content.replace(/[\[【]\s*(转账|红包)\s*[\|｜:：]([0-9.]+)\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,kind,amt,note)=>{const ty=(kind==='红包'?'redpacket':'transfer'),av=+amt||0;if(msgs(_call.id).some(x=>x.role==='assistant'&&x.type===ty&&Math.abs((+x.amount||0)-av)<0.01&&Date.now()-(x.time||0)<180000))return '';/* 3分钟内同额转账/红包不重复 */const tc={role:'assistant',type:ty,amount:av,note:(note||'').trim(),received:false,id:uid(),time:Date.now()};msgs(_call.id).push(tc);notifyIncoming(c,tc);save();return '';});
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
+    bubbleNaturalRequest(_luc&&msgToText(_luc),c);content=applyBubbleTags(content,c);
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,_call.id))extractControl(content,c,_statedPwd);}
     maybeSpyIntent(content,c,_call.id,_luc);
     maybeAffectionShift(_call.id,c,_luc,content);
