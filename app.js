@@ -303,7 +303,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v454 · 高级灰聊天与识图兼容';
+const APP_VER='v455 · 朋友圈简洁布局与识图保存';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -924,7 +924,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=454').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=455').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -2269,9 +2269,8 @@ async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999
   const old=JSON.stringify(S.settings.vision||{});S.settings.vision={base:($('#s_vbase').value.trim()||'').replace(/\/+$/,''),key:$('#s_vkey').value.trim()||$('#s_ckey').value.trim(),model:$('#s_vmodel').value.trim()};
   if(!S.settings.vision.base||!S.settings.vision.key){try{S.settings.vision=JSON.parse(old);}catch(_){}o.style.color='#e85';o.textContent='先填识图地址和Key';return;}
   if(!S.settings.vision.model){try{S.settings.vision=JSON.parse(old);}catch(_){}o.style.color='#e85';o.textContent='先填识图模型名';return;}
-  try{const txt=await visionAPI(visionTestImage(),'这张测试图里有什么？只回答主要颜色和形状。');o.style.color='#19a463';o.textContent='✅ 识图可用：'+txt.slice(0,48);}
-  catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：模型或中转响应太慢':'❌ '+(e.message||'识图失败').slice(0,120);}
-  finally{try{S.settings.vision=JSON.parse(old);}catch(_){}}}
+  try{const txt=await visionAPI(visionTestImage(),'这张测试图里有什么？只回答主要颜色和形状。');save();o.style.color='#19a463';o.textContent='✅ 识图可用，已保存：'+txt.slice(0,48);toast('识图配置已保存');}
+  catch(e){try{S.settings.vision=JSON.parse(old);}catch(_){}o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：模型或中转响应太慢':'❌ '+(e.message||'识图失败').slice(0,120);}}
 async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999';o.textContent='真生成一张测试图中…（约30-60秒，别急）';
   const base=((($('#s_ibase')&&$('#s_ibase').value.trim())||(S.settings.chat&&S.settings.chat.base)||'').replace(/\/+$/,''));
   const key=($('#s_ikey')&&$('#s_ikey').value.trim())||(S.settings.chat&&S.settings.chat.key)||'';
@@ -3563,8 +3562,8 @@ function renderWeChat(){
   else if(wxTab==='moments')body=wxMoments();
   else if(wxTab==='me')body=wxMe();
   const titles={chats:'微信',contacts:'通讯录',moments:'朋友圈',me:'我'};
-  const showAdd=wxTab==='chats'||wxTab==='contacts';
-  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${wxTab==='chats'?'chatAddMenu()':wxTab==='contacts'?'editContact()':''}">${showAdd?'＋':''}</span></div>
+  const showAdd=wxTab==='chats'||wxTab==='contacts'||wxTab==='moments';
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${wxTab==='chats'?'chatAddMenu()':wxTab==='contacts'?'editContact()':wxTab==='moments'?'momentTools()':''}">${showAdd?'＋':''}</span></div>
     <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">${body}</div>
     <div class="tabbar">
       ${tb('chats',svgIc('chat',23),'微信')}${tb('contacts',svgIc('user',23),'通讯录')}${tb('moments',svgIc('camera',23),'朋友圈')}${tb('me',svgIc('cat',23),'我')}
@@ -7640,13 +7639,15 @@ setInterval(checkSpyTime,15000);
 
 /* ---------- 朋友圈 ---------- */
 function showVisitors(){const vs=S.visitors||[];openModal(`<h3>谁看过我</h3>${vs.length?vs.map(v=>`<div class="xdmrow">${av(v.avatar,'sm')}<div class="meta"><div class="n">${esc(v.name)}</div><div class="s">${esc(v.where)} · ${ago(v.time)}</div></div></div>`).join(''):'<div class="empty">还没有访客记录</div>'}${vs.length?'<button class="btn d" style="margin-top:8px" onclick="S.visitors=[];save();showVisitors()">一键清空</button>':''}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function momentTools(){const n=(S.visitors||[]).length;openModal(`<h3>朋友圈</h3>
+  <button class="btn g" style="margin-bottom:8px" onclick="showVisitors()">谁看过我${n?'（'+n+'）':''}</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="closeModal();postMoment()">发朋友圈</button>
+  <button class="btn g" onclick="closeModal();refreshMoments()">刷新朋友圈</button>
+  <button class="btn g" style="margin-top:12px" onclick="closeModal()">取消</button>`);}
 function wxMoments(){
-  const cover=S.me.momentCover?`background:url(${S.me.momentCover}) center/cover`:'';
-  return `<div class="mcover" style="${cover}"><div onclick="changeCover()" style="position:absolute;left:12px;top:14px;font-size:12px;color:#fff;background:rgba(0,0,0,.3);padding:3px 9px;border-radius:12px;cursor:pointer">📷 换背景</div><div class="me"><div class="nm">${esc(S.me.name)}</div>${av(S.me.avatar,'lg')}</div></div>
-    <div style="text-align:right;padding:26px 14px 6px"><button class="minibtn" onclick="showVisitors()">谁看过我${(S.visitors||[]).length?'('+(S.visitors||[]).length+')':''}</button>
-      <button class="minibtn" onclick="postMoment()">＋ 发朋友圈</button>
-      <button class="minibtn" onclick="refreshMoments()">刷新</button></div>
-    ${(function(){const ms=S.moments.filter(p=>(p.acct||'main')===actId());return ms.length?ms.map(momentHTML).join(''):'<div class="empty">'+(isMain()?'还没有朋友圈，点「刷新」让角色发动态，或自己发一条～':'这个身份的朋友圈还是空的～')+'</div>';})()}
+  const src=S.me.momentCover||'';const cover=src?`<div class="coverfill" style="background-image:url(${src})"></div><img class="coverfull" src="${src}">`:'';
+  return `<div class="mcover" onclick="changeCover()">${cover}<div class="me"><div class="nm">${esc(S.me.name)}</div>${av(S.me.avatar,'lg')}</div></div>
+    ${(function(){const ms=S.moments.filter(p=>(p.acct||'main')===actId());return ms.length?ms.map(momentHTML).join(''):'<div class="empty">'+(isMain()?'还没有朋友圈，点右上角「＋」刷新或发表':'这个身份的朋友圈还是空的～')+'</div>';})()}
     <div style="height:20px"></div>`;}
 function changeCover(){pickFile('image/*',async f=>{S.me.momentCover=await compress(f,900,.6);save();render();toast('背景已换');});}
 function momentHTML(p){const author=p.authorId==='me'?S.me:getC(p.authorId);if(!author)return '';
@@ -7654,10 +7655,10 @@ function momentHTML(p){const author=p.authorId==='me'?S.me:getC(p.authorId);if(!
   return `<div class="mpost">${av(author.avatar,'sm')}<div class="body">
     <div class="au">${esc(name)}</div>
     <div class="tx">${esc(p.text)}</div>
-    ${p.images&&p.images.length?`<div class="imgs">${p.images.map(im=>`<div class="ph" onclick="viewImg('${im}')"><img src="${im}"></div>`).join('')}</div>`:''}
-    ${(p.authorId==='me'&&p.visible&&p.visible.length)?`<div style="font-size:11px;color:#888;margin-top:3px">🔒 仅 ${p.visible.map(id=>{const cc=getC(id);return cc?esc(cc.remark||cc.name):'?';}).join('、')} 可见</div>`:''}
+    ${p.images&&p.images.length?`<div class="imgs ${p.images.length===1?'one':''}">${p.images.map(im=>`<div class="ph" onclick="viewImg('${im}')"><img src="${im}"></div>`).join('')}</div>`:''}
+    ${(p.authorId==='me'&&p.visible&&p.visible.length)?`<div style="font-size:11px;color:#888;margin-top:3px">仅 ${p.visible.map(id=>{const cc=getC(id);return cc?esc(cc.remark||cc.name):'?';}).join('、')} 可见</div>`:''}
     <div class="ft"><div class="tm">${ago(p.time)}</div><div class="acts" onclick="momentMenu('${p.id}')">···</div></div>
-    ${p.likes&&p.likes.length?`<div class="likes">❤️ ${p.likes.map(l=>esc(l)).join('，')}</div>`:''}
+    ${p.likes&&p.likes.length?`<div class="likes"><span class="like-label">赞</span>${p.likes.map(l=>esc(l)).join('，')}</div>`:''}
     ${p.comments&&p.comments.length?`<div class="cmts">${p.comments.map((cm,ci)=>`<div class="cmt" onclick="replyComment('${p.id}',${ci})"><b>${esc(cm.name)}：</b>${esc(cm.text)}</div>`).join('')}</div>`:''}
   </div></div>`;}
 function momentMenu(pid){const p=S.moments.find(x=>x.id===pid);
