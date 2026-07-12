@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v463 · 真人感语音表演';
+const APP_VER='v464 · 语音模型快捷选择';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -990,7 +990,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=463').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=464').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -2206,7 +2206,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="two" style="padding:0 14px 2px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-02-turbo / eleven_flash_v2_5"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="male-qn-qingse / voice id / 克隆ID"></div></div>
       <div class="field" style="padding:2px 14px 2px"><label>GroupId（海螺·选填）</label><input id="s_tgroup" value="${esc((S.settings.tts||{}).group||'')}" placeholder="新版sk-api留空即可；若报「token not match group」就把团队ID填这里"></div>
       <div style="padding:2px 14px 4px;font-size:12px;color:#9aa">常用模型（点一下填入）：</div>
-      <div style="padding:0 14px 8px">${[['speech-02-turbo','海螺·省钱'],['speech-02-hd','海螺·更好听'],['eleven_flash_v2_5','11·省额度'],['eleven_multilingual_v2','11·原版']].map(m=>`<span onclick="pickTtsModel('${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
+      <div style="padding:0 14px 8px">${[['speech-02-turbo','海螺·省钱'],['speech-02-hd','海螺·更好听'],['speech-2.8-turbo','海螺2.8·情绪'],['speech-2.8-hd','海螺2.8·高清'],['eleven_flash_v2_5','11·省额度'],['eleven_multilingual_v2','11·原版']].map(m=>`<span onclick="pickTtsModel('${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
       <div style="padding:0 14px 4px;font-size:12px;color:#9aa">海螺常用音色（点一下填入"默认音色"）：</div>
       <div style="padding:0 14px 8px">${[['male-qn-qingse','青涩青年'],['male-qn-jingying','精英青年'],['male-qn-badao','霸道青年'],['presenter_male','男主持'],['audiobook_male_1','有声书男'],['female-shaonv','少女'],['female-yujie','御姐'],['presenter_female','女主持']].map(v=>`<span onclick="pickVoice('${v[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${v[1]}</span>`).join('')}</div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="pullVoices()">拉取我的全部音色（含克隆·海螺）</button></div>
