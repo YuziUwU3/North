@@ -302,7 +302,7 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v447 · 微信登录与小黑屋记录修复';
+const APP_VER='v448 · 安卓启动稳定与中文报错';
 const VOICE_MAX_CHARS=200;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -578,6 +578,25 @@ function pickFiles(accept,cb){try{if(window._pfEl){window._pfEl.remove();}}catch
 function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
 
 /* =================== API =================== */
+function apiErrorCN(status,raw){status=+status||0;const src=String(raw||'').replace(/\s+/g,' ').trim();let tip='接口返回异常，请检查地址、密钥和模型名';
+  if(status===400)tip='请求格式或模型名不兼容；先确认模型名完全正确，再换兼容接口测试';
+  else if(status===401)tip='API Key 无效、过期或没有正确填写；重新复制密钥，注意不要带空格';
+  else if(status===402)tip='账户余额或点数不足，需要充值后再试';
+  else if(status===403)tip='密钥没有这个模型的权限，或平台限制了地区/IP；去平台控制台检查权限';
+  else if(status===404)tip='接口地址或模型名不存在；地址通常要以 /v1 结尾，并确认该平台真的有这个模型';
+  else if(status===408)tip='请求超时；网络或模型响应太慢，稍后重试或换模型';
+  else if(status===409)tip='请求发生冲突；稍等几秒后重试';
+  else if(status===422)tip='参数格式不被该接口接受；这个中转可能不完全兼容 OpenAI 格式';
+  else if(status===429)tip='请求太频繁或额度达到上限；等一会儿再试，并检查平台限额';
+  else if(status===500)tip='服务端内部错误，不是你手机的问题；稍后重试或换线路';
+  else if(status===501)tip='这个接口没有实现当前功能；常见于地址路径不对，或该渠道不支持这个模型/生图/语音';
+  else if(status===502)tip='上游模型连接失败；稍后重试或换线路';
+  else if(status===503)tip='服务暂时拥堵或维护中；稍后重试';
+  else if(status===504)tip='上游响应超时；稍后重试或换速度更快的模型';
+  else if(!status&&/abort|timeout|超时/i.test(src))tip='请求超时；检查网络、接口地址，或换响应更快的模型';
+  else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='网络连接失败或接口禁止网页跨域；确认网址能访问，并询问平台是否支持网页调用（CORS）';
+  const cn=/[\u4e00-\u9fa5]/.test(src)?src.slice(0,90):'';return(status?'HTTP '+status+'：':'')+tip+(cn&&cn.indexOf(tip)<0?'（'+cn+'）':'');}
+function apiCaughtCN(e){const s=String((e&&e.message)||e||'');const m=s.match(/HTTP\s*(\d{3})/i);return apiErrorCN(m?+m[1]:0,s);}
 function aiCoreOn(){return !!(S.settings&&S.settings.aiCore&&S.settings.aiCore.enabled);}
 function aiCoreUrl(){return (((S.settings&&S.settings.aiCore&&S.settings.aiCore.url)||'').trim()).replace(/\/+$/,'');}
 function ttsCfg(){S.settings=S.settings||{};S.settings.tts=S.settings.tts||{};return S.settings.tts;}
@@ -590,7 +609,7 @@ function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}c
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
   const uid=aiUserId(),sec=aiUserSecret();
-  const r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},190000);
+  let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},190000);}catch(e){throw new Error(apiCaughtCN(e));}
   const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);if(r.status===402||/no-balance/i.test(msg))throw new Error('AI点数不足，请去「AI账户」充值或让管理员加点');throw new Error('内置AI失败：'+String(msg).slice(0,140));}
   if(typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);
   return d;}
@@ -600,11 +619,11 @@ async function chatAPI(messages,opt){opt=opt||{};let a=S.settings.chat;
   if(aiCoreOn()&&!opt.noRelay){const d=await aiRelay('chat',{messages,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,model:opt.model||''});return chatResultText(messages,opt,d.data);}
   if(opt.aux&&S.settings.aux&&S.settings.aux.model){const x=S.settings.aux;a={base:x.base||a.base,key:x.key||a.key,model:x.model,temp:a.temp,maxTokens:a.maxTokens};}
   if(!a.base||!a.key)throw new Error('还没设置聊天 API（去 设置→API）');
-  const res=await fetch(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
+  let res;try{res=await fetchT(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
-    body:JSON.stringify({model:opt.model||a.model,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,messages})});
+    body:JSON.stringify({model:opt.model||a.model,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,messages})},190000);}catch(e){throw new Error(apiCaughtCN(e));}
   const d=await res.json().catch(()=>null);
-  if(!res.ok)throw new Error('HTTP '+res.status+'：'+((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'失败').slice(0,160));
+  if(!res.ok)throw new Error(apiErrorCN(res.status,(d&&d.error&&(d.error.message||JSON.stringify(d.error)))||''));
   return chatResultText(messages,opt,d);
 }
 function uniq(arr){const out=[];(arr||[]).forEach(x=>{x=(x||'').trim();if(x&&!out.includes(x))out.push(x);});return out;}
@@ -647,7 +666,7 @@ async function genImage(prompt){
   const err=((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'').toLowerCase();
   if(!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|size)|extra inputs are not permitted|not allowed/.test(err)){out=await post({model,prompt:body0.prompt,n:1,size:'1024x1536'});res=out.res;d=out.d;}
   if(!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await post({model:'gpt-4o-image',prompt:body0.prompt,n:1,size:'1024x1536'});res=out.res;d=out.d;}
-  if(!res.ok)throw new Error('HTTP '+res.status+'：'+((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'生图失败').slice(0,140));
+  if(!res.ok)throw new Error(apiErrorCN(res.status,(d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'生图失败'));
   const it=d&&d.data&&d.data[0];
   let url=it&&(it.url||(it.b64_json?('data:image/png;base64,'+it.b64_json):''));
   if(!url)throw new Error('没拿到图片');
@@ -901,7 +920,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=381').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=448').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -2060,6 +2079,7 @@ function quickJumpBar(items){return `<div class="section" style="margin:0 0 10px
 function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">设置</span><span class="r"></span></div>
   <div class="scroll" id="settingsscroll" style="padding:12px;background:#000">
+    <div class="section" style="border:1px solid rgba(255,143,171,.5);background:linear-gradient(135deg,rgba(255,143,171,.18),rgba(108,92,231,.14));margin-bottom:10px" onclick="showManual()"><div class="it" style="background:transparent"><span><b style="color:#ffd0df;font-size:15px">📖 使用说明书 · 常见报错</b><br><small style="color:#aaa">404、501、密钥、模型、安卓黑屏等问题都在这里</small></span><span class="v" style="color:#ff8fab">随时查看 ›</span></div></div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="minibtn" id="settab1" style="flex:1;${_setTab===2?'background:#2c2c2e;color:#ccc':'background:#07c160;color:#fff'}" onclick="setTab(1)">接口·模型</button>
       <button class="minibtn" id="settab2" style="flex:1;${_setTab===2?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(2)">偏好·工具</button></div>
@@ -2211,8 +2231,8 @@ async function testConn(){const o=$('#testOut');o.style.color='#999';o.textConte
   const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
   if(!base||!key){o.style.color='#e85';o.textContent='先填地址和 Key';return;}
   try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'说"在"'}],max_tokens:5})});
-    if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,100);}
-  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message+'（多半是把网页当本地文件打开了，要用网址打开）';}}
+    if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,await r.text());}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
 function fetchT(url,opt,ms){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms||25000);return fetch(url,Object.assign({},opt||{},{signal:ac.signal})).finally(()=>clearTimeout(t));}
 async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const base=($('#'+bId).value.trim()||'').replace(/\/+$/,'');const key=$('#'+kId).value.trim();const model=$('#'+mId).value.trim()||defM;
@@ -2221,8 +2241,8 @@ async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)retu
   if(!ub||!uk){o.style.color='#e85';o.textContent='先填地址和Key';return;}
   if(!model){o.style.color='#e85';o.textContent='先填模型名';return;}
   try{const r=await fetchT(ub+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+uk},body:JSON.stringify({model,max_tokens:5,messages:[{role:'user',content:'说"在"'}]})});
-    if(r.ok)o.style.color='#19a463',o.textContent='✅ 连接成功！';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,90);}
-  }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时（25秒没响应，检查地址/模型名）':'❌ '+e.message+'（可能是把网页当本地文件打开了）';}}
+    if(r.ok)o.style.color='#19a463',o.textContent='✅ 连接成功！';else{o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,await r.text());}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
 function testMain(){testModel('s_cbase','s_ckey','s_cmodel','testC','gpt-4o-mini');}
 function testAux(){testModel('s_xbase','s_xkey','s_xmodel','testX','');}
 function saveTestedSearch(mode,seb,sek,sem){const old=S.settings.search||{},base=((seb&&seb.value.trim())||(mode==='jina'?'https://s.jina.ai':'')),key=(sek&&sek.value.trim())||'',model=(sem&&sem.value.trim())||old.model||'';S.settings.search={mode,base:base.replace(/\/+$/,''),key,model};S.settings.web=Object.assign({},S.settings.web||{},{enabled:true});save();}
@@ -2232,11 +2252,11 @@ async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o
     if(mode==='model'){const a=S.settings.chat;const base=(((seb&&seb.value.trim())||a.base||'')).replace(/\/+$/,'');const key=(sek&&sek.value.trim())||a.key;const model=(sem&&sem.value.trim())||a.model;
       if(!base||!key){o.style.color='#e85';o.textContent='先填地址和Key';return;}
       const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:'回个"在"'}]})});
-      if(r.ok){saveTestedSearch(mode,seb,sek,sem);o.style.color='#19a463';o.textContent='✅ 联网模型可用，已保存并启用角色联网';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,80);}
+      if(r.ok){saveTestedSearch(mode,seb,sek,sem);o.style.color='#19a463';o.textContent='✅ 联网模型可用，已保存并启用角色联网';}else{o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,await r.text());}
     }else{const base=(((seb&&seb.value.trim())||'https://s.jina.ai')).replace(/\/+$/,'');const key=(sek&&sek.value.trim());const h={'Accept':'text/plain','X-Respond-With':'no-content'};if(key)h['Authorization']='Bearer '+key;
       const r=await fetchT(base+'/'+encodeURIComponent('OpenAI'),{headers:h});
       if(r.ok){saveTestedSearch(mode,seb,sek,sem);o.style.color='#19a463';o.textContent='✅ jina 联网成功，已保存并启用角色联网';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：检查 jina 密钥或改用「用模型」';}}
-  }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时（25秒没响应）':'❌ '+e.message;}}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
 function visionTestImage(){try{const c=document.createElement('canvas');c.width=80;c.height=80;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,80,80);x.fillStyle='#e53935';x.fillRect(8,8,28,28);x.fillStyle='#1e88e5';x.beginPath();x.arc(56,54,16,0,Math.PI*2);x.fill();x.fillStyle='#111';x.font='bold 18px sans-serif';x.fillText('A',12,64);return c.toDataURL('image/jpeg',.86);}catch(_){return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';}}
 async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const old=JSON.stringify(S.settings.vision||{});S.settings.vision={base:($('#s_vbase').value.trim()||'').replace(/\/+$/,''),key:$('#s_vkey').value.trim()||$('#s_ckey').value.trim(),model:$('#s_vmodel').value.trim()};
@@ -2253,11 +2273,11 @@ async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999
   const t0=Date.now();
   try{const r=await fetchT(base+'/images/generations',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,prompt:'一只可爱的小猫坐在窗台上，阳光明媚，真实照片质感',n:1,size:'1024x1024'})},180000);
     const d=await r.json().catch(()=>null);const sec=Math.round((Date.now()-t0)/1000);
-    if(!r.ok){o.style.color='#e85';o.textContent='❌ '+r.status+'：'+((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'失败').slice(0,140);return;}
+    if(!r.ok){o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,(d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'失败');return;}
     const it=d&&d.data&&d.data[0];const url=it&&(it.url||(it.b64_json?'b64':''));
     if(url){o.style.color='#19a463';o.innerHTML='✅ 出图成功（'+sec+'秒）这个模型能用 👍'+(typeof url==='string'&&url.indexOf('http')===0?'　<a href="'+esc(url)+'" target="_blank" style="color:#54a0ff">点开看</a>':'');}
     else{o.style.color='#e85';o.textContent='❌ 没返回图片（'+sec+'秒）：这个模型可能不支持出图，换一个再测';}
-  }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时(>180秒)：这个模型太慢，建议换 gpt-4o-image':'❌ '+e.message;}}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
 async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(iOS必须如此),否则第二次测试时上下文已挂起、网络回来再播就没声 */
   const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
   const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
@@ -3609,7 +3629,7 @@ function gmText(m){return m.type==='text'?m.content:m.type==='transfer'?'[转账
 /* ===== 群聊 ===== */
 function showManual(){openModal(`<h3>North · 使用说明书</h3>
   <div style="font-size:13.5px;line-height:1.95;color:#e6e6e6;max-height:62vh;overflow:auto;text-align:left">
-    欢迎来玩～North 是一个能和你自己创建的角色用「微信」聊天的小手机。所有数据都只存在你自己这台设备上，没有人能看到。<br><br>
+    欢迎来玩～North 是一个能和你自己创建的角色用「微信」聊天的小手机。角色、聊天和设置主要保存在当前浏览器；开启真人好友或云同步时，对应内容会连接云端。<br><br>
     <b>① 先填接口（必做一次）</b><br>
     回主屏幕进「设置」，在「聊天模型」里填上你的 <b>API Key</b>（地址和模型名一般已经填好，不会就用默认的）。识图想用别的模型可以单独填。<br><br>
     <b>② 新建你的角色</b><br>
@@ -3621,7 +3641,24 @@ function showManual(){openModal(`<h3>North · 使用说明书</h3>
     · 朋友圈、抖音、相册、备忘录、记账等小应用都能用。<br>
     · 绑定「情侣空间」后，恋人角色会解锁更多专属互动。<br>
     · 在「我」里可以改自己的资料、切换身份、导出/导入备份。<br><br>
-    <b>小提示</b>：换设备或清缓存数据会没，记得偶尔在「我」里<b>导出备份</b>存好。玩得开心。
+    <b>⑤ API Key 常见报错（看数字就行）</b><br>
+    · <b>400</b>：请求格式或模型名不兼容。先检查模型名有没有写错。<br>
+    · <b>401</b>：密钥无效、过期或复制时带了空格。重新复制 Key。<br>
+    · <b>402</b>：账户余额/点数不足，需要充值。<br>
+    · <b>403</b>：密钥没有模型权限，或平台限制了地区/IP。<br>
+    · <b>404</b>：<b>接口地址或模型名不存在</b>。地址通常要以 <b>/v1</b> 结尾，并确认平台真的提供这个模型。<br>
+    · <b>408 / 超时</b>：网络或模型太慢，稍后重试或换模型。<br>
+    · <b>429</b>：请求太频繁、并发受限或额度达到上限，等一会儿再试。<br>
+    · <b>500</b>：平台服务端内部错误，不是你手机坏了。<br>
+    · <b>501</b>：<b>这个接口没有实现当前功能</b>；常见于路径不对，或渠道不支持这个模型、生图/语音接口。<br>
+    · <b>502 / 503 / 504</b>：上游故障、拥堵或超时，稍后重试或换线路。<br>
+    · <b>Failed to fetch / Network / CORS</b>：网络没连上，或平台不允许网页直接调用。先确认网址能打开，再问平台是否支持网页跨域。<br><br>
+    <b>⑥ 安卓黑屏 / 一直刷新不出来</b><br>
+    1. 先等 10 秒，启动失败会出现中文修复页。<br>
+    2. 点<b>「修复页面缓存后重开」</b>，这不会删除角色、聊天或密钥。<br>
+    3. 仍不行：更新手机的 <b>Chrome</b> 和 <b>Android System WebView</b>，再用 Chrome 打开小手机网址。<br>
+    4. 不要直接点“清除网站数据/清除存储”，那会删本机记录；能进入时先在「我」里导出备份。<br><br>
+    <b>小提示</b>：换设备或清除网站数据可能会丢本机记录，记得偶尔在「我」里<b>导出备份</b>存好。玩得开心。
   </div>
   <div class="btns" style="margin-top:14px"><button class="btn p" onclick="closeModal()">开始玩吧</button></div>`);}
 function maybeFirstRun(){try{if(!gateOK())return;if(localStorage.getItem('yibei_manual_seen'))return;
@@ -7685,15 +7722,16 @@ function storageFullAlert(){openModal(`<h3>存储已经满了！</h3><div style=
 /* ---------- 时钟 & 启动 ---------- */
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
+function androidResumeRepair(){try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
 initBattery();
 window.addEventListener('pagehide',()=>{sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{sleepMarkAway();callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('pageshow',()=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pageshow',()=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(androidResumeRepair,260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(androidResumeRepair,280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});
-sleepAutoEndOnOpen();render();restoreActiveCall();idleConsumeLocalPending();routeHash();/* 先立刻渲染，UI 一定出来；如后台回来/重载，恢复未挂断通话 */
-_bootImagesPromise=bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
+try{sleepAutoEndOnOpen();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}/* 先立刻渲染；失败时由安卓启动保护显示中文自救页 */
+_bootImagesPromise=bootImages().then(()=>{render();window.__northBootReady=true;}).catch(e=>{if(!window.__northBootReady&&typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'图片数据载入失败');});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(()=>pollExternalEvents(true),2600);
 setTimeout(idleOpenHeartbeatStart,3800);
 setInterval(()=>pollExternalEvents(false),30000);

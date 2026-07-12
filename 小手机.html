@@ -540,12 +540,16 @@ body{background:#000;padding:0;}
 .aiload.show{display:flex;}
 .aiload .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.28);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;flex:none;}
 @keyframes aispin{to{transform:rotate(360deg)}}
+.bootbox{height:100%;display:flex;align-items:center;justify-content:center;padding:26px;background:#111;color:#eee;text-align:center;}
+.bootcard{width:100%;max-width:310px;background:#1c1c1e;border:1px solid #303036;border-radius:18px;padding:22px 18px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.bootlogo{font-size:38px;margin-bottom:10px}.boottitle{font-size:18px;font-weight:700;margin-bottom:8px}.bootmsg{font-size:13px;line-height:1.75;color:#bbb;word-break:break-word}
+.bootbtn{width:100%;border:0;border-radius:11px;padding:11px;margin-top:10px;background:#ff8fab;color:#fff;font-size:14px;font-weight:600}.bootbtn.secondary{background:#303036;color:#ddd}
 </style>
 </head>
 <body>
 <div class="phone"><div class="screen">
   <div class="island"></div>
-  <div id="app"></div>
+  <div id="app"><div class="bootbox"><div class="bootcard"><div class="bootlogo">📱</div><div class="boottitle">North 正在启动</div><div class="bootmsg">第一次打开或网络较慢时，请稍等几秒…</div></div></div></div>
   <div class="msgbanner" id="msgBanner"></div>
   <div class="msgbanner" id="callBanner"></div>
   <div class="spybanner" id="spyBanner"></div>
@@ -558,7 +562,21 @@ body{background:#000;padding:0;}
   <div class="usebadge" id="useBadge"></div>
 </div></div>
 
-<script src="app.js?v=447"></script>
+<script>
+/* 安卓启动保护：资源或旧缓存出错时显示自救页，不让用户只看到黑屏。 */
+(function(){
+  window.__northBootReady=false;
+  function safeText(v){return String(v||'').replace(/[<>]/g,'').slice(0,180);}
+  function reasonText(raw){var s=String(raw||'');if(/quota|storage|memory|out of memory/i.test(s))return '本机网页存储或内存不足。先修复缓存；能进入后请尽快导出备份并清理旧图片。';if(/syntax|unexpected token|not defined|not a function/i.test(s))return '浏览器内核过旧或脚本没有完整加载。请更新 Chrome / 系统 WebView，再修复缓存。';if(/404|failed to load|loading chunk|network|fetch/i.test(s))return '页面文件没有完整加载，通常是网络抖动或旧缓存造成的。';return '启动时遇到异常，聊天和角色数据仍保存在本机，没有被清除。';}
+  window.__northRetry=function(){var u=location.pathname+'?reload='+Date.now()+(location.hash||'');location.replace(u);};
+  window.__northRepair=function(){var jobs=[];try{if(window.caches&&caches.keys)jobs.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}));}catch(e){}try{if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations)jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}));}catch(e){}if(window.Promise)Promise.all(jobs).then(window.__northRetry,window.__northRetry);else window.__northRetry();};
+  window.__northBootFail=function(raw){if(window.__northBootReady)return;var app=document.getElementById('app');if(!app)return;var detail=safeText(raw);app.innerHTML='<div class="bootbox"><div class="bootcard"><div class="bootlogo">🛠️</div><div class="boottitle">小手机没有正常启动</div><div class="bootmsg">'+reasonText(raw)+(detail?'<br><small style="color:#777">诊断：'+detail+'</small>':'')+'<br><b style="color:#8fd6a7">下面操作不会删除聊天、角色或密钥。</b></div><button class="bootbtn" onclick="__northRetry()">重新加载</button><button class="bootbtn secondary" onclick="__northRepair()">修复页面缓存后重开</button></div></div>';};
+  window.addEventListener('error',function(e){if(!window.__northBootReady)window.__northBootFail((e&&e.message)||'页面文件加载失败');},true);
+  window.addEventListener('unhandledrejection',function(e){if(!window.__northBootReady)window.__northBootFail((e&&e.reason&&e.reason.message)||'启动任务失败');});
+  setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
+})();
+</script>
+<script src="app.js?v=448" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="ai-account.js?v=413"></script>
 </body>
 </html>

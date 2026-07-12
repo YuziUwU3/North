@@ -1,16 +1,18 @@
 <!doctype html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>小手机</title>
-<style>html,body{margin:0;height:100%;background:#000;color:#bbb;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center}</style>
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<title>North 小手机</title>
+<style>
+html,body{margin:0;height:100%;background:#111;color:#ddd;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}.box{padding:28px}.ico{font-size:42px}.txt{margin:12px 0 18px;font-size:14px;color:#aaa}a{display:inline-block;background:#ff8fab;color:#fff;text-decoration:none;padding:11px 22px;border-radius:12px;font-weight:600}
+</style>
 </head>
 <body>
-正在加载最新版小手机…
+<div class="box"><div class="ico">📱</div><div class="txt">正在打开最新版 North 小手机…</div><a id="open" href="./小手机.html">如果没有自动打开，请点这里</a></div>
 <script>
-// 每次都带一个新的时间戳，等于全新网址，浏览器/CDN 都没法吃旧缓存 → 永远最新
-location.replace('小手机.html?t=' + Date.now());
+(function(){var target='./小手机.html?v=448&open='+Date.now();var a=document.getElementById('open');if(a)a.href=target;setTimeout(function(){location.replace(target);},80);})();
 </script>
 </body>
 </html>
