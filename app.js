@@ -68,7 +68,8 @@ function pfUnpack(t){t=(''+(t||'')).trim();let m=t.match(/^\[PF\|([A-Za-z0-9+/=]
   return null;}
 function pfMsgPayload(m){return pfUnpack(m&&(m.text||m.body||m.content));}
 function pfIsRoomTransport(m){const p=pfMsgPayload(m);return !!(p&&String(p.type||'').indexOf('game_room_')===0&&p.type!=='game_room_invite');}
-function pfVisibleMsgList(store,key){return pfMsgList(store,key).filter(m=>!pfIsRoomTransport(m));}
+function pfIsHiddenTransport(m){const p=pfMsgPayload(m);return !!(p&&p.type==='style_update');}
+function pfVisibleMsgList(store,key){return pfMsgList(store,key).filter(m=>!pfIsRoomTransport(m)&&!pfIsHiddenTransport(m));}
 function pfMsgPreview(m){const p=pfMsgPayload(m);if(!p)return (m&&m.text)||'';if(p.type==='text')return p.text||'';if(p.type==='sticker')return '[表情]'+(p.meaning?(' '+p.meaning):'');if(p.type==='image')return '[图片]'+(p.desc?(' '+p.desc):'');if(p.type==='pat')return '[拍一拍]';if(p.type==='group_invite')return '[群聊邀请] '+(p.groupName||'小手机群聊');if(p.type==='game_room_invite')return '[游戏房间] '+(p.title||'邀请你一起玩');if(p.type==='game_room_ready')return '[已准备]';if(p.type==='game_room_start')return '[游戏开始]';if(p.type==='game_room_chat')return '[房间消息] '+(p.text||'');if(p.type==='transfer')return '[转账] ¥'+(+p.amount||0).toFixed(2);if(p.type==='redpacket')return '[红包] ¥'+(+p.amount||0).toFixed(2);return '[消息]';}
 function pfPayloadIsPay(m){const p=pfMsgPayload(m);return !!(p&&(p.type==='transfer'||p.type==='redpacket'));}
 function pfMentionsMe(m){let t=''+((m&&m.body)||(m&&m.text)||'');const pl=pfMsgPayload(m);if(pl&&pl.type==='text')t=pl.text||'';const nm=(S.me&&S.me.name)||'我';return !!(t&&nm&&t.indexOf('@'+nm)>=0);}
@@ -80,7 +81,7 @@ function pfNotifyFriend(m,opt){opt=opt||{};if(pfIsRoomTransport(m))return;const 
   if(!opt.silent&&S.settings.sound&&typeof playDing==='function')playDing();
   const b=$('#msgBanner');if(b&&!_call){b.innerHTML=`${pfAvatarHTML(f,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(pfFriendDisplayName(f))}</div><div class="bm">${esc(pfMsgPreview(msg))}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneFriendChat(from);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
   appNotify(pfFriendDisplayName(f),pfMsgPreview(msg),{tag:'pf-'+from,data:{type:'open',target:'pfchat',id:from}});}
-function pfNotifyGroup(m,opt){opt=opt||{};const p=phoneFriendState(),gid=m.group_id||m.gid,from=(''+(m.from_id||m.from||'')).toUpperCase();if(!gid||!from||from===p.id)return;
+function pfNotifyGroup(m,opt){opt=opt||{};if(pfIsHiddenTransport({text:m.body||m.text||''}))return;const p=phoneFriendState(),gid=m.group_id||m.gid,from=(''+(m.from_id||m.from||'')).toUpperCase();if(!gid||!from||from===p.id)return;
   const g=pfGroupById(gid)||{group_id:gid,name:'小手机群聊'},msg={text:(''+(m.body||m.text||'')),time:m.created_at?new Date(m.created_at).getTime():Date.now()};
   const title=pfGroupDisplayName(g),line=(pfMentionsMe(msg)?'[有人@你] ':'')+(pfNameById(from)||'成员')+'：'+pfMsgPreview(msg);
   const viewing=cur().p==='pfgroup'&&cur().gid===gid;if(viewing){pfMarkGroupRead(gid);return;}
@@ -131,6 +132,7 @@ function pfStoreGroupMessage(m){const p=phoneFriendState();if(!m)return false;co
   if(ts<=(p.groupClearBefore[gid]||0))return false;
   const kept={id,gid,from,text:pfSafeBody(m.body||m.text||''),time:ts,recalled:!!m.recalled||!!(oldLocal&&oldLocal.recalled),received:!!m.received||!!(oldLocal&&oldLocal.received),receivedBy:m.received_by||m.receiver_id||(oldLocal&&oldLocal.receivedBy)||''};
   pfAbsorbGroupBubbleStyle(gid,from,kept);
+  if(pfIsHiddenTransport(kept))return false;
   p.groupMessages[gid].push(kept);
   p.groupMessages[gid].sort((a,b)=>(a.time||0)-(b.time||0));if(p.groupMessages[gid].length>400)p.groupMessages[gid]=p.groupMessages[gid].slice(-400);return true;}
 function pfApplyReceipt(r){const p=phoneFriendState(),mid=''+(r&&r.message_id||''),rid=(''+(r&&r.receiver_id||'')).toUpperCase();if(!mid)return;Object.keys(p.messages||{}).forEach(id=>{pfMsgList(p.messages,id).forEach(m=>{if(m.id===mid){if(pfPayloadIsPay(m)){m.received=true;m.receivedBy=rid;m.receivedAt=r.received_at?new Date(r.received_at).getTime():Date.now();}else pfSetReadBy(m,rid);}});});Object.keys(p.groupMessages||{}).forEach(gid=>{pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.id===mid){if(pfPayloadIsPay(m)){m.received=true;m.receivedBy=rid;m.receivedAt=r.received_at?new Date(r.received_at).getTime():Date.now();}else pfSetReadBy(m,rid);}});});}
@@ -262,13 +264,13 @@ async function pfGroupInviteAccept(mid,inviteId,ok){const p=phoneFriendState();l
   catch(e){found.inviteStatus='';save();render();toast(e.message||'操作失败');}}
 async function sendPhoneFriendGroup(gid){const ta=$('#pfg_input'),text=(ta&&ta.value||'').trim();if(!text)return;const p=phoneFriendState();if(ta)ta.value='';
   sendPhoneFriendGroupBody(gid,text);}
-async function sendPhoneFriendGroupBody(gid,body,opt){body=(''+(body||'')).trim();opt=opt||{};if(!body)return;body=pfGroupOutgoingBody(gid,body);if(body.length>PHONE_FRIEND_BODY_MAX){toast('这条消息太大，发不出去');return;}const p=phoneFriendState(),localId='local_'+uid();
-  if(S.couple&&S.couple.gags&&S.couple.gags[pfgGagKey(gid)]){toast('这个群聊被ta禁言了，先去求ta解开');return;}
-  pfStoreGroupMessage({id:localId,group_id:gid,from_id:p.id,body,time:Date.now()});if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);save();render();
-  if(S.settings.sound&&typeof playDing==='function')playDing();
+async function sendPhoneFriendGroupBody(gid,body,opt){body=(''+(body||'')).trim();opt=opt||{};if(!body)return;const silent=!!opt.silent;body=pfGroupOutgoingBody(gid,body);if(body.length>PHONE_FRIEND_BODY_MAX){if(!silent)toast('这条消息太大，发不出去');return;}const p=phoneFriendState(),localId='local_'+uid();
+  if(S.couple&&S.couple.gags&&S.couple.gags[pfgGagKey(gid)]){if(!silent)toast('这个群聊被ta禁言了，先去求ta解开');return;}
+  pfStoreGroupMessage({id:localId,group_id:gid,from_id:p.id,body,time:Date.now()});if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);save();if(!silent)render();
+  if(!silent&&S.settings.sound&&typeof playDing==='function')playDing();
   try{await pfEnsure();const m=await pfRpc('phone_friend_send_group_message',{p_from_id:p.id,p_secret:p.secret,p_group_id:gid,p_body:body},30000);pfStoreGroupMessage(m);save();phoneFriendSync(true);}
-  catch(e){if(opt.bill){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机群转账'));const arr=pfMsgList(p.groupMessages,gid);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}toast(e.message||'发送失败');}
-  finally{if(cur().p==='pfgroup'&&cur().gid===gid)render();}}
+  catch(e){if(opt.bill){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机群转账'));const arr=pfMsgList(p.groupMessages,gid);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!silent)toast(e.message||'发送失败');}
+  finally{if(!silent&&cur().p==='pfgroup'&&cur().gid===gid)render();}}
 function pfCardBody(type,amount,note){return pfPack({type,amount:+amount||0,note:(note||'').trim()});}
 function phoneFriendTransferModal(id,type){id=(''+id).toUpperCase();const f=phoneFriendById(id)||{display_name:id};const red=type==='redpacket';
   openModal(`<h3>${red?'红包':'转账'}给 ${esc(pfFriendDisplayName(f))}</h3><div class="field"><label>金额</label><input id="pft_amt" type="number" step="0.01" placeholder="${red?'6.66':'13.14'}"></div><div class="field"><label>${red?'祝福语':'说明'}</label><input id="pft_note" placeholder="${red?'恭喜发财，大吉大利':'给你～'}"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="phoneFriendSendMoney('${id}','${type}')">${red?'塞钱':'转账'}</button></div>`);}
@@ -286,7 +288,8 @@ function phoneFriendSendImage(id){const p=$('#pfpanel');if(p)p.classList.remove(
 function phoneFriendGroupSendImage(gid){const p=$('#pfgpanel');if(p)p.classList.remove('show');pickFile('image/*',async f=>{let src;try{src=await compress(f,620,.68);}catch(e){try{src=await readAsDataURL(f);}catch(_){toast('图片读取失败');return;}}let body=pfImagePack(src);if(!body||body.length>PHONE_FRIEND_BODY_MAX){try{src=await compress(f,420,.58);body=pfImagePack(src);}catch(_){body='';}}if(!body||body.length>PHONE_FRIEND_BODY_MAX){toast('图片太大，换一张小一点的');return;}sendPhoneFriendGroupBody(gid,body);});}
 function phoneFriendGroupPatModal(gid){const p=phoneFriendState(),g=pfGroupById(gid)||{members:[]},ids=['me'].concat(pfGroupMemberIds(g));const rows=ids.map(id=>{const me=id==='me',tid=me?p.id:id,f=me?null:phoneFriendById(id),nm=me?(S.me.name||'我'):(pfNameById(id)||id),avh=me?av(S.me.avatar,'sm'):pfAvatarHTML(f||{phone_id:id,display_name:nm},'sm');return `<div class="it" onclick="phoneFriendGroupPat('${gid}','${tid}')">${avh}<span style="flex:1">${esc(nm)}${me?'（我）':''}</span><span class="v">拍一拍</span></div>`;}).join('');
   const panel=$('#pfgpanel');if(panel)panel.classList.remove('show');openModal(`<h3>拍一拍</h3><div class="hint">会作为群消息发出去，群里所有人都能看见。</div><div class="section">${rows}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">取消</button>`);}
-function phoneFriendGroupPat(gid,targetId){targetId=(''+(targetId||'')).toUpperCase();const targetName=pfNameById(targetId)||targetId;closeModal();sendPhoneFriendGroupBody(gid,pfPack({type:'pat',targetId,targetName,fromName:S.me.name||'我'}));}
+let _pfLastPat=null;
+function phoneFriendGroupPat(gid,targetId){targetId=(''+(targetId||'')).toUpperCase();const key=gid+'|'+targetId,now=Date.now();if(_pfLastPat&&_pfLastPat.key===key&&now-_pfLastPat.t<900)return;_pfLastPat={key,t:now};const targetName=pfNameById(targetId)||targetId;closeModal();sendPhoneFriendGroupBody(gid,pfPack({type:'pat',targetId,targetName,fromName:S.me.name||'我'}));}
 function pfPanelHTML(id){const stk=S.me.stickers||[];return `<div class="panel" id="pfpanel"><div class="pgrid"><div class="it" onclick="phoneFriendSendImage('${id}')"><div class="b">${svgIc('image',26,'#e6e6ee')}</div><span>相册</span></div><div class="it" onclick="document.getElementById('pfpanel').classList.remove('show');phoneFriendTransferModal('${id}','transfer')"><div class="b">${svgIc('money',26,'#e6e6ee')}</div><span>转账</span></div><div class="it" onclick="document.getElementById('pfpanel').classList.remove('show');phoneFriendTransferModal('${id}','redpacket')"><div class="b">${svgIc('redpacket',26,'#e6e6ee')}</div><span>红包</span></div><div class="it" onclick="addSticker()"><div class="b">${svgIc('smile',26,'#e6e6ee')}</div><span>添加表情</span></div></div><div class="ppage" style="padding-top:0"><div class="estk">${stk.map((s,i)=>`<div class="s" onclick="phoneFriendSendSticker('${id}',${i})"><span class="x" onclick="event.stopPropagation();pfDeleteSticker(${i},'pfpanel')">×</span><img src="${s.img}"><small>${esc(s.meaning||'')}</small></div>`).join('')||'<div style="color:#666;font-size:12px;padding:8px">还没有自定义表情，点「添加表情」上传</div>'}</div></div></div>`;}
 function pfGroupPanelHTML(gid){const stk=S.me.stickers||[];return `<div class="panel" id="pfgpanel"><div class="pgrid"><div class="it" onclick="phoneFriendGroupSendImage('${gid}')"><div class="b">${svgIc('image',26,'#e6e6ee')}</div><span>相册</span></div><div class="it" onclick="document.getElementById('pfgpanel').classList.remove('show');phoneFriendGroupTransferModal('${gid}','transfer')"><div class="b">${svgIc('money',26,'#e6e6ee')}</div><span>转账</span></div><div class="it" onclick="document.getElementById('pfgpanel').classList.remove('show');phoneFriendGroupTransferModal('${gid}','redpacket')"><div class="b">${svgIc('redpacket',26,'#e6e6ee')}</div><span>红包</span></div><div class="it" onclick="phoneFriendGroupPatModal('${gid}')"><div class="b" style="font-size:24px;color:#e6e6ee">↟</div><span>拍一拍</span></div><div class="it" onclick="addSticker()"><div class="b">${svgIc('smile',26,'#e6e6ee')}</div><span>添加表情</span></div></div><div class="ppage" style="padding-top:0"><div class="estk">${stk.map((s,i)=>`<div class="s" onclick="phoneFriendGroupSendSticker('${gid}',${i})"><span class="x" onclick="event.stopPropagation();pfDeleteSticker(${i},'pfgpanel')">×</span><img src="${s.img}"><small>${esc(s.meaning||'')}</small></div>`).join('')||'<div style="color:#666;font-size:12px;padding:8px">还没有自定义表情，点「添加表情」上传</div>'}</div></div></div>`;}
 function pfBubblePart(m,me,bstyle){if(m&&m.recalled)return `<div class="bubble recalled">已撤回一条消息</div>`;const p=pfMsgPayload(m);if(!p){if(String(m.text||'').indexOf('[PF|')===0)return bubbleSingleHTML('[消息]','',bstyle,me);return bubbleSingleHTML(m.text,pfMentionsMe(m)&&!me?'mention':'',bstyle,me);}
@@ -322,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v460 · 柔和消息与高级信箱';
+const APP_VER='v461 · 记忆承接与通话清理';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -471,6 +474,11 @@ function selectRelevantMemory(c,query,limit){if(!c)return{items:[],query:''};con
   const scored=items.map(x=>Object.assign(x,{score:memoryItemScore(x,query,now)})).filter(x=>x.score>=2.6).sort((a,b)=>b.score-a.score||b.importance-a.importance||b.ts-a.ts).slice(0,Math.max(0,Math.min(3,limit||3)));c._memoryLastPick=c._memoryLastPick||{};c._memoryLastPick[scope]={ts:now,query:(''+query).slice(-180),picked:scored.map(x=>({source:x.source,text:x.text.slice(0,100),score:+x.score.toFixed(2)}))};return{items:scored,query};}
 function memoryRetrievalPrompt(c,ctx){const pending=memoryPending(c);let s='';if(ctx&&ctx.items&&ctx.items.length)s+='\n\n# 本轮真正相关的记忆（隐藏，只给当前回复使用）\n'+ctx.items.map(x=>'· ['+x.source+'] '+x.text).join('\n')+'\n只在当前话题确实需要时自然受这些经历影响，不要逐条复述，不要炫耀“我记得”，也不要硬把旧事扯进来。没有列出的旧记忆，本轮不要自行翻找。';
   if(pending)s+='\n\n# 待确认的记忆冲突（隐藏）\n旧信息：'+pending.oldText+'\n新信息：'+pending.newText+'\n这两条不能同时确定成立。请像真人一样用一句简短自然的话向'+S.me.name+'确认现在以哪条为准，不要擅自覆盖，也不要提数据库、记忆系统或冲突检测。对方明确确认其中一条后，在回复末尾单独输出 [记住|确认后的完整信息]，系统会完成更新。';return s;}
+function memoryCriticalPrompt(c){if(!c||!isMain())return '';const now=Date.now(),items=[];const add=(txt,src,ts)=>{txt=aboutMeNoteText(txt);if(txt&&!items.some(x=>memoryNorm(x.text)===memoryNorm(txt)))items.push({text:txt,src,ts:+ts||0});};
+  memoryList(c).forEach(v=>{const t=memoryText(v);if(/称呼|叫我|叫ta|喊我|喊ta|别叫|不要叫|不准叫|不能叫|禁止叫|不可以叫|不要那样叫|不能那样叫|名字|备注|底线|禁忌|雷区|不喜欢被叫|不能用.{0,8}叫/.test(t))add(t,'长期记忆',0);});
+  (c.summaries||[]).forEach(v=>{const t=summaryCleanText(c,v&&v.text||'');if(/称呼|叫我|别叫|不要叫|不准叫|不能叫|禁止叫|底线|禁忌|雷区/.test(t))add(t,'对话总结',v.ts);});
+  if(!items.length)return '';
+  return '\n\n# 必须长期遵守的称呼/边界记忆（最高优先级）\n'+items.slice(-8).map(x=>'· '+(x.ts?fmtDT(x.ts)+' · ':'')+x.text).join('\n')+'\n这些是关系里的硬约定和雷区，尤其是不能怎样称呼'+S.me.name+'、ta不喜欢什么叫法、哪些边界不能踩。即使本轮话题不明显相关，也要在用词和称呼上严格遵守；不要在可见消息里说“系统提醒/记忆写着”。';}
 function lifeNoteAdd(text,source,tags){const raw=(''+(text||'')).replace(/\s+/g,' ').trim();const v=(source==='manual')?raw:aboutMeNoteText(raw);if(!v)return false;const arr=lifeNotes();const key=v.slice(0,36);
   if(arr.some(n=>(n.text||'').slice(0,36)===key&&Date.now()-(n.ts||0)<3*86400000))return false;
   arr.unshift({id:uid(),text:v.slice(0,90),source:source||'chat',tags:tags&&tags.length?tags:lifeTopicOf(v),ts:Date.now()});
@@ -483,7 +491,7 @@ function lifeNotePrompt(c){if(!isLover(c))return '';const arr=lifeNotes();if(!ar
   const hitTags=lifeTopicOf(recent);let picked=arr.filter(n=>{const age=Date.now()-(n.ts||0),tags=n.tags||[];return age<14*86400000||tags.some(t=>hitTags.includes(t));});
   if(!picked.length)picked=arr.slice(0,3);else picked=picked.slice(0,6);
   if(!picked.length)return '';
-  return '\n\n# '+S.me.name+'身上的小事簿（隐藏的生活痕迹）\n'+picked.map(n=>'· '+ymd(n.ts||0)+'：'+aboutMeNoteText(n.text)).join('\n')+'\n这些不是数据库条目，而是你对ta的印象来源。相关话题再次出现时，你会自然先观察ta现在的状态、记得ta之前受过什么影响；不要在可见消息里机械复述清单，也不要说你读取了小事簿。';}
+  return '\n\n# '+S.me.name+'身上的小事簿（隐藏的生活痕迹）\n'+picked.map(n=>'· '+fmtDT(n.ts||Date.now())+'：'+aboutMeNoteText(n.text)).join('\n')+'\n这些不是数据库条目，而是你对ta的印象来源。相关话题再次出现时，你会自然先观察ta现在的状态、记得ta之前受过什么影响；不要在可见消息里机械复述清单，也不要说你读取了小事簿。';}
 function negatedBlockMention(text){return /(没|没有|从没|并没|根本没|不是|并不是).{0,5}(拉黑|删了|删除)|就没拉黑|没有把.{0,5}(拉黑|删除)/.test(String(text||''));}
 function dialogueEmotion(c){if(!c)return null;c._dialogueEmotion=c._dialogueEmotion||{};const key=(typeof actId==='function'?actId():'main');let st=c._dialogueEmotion[key];if(!st){const mv=typeof moodNow==='function'?moodNow(c):(c.moodVal==null?70:c.moodVal),reason=c.emotionTailReason||'';st=c._dialogueEmotion[key]={type:mv<45?'hurt':mv<62?'low':'neutral',intensity:Math.max(0,Math.min(100,(70-mv)*2)),cause:reason,startedAt:Date.now(),updatedAt:Date.now(),repair:0,probeCount:0,revealed:0,threads:[]};}if(!Array.isArray(st.threads))st.threads=[];const before=st.threads.length;st.threads=st.threads.filter(x=>!negatedBlockMention((x&&x.topic)||''));if(before!==st.threads.length||negatedBlockMention(st.cause)){const active=st.threads.filter(x=>x&&x.status!=='resolved');st.cause=active.length?active[active.length-1].topic:'';st.intensity=active.length?Math.min(+st.intensity||0,30):0;st.type=active.length?(st.type||'low'):'neutral';st.repair=active.length?(+st.repair||0):0;if(negatedBlockMention(c.mood))c.mood='';}return st;}
 function dialogueActiveThreads(c){const st=dialogueEmotion(c);return st?st.threads.filter(x=>x&&x.status!=='resolved'):[];}
@@ -495,9 +503,11 @@ function dialogueEmotionOnReply(c,content,userText){const st=dialogueEmotion(c);
 function dialogueEmotionPrompt(c){const e=dialogueEmotionSnapshot(c);if(!e||(!e.intensity&&!e.threads.length&&!e.userDistress))return'';const names={neutral:'平静',low:'低落',hurt:'受伤/委屈',angry:'生气',jealous:'吃醋',worried:'担心对方',sad:'难过',warm:'温暖',softening:'正在软化'};const ts=e.threads.length?e.threads.map((x,i)=>(i+1)+'. '+x.topic+'（'+(x.status==='repairing'?'正在修复':'还没说开')+'）').join('\n'):'（没有未解决话题）';let reveal='';if(e.probeCount>=3)reveal='对方已经连续追问多次，这轮必须说出较明确的真实原因或在意点，不能继续否认。';else if(e.probeCount===2)reveal='这是第二次追问，至少透露原因类别或一个具体在意点，让对方能继续理解和安抚。';else if(e.probeCount===1)reveal='这是第一次追问，可以按人设保留，但至少承认情绪存在，或说暂时不想讲；不能反复说完全没事。';
   return '\n\n# 连续情绪状态（隐藏，必须与顶部心情和实际语气一致）\n当前状态：'+(names[e.type]||e.type)+'，强度 '+e.intensity+'/100。\n原因：'+(e.cause||'没有明确原因')+'。\n修复进度：'+e.repair+'/100。\n未解决话题：\n'+ts+(e.userDistress?'\n'+S.me.name+'当前明显难过/求安慰：先暂停冷处理和追究，用你自己的关心方式稳住ta；未解决话题保留，等ta情绪稳定后再谈。':'')+(reveal?'\n'+reveal:'')+'\n情绪变化规则：道歉、解释、撒娇或安慰只能让态度逐步松动，不能一轮瞬间从受伤变成极度热情；真正说开时可以明确原谅/翻篇。未解决话题不必每轮翻旧账，但它会影响分寸。';}
 function emotionAfterForgive(c){if(!c)return;const now=Date.now();dialogueResolveThread(c,'');const st=dialogueEmotion(c),left=dialogueActiveThreads(c);if(st){st.type=left.length?'softening':'warm';st.intensity=left.length?Math.min(+st.intensity||0,28):Math.min(+st.intensity||0,8);st.repair=100;st.cause=left.length?(left[left.length-1].topic||'事情刚说开，情绪还在慢慢恢复'):'';st.updatedAt=now;}c.coldUntil=0;c.emotionTailUntil=now+45*60000;c.emotionTailReason='刚刚和好，心里已经暖下来';c.moodVal=Math.max(68,Math.min(78,moodNow(c)+16));c.moodAt=now;}
+function maybeDistressCall(c,text){if(!isMain()||!c||c.blocked||_call)return;if(S.jail&&S.jail.active)return;if(S.me.sleep&&S.me.sleep.active)return;const now=Date.now();if(now-(c._distressCallAt||0)<45*60000)return;c._distressCallAt=now;save();
+  setTimeout(()=>{const cc=getC(c.id);if(!_call&&cc&&!cc.blocked&&!(S.jail&&S.jail.active)&&!(S.me.sleep&&S.me.sleep.active)){incomingCall(c.id,'voice');if(_call){_call._distress=true;_call._proReason='听出来'+S.me.name+'情绪很不好，想马上听见ta声音';}}},1800+Math.random()*2200);}
 function emotionOnUserMsg(id,m){if(!m)return;const c=getC(id);if(!c)return;const text=(m.content||'').trim();if(!text)return;const st=dialogueEmotion(c),now=Date.now();
   if(moodProbeText(text)){st.probeCount=Math.min(5,(+st.probeCount||0)+1);st.updatedAt=now;}
-  const distress=/(我.{0,8}(哭|难过|委屈|不开心|崩溃|好累|受不了|生气了)|呜呜|😭|😢|别管我|不要你管|哄我|你不爱我|别冷着我)/.test(text)&&!/废物|有病|恶心|滚开|闭嘴/.test(text);if(distress){st.userDistressUntil=now+45*60000;if(!dialogueActiveThreads(c).length){st.type='worried';st.intensity=Math.max(+st.intensity||0,30);st.cause='担心'+S.me.name+'现在的情绪';}st.updatedAt=now;if(isMain()){c.moodVal=Math.min(moodNow(c),62);c.moodAt=now;c.mood='担心'+S.me.name+'，先想把ta哄好';}save();return;}
+  const distress=/(我.{0,8}(哭|难过|委屈|不开心|崩溃|好累|受不了|生气了)|呜呜|😭|😢|别管我|不要你管|哄我|你不爱我|别冷着我)/.test(text)&&!/废物|有病|恶心|滚开|闭嘴/.test(text);if(distress){st.userDistressUntil=now+45*60000;if(!dialogueActiveThreads(c).length){st.type='worried';st.intensity=Math.max(+st.intensity||0,30);st.cause='担心'+S.me.name+'现在的情绪';}st.updatedAt=now;if(isMain()){c.moodVal=Math.min(moodNow(c),62);c.moodAt=now;c.mood='担心'+S.me.name+'，先想把ta哄好';maybeDistressCall(c,text);}save();return;}
   const noBlock=negatedBlockMention(text),attacked=/滚|闭嘴|烦死|讨厌你|废物|有病|恶心|分手|滚开|烦不烦|你很烦/.test(text)||(!noBlock&&/拉黑|删了你/.test(text));if(attacked){dialogueAddThread(c,'被'+S.me.name+'这句话刺到了：'+text.slice(0,38),4,'hurt');st.intensity=Math.min(100,Math.max(+st.intensity||0,55)+18);st.updatedAt=now;if(isMain()){c.moodVal=Math.max(0,moodNow(c)-18);c.moodAt=now;c.emotionTailUntil=now+4*3600000;c.emotionTailReason=st.cause;}save();return;}
   if(/对不起|我错了|别生气|哄你|抱抱|原谅我|不吵了|我解释|听我说/.test(text)&&dialogueActiveThreads(c).length){const t=dialogueActiveThreads(c).slice(-1)[0];if(t)t.status='repairing';st.repair=Math.min(85,(+st.repair||0)+(/解释|说清楚|我错了/.test(text)?28:16));st.intensity=Math.max(12,(+st.intensity||0)-10);st.type='softening';st.updatedAt=now;if(isMain()){c.moodVal=Math.min(65,moodNow(c)+6);c.moodAt=now;if(!c.emotionTailUntil||c.emotionTailUntil<now)c.emotionTailUntil=now+90*60000;}save();return;}
   if(/爱你|喜欢你|想你|抱抱|亲亲|陪你|别难过/.test(text)&&(+st.intensity||0)>0){st.repair=Math.min(75,(+st.repair||0)+8);st.intensity=Math.max(8,(+st.intensity||0)-5);st.updatedAt=now;if(isMain()){c.moodVal=Math.min(65,moodNow(c)+5);c.moodAt=now;}save();}}
@@ -1187,9 +1197,9 @@ function behaviorOnUserMsg(id,m){if(!(S.couple&&S.couple.cid===id)||!m)return;co
   const d=new Date(m.time||Date.now()),h=d.getHours();if(text&&h>=1&&h<5&&!/睡了|晚安|去睡|我要睡|准备睡/.test(text)){
     behaviorRecord('late','凌晨 '+hm(m.time)+' 还在'+(m._call?'电话':'微信')+'里说：'+text.slice(0,42),m._call?'call':'wechat',{gapMs:30*60000});}}
 function behaviorPrompt(c){if(!(S.couple&&S.couple.cid===c.id&&behaviorOn()))return '';const b=behaviorStore(),items=(b&&b.items||[]).filter(x=>x.active!==false&&(x.promise||(x.events&&x.events.length))).sort((a,b)=>(b.lastTs||0)-(a.lastTs||0)).slice(0,5);if(!items.length)return '';
-  return '\n\n# 你悄悄记在心里的小账本（隐藏记忆，不要说成系统或账本）\n'+items.map(it=>{const ev=(it.events||[]).slice(0,3).map(e=>ymd(e.ts)+' '+hm(e.ts)+'：'+e.text).join('；');return '· '+it.title+(it.promise?'：'+S.me.name+'答应过「'+it.promise+'」':'')+((it.count||0)>0?'，后来相关记录 '+(it.count||0)+' 次':'')+(ev?'。证据：'+ev:'')+((it.oldCount||0)?'（另有更早记录 '+it.oldCount+' 条）':'');}).join('\n')+'\n你要把这些当成真实相处里记住的细节：如果ta又犯同类问题，可以自然提到“又”“上次答应过”“这不是第一次”，但别机械念日期清单，别把隐藏提示原样说出来。';}
+  return '\n\n# 你悄悄记在心里的小账本（隐藏记忆，不要说成系统或账本）\n'+items.map(it=>{const ev=(it.events||[]).slice(0,3).map(e=>fmtDT(e.ts)+'：'+e.text).join('；');return '· '+it.title+(it.promise?'：'+S.me.name+'答应过「'+it.promise+'」':'')+((it.count||0)>0?'，后来相关记录 '+(it.count||0)+' 次':'')+(ev?'。证据：'+ev:'')+((it.oldCount||0)?'（另有更早记录 '+it.oldCount+' 条）':'');}).join('\n')+'\n你要把这些当成真实相处里记住的细节：如果ta又犯同类问题，可以自然提到“又”“上次答应过”“这不是第一次”，但别机械念日期清单，别把隐藏提示原样说出来。';}
 function behaviorStats(){const b=behaviorStore();const arr=(b&&b.items)||[];const active=arr.filter(x=>x.active!==false);const vio=active.reduce((s,x)=>s+(x.count||0),0);return {on:!b||b.enabled!==false,n:active.length,v:vio,latest:active[0]||null};}
-function behaviorLedgerModal(){const b=behaviorStore();if(!b){toast('先绑定情侣空间');return;}const items=(b.items||[]).filter(x=>x.active!==false);const card=it=>`<div class="section" style="margin:0 0 10px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#211922,#17151b);border:1px solid rgba(255,255,255,.08)"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">♡</span><b style="color:#ffd3e4;flex:1">${esc(it.title)}</b><span style="font-size:12px;color:#ff9fbd">×${it.count||0}</span><span onclick="behaviorDelete('${it.id}')" style="color:#fa5151;cursor:pointer;padding:4px">✕</span></div>${it.promise?`<div style="font-size:13px;color:#eee;margin-top:7px;line-height:1.55">答应过：${esc(it.promise)}</div>`:''}${(it.events&&it.events.length)?`<div style="margin-top:8px">${it.events.slice(0,4).map(e=>`<div style="font-size:12px;color:#aaa;line-height:1.55;margin-top:4px">${esc(ymd(e.ts)+' '+hm(e.ts)+' · '+e.text)}</div>`).join('')}</div>`:'<div style="font-size:12px;color:#777;margin-top:8px">还没有抓到违规证据</div>'}${it.oldCount?`<div style="font-size:11px;color:#777;margin-top:5px">另有更早记录 ${it.oldCount} 条，已自动收纳</div>`:''}</div></div>`;
+function behaviorLedgerModal(){const b=behaviorStore();if(!b){toast('先绑定情侣空间');return;}const items=(b.items||[]).filter(x=>x.active!==false);const card=it=>`<div class="section" style="margin:0 0 10px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#211922,#17151b);border:1px solid rgba(255,255,255,.08)"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">♡</span><b style="color:#ffd3e4;flex:1">${esc(it.title)}</b><span style="font-size:12px;color:#ff9fbd">×${it.count||0}</span><span onclick="behaviorDelete('${it.id}')" style="color:#fa5151;cursor:pointer;padding:4px">✕</span></div>${it.promise?`<div style="font-size:13px;color:#eee;margin-top:7px;line-height:1.55">答应过：${esc(it.promise)}</div>`:''}${(it.events&&it.events.length)?`<div style="margin-top:8px">${it.events.slice(0,4).map(e=>`<div style="font-size:12px;color:#aaa;line-height:1.55;margin-top:4px">${esc(fmtDT(e.ts)+' · '+e.text)}</div>`).join('')}</div>`:'<div style="font-size:12px;color:#777;margin-top:8px">还没有抓到违规证据</div>'}${it.oldCount?`<div style="font-size:11px;color:#777;margin-top:5px">另有更早记录 ${it.oldCount} 条，已自动收纳</div>`:''}</div></div>`;
   openModal(`<h3>♡ 行为小账本</h3><div class="hint" style="line-height:1.7">这里记录你答应过ta的事、以及后来有没有又犯。角色会在微信和电话里悄悄记得，但不会在聊天框显示系统提示。</div>
   <div class="section" style="margin:0 0 10px"><div class="it"><span>启用小账本</span><span class="sw ${b.enabled!==false?'on':''}" onclick="behaviorToggle()"></span></div></div>
   ${items.length?items.map(card).join(''):'<div class="empty" style="padding:24px 10px">还没有记账。等你答应过什么、或又熬夜/失踪/超时，它会自己记下来。</div>'}
@@ -1247,6 +1257,8 @@ function buildSystem(c,opt){
   if(wb.length)s+='\n\n# 世界设定／世界书（最高优先级，务必严格遵守，触发了就要照做，不要无视）\n'+wb.map(w=>'· '+w.name+'：'+w.content).join('\n');
   // 记忆（仅主身份）
   if(!opt.selectiveMemory&&_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+aboutMeNoteText(m)).join('\n');
+  if(_main){const _crit=memoryCriticalPrompt(c);if(_crit)s+=_crit;}
+  if(_main&&c._jailHandoff&&c._jailHandoff.ts&&Date.now()-c._jailHandoff.ts<24*3600000)s+='\n\n# 刚从小黑屋出来后的承接（优先级很高）\n'+c._jailHandoff.text+'\n这是刚刚发生的关系事件，比微信里更早的闲聊更靠后。现在回微信时要接着这件事的余温、冷处理、算账后的情绪继续，不要突然回到小黑屋之前的旧微信话题。不要说“系统提示/小黑屋记录”。';
   if(_main&&c.gamesPlayed&&c.gamesPlayed.length)s+='\n\n# 你和'+S.me.name+'一起玩过的游戏\n你记得跟ta在游戏大厅一起玩过：'+c.gamesPlayed.join('、')+'。被提起时要想得起来、能自然回味这些一起玩过的事，别说没玩过（具体每局怎么玩的不重要，记得玩过就行）。';
   if(_main){const _co=S.shop&&S.shop.co;
     if(_co&&_co.on&&_co.cid===c.id)s+='\n\n# 你正在和'+S.me.name+'一起逛街（进行中）\n你俩此刻正一起用购物App逛街、边看边挑东西：你会自己看中/想买些东西让ta同意，ta想买的也会来问你同不同意。ta聊到"一起买的/你挑的/刚看的那个"时，你心里清楚这事正在发生，自然接着聊。';
@@ -2602,7 +2614,7 @@ function spyAddGrudge(id){const c=getC(id);if(!c)return;const t=prompt('帮ta在
 function spyToggleGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g[i].done=!g[i].done;g[i].doneTs=g[i].done?Date.now():0;save();render();}
 function spyDelGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g.splice(i,1);save();render();}
 function spyLifeNoteSec(id){const arr=lifeNotes();
-  const rows=arr.length?arr.map((n,i)=>`<div class="bill" style="border-radius:10px;margin:0 10px 7px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-size:13px;color:#e8e1ff;line-height:1.6">${esc(aboutMeNoteText(n.text||''))}</div><small style="display:block;color:#777;margin-top:4px">${ymd(n.ts||0)} · ${(n.tags||[]).map(lifeTagName).join('、')||'生活'}</small></div><div style="white-space:nowrap"><span onclick="spyEditLifeNote(${i})" style="color:#54a0ff;cursor:pointer;margin-right:8px">改</span><span onclick="spyDelLifeNote(${i})" style="color:#fa5151;cursor:pointer">删</span></div></div>`).join(''):'<div class="empty" style="padding:22px 18px;color:#8d86a8">还没有记录。可以把工作、睡眠、家里、身体、情绪这些会影响现在的小事记在这里。</div>';
+  const rows=arr.length?arr.map((n,i)=>`<div class="bill" style="border-radius:10px;margin:0 10px 7px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-size:13px;color:#e8e1ff;line-height:1.6">${esc(aboutMeNoteText(n.text||''))}</div><small style="display:block;color:#777;margin-top:4px">${fmtDT(n.ts||Date.now())} · ${(n.tags||[]).map(lifeTagName).join('、')||'生活'}</small></div><div style="white-space:nowrap"><span onclick="spyEditLifeNote(${i})" style="color:#54a0ff;cursor:pointer;margin-right:8px">改</span><span onclick="spyDelLifeNote(${i})" style="color:#fa5151;cursor:pointer">删</span></div></div>`).join(''):'<div class="empty" style="padding:22px 18px;color:#8d86a8">还没有记录。可以把工作、睡眠、家里、身体、情绪这些会影响现在的小事记在这里。</div>';
   return `<div class="section" style="margin:12px;background:#14131a;border:1px solid rgba(167,139,250,.22)"><div style="padding:11px 14px;font-weight:600;color:#c4b5fd;display:flex;justify-content:space-between">关于${esc(S.me.name)}的小事簿<span class="minibtn" onclick="spyAddLifeNote()">添加</span></div><div class="hint" style="padding:0 14px 8px;color:#8d86a8">这些会作为隐藏印象影响ta的反应，可随时删改。</div>${rows}</div>`;}
 function lifeTagName(k){return {work:'工作',sleep:'睡眠',health:'身体',family:'家里',friend:'朋友',money:'钱',emotion:'情绪'}[k]||k;}
 function spyAddLifeNote(){const t=prompt('记一件会影响现在的小事：','');if(t==null)return;const v=t.trim();if(!v)return;lifeNoteAdd(v,'manual',lifeTopicOf(v));save();render();toast('已记进小事簿');}
@@ -3163,13 +3175,16 @@ function doXPost(){const t=$('#xc_t').value.trim();if(!t&&!(window._xcImgs||[]).
 function fanCount(min,max){const f=(S.x.profile.fans||0);return Math.max(min,Math.min(max,Math.round(f/250)+min));}
 async function reactToTweet(tweet){
   const n=fanCount(3,9);
+  const authorCid=(tweet.who&&tweet.who!=='me'&&tweet.who!=='net')?tweet.who:null;
+  const rolePool=tweet.who==='me'?S.contacts.filter(c=>!c.deleted&&!c.blocked).slice(0,1):[];
+  for(const c of rolePool){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'"'+tweet.name+'"在X发了条推："'+tweet.text+'"。你是最先刷到的人，以你自己的身份和视角第一个评论一句（口语、像真人留言；别带方括号）。'}],{aux:true});
+    tweet.comments.push({name:c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50)});save();if(cur().p==='x'||cur().p==='xtweet')render();}catch(e){}}
   try{const r=await chatAPI([{role:'system',content:'你是X网友评论生成器。针对"'+tweet.name+'"发的推，生成'+n+'条不同网友的简短评论（吃瓜、调侃、共鸣、抬杠黑子都行；其中1-2条可以@楼上某个网友名跟着接话，形成楼层互动）。每行一条，严格用格式：昵称:::@英文id:::评论内容。不要别的话。'},{role:'user',content:'推文："'+tweet.text+'"'}],{max:900,aux:true});
     looseLines(r).forEach(p=>{const nm=clean(p[0]);if(!nm)return;tweet.comments.push({name:nm,avatar:letterAv(p[1]||nm),text:p[2]||p[1]||''});xUser(nm,{handle:p[1]});});save();if(cur().p==='x'||cur().p==='xtweet')render();}catch(e){}
   // 发帖影响粉丝
   if(tweet.who==='me'){const d=Math.floor(Math.random()*40)-8;S.x.profile.fans=Math.max(0,(S.x.profile.fans||0)+d);save();if(d>0)toast('涨粉 +'+d);else if(d<0)toast('掉粉 '+d);}
-  const authorCid=(tweet.who&&tweet.who!=='me'&&tweet.who!=='net')?tweet.who:null;
   const ats=S.contacts.filter(c=>!c.deleted&&!c.blocked&&c.id!==authorCid&&tweet.text.includes(c.name));
-  const pool=ats.length?ats:S.contacts.filter(c=>!c.deleted&&!c.blocked&&c.id!==authorCid).slice(0,1);
+  const pool=tweet.who==='me'?[]:(ats.length?ats:S.contacts.filter(c=>!c.deleted&&!c.blocked&&c.id!==authorCid).slice(0,1));
   for(const c of pool){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'"'+tweet.name+'"在X发了条推："'+tweet.text+'"'+(tweet.text.includes(c.name)?'（@了你）':'')+'。你刷到了，以你自己的身份和视角评论一句（这不是你发的推；口语；别带方括号）。'}],{aux:true});
     tweet.comments.push({name:c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50)});save();if(cur().p==='x'||cur().p==='xtweet')render();}catch(e){}}}
 function genContactTweet(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
@@ -4914,6 +4929,7 @@ function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.
     // 关进小黑屋清算完，旧账都算已处理→自动清空省空间，只留这次关押记录
     c.grudges=[{id:uid(),text:'把'+S.me.name+'关进小黑屋、清算了所有旧账'+(reason?('（'+reason+'）'):'')+(backdoor?'，ta最后是灰头土脸钻狗洞逃出去的（被我逮个正着）':''),done:false,ts:Date.now()}];
     c.coldUntil=Date.now()+(backdoor?Math.round(COLD_MS*1.5):COLD_MS);
+    c._jailHandoff={ts:Date.now(),text:'你刚刚把'+S.me.name+'从小黑屋放出来。你亲自关了ta、审了ta、清算旧账，'+(backdoor?'ta最后从狗洞逃出去又被你逮到，所以你更介意、更冷。':'ta已经认错服软，你才放ta出来，但你还没完全消气。')+(_cleared?'这次积压的 '+_cleared+' 笔旧账已经算过并翻篇，但情绪余温还在。':'')};
     summarizeJail(c,reason,backdoor,_jmsgs);// 写一条出狱记忆：让微信里的他记得自己关过ta、小黑屋里发生了啥
     save();}
   go('home');toast(test?'🧪 测试结束，没留任何记录':('🚪 门开了…你出来了'+(_cleared?'｜清算并清空了 '+_cleared+' 笔旧账':'')));
@@ -4921,7 +4937,7 @@ function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.
 async function summarizeJail(c,reason,backdoor,jmsgs){if(!c)return;
   const stamp=new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
   c.summaries=c.summaries||[];
-  const push=t=>{addSummary(c,trimSentence(t,320),4,'【小黑屋】');};
+  const push=t=>{const v=trimSentence(t,320);addSummary(c,v,4,'【小黑屋】');c._jailHandoff={ts:Date.now(),text:'刚才的小黑屋总结：'+v+' 现在你刚回到微信，必须接着这件事后的冷处理、占有欲和余温继续，不要回到旧微信话题。'};save();};
   const fallback='我把'+S.me.name+'关进了禁闭室小黑屋惩罚ta'+(reason?('，因为'+reason):'')+'，'+(backdoor?'ta最后从墙角狗洞里灰头土脸钻出去逃跑、被我逮个正着':'我逼问审够、ta认错服软了才放ta出来')+'，积压的旧账也都清算翻篇了。';
   const text=(jmsgs||[]).map(m=>{const who=(m.who==='me')?S.me.name:(m.who==='旁白'?'（场景）':(c.name||'我'));return who+'：'+(m.text||'');}).filter(x=>x.slice(-1)!=='：'&&x.indexOf('（场景）：')!==0).join('\n');
   if(!text.trim()){push(fallback);return;}
@@ -5341,7 +5357,7 @@ function myActivity(exceptId,since){let s='';since=since||0;
   const bills=(S.me.bills||[]).filter(b=>!since||!b.ts||b.ts>since).slice(-3);
   if(bills.length)s+='·她最近花钱：'+bills.map(b=>b.note+' '+(b.type==='in'?'+':'-')+b.amount).join('、')+'\n';
   const lns=lifeNotes().filter(n=>!since||!n.ts||n.ts>since).slice(0,5);
-  if(lns.length)s+='·她的小事簿：'+lns.map(n=>ymd(n.ts||0)+' '+aboutMeNoteText(n.text||'').slice(0,36)).join('；')+'\n';
+  if(lns.length)s+='·她的小事簿：'+lns.map(n=>fmtDT(n.ts||Date.now())+' '+aboutMeNoteText(n.text||'').slice(0,36)).join('；')+'\n';
   const liked=S.moments.filter(p=>((p.likes||[]).includes(S.me.name)||(p.comments||[]).some(cm=>cm.name===S.me.name))&&p.time>since);
   if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return (p.authorId==='me'?'自己':(getC(p.authorId)?.name||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
   if(S.me.status)s+='·她自己写的动态："'+S.me.status+'"\n';
@@ -6046,7 +6062,8 @@ function pfGroupBubbleList(gid){const p=phoneFriendState(),g=pfGroupById(gid)||{
 function pfGroupBubbleEdit(gid,sid){const b=groupBubbleBase(sid,pfGroupBubbleCfg(gid,sid)),nm=sid==='me'?S.me.name:(pfNameById(sid)||sid);openModal(`<h3>${esc(nm)}的群聊气泡</h3><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px">${[['strawberry','草莓粉'],['cake','奶油黄'],['panda','雾霾蓝'],['mint','薄荷青'],['night','夜空灰'],['classic','微信原版']].map(x=>`<button class="minibtn" onclick="pfGroupBubblePreset('${gid}','${sid}','${x[0]}')">${x[1]}</button>`).join('')}</div>
   <div class="two"><div class="field"><label>气泡颜色</label><input id="pgbs_bg" type="color" value="${bubbleSolid(b.bg,sid==='me'?'#95ec69':'#2c2c2e')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="pgbs_tx" type="color" value="${bubbleSolid(b.text,sid==='me'?'#0b3b18':'#ececec')}" style="height:42px;padding:3px"></div></div><div class="two"><div class="field"><label>气泡形状</label><select id="pgbs_shape">${bubbleShapeOpts(b.shape)}</select></div><div class="field"><label>头像形状</label><select id="pgbs_avatar">${bubbleAvatarOpts(b.avatar)}</select></div></div><div class="field"><label>非 Emoji 小图标</label>${bubbleIconPicker('pgbs',b.icon,b.iconColor)}<input id="pgbs_ic" type="color" value="${bubbleIconColor(b.iconColor,'#e777a5')}" style="height:38px;padding:3px"></div><div class="it"><span>柔光效果</span><span class="sw ${b.glow?'on':''}" id="pgbs_glow" onclick="this.classList.toggle('on')"></span></div><div class="btns"><button class="btn g" onclick="pfGroupBubbleReset('${gid}','${sid}')">恢复默认</button><button class="btn p" onclick="pfGroupBubbleSave('${gid}','${sid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="pfGroupBubbleList('${gid}')">返回成员列表</button>`);}
 function pfGroupBubblePreset(gid,sid,key){const p=BUBBLE_PRESETS[key];if(!p)return;const pre=sid==='me'?'me':'them';pfGroupBubbleMap(gid)[sid]={bg:p[pre+'Bg'],text:p[pre+'Text'],shape:p[pre+'Shape'],avatar:'original',icon:p[pre+'Icon']||'none',iconColor:p[pre+'IconColor']||'#e777a5',glow:!!p.glow};save();pfGroupBubbleEdit(gid,sid);}
-function pfGroupBubbleSave(gid,sid){pfGroupBubbleMap(gid)[sid]={bg:$('#pgbs_bg').value,text:$('#pgbs_tx').value,shape:$('#pgbs_shape').value,avatar:$('#pgbs_avatar').value,icon:$('#pgbs_icon').value,iconColor:$('#pgbs_ic').value,glow:$('#pgbs_glow').classList.contains('on')};save();closeModal();render();toast('群聊气泡已保存');}
+function pfGroupBubbleStyleSync(gid){const st=pfOwnGroupBubbleStyle(gid);if(!st)return;sendPhoneFriendGroupBody(gid,pfPack({type:'style_update',style:st,fromName:S.me.name||'我'}),{silent:true});}
+function pfGroupBubbleSave(gid,sid){pfGroupBubbleMap(gid)[sid]={bg:$('#pgbs_bg').value,text:$('#pgbs_tx').value,shape:$('#pgbs_shape').value,avatar:$('#pgbs_avatar').value,icon:$('#pgbs_icon').value,iconColor:$('#pgbs_ic').value,glow:$('#pgbs_glow').classList.contains('on')};save();if(sid==='me')pfGroupBubbleStyleSync(gid);closeModal();render();toast(sid==='me'?'群聊气泡已保存，已同步给群成员':'群聊气泡已保存');}
 function pfGroupBubbleReset(gid,sid){delete pfGroupBubbleMap(gid)[sid];save();pfGroupBubbleList(gid);toast('已恢复这个成员的默认样式');}
 const BUBBLE_COLOR_NAMES={粉色:'#ffc5df',浅粉:'#ffd9e9',深粉:'#d9699e',红色:'#ef7b88',橙色:'#ffbd7a',黄色:'#ffe59a',奶黄:'#fff0b8',绿色:'#aee6a2',薄荷:'#a9eee2',蓝色:'#a9dcff',浅蓝:'#c9ebff',深蓝:'#6489c8',紫色:'#d5b8ef',浅紫:'#ead8f7',白色:'#ffffff',黑色:'#222228',灰色:'#b9bdc6',透明:'#ffffff'};
 function bubbleNamedColor(v,fb){v=(''+(v||'')).replace(/色$/,'色').trim();if(/^#[0-9a-f]{6}$/i.test(v))return v;const k=Object.keys(BUBBLE_COLOR_NAMES).find(n=>v===n||v.includes(n));return k?BUBBLE_COLOR_NAMES[k]:fb;}
@@ -6220,10 +6237,10 @@ function bubbleRow(c,m){
   const quotable=(S.settings.quoteOn!==false)&&!selecting&&(m.type==='text'||m.type==='voice');
   const lp=quotable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
   return `<div class="msg ${me?'me':'them'}${msgEnterClass(m)}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar,bubbleAvatarClass(c,me))}</span><div class="col" ${h}${lp}>${inner}${ts}</div></div>`;}
-function msgEnterClass(m){return m&&m.role==='assistant'&&!m._call&&m.type!=='sys'&&Date.now()-(+m.time||0)<6500?' msg-enter':'';}
+function msgEnterClass(m){return m&&m.role==='assistant'&&!m._call&&m.type!=='sys'&&Date.now()-(+m.time||0)<20000?' msg-enter':'';}
 function buildPart(c,m,me){
   const _bl=bubbleLook(c,me),_bi=bubbleIconFor(c,me);
-  if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#ff8fab,#b8a4e3)"><div class="big">🎧</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">🎵 点击进入一起听</div></div>`;
+  if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#1f2229,#5d6675);border:1px solid rgba(255,255,255,.12)"><div class="big" style="display:flex;align-items:center;justify-content:center">${svgIc('music',34,'#f4f4f6')}</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">${svgIc('note',14,'#8f96a3')} 点击进入一起听</div></div>`;
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
     if(!m.src)return `<div class="imgmsg imgfail">[图片]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.6">${m.failed?'生成失败':''}</small></div>`;
@@ -6672,10 +6689,14 @@ async function maybeGrudgeResolve(reply,c,id){
   }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
 const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
-function cleanMomentBody(t){return cleanRolePunct((''+(t||'')).replace(/^[「"']+|[」"']+$/g,'').trim()).trim().slice(0,140);}
-function parseMomentCommandLine(line){const t=normTag(line);let m=t.match(/^\[发朋友圈\|([\s\S]*?)\]$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]);return null;}
+function cleanMomentBody(t){let v=(''+(t||'')).replace(/^[\s「"'\[【]+|[\s」"'\]】]+$/g,'').trim();v=v.replace(/^发朋友圈\s*[\|:：]?\s*/,'').replace(/^朋友圈\s*[:：]\s*/,'').trim();return cleanRolePunct(v).trim().slice(0,140);}
+function parseMomentCommandLine(line){const t=normTag(line);let m=t.match(/^\[发朋友圈\|([\s\S]*?)\]$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\|([^\]]+)\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]||m[2]);return null;}
 function postRoleMoment(c,tx,opt){tx=cleanMomentBody(tx);if(!c||!tx)return false;S.moments.unshift({id:uid(),authorId:c.id,text:tx,images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();if(opt&&opt.toast)toast(''+(c.remark||c.name)+'发了朋友圈');if(cur().p==='wechat'&&wxTab==='moments')render();return true;}
-function consumeMomentCommands(content,c,opt){return (content||'').replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,180})[\]】]/g,(mm,tx)=>{postRoleMoment(c,tx,opt);return '';}).replace(/[\[【]\s*发朋友圈\s*[\]】]\s*([^\n]{1,180})/g,(mm,tx)=>{postRoleMoment(c,tx,opt);return '';});}
+function stripPostedMomentEcho(content,posted){let out=''+(content||'');(posted||[]).forEach(tx=>{if(!tx)return;const escRe=tx.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');out=out.replace(new RegExp('^[\\s\\n「"\'【\\[]*'+escRe+'[\\s」"\'】\\]]*','m'),'');});return out;}
+function consumeMomentCommands(content,c,opt){const posted=[];let out=''+(content||'');
+  out=out.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,180})[\]】]/g,(mm,tx)=>{const body=cleanMomentBody(tx);if(body){postRoleMoment(c,body,opt);posted.push(body);}return '';});
+  out=out.replace(/[\[【]\s*发朋友圈\s*[\]】]\s*[「"']?([^\n]{1,180})[」"']?/g,(mm,tx)=>{const body=cleanMomentBody(tx);if(body){postRoleMoment(c,body,opt);posted.push(body);}return '';});
+  return stripPostedMomentEcho(out,posted);}
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
 function wxLoginActive(){return !!(S.wxLogin&&Date.now()<S.wxLogin.until);}
@@ -6829,6 +6850,11 @@ function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］�
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
   return t;}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
+const CONTROL_TAG_RE=new RegExp('[\\[【]\\s*(?:'+TAGWORDS+')(?:\\s*[\\|｜:：][^\\]】]*)?\\s*[\\]】]','g');
+function stripCallControlTags(line,c,id){let t=normTag(line);
+  t=t.replace(/[\[【]\s*心情值\s*[\|｜:：]\s*([+\-]?\d{1,3})\s*[\]】]/g,(m,n)=>{if(c&&id)adjMood(id,parseInt(n,10)||0);return '';});
+  t=t.replace(/[\[【]\s*心情\s*[\|｜:：]\s*([^\]】]*)\s*[\]】]/g,(m,v)=>{if(c)c.mood=(v||'').trim();return '';});
+  return t.replace(CONTROL_TAG_RE,'').replace(/\[[^\]]*\]/g,'').replace(/【[^】]*】/g,'').trim();}
 const CARD_RE=/^[\[【]\s*(转账|红包|位置|图片|照片|文件)\s*[\|｜]\s*([^\]】]*)[\]】]$/;
 function cleanPhotoDescText(t){return (t||'').replace(/^[\s:：,，。；;]+|[\s\]】]+$/g,'').replace(/[|｜]/g,'，').trim().slice(0,420);}
 function normalizeImageLine(line){
@@ -7042,7 +7068,7 @@ async function aiReply(id,note){const c=getC(id);if(!c||c.blocked||c.deleted)ret
   maybeSummarize(id);
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-function roleMessageGap(text){return 900+Math.min(1100,[...String(text||'')].length*18)+Math.random()*350;}
+function roleMessageGap(text){return 1050+Math.min(1350,[...String(text||'')].length*22)+Math.random()*520;}
 // ===== 记忆总结·重要度(1-5) + 自动清理 =====
 const IMP_INSTR='\n最后，请在【最前面单独一行】用「重要度：N」给这段记忆打个分：N是1到5的整数——1=普通日常闲聊、2=有点小事、3=一般值得记、4=重要、5=刻骨铭心的大事(比如表白/订婚/纪念日/ta哭了/重大承诺/大吵又和好)。第一行只写「重要度：N」，第二行起再写日记正文。';
 function rateAndText(raw){let imp=3,text=(raw||'').trim();const m=text.match(/^\s*重要度\s*[:：]?\s*([1-5])[^\n]*\n?/);if(m){imp=+m[1];text=text.slice(m[0].length).trim();}return {imp:imp,text:text};}
@@ -7477,7 +7503,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     maybeAffectionShift(_call.id,c,_luc,content);
     maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
-    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;
+    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;l=stripCallControlTags(l,c,_call.id);if(!l)return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
       else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned)splitActions(cleaned).forEach(p=>pieces.push(p));}});
     // 把"外语原文 + 紧跟的（中文翻译）"配成一组，字幕里一起显示、只读原文、停顿一次，避免字幕快闪/翻译跟原文脱节
