@@ -237,7 +237,18 @@ function audioToDataUrl(audio: string) {
   return "data:audio/mpeg;base64," + compact;
 }
 
-async function minimaxTTS(text: string, voiceId: string, model: string) {
+type TTSVoiceSetting = { speed?: number; vol?: number; pitch?: number; emotion?: string };
+
+function safeTTSVoiceSetting(input: TTSVoiceSetting | null | undefined) {
+  const allowed = new Set(["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral"]);
+  const speed = Math.max(0.5, Math.min(2, Number(input?.speed) || 1));
+  const vol = Math.max(0.1, Math.min(10, Number(input?.vol) || 1));
+  const pitch = Math.max(-12, Math.min(12, Math.round(Number(input?.pitch) || 0)));
+  const emotion = allowed.has(String(input?.emotion || "")) ? String(input?.emotion) : "neutral";
+  return { speed, vol, pitch, emotion };
+}
+
+async function minimaxTTS(text: string, voiceId: string, model: string, setting?: TTSVoiceSetting) {
   const base = (Deno.env.get("MINIMAX_BASE_URL") || "https://api.minimaxi.com").replace(/\/+$/, "");
   const key = Deno.env.get("MINIMAX_API_KEY") || "";
   const groupId = Deno.env.get("MINIMAX_GROUP_ID") || "";
@@ -251,7 +262,7 @@ async function minimaxTTS(text: string, voiceId: string, model: string) {
       text,
       stream: false,
       language_boost: "auto",
-      voice_setting: { voice_id: voiceId, speed: 1, vol: 1, pitch: 0 },
+      voice_setting: { voice_id: voiceId, ...safeTTSVoiceSetting(setting) },
       audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
     }),
   });
@@ -396,7 +407,7 @@ Deno.serve(async (req) => {
       const text = String(body.text || "").trim();
       if (!text) throw new Error("missing-tts-text");
       const chars = [...text].length;
-      if (chars > 200) throw new Error("tts-text-too-long");
+      if (chars > 300) throw new Error("tts-text-too-long");
       await requireBalance(userId, clientSecret, "tts");
       model = "speech-02-turbo";
       const requestedVoiceId = body.voice_id || DEFAULT_TTS_VOICE;
@@ -404,12 +415,12 @@ Deno.serve(async (req) => {
       let voiceFallback = false;
       let data;
       try {
-        data = await minimaxTTS(text, voiceId, model);
+        data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
       } catch (e) {
         if (voiceId !== DEFAULT_TTS_VOICE && errText(e).includes("invalid-voice-id")) {
           voiceId = DEFAULT_TTS_VOICE;
           voiceFallback = true;
-          data = await minimaxTTS(text, voiceId, model);
+          data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
         } else {
           throw e;
         }
