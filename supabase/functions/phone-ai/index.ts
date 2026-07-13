@@ -254,8 +254,10 @@ function safeTTSVoiceSetting(input: TTSVoiceSetting | null | undefined) {
   const speed = Math.max(0.5, Math.min(2, Number(input?.speed) || 1));
   const vol = Math.max(0.1, Math.min(10, Number(input?.vol) || 1));
   const pitch = Math.max(-12, Math.min(12, Math.round(Number(input?.pitch) || 0)));
-  const emotion = allowed.has(String(input?.emotion || "")) ? String(input?.emotion) : "neutral";
-  return { speed, vol, pitch, emotion };
+  const emotion = String(input?.emotion || "");
+  const out: TTSVoiceSetting = { speed, vol, pitch };
+  if (allowed.has(emotion)) out.emotion = emotion;
+  return out;
 }
 
 async function minimaxTTS(text: string, voiceId: string, model: string, setting?: TTSVoiceSetting) {

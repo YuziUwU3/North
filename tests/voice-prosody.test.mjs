@@ -90,11 +90,14 @@ for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted",
   assert.equal(profile.vol, 1, `${cue} changed volume`);
 }
 
-assert.match(source, /model:'speech-02-turbo',voice_setting:vp/);
+assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo'\}\)/);
+assert.doesNotMatch(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:/);
 assert.match(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
 assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
 assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSetting\(setting\) \}/);
+assert.match(backend, /if \(allowed\.has\(emotion\)\) out\.emotion = emotion/);
+assert.doesNotMatch(backend, /: "neutral";/);
 assert.match(backend, /if \(chars > 300\)/);
 
 const route = { enabled: true, relay: false, base: "https://api.minimax.io", key: "sk-direct" };
