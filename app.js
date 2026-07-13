@@ -80,7 +80,7 @@ function pfNotifyFriend(m,opt){opt=opt||{};if(pfIsRoomTransport(m))return;const 
   const viewing=cur().p==='pfchat'&&cur().id===from;if(viewing){pfMarkRead(from);return;}
   if(!opt.silent&&S.settings.sound&&typeof playDing==='function')playDing();
   lockNotify(pfFriendDisplayName(f),pfMsgPreview(msg),{avatar:phoneFriendAvatar(f),target:{type:'pfchat',id:from}});
-  const b=$('#msgBanner');if(b&&!_call){b.innerHTML=`${pfAvatarHTML(f,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(pfFriendDisplayName(f))}</div><div class="bm">${esc(pfMsgPreview(msg))}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneFriendChat(from);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
+  const b=$('#msgBanner');if(b&&!_call&&!lockVisible()){b.innerHTML=`${pfAvatarHTML(f,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(pfFriendDisplayName(f))}</div><div class="bm">${esc(pfMsgPreview(msg))}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneFriendChat(from);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
   appNotify(pfFriendDisplayName(f),pfMsgPreview(msg),{tag:'pf-'+from,data:{type:'open',target:'pfchat',id:from}});}
 function pfNotifyGroup(m,opt){opt=opt||{};if(pfIsHiddenTransport({text:m.body||m.text||''}))return;const p=phoneFriendState(),gid=m.group_id||m.gid,from=(''+(m.from_id||m.from||'')).toUpperCase();if(!gid||!from||from===p.id)return;
   const g=pfGroupById(gid)||{group_id:gid,name:'小手机群聊'},msg={text:(''+(m.body||m.text||'')),time:m.created_at?new Date(m.created_at).getTime():Date.now()};
@@ -88,7 +88,7 @@ function pfNotifyGroup(m,opt){opt=opt||{};if(pfIsHiddenTransport({text:m.body||m
   const viewing=cur().p==='pfgroup'&&cur().gid===gid;if(viewing){pfMarkGroupRead(gid);return;}
   if(!opt.silent&&S.settings.sound&&typeof playDing==='function')playDing();
   lockNotify(title,line,{icon:'users',target:{type:'pfgroup',id:gid}});
-  const b=$('#msgBanner');if(b&&!_call){b.innerHTML=`<div class="avatar sm" style="background:linear-gradient(135deg,#ff8fab,#ffc2d8)">${svgIc('users',22,'#fff')}</div><div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(line)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneFriendGroup(gid);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
+  const b=$('#msgBanner');if(b&&!_call&&!lockVisible()){b.innerHTML=`<div class="avatar sm" style="background:linear-gradient(135deg,#ff8fab,#ffc2d8)">${svgIc('users',22,'#fff')}</div><div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(line)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneFriendGroup(gid);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
   appNotify(title,line,{tag:'pfg-'+gid,data:{type:'open',target:'pfgroup',id:gid}});}
 function pfReadIds(m){let a=m&&m.readBy;if(!Array.isArray(a))a=m&&m.receivedBy?[m.receivedBy]:[];return a.map(x=>(''+x).toUpperCase()).filter(Boolean);}
 function pfSetReadBy(m,rid){rid=(''+rid).toUpperCase();if(!rid)return;m.readBy=pfReadIds(m);if(m.readBy.indexOf(rid)<0)m.readBy.push(rid);m.readAt=m.readAt||Date.now();}
@@ -96,8 +96,8 @@ function pfAckRead(mid){const p=phoneFriendState();if(!mid||String(mid).startsWi
 function pfInferFriendRead(other,rid,ts){const p=phoneFriendState(),arr=pfMsgList(p.messages,other);rid=(''+rid).toUpperCase();if(!rid||rid===p.id)return false;let ch=false;arr.forEach(m=>{if(m.from===p.id&&!m.recalled&&!pfPayloadIsPay(m)&&(m.time||0)<=ts&&pfReadIds(m).indexOf(rid)<0){pfSetReadBy(m,rid);ch=true;}});return ch;}
 function pfInferGroupRead(gid,rid,ts){const p=phoneFriendState(),arr=pfMsgList(p.groupMessages,gid);rid=(''+rid).toUpperCase();if(!rid||rid===p.id)return false;let ch=false;arr.forEach(m=>{if(m.from!==rid&&!m.recalled&&!pfPayloadIsPay(m)&&(m.time||0)<=ts&&pfReadIds(m).indexOf(rid)<0){pfSetReadBy(m,rid);ch=true;}});return ch;}
 function pfReconcileReadInference(){const p=phoneFriendState();let ch=false;Object.keys(p.messages||{}).forEach(id=>{pfMsgList(p.messages,id).forEach(m=>{if(m.from===id)ch=pfInferFriendRead(id,id,m.time||0)||ch;});});Object.keys(p.groupMessages||{}).forEach(gid=>{pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.from&&m.from!==p.id)ch=pfInferGroupRead(gid,m.from,m.time||0)||ch;});});if(ch)save(800);}
-function pfMarkRead(id){const p=phoneFriendState();id=(''+id).toUpperCase();p.friendRead[id]=Date.now();pfMsgList(p.messages,id).forEach(m=>{if(m.from===id&&!m.recalled&&!pfPayloadIsPay(m)&&pfReadIds(m).indexOf(p.id)<0){pfSetReadBy(m,p.id);pfAckRead(m.id);}});save();}
-function pfMarkGroupRead(gid){const p=phoneFriendState();if(gid){p.groupRead[gid]=Date.now();pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.from!==p.id&&!m.recalled&&!pfPayloadIsPay(m)&&pfReadIds(m).indexOf(p.id)<0){pfSetReadBy(m,p.id);pfAckRead(m.id);}});save();}}
+function pfMarkRead(id){const p=phoneFriendState();id=(''+id).toUpperCase();p.friendRead[id]=Date.now();pfMsgList(p.messages,id).forEach(m=>{if(m.from===id&&!m.recalled&&!pfPayloadIsPay(m)&&pfReadIds(m).indexOf(p.id)<0){pfSetReadBy(m,p.id);pfAckRead(m.id);}});lockClearTarget({type:'pfchat',id},true);save();}
+function pfMarkGroupRead(gid){const p=phoneFriendState();if(gid){p.groupRead[gid]=Date.now();pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.from!==p.id&&!m.recalled&&!pfPayloadIsPay(m)&&pfReadIds(m).indexOf(p.id)<0){pfSetReadBy(m,p.id);pfAckRead(m.id);}});lockClearTarget({type:'pfgroup',id:gid},true);save();}}
 function pfClearLocalPending(other,serverMsg){const p=phoneFriendState();other=(''+other).toUpperCase();const arr=pfMsgList(p.messages,other);if(!arr.length||!serverMsg)return null;
   const from=(''+(serverMsg.from_id||serverMsg.from||'')).toUpperCase(),to=(''+(serverMsg.to_id||serverMsg.to||'')).toUpperCase(),body=''+(serverMsg.body||serverMsg.text||'');
   for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(!x||!String(x.id||'').startsWith('local_'))continue;
@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v481 · 锁屏回拉入口';
+const APP_VER='v482 · 自然锁屏通知';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1141,22 +1141,26 @@ function appNotify(title,body,opt){if(!document.hidden)return;opt=opt||{};if(!('
   registerSW().then(reg=>{if(reg&&reg.showNotification)reg.showNotification(title,nopt).catch(fallback);else fallback();});}
 function showMsgBanner(c,msg){
   lockNotify(c.remark||c.name,previewOf(msg),{avatar:c.avatar,target:{type:'chat',id:c.id}});
+  if(lockVisible())return;
   const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">${esc(previewOf(msg))}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openChat(c.id);};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
 function lockDateText(t){const d=new Date(t||Date.now()),w=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][d.getDay()];return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+w;}
 function lockNotes(){S.me=S.me||{};if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];return S.me.lockNotes;}
-function lockNotify(title,body,opt){try{opt=opt||{};const arr=lockNotes(),id='ln_'+uid(),note={id,title:String(title||'通知').slice(0,40),body:String(body||'').replace(/\s+/g,' ').slice(0,80),time:Date.now(),avatar:opt.avatar||'',icon:opt.icon||'',target:opt.target||null};arr.unshift(note);if(arr.length>8)arr.length=8;save(600);renderLockScreen(true);}catch(_){}}
+function lockVisible(){const e=$('#lockScreen');return !!(e&&e.classList.contains('show'));}
+function lockTargetKey(t){if(!t)return '';return [t.type||'',t.id||t.gid||t.cid||'',t.tab||''].join(':');}
+function lockClearTarget(target,silent){try{const key=lockTargetKey(target);if(!key)return false;const arr=lockNotes();let changed=false;for(let i=arr.length-1;i>=0;i--){if(lockTargetKey(arr[i]&&arr[i].target)===key){arr.splice(i,1);changed=true;}}if(changed&&!silent){save(500);renderLockScreen(true);}return changed;}catch(_){return false;}}
+function lockNotify(title,body,opt){try{opt=opt||{};const arr=lockNotes(),id='ln_'+uid(),note={id,title:String(title||'通知').slice(0,40),body:String(body||'').replace(/\s+/g,' ').slice(0,80),time:Date.now(),avatar:opt.avatar||'',icon:opt.icon||'',target:opt.target||null};arr.unshift(note);if(arr.length>4)arr.length=4;save(600);renderLockScreen(true);}catch(_){}}
 function lockAvatarHTML(n){if(n&&n.avatar)return av(n.avatar,'sm');if(n&&n.icon)return `<div class="avatar sm" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.13)">${svgIc(n.icon,18,'#fff',1.7)}</div>`;return `<div class="avatar sm" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.13)">${svgIc('bell',18,'#fff',1.7)}</div>`;}
-function lockOpenTarget(n){if(!n||!n.target){lockOpen();return;}lockOpen();const t=n.target;setTimeout(()=>{if(t.type==='chat')openChat(t.id);else if(t.type==='pfchat')openPhoneFriendChat(t.id);else if(t.type==='pfgroup')openPhoneFriendGroup(t.id);else if(t.type==='group')go('group',{id:t.id});else if(t.type==='mail')go('mail');else if(t.type==='x')openX();else if(t.type==='wechat')openWeChat(t.tab||'chats');},60);}
+function lockOpenTarget(n){if(!n||!n.target){lockOpen();return;}const t=n.target;lockClearTarget(t,true);save(300);lockOpen();setTimeout(()=>{if(t.type==='chat')openChat(t.id);else if(t.type==='pfchat')openPhoneFriendChat(t.id);else if(t.type==='pfgroup')openPhoneFriendGroup(t.id);else if(t.type==='group'){lockClearTarget({type:'group',id:t.id},true);go('group',{id:t.id});}else if(t.type==='mail'){lockClearTarget({type:'mail'},true);go('mail');}else if(t.type==='x'){lockClearTarget({type:'x'},true);openX();}else if(t.type==='wechat')openWeChat(t.tab||'chats');},80);}
 function lockNoteHTML(n,i){return `<div class="locknote" style="animation-delay:${Math.min(i*45,220)}ms" onclick="lockOpenTarget(lockNotes().find(x=>x.id==='${n.id}')||null)">${lockAvatarHTML(n)}<div class="ltxt"><div class="lt">${esc(n.title)}</div><div class="lb">${esc(n.body||'打开查看')}</div></div><div class="lk">${hm(n.time)}</div></div>`;}
 function renderLockClock(){const e=$('#lockScreen');if(!e)return;const t=e.querySelector('.locktime'),d=e.querySelector('.lockdate');if(t)t.textContent=hm();if(d)d.textContent=lockDateText();}
-function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=S.me.lockBg||S.me.homeBg||'',notes=lockNotes().slice(0,5);
-  el.innerHTML=`<div class="lockbg" style="${bg?'background-image:url('+bg+');':''}"></div><div class="lockshade"></div><div class="locktop"><div class="locktime">${hm()}</div><div class="lockdate">${lockDateText()}</div></div><div class="locknotes">${notes.length?notes.map(lockNoteHTML).join(''):'<div class="lockempty">暂无新通知</div>'}</div><div class="lockbottom"><button class="lockquick" onclick="lockQuickTorch(event)" title="手电筒">${svgIc('flashlight',24,'#fff',1.75)}</button><div class="lockhint" onclick="lockOpen()">上滑进入小手机<div class="lockhandle"></div></div><button class="lockquick" onclick="lockQuickCamera(event)" title="相机">${svgIc('camera',24,'#fff',1.75)}</button></div>`;}
+function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=S.me.lockBg||S.me.homeBg||'',notes=lockNotes().slice(0,4);
+  el.innerHTML=`<div class="lockbg" style="${bg?'background-image:url('+bg+');':''}"></div><div class="lockshade"></div><div class="locktop"><div class="locktime">${hm()}</div><div class="lockdate">${lockDateText()}</div></div><div class="locknotes">${notes.length?notes.map(lockNoteHTML).join(''):'<div class="lockempty">暂无新通知</div>'}</div><div class="lockbottom"><button class="lockquick" onclick="lockQuickTorch(event)" title="手电筒">${svgIc('flashlight',24,'#fff',1.75)}</button><div class="lockhint" onclick="lockOpen()"><div class="lockup"></div><div>上滑进入小手机</div><div class="lockhandle"></div></div><button class="lockquick" onclick="lockQuickCamera(event)" title="相机">${svgIc('camera',24,'#fff',1.75)}</button></div>`;}
 function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return;let on=false;try{on=S.me.locked===false&&cur().p==='home'&&!_call;}catch(_){}e.classList.toggle('show',!!on);}
 function lockOpen(){S.me.locked=false;save();renderLockScreen();renderLockPull();}
-function lockShow(drop){if(_call)return;S.me.locked=true;save();renderLockScreen(true);renderLockPull();if(drop){const el=$('#lockScreen');if(el){el.classList.remove('dropin');void el.offsetWidth;el.classList.add('dropin');setTimeout(()=>el.classList.remove('dropin'),520);}}}
+function lockShow(drop){if(_call)return;const el=$('#lockScreen');if(el)el.style.transform='';const b=$('#msgBanner');if(b)b.className='msgbanner';S.me.locked=true;save();renderLockScreen(true);renderLockPull();}
 function lockPrepareAway(){try{if(S&&S.me&&!_call){S.me.locked=true;saveNow();}}catch(_){}}
 function lockQuickTorch(e){try{e.stopPropagation();}catch(_){}toast('手电筒已点亮');}
 function lockQuickCamera(e){try{e.stopPropagation();}catch(_){}lockOpen();setTimeout(()=>openApp('moments'),80);}
@@ -1166,14 +1170,17 @@ function initLockGestures(){if(window._lockGesturesInit)return;window._lockGestu
   const move=(x,y,e)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dx=Math.abs(x-_lockTouch.x);if(dx>70){_lockTouch=null;return;}if(_lockTouch.mode==='unlock'&&dy<-26){try{e.preventDefault();}catch(_){}const ls=$('#lockScreen');if(ls)ls.style.transform='translateY('+Math.max(-90,dy*.45)+'px)';}else if(_lockTouch.mode==='lock'&&dy>18){try{e.preventDefault();}catch(_){} }};
   const end=(x,y)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dt=Date.now()-_lockTouch.t,mode=_lockTouch.mode;_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';if(mode==='unlock'&&(dy<-58||(dy<-35&&dt<260)))lockOpen();else if(mode==='lock'&&(dy>62||(dy>40&&dt<280)))lockShow(true);};
   const cancel=()=>{_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';};
-  document.addEventListener('pointerdown',e=>begin(e.target,e.clientX,e.clientY), {passive:true});
-  document.addEventListener('pointermove',e=>move(e.clientX,e.clientY,e), {passive:false});
-  document.addEventListener('pointerup',e=>end(e.clientX,e.clientY));
-  document.addEventListener('pointercancel',cancel);
-  document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)begin(e.target,t.clientX,t.clientY);}, {passive:true});
-  document.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(t)move(t.clientX,t.clientY,e);}, {passive:false});
-  document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(t)end(t.clientX,t.clientY);});
-  document.addEventListener('touchcancel',cancel);
+  if('PointerEvent'in window){
+    document.addEventListener('pointerdown',e=>begin(e.target,e.clientX,e.clientY), {passive:true});
+    document.addEventListener('pointermove',e=>move(e.clientX,e.clientY,e), {passive:false});
+    document.addEventListener('pointerup',e=>end(e.clientX,e.clientY));
+    document.addEventListener('pointercancel',cancel);
+  }else{
+    document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)begin(e.target,t.clientX,t.clientY);}, {passive:true});
+    document.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(t)move(t.clientX,t.clientY,e);}, {passive:false});
+    document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(t)end(t.clientX,t.clientY);});
+    document.addEventListener('touchcancel',cancel);
+  }
 }
 /* ===== 真·录音 长按说话 ===== */
 let _rec=null;
@@ -2135,7 +2142,7 @@ function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcon
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
-function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
+function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
   ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:()=>{musicInit();go('music');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
@@ -2210,7 +2217,7 @@ function publishRoleTweet(c,text,opt){opt=opt||{};text=(''+(text||'')).trim();if
 async function doAutoTweet(id){const c=getC(id);try{const _co=(typeof circleObj==='function')?circleObj(id):{};const note=_co.desc?'，贴合你的圈子定位「'+_co.desc+'」':'';
   const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条推特'+note+'，一两句，只输出推文内容，别带方括号。'}],{aux:true});
   publishRoleTweet(c,cleanReply(r),{auto:true,notify:true});}catch(e){}}
-function notifyX(c,text){if(c.muted)return;playDing();lockNotify((c.remark||c.name)+' 发了新动态',text,{icon:'note',target:{type:'x'}});appNotify((c.remark||c.name)+' 发了新动态',text,{tag:'x-'+c.id,data:{type:'open',target:'x'}});const b=$('#msgBanner');if(!b)return;
+function notifyX(c,text){if(c.muted)return;playDing();lockNotify((c.remark||c.name)+' 发了新动态',text,{icon:'note',target:{type:'x'}});appNotify((c.remark||c.name)+' 发了新动态',text,{tag:'x-'+c.id,data:{type:'open',target:'x'}});if(lockVisible())return;const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#000;border:1px solid #333;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px">𝕏</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 发了新动态</div><div class="bm">${esc(text)}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openX();};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
@@ -3151,7 +3158,7 @@ async function remindEvent(id,e){const c=getC(id);try{
 
 /* ====================== X (推特) ====================== */
 let xTab='feed';
-function openX(){xTab='feed';go('x');}
+function openX(){if(lockClearTarget({type:'x'},true))save(500);xTab='feed';go('x');}
 function tw(id){return S.x.tweets.find(t=>t.id===id);}
 function xAuthor(name){if(name===S.me.name){xTab='me';if(cur().p==='x')render();else go('x');}else go('xuser',{name});}
 function xlog(s){S.x._mylog=S.x._mylog||[];S.x._mylog.push(s);if(S.x._mylog.length>12)S.x._mylog.shift();}
@@ -3968,7 +3975,7 @@ function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return `<div 
   return `<div class="msg ${me?'me':'them'}" ${click} style="cursor:pointer">${selecting&&me?tick:''}${av0}<div class="col">${nm}${inner}<div class="msgt">${hm(m.time)}</div></div>${selecting&&!me?tick:''}</div>`;}
 function gGrab(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;const m=g.msgs.find(x=>x.id===mid);if(!m||m.received||(m.type!=='transfer'&&m.type!=='redpacket'))return;
   m.received=true;const nm=getC(m.senderId)?getC(m.senderId).name:'群友';addBill('in',+m.amount||0,nm+(m.type==='redpacket'?'的群红包':'的群转账'));save();render();toast('已领取 ¥'+(+m.amount).toFixed(2)+' 💰');}
-function gNotify(g,c){if(cur().p==='group'&&cur().id===g.id)return;playDing();const lm=g.msgs[g.msgs.length-1],line=gnm(g,c.id)+'：'+(lm?gmText(lm):'');lockNotify(g.name,line,{avatar:g.avatar,icon:'users',target:{type:'group',id:g.id}});appNotify(g.name,line,{tag:'group-'+g.id,data:{type:'open',target:'group',id:g.id}});const b=$('#msgBanner');if(!b)return;
+function gNotify(g,c){if(cur().p==='group'&&cur().id===g.id)return;playDing();const lm=g.msgs[g.msgs.length-1],line=gnm(g,c.id)+'：'+(lm?gmText(lm):'');lockNotify(g.name,line,{avatar:g.avatar,icon:'users',target:{type:'group',id:g.id}});appNotify(g.name,line,{tag:'group-'+g.id,data:{type:'open',target:'group',id:g.id}});if(lockVisible())return;const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`${g.avatar?av(g.avatar,'sm'):'<div class="avatar sm" style="background:#7c6cc0">👥</div>'}<div style="flex:1;min-width:0"><div class="bn">${esc(g.name)}</div><div class="bm">${esc(gnm(g,c.id)+'：'+(lm?gmText(lm):''))}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('group',{id:g.id});};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
 function sendGroup(id){const g=S.groups.find(x=>x.id===id);const ta=$('#ginput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
@@ -5091,7 +5098,7 @@ function renderMail(){const list=S.mail||[];
      <div style="font-size:12px;color:#888;margin-top:3px">${esc(c?(c.remark||c.name):'TA')} · ${fmtDate(L.time)}</div></div>
      ${(L.type==='gift'&&!L.signed)?`<button class="minibtn" onclick="event.stopPropagation();signGift('${L.id}')" style="background:#ee5a6f;color:#fff;margin-right:4px">签收</button>`:''}<span onclick="event.stopPropagation();delLetter('${L.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">×</span></div></div>`;}).join(''):'<div class="empty" style="padding:50px;line-height:2">还没有信<br>点右上角设置，让角色每天主动写信</div>'}
    <div style="height:20px"></div></div>`;}
-function openLetter(lid){const L=(S.mail||[]).find(x=>x.id===lid);if(!L)return;L.read=true;save();const c=getC(L.cid);
+function openLetter(lid){const L=(S.mail||[]).find(x=>x.id===lid);if(!L)return;L.read=true;lockClearTarget({type:'mail'},true);save();const c=getC(L.cid);
   openModal(`<div style="text-align:center"><div style="width:48px;height:48px;border-radius:14px;background:#151518;border:1px solid #34343a;margin:0 auto 8px;display:flex;align-items:center;justify-content:center">${svgIc(L.type==='gift'?'gift':'envelope',27,'#d7d7dc',1.35)}</div><h3 style="margin:6px 0 2px">${esc(mailCleanText(L.subject))}</h3>
    <div style="font-size:12px;color:#888;margin-bottom:12px">${esc(c?(c.remark||c.name):'TA')} 写于 ${fmtDate(L.time)}</div></div>
    <div style="background:#fffdf3;color:#3a3a3a;border-radius:14px;padding:18px;line-height:2;white-space:pre-wrap;font-size:15px;max-height:52vh;overflow:auto;box-shadow:inset 0 0 0 1px #f0e6c8">${esc(mailCleanText(L.body))}</div>
@@ -5121,7 +5128,7 @@ async function genLetter(id){const c=getC(id);if(!c)return;
     S.mail.unshift(letter);if(S.mail.length>60)S.mail=S.mail.slice(0,60);save();notifyMail(c,letter);
     if(cur().p==='mail'||cur().p==='home')render();
   }catch(e){}}
-function notifyMail(c,letter){if(c.muted)return;playDing();lockNotify((c.remark||c.name)+' 给你写了封信',mailCleanText(letter.subject),{avatar:c.avatar,icon:'envelope',target:{type:'mail'}});appNotify((c.remark||c.name)+' 给你写了封信',letter.subject,{tag:'mail-'+c.id,data:{type:'open',target:'mail'}});const b=$('#msgBanner');if(!b)return;
+function notifyMail(c,letter){if(c.muted)return;playDing();lockNotify((c.remark||c.name)+' 给你写了封信',mailCleanText(letter.subject),{avatar:c.avatar,icon:'envelope',target:{type:'mail'}});appNotify((c.remark||c.name)+' 给你写了封信',letter.subject,{tag:'mail-'+c.id,data:{type:'open',target:'mail'}});if(lockVisible())return;const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#151518;border:1px solid #34343a;display:flex;align-items:center;justify-content:center">${svgIc('envelope',19,'#d7d7dc',1.35)}</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 给你写了封信</div><div class="bm">${esc(mailCleanText(letter.subject))}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('mail');};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},5500);}
@@ -7982,7 +7989,7 @@ function uiConfirm(msg,opt){opt=opt||{};return new Promise(res=>{let el=document
   document.getElementById('cfmYes').onclick=()=>done(true);});}
 function askConfirm(msg,onYes,opt){uiConfirm(msg,opt).then(v=>{if(v){try{onYes&&onYes();}catch(e){}}});}
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
-function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}stack=stack.filter(s=>s.p!=='chat');go('chat',{id});}
+function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}if(lockClearTarget({type:'chat',id},true))save(500);stack=stack.filter(s=>s.p!=='chat');go('chat',{id});}
 
 /* ---------- 备份 ---------- */
 async function exportData(){const data=await fullBackupState();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
