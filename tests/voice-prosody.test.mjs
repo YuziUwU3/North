@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsVoiceProfile"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsBracketPerformance", "ttsVoiceProfile"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -51,6 +51,14 @@ assert.equal(context.tts2p8Interjection("I missed you.", "难过"), "I missed yo
 
 const minimax28 = { base: "https://api.minimax.io", model: "speech-2.8-turbo" };
 const minimax02 = { base: "https://api.minimax.io", model: "speech-02-turbo" };
+const eleven3 = { base: "https://api.elevenlabs.io", model: "eleven_v3" };
+const fish21 = { base: "https://api.fish.audio", model: "s2.1-pro-free" };
+const hume2 = { base: "https://api.hume.ai", model: "octave-2" };
+assert.equal(context.ttsStyleKind(eleven3), "eleven");
+assert.equal(context.ttsStyleKind(fish21), "fish");
+assert.equal(context.ttsStyleKind(hume2), "hume");
+assert.equal(context.ttsBracketPerformance("Tell me the truth.", "质问", "eleven", true), "[angry, controlled] Tell me the truth.");
+assert.equal(context.ttsBracketPerformance("Come here.", "亲亲", "fish", true), "[kissing softly] Come here.");
 context.ttsCleanBase = (x) => String(x || "").trim();
 context.ttsSafeProsody = (x) => x;
 context.VOICE_MAX_CHARS = 300;
@@ -58,6 +66,8 @@ vm.runInContext(functionSource("ttsPerformanceText"), context);
 assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "亲亲" }), "Come here. (lip-smacking)");
 assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "亲亲", interjection: false }), "Come here.");
 assert.equal(context.ttsPerformanceText("Come here.", null, minimax02, { cue: "亲亲" }), "Come here.");
+assert.equal(context.ttsPerformanceText("Tell me.", null, eleven3, { cue: "质问" }), "[angry, controlled] Tell me.");
+assert.equal(context.ttsPerformanceText("Come here.", null, fish21, { cue: "亲亲" }), "[kissing softly] Come here.");
 assert.deepEqual(
   JSON.parse(JSON.stringify(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax28))),
   { speed: 1, vol: 1, pitch: 0, emotion: "angry" },
@@ -99,5 +109,9 @@ route.key = "";
 assert.equal(routeContext.ttsUseRelay(), true, "relay should be used only without external credentials");
 
 assert.match(source, /model:tts\.model\|\|'speech-02-turbo'/);
+assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);
+assert.match(source, /'https:\/\/api\.fish\.audio','s2\.1-pro-free'/);
+assert.match(source, /'https:\/\/api\.hume\.ai','octave-2'/);
+assert.match(source, /'X-Hume-Api-Key':tts\.key/);
 
 console.log("voice prosody tests passed");
