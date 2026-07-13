@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v480 · 真实锁屏与通知';
+const APP_VER='v481 · 锁屏回拉入口';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -363,7 +363,7 @@ function defState(){return{
   _mailCount:{}
 };}
 let S=load();
-try{S.me=S.me||{};if(S.me.locked==null)S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
+try{S.me=S.me||{};S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
 // 把旧的默认绘图模型切到更适合日常照片的新默认；如果用户自己填了别的名字，就尊重原设置
 try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}
 function mergeStateData(d,opt){const n=Object.assign(defState(),d||{});if(opt&&opt.keepPhoneFriend){const old=S&&S.me&&S.me.phoneFriend,has=d&&d.me&&d.me.phoneFriend&&d.me.phoneFriend.id;if(old&&!has){n.me=n.me||{};n.me.phoneFriend=old;}if(n.messages&&n.messages.__idb==='messages'&&S.messages&&!S.messages.__idb)n.messages=S.messages;}return n;}
@@ -1154,16 +1154,26 @@ function lockNoteHTML(n,i){return `<div class="locknote" style="animation-delay:
 function renderLockClock(){const e=$('#lockScreen');if(!e)return;const t=e.querySelector('.locktime'),d=e.querySelector('.lockdate');if(t)t.textContent=hm();if(d)d.textContent=lockDateText();}
 function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=S.me.lockBg||S.me.homeBg||'',notes=lockNotes().slice(0,5);
   el.innerHTML=`<div class="lockbg" style="${bg?'background-image:url('+bg+');':''}"></div><div class="lockshade"></div><div class="locktop"><div class="locktime">${hm()}</div><div class="lockdate">${lockDateText()}</div></div><div class="locknotes">${notes.length?notes.map(lockNoteHTML).join(''):'<div class="lockempty">暂无新通知</div>'}</div><div class="lockbottom"><button class="lockquick" onclick="lockQuickTorch(event)" title="手电筒">${svgIc('flashlight',24,'#fff',1.75)}</button><div class="lockhint" onclick="lockOpen()">上滑进入小手机<div class="lockhandle"></div></div><button class="lockquick" onclick="lockQuickCamera(event)" title="相机">${svgIc('camera',24,'#fff',1.75)}</button></div>`;}
-function lockOpen(){S.me.locked=false;save();renderLockScreen();}
-function lockShow(){if(_call)return;S.me.locked=true;save();renderLockScreen();}
+function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return;let on=false;try{on=S.me.locked===false&&cur().p==='home'&&!_call;}catch(_){}e.classList.toggle('show',!!on);}
+function lockOpen(){S.me.locked=false;save();renderLockScreen();renderLockPull();}
+function lockShow(drop){if(_call)return;S.me.locked=true;save();renderLockScreen(true);renderLockPull();if(drop){const el=$('#lockScreen');if(el){el.classList.remove('dropin');void el.offsetWidth;el.classList.add('dropin');setTimeout(()=>el.classList.remove('dropin'),520);}}}
+function lockPrepareAway(){try{if(S&&S.me&&!_call){S.me.locked=true;saveNow();}}catch(_){}}
 function lockQuickTorch(e){try{e.stopPropagation();}catch(_){}toast('手电筒已点亮');}
 function lockQuickCamera(e){try{e.stopPropagation();}catch(_){}lockOpen();setTimeout(()=>openApp('moments'),80);}
 let _lockTouch=null;
 function initLockGestures(){if(window._lockGesturesInit)return;window._lockGesturesInit=1;
-  document.addEventListener('pointerdown',e=>{const ls=$('#lockScreen'),locked=ls&&ls.classList.contains('show');if(locked&&ls.contains(e.target)){_lockTouch={mode:'unlock',x:e.clientX,y:e.clientY,t:Date.now()};return;}if(!locked&&cur().p==='home'&&e.clientY<115){_lockTouch={mode:'lock',x:e.clientX,y:e.clientY,t:Date.now()};}}, {passive:true});
-  document.addEventListener('pointermove',e=>{if(!_lockTouch)return;const dy=e.clientY-_lockTouch.y,dx=Math.abs(e.clientX-_lockTouch.x);if(dx>70){_lockTouch=null;return;}if(_lockTouch.mode==='unlock'&&dy<-26){try{e.preventDefault();}catch(_){}const ls=$('#lockScreen');if(ls)ls.style.transform='translateY('+Math.max(-90,dy*.45)+'px)';}else if(_lockTouch.mode==='lock'&&dy>26){try{e.preventDefault();}catch(_){} }}, {passive:false});
-  document.addEventListener('pointerup',e=>{if(!_lockTouch)return;const dy=e.clientY-_lockTouch.y,dt=Date.now()-_lockTouch.t,mode=_lockTouch.mode;_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';if(mode==='unlock'&&(dy<-58||(dy<-35&&dt<260)))lockOpen();else if(mode==='lock'&&(dy>76||(dy>48&&dt<260)))lockShow();});
-  document.addEventListener('pointercancel',()=>{_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';});
+  const begin=(target,x,y)=>{const ls=$('#lockScreen'),locked=ls&&ls.classList.contains('show');if(locked&&ls.contains(target)){_lockTouch={mode:'unlock',x,y,t:Date.now()};return;}if(!locked&&cur().p==='home'&&y<132)_lockTouch={mode:'lock',x,y,t:Date.now()};};
+  const move=(x,y,e)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dx=Math.abs(x-_lockTouch.x);if(dx>70){_lockTouch=null;return;}if(_lockTouch.mode==='unlock'&&dy<-26){try{e.preventDefault();}catch(_){}const ls=$('#lockScreen');if(ls)ls.style.transform='translateY('+Math.max(-90,dy*.45)+'px)';}else if(_lockTouch.mode==='lock'&&dy>18){try{e.preventDefault();}catch(_){} }};
+  const end=(x,y)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dt=Date.now()-_lockTouch.t,mode=_lockTouch.mode;_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';if(mode==='unlock'&&(dy<-58||(dy<-35&&dt<260)))lockOpen();else if(mode==='lock'&&(dy>62||(dy>40&&dt<280)))lockShow(true);};
+  const cancel=()=>{_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';};
+  document.addEventListener('pointerdown',e=>begin(e.target,e.clientX,e.clientY), {passive:true});
+  document.addEventListener('pointermove',e=>move(e.clientX,e.clientY,e), {passive:false});
+  document.addEventListener('pointerup',e=>end(e.clientX,e.clientY));
+  document.addEventListener('pointercancel',cancel);
+  document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)begin(e.target,t.clientX,t.clientY);}, {passive:true});
+  document.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(t)move(t.clientX,t.clientY,e);}, {passive:false});
+  document.addEventListener('touchend',e=>{const t=e.changedTouches&&e.changedTouches[0];if(t)end(t.clientX,t.clientY);});
+  document.addEventListener('touchcancel',cancel);
 }
 /* ===== 真·录音 长按说话 ===== */
 let _rec=null;
@@ -1501,7 +1511,7 @@ function render(){
   else if(c.p==='momentDetail')html='';
   const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'))?' wxlight':'';
   app.innerHTML='<div class="page'+_wxL+'">'+html+'</div>';
-  renderLockScreen();
+  renderLockScreen();renderLockPull();
   if(c.p==='chat'){afterChat(c.id);}
   restoreRenderScroll(c,_scrollState);
   if((c.p==='tale'&&S.tale&&S.tale.active)||(c.p==='dread'&&S.dread&&S.dread.active)){setTimeout(jailAmbientStart,40);}
@@ -8033,10 +8043,10 @@ function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.m
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 function androidResumeRepair(){try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
 initBattery();
-window.addEventListener('pagehide',()=>{sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();});
-window.addEventListener('beforeunload',()=>{sleepMarkAway();callBackgroundHold();if(_savePending)saveNow();});
+window.addEventListener('pagehide',()=>{sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
+window.addEventListener('beforeunload',()=>{sleepMarkAway();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
 window.addEventListener('pageshow',()=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(androidResumeRepair,260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(androidResumeRepair,280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(androidResumeRepair,280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});
 try{sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}/* 先立刻渲染；失败时由安卓启动保护显示中文自救页 */
