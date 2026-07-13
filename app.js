@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v492 · 趣味陌生短信';
+const APP_VER='v493 · 匿名通话语音';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1033,7 +1033,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=492').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=493').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -5227,7 +5227,7 @@ function phRandomNumber(){const seed=Date.now()+Math.floor(Math.random()*9999),a
 function phSimAccept(){const c=phState().simCall;if(!c||c.state!=='incoming')return;c.state='calling';save();render();setTimeout(()=>phSimAnswer(c.id),450);}
 function phSimDecline(){const p=phState(),c=p.simCall;if(!c)return;phSound('end');phAddRecent(c.num,'in','missed','voice',0);phAddVoicemail(c.num,'未接来电。');phArchiveSimCall(c,'decline');p.simCall=null;save();go('phoneapp');}
 function phCallDur(c){const st=c&&c.answeredAt;if(!st)return '00:00';const d=Math.max(0,Math.floor((Date.now()-st)/1000));return Math.floor(d/60)+':'+String(d%60).padStart(2,'0');}
-function phSimSpeak(text){}
+async function phSimSpeak(text){if(!ttsApiOn())return;const c=phState().simCall;if(!c||!c.meta||!c.meta.aliasToRole||c.meta.spoof)return;const role=getC(c.meta.roleId);if(!role||role.blocked)return;try{await speakWait(text,role,{cue:ttsAutoCue(text,role)});}catch(_){}}
 function phSimLine(c,from,text){if(!c)return;from=from||'them';const tx=String(text||'').slice(0,260),ts=Date.now(),ttl=Math.max(1800,Math.min(5600,1300+[...tx].length*95));c.lines=Array.isArray(c.lines)?c.lines:[];c.lines.push({from,text:tx,time:ts});if(c.lines.length>80)c.lines=c.lines.slice(-80);c.sub={from,text:tx,time:ts,ttl,hold:from==='me'};if(from==='me')return;setTimeout(()=>{try{const now=phState().simCall;if(now&&now.id===c.id&&now.sub&&now.sub.time===ts&&!now.sub.hold){now.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},ttl);}
 function phStrangerRejectAction(text){text=String(text||'');if(/诈骗|骚扰|推销|贷款|中奖|链接|http|验证码|转账|裸聊|加群|刷流水|提现吗|威胁|辱骂|滚|骗子|广告/.test(text))return'block';if(/打错|不认识|哪位|找谁|别打|别联系|没空|挂了/.test(text))return'hangup';return'';}
 function phDecisionFromRaw(raw,heard){const t=String(raw||''),u=String(heard||'');if(/[\[【]\s*(拉黑|屏蔽|加入黑名单)\s*[\]】]/.test(t))return'block';if(/[\[【]\s*(挂断|拒接|结束通话)\s*[\]】]/.test(t))return'hangup';return phStrangerRejectAction(u);}
