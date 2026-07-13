@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v478 · 修复外语语音格式';
+const APP_VER='v479 · 语音条灵敏波纹';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -997,11 +997,11 @@ async function speakMsg(m,o){const v=o?getVoice(o):null;
   if(voiceAudioExpired(m))clearVoiceAudio(m);
   if(m.audio){const u=await audioPlayableUrl(m.audio);if(u){playUrl(u);return;}}
   if(m._aurl){playUrl(m._aurl);return;}
-  if(ttsApiOn()){const url=await warmVoiceMsg(m,o);if(url){playUrl(url);return;}return;}
+  if(ttsApiOn()){const url=await warmVoiceMsg(m,o);if(url){const u=await audioPlayableUrl(url);if(u)playUrl(u);return;}return;}
   speak(m.content,o);}
 function voiceTtsPending(m){return !!(m&&ttsApiOn()&&m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl&&(m._ttsTask||m._ttsLoading));}
 function refreshVoiceBubble(m){if(!m||!m.id)return;const el=document.querySelector('[data-vid="'+m.id+'"]');if(!el)return;
-  const loading=voiceTtsPending(m);el.classList.toggle('loading',loading);el.setAttribute('aria-busy',loading?'true':'false');}
+  const loading=voiceTtsPending(m);el.classList.toggle('loading',loading);el.classList.toggle('queued',!!m._playWhenReady);el.setAttribute('aria-busy',loading?'true':'false');}
 function warmVoiceMsg(m,o){
   if(voiceAudioExpired(m))clearVoiceAudio(m);
   if(!m||m.role==='user'||m.type!=='voice'||m.audio||m._aurl||!ttsApiOn())return m&&m._aurl;
@@ -1010,7 +1010,7 @@ function warmVoiceMsg(m,o){
   m._ttsLoading=true;refreshVoiceBubble(m);
   m._ttsTask=(async()=>{try{const ab=await ttsArr(m.content,o,{cue:m.voiceCue});
     if(ab){try{const du=audioBufToDataUrl(ab,'audio/mpeg');if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;m.audioTs=Date.now();}catch(_){m.audio=du;m.audioTs=Date.now();}}m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));delete m._ttsFailAt;return m.audio||m._aurl;}catch(e){}}
-    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);return x;});
+    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(async x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);if(x&&m._playWhenReady){delete m._playWhenReady;const u=await audioPlayableUrl(x);if(u){playUrl(u);const el=document.querySelector('[data-vid="'+m.id+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}}refreshVoiceBubble(m);}return x;});
   return m._ttsTask;}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   if(voiceTtsPending(m))return;
@@ -6318,7 +6318,7 @@ function buildPart(c,m,me){
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">${svgIc('money',30,'#fff')}</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">${svgIc('refresh',30,'#fff')}</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
   if(m.type==='voice'){const dur=m.dur||Math.max(1,Math.round((m.content||'').length/3)),wide=Math.min(60+dur*8,200),loading=voiceTtsPending(m);
-    return quoteBar(m)+`<div class="bubble voiceb${loading?' loading':''}${_bl.cls}" style="min-width:${wide}px;${_bl.css}" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();${loading?'':`vtoggle('${m.id}')`}">${_bi}<span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
+    return quoteBar(m)+`<div class="bubble voiceb${loading?' loading':''}${m._playWhenReady?' queued':''}${_bl.cls}" style="min-width:${wide}px;${_bl.css}" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();vtoggle('${m.id}')">${_bi}<span class="vwave"><i></i><i></i><i></i><i></i></span><span class="vdur">${dur}″</span></div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
   if(m.type==='sticker'){return `<div class="stickermsg"><img src="${m.img}">${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;}
   if(m.type==='familycard'){const bnd=m.bound;
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e8527f;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
@@ -6338,8 +6338,8 @@ function buildPart(c,m,me){
     return `<div class="card" style="width:240px;background:#1d2342;border:1px solid #4a5bb0"><div style="padding:12px"><div style="color:#9db4ff;font-size:11px;margin-bottom:4px">🎮 游戏邀请</div><div style="color:#e3e9ff;font-size:14px;font-weight:600">${esc(m.ge||'')} ${esc(m.gname||'一起玩')}</div><div style="color:#aab6e8;font-size:12px;margin-top:5px">想拉你进游戏空间一起玩～</div></div><div class="cfoot" style="color:#8fa0d8">${st==='accepted'?'ta答应啦🎮':st==='declined'?'ta这会儿不想玩':'等ta同意…'}</div></div>${playing?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#5b6bd6;color:#fff" onclick="event.stopPropagation();enterGameNow('${c.id}','${m.game}')">▶ 进入游戏</button></div>`:''}`;}
   return quoteBar(m)+`<div class="bubble${_bl.cls}"${_bl.css?` style="${_bl.css}"`:''}>${_bi}${esc(m.content)}</div>`;}
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
-  if(voiceTtsPending(m)){refreshVoiceBubble(m);return;}
   audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
+  if(voiceTtsPending(m)){m._playWhenReady=true;refreshVoiceBubble(m);warmVoiceMsg(m,m.role==='user'?S.me:getC(owner));return;}
   speakMsg(m,m.role==='user'?S.me:getC(owner));   // 点一下就播放，可重复点重复听
   const el=document.querySelector('[data-vid="'+mid+'"]');
   if(el){el.classList.add('playing');setTimeout(()=>{const e2=document.querySelector('[data-vid="'+mid+'"]');if(e2)e2.classList.remove('playing');},Math.min(9000,(m.dur||3)*1000+600));
