@@ -1,4 +1,4 @@
-const SHELL_CACHE='north-shell-v488';
+const SHELL_CACHE='north-shell-v489';
 const SHELL_FILES=['./','./小手机.html','./app.js','./ai-account.js','./icon.png'];
 self.addEventListener('install',event=>{event.waitUntil((async()=>{const c=await caches.open(SHELL_CACHE);await Promise.all(SHELL_FILES.map(u=>fetch(u,{cache:'no-cache'}).then(r=>{if(r.ok)return c.put(u,r.clone());}).catch(()=>null)));await self.skipWaiting();})());});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.indexOf('north-shell-')===0&&k!==SHELL_CACHE).map(k=>caches.delete(k)));await self.clients.claim();})());});

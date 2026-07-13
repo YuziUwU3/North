@@ -36,14 +36,17 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
 context.splitBubbles = (text) => (text || "").split("\n").map((s) => s.trim()).filter(Boolean);
+context.hasCN = (text) => /[\u3400-\u9fff]/.test(text || "");
 
 assert.equal(context.ttsRequestedCue("Be meaner. Lower your voice."), "质问");
 assert.equal(context.ttsRequestedCue("Please whisper and speak softly."), "低声");
+assert.equal(context.tts2p8IsInterjectionCue(context.ttsRequestedCue("Please laugh once.")), true);
+assert.equal(context.tts2p8IsInterjectionCue(context.ttsRequestedCue("Give me a kiss.")), true);
 assert.equal(context.ttsCueKind("emotion: angry"), "tense");
 assert.equal(context.ttsCueKind("surprised"), "surprised");
 assert.equal(context.ttsCueKind("低沉"), "sleepy");
@@ -76,7 +79,8 @@ assert.equal(context.ttsBracketPerformance("Tell me why you lied.", "questioning
 assert.equal(context.ttsBracketPerformance("I am jealous.", "jealous", "fish", true), "[jealous] I am jealous.");
 assert.equal(context.ttsBracketPerformance("Please whisper.", "whisper", "fish", true), "[whispering] Please whisper.");
 assert.equal(context.ttsBracketPerformance("Tell me the truth.", "质问", "eleven", true), "[angry, controlled] Tell me the truth.");
-assert.equal(context.ttsBracketPerformance("Come here.", "亲亲", "fish", true), "[kissing softly] Come here.");
+assert.equal(context.ttsBracketPerformance("Come here.", "亲亲", "fish", true), "[kissing softly] Mwah. Come here.");
+assert.equal(context.ttsBracketPerformance("That was funny.", "giggle", "fish", true), "[chuckling] Heh, heh. That was funny.");
 context.ttsCleanBase = (x) => String(x || "").trim();
 context.ttsSafeProsody = (x) => x;
 context.VOICE_MAX_CHARS = 300;
@@ -85,7 +89,7 @@ assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "�
 assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "亲亲", interjection: false }), "Come here.");
 assert.equal(context.ttsPerformanceText("Come here.", null, minimax02, { cue: "亲亲" }), "Come here.");
 assert.equal(context.ttsPerformanceText("Tell me.", null, eleven3, { cue: "质问" }), "[angry, controlled] Tell me.");
-assert.equal(context.ttsPerformanceText("Come here.", null, fish21, { cue: "亲亲" }), "[kissing softly] Come here.");
+assert.equal(context.ttsPerformanceText("Come here.", null, fish21, { cue: "亲亲" }), "[kissing softly] Mwah. Come here.");
 assert.deepEqual(
   JSON.parse(JSON.stringify(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax28))),
   { speed: 1, vol: 1, pitch: 0, emotion: "angry" },
