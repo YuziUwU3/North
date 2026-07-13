@@ -36,21 +36,35 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
+context.splitBubbles = (text) => (text || "").split("\n").map((s) => s.trim()).filter(Boolean);
 
 assert.equal(context.ttsRequestedCue("Be meaner. Lower your voice."), "质问");
 assert.equal(context.ttsRequestedCue("Please whisper and speak softly."), "低声");
 assert.equal(context.ttsCueKind("emotion: angry"), "tense");
 assert.equal(context.ttsCueKind("surprised"), "surprised");
+assert.equal(context.ttsCueKind("低沉"), "sleepy");
 assert.equal(context.ttsAutoCue("Tell me why you lied to me.", null), "tense");
 assert.equal(context.tts2p8Interjection("Come here.", "亲亲"), "Come here. (lip-smacking)");
 assert.equal(context.tts2p8Interjection("I missed you.", "叹气"), "(sighs) I missed you.");
 assert.equal(context.tts2p8Interjection("I missed you.", "难过"), "I missed you.");
 
 const minimax28 = { base: "https://api.minimax.io", model: "speech-2.8-turbo" };
+assert.deepEqual(JSON.parse(JSON.stringify(context.parseVoiceTagLine("[我发语音说：哦？ 是吗。看来是我误会宝宝了。 |语气:低沉]"))), {
+  text: "哦？ 是吗。看来是我误会宝宝了。",
+  trans: "",
+  cue: "低沉",
+});
+assert.deepEqual(JSON.parse(JSON.stringify(context.parseVoiceTagLine("[语音|Tell me why.|语气:质问]"))), {
+  text: "Tell me why.",
+  trans: "",
+  cue: "质问",
+});
+assert.equal(context.voiceTagNeedsLangFix("[我发语音说：哦？ 是吗。|语气:低沉]", { voice: { lang: "英" } }), true);
+assert.equal(context.voiceTagNeedsLangFix("[语音|Tell me why.|为什么这样？|语气:质问]", { voice: { lang: "英" } }), false);
 const minimax02 = { base: "https://api.minimax.io", model: "speech-02-turbo" };
 const eleven3 = { base: "https://api.elevenlabs.io", model: "eleven_v3" };
 const fish21 = { base: "https://api.fish.audio", model: "s2.1-pro-free" };
