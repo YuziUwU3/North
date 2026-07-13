@@ -122,6 +122,10 @@ assert.match(source, /function ttsFishPerformance/);
 assert.match(source, /aiRelay\('external_tts',\{provider:'fish'/);
 assert.match(source, /stripCallControlTags\(l,c,_call\.id,video\)/);
 assert.match(source, /if\(!keepActions\)t=t\.replace\(\/【\[\^】\]\*】\/g,''\)/);
+assert.match(source, /const VOICE_AUDIO_TTL_MS=24\*60\*60\*1000/);
+assert.match(source, /function voiceAudioExpired/);
+assert.match(source, /m\.audioTs=Date\.now\(\)/);
+assert.match(source, /if\(voiceAudioExpired\(m\)\)clearVoiceAudio\(m\)/);
 assert.match(source, /function fishVoiceItems/);
 assert.match(source, /base\+'\/model\?self=true&page_size=100'/);
 assert.deepEqual(JSON.parse(JSON.stringify(context.fishVoiceItems({ items: [{ _id: "fish-voice-id", title: "我的克隆" }] }))), [
