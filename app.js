@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v483 · 单条锁屏通知动效';
+const APP_VER='v484 · 电话短信软件';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -358,6 +358,7 @@ function defState(){return{
   x:{profile:{handle:'@yibei_0414',bio:'做一只无忧无虑的小猫～',fans:328,following:12,cover:''},tweets:[],dms:[],following:[],blocked:[],circle:{},users:{}},
   friendRequests:[],
   mail:[],
+  phoneapp:{tab:'recents',recents:[],sms:{},read:{},contacts:[],voicemail:[],favorites:[],blocked:{},keypad:''},
   _proactiveDone:{},
   _proactiveCount:{},
   _mailCount:{}
@@ -1154,7 +1155,7 @@ function lockClearTarget(target,silent){try{const key=lockTargetKey(target);if(!
 let _lockFreshId='';
 function lockNotify(title,body,opt){try{opt=opt||{};const arr=lockNotes(),id='ln_'+uid(),note={id,title:String(title||'通知').slice(0,40),body:String(body||'').replace(/\s+/g,' ').slice(0,80),time:Date.now(),avatar:opt.avatar||'',icon:opt.icon||'',target:opt.target||null};arr.unshift(note);if(arr.length>4)arr.length=4;_lockFreshId=id;save(600);renderLockScreen(true);}catch(_){}}
 function lockAvatarHTML(n){if(n&&n.avatar)return av(n.avatar,'sm');if(n&&n.icon)return `<div class="avatar sm" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.13)">${svgIc(n.icon,18,'#fff',1.7)}</div>`;return `<div class="avatar sm" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.13)">${svgIc('bell',18,'#fff',1.7)}</div>`;}
-function lockOpenTarget(n){if(!n||!n.target){lockOpen();return;}const t=n.target;lockClearTarget(t,true);save(300);lockOpen();setTimeout(()=>{if(t.type==='chat')openChat(t.id);else if(t.type==='pfchat')openPhoneFriendChat(t.id);else if(t.type==='pfgroup')openPhoneFriendGroup(t.id);else if(t.type==='group'){lockClearTarget({type:'group',id:t.id},true);go('group',{id:t.id});}else if(t.type==='mail'){lockClearTarget({type:'mail'},true);go('mail');}else if(t.type==='x'){lockClearTarget({type:'x'},true);openX();}else if(t.type==='wechat')openWeChat(t.tab||'chats');},80);}
+function lockOpenTarget(n){if(!n||!n.target){lockOpen();return;}const t=n.target;lockClearTarget(t,true);save(300);lockOpen();setTimeout(()=>{if(t.type==='chat')openChat(t.id);else if(t.type==='pfchat')openPhoneFriendChat(t.id);else if(t.type==='pfgroup')openPhoneFriendGroup(t.id);else if(t.type==='phonesms')openPhoneSMS(t.id);else if(t.type==='group'){lockClearTarget({type:'group',id:t.id},true);go('group',{id:t.id});}else if(t.type==='mail'){lockClearTarget({type:'mail'},true);go('mail');}else if(t.type==='x'){lockClearTarget({type:'x'},true);openX();}else if(t.type==='wechat')openWeChat(t.tab||'chats');},80);}
 function lockNoteHTML(n,i){const fresh=n&&n.id===_lockFreshId;return `<div class="locknote${fresh?' fresh':''}"${fresh?' style="animation-delay:0ms"':''} onclick="lockOpenTarget(lockNotes().find(x=>x.id==='${n.id}')||null)">${lockAvatarHTML(n)}<div class="ltxt"><div class="lt">${esc(n.title)}</div><div class="lb">${esc(n.body||'打开查看')}</div></div><div class="lk">${hm(n.time)}</div></div>`;}
 function renderLockClock(){const e=$('#lockScreen');if(!e)return;const t=e.querySelector('.locktime'),d=e.querySelector('.lockdate');if(t)t.textContent=hm();if(d)d.textContent=lockDateText();}
 function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=S.me.lockBg||S.me.homeBg||'',notes=lockNotes().slice(0,4);
@@ -1456,7 +1457,7 @@ function back(){const c=cur();if(c&&c.p==='chat'&&idleForceActive(c.id)){toast('
 function home(){if(idleForceBlockNav('home'))return;stack=[{p:'home'}];render();}
 function cur(){return stack[stack.length-1];}
 function renderPageKey(c){if(!c)return'';if(c.p==='chat')return'chat:'+c.id;if(c.p==='pfchat')return'pfchat:'+c.id;if(c.p==='pfgroup')return'pfgroup:'+c.gid;if(c.p==='group')return'group:'+c.id;if(c.p==='mgroom')return'mgroom:'+c.id;if(c.p==='hischat')return'hischat:'+c.id+':'+c.fid;if(c.p==='dydm')return'dydm:'+c.id;return c.p;}
-function renderScrollTarget(c){if(!c)return null;if(c.p==='hischat'&&c.fid==='__me')return{id:'hisselflog',stick:true};const map={settings:['settingsscroll',0],couple:['couplescroll',0],chat:['chatbg',1],pfchat:['pfchatbg',1],pfgroup:['pfgroupbg',1],group:['chatbg',1],mgroom:['mgrbg',1],alter:['alterbg',1],tale:['talebox',1],dread:['dreadbox',1],xdm:['xdmbox',1],dydm:['dydmbox',1],shopcs:['csbox',1],off:['offbg',1],rp:['rpbg',1],jail:['jailbox',1],gs:['gsbg',1],hischat:['hischatlog',1]};const x=map[c.p];return x?{id:x[0],stick:!!x[1]}:null;}
+function renderScrollTarget(c){if(!c)return null;if(c.p==='hischat'&&c.fid==='__me')return{id:'hisselflog',stick:true};const map={settings:['settingsscroll',0],couple:['couplescroll',0],chat:['chatbg',1],pfchat:['pfchatbg',1],pfgroup:['pfgroupbg',1],group:['chatbg',1],mgroom:['mgrbg',1],alter:['alterbg',1],tale:['talebox',1],dread:['dreadbox',1],xdm:['xdmbox',1],dydm:['dydmbox',1],shopcs:['csbox',1],off:['offbg',1],rp:['rpbg',1],jail:['jailbox',1],gs:['gsbg',1],hischat:['hischatlog',1],phonesms:['smsbody',1]};const x=map[c.p];return x?{id:x[0],stick:!!x[1]}:null;}
 function nearBottom(el){return !el||Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight)<80;}
 function appendChatHTML(cb,html,opt){if(!cb||!html)return null;opt=opt||{};const stick=nearBottom(cb),typing=opt.replaceTyping?cb.querySelector('#typing'):null;let node=null;
   if(typing&&typing.isConnected){typing.insertAdjacentHTML('afterend',html);node=typing.nextElementSibling;typing.remove();}
@@ -1486,6 +1487,9 @@ function render(){
   else if(c.p==='jail')html=renderJail();
   else if(c.p==='wg')html=renderWG();
   else if(c.p==='mail')html=renderMail();
+  else if(c.p==='phoneapp')html=renderPhoneApp();
+  else if(c.p==='phonesms')html=renderPhoneSMS(c.num);
+  else if(c.p==='phonecontact')html=renderPhoneContact(c.num);
   else if(c.p==='gs')html=renderGS();
   else if(c.p==='mgroom')html=renderMGRoom(c.id);
   else if(c.p==='uc')html=renderUC();
@@ -1817,7 +1821,7 @@ function renderHome(){
 function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);for(let i=0;i<APP_PAGES;i++){const d=document.getElementById('pgdot'+i);if(d)d.className='pgdot'+(i===p?' on':'');}}
 // ===== 主屏 App（数据驱动 + 长按拖拽换位/换页）=====
 const APPDEFS={
-  wechat:{e:'💬',c:'#07c160',t:'微信'},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
+  wechat:{e:'💬',c:'#07c160',t:'微信'},phoneapp:{e:'',c:'#0a84ff',t:'电话',icon:'phoneapp',lk:1},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
   browser:{e:'🌐',c:'#3a7bd5',t:'浏览器',lk:1},moments:{e:'🌸',c:'#ee5a6f',t:'朋友圈',lk:1},spy:{e:'🔍',c:'#5b6b9c',t:'查他手机',lk:1},
   shop:{e:'🛒',c:'#ff6b6b',t:'购物',lk:1},calendar:{e:'📅',c:'#4ecdc4',t:'日历',lk:1},x:{e:'𝕏',c:'#1a1a1f',t:'X',lk:1},
   douyin:{e:'🎵',c:'#1a1a1f',t:'抖音',lk:1},food:{e:'🍔',c:'#ffb83b',t:'外卖',lk:1},couple:{e:'💞',c:'#ff8fab',t:'情侣空间'},
@@ -1826,9 +1830,9 @@ const APPDEFS={
   tale:{e:'🕯️',c:'linear-gradient(135deg,#3a0010,#1a1a1f)',t:'规则怪谈',lk:1},dread:{e:'🩸',c:'linear-gradient(135deg,#5a0012,#23000a)',t:'惊悚抉择',lk:1},
   travel:{e:'✈',c:'linear-gradient(135deg,#26324a,#5a6b8c)',t:'云程',lk:1},
   aiaccount:{e:'AI',c:'linear-gradient(135deg,#1e293b,#4f46e5)',t:'AI账户',icon:'aiaccount'}};
-const APPRUN={wechat:()=>openWeChat(),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openApp('music'),roleplay:()=>openApp('roleplay'),tale:()=>openApp('tale'),dread:()=>openApp('dread'),travel:()=>openApp('travel'),aiaccount:()=>openAIAccount()};
+const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openApp('music'),roleplay:()=>openApp('roleplay'),tale:()=>openApp('tale'),dread:()=>openApp('dread'),travel:()=>openApp('travel'),aiaccount:()=>openAIAccount()};
 const APP_PAGES=3;
-const APP_DEFLAYOUT=[['wechat','settings','aiaccount','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail'],['offline','roleplay','travel','music','tale','dread'],[]];
+const APP_DEFLAYOUT=[['wechat','phoneapp','settings','aiaccount','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','tale','dread'],[]];
 function appLayoutInit(){let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
@@ -2041,6 +2045,7 @@ function wDragEnd(){if(!_wdg)return;_wdg.row.classList.remove('wdrag');const lis
 const _MI=(p,f)=>'<svg viewBox="0 0 24 24" width="26" height="26" fill="'+(f?'#fff':'none')+'" stroke="'+(f?'none':'#fff')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
 const MICO={
   wechat:_MI('<path d="M21 11.4a8.3 8.3 0 0 1-12 7.4L4 20.5l1.4-4A8.3 8.3 0 1 1 21 11.4z"/><path d="M8.6 11.3h.01M12 11.3h.01M15.4 11.3h.01"/>'),
+  phoneapp:_MI('<path d="M7.2 4.2 9.7 6.7a1.7 1.7 0 0 1 .3 1.9l-.8 1.6a12 12 0 0 0 4.6 4.6l1.6-.8a1.7 1.7 0 0 1 1.9.3l2.5 2.5a1.7 1.7 0 0 1-.1 2.5c-1 .9-2.2 1.4-3.5 1.1C9.7 19.1 4.9 14.3 3.6 7.8c-.3-1.3.2-2.5 1.1-3.5a1.7 1.7 0 0 1 2.5-.1z"/>'),
   contacts:_MI('<circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>'),
   me:_MI('<path d="M5.5 4 7 8.3M18.5 4 17 8.3"/><path d="M5.5 9.5C5.5 14 8.2 17.5 12 17.5s6.5-3.5 6.5-8"/><path d="M9.6 12h.01M14.4 12h.01M10.8 14.4c.7.5 1.7.5 2.4 0"/>'),
   settings:_MI('<circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v3M12 18.4v3M21.4 12h-3M5.6 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7 5.6 5.6"/>'),
@@ -2070,6 +2075,7 @@ function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];con
 // 通用线条图标（UI 里替代 emoji，可指定颜色/大小，默认跟随文字色）
 const ICONS={
   chat:'<path d="M21 11.4a8.3 8.3 0 0 1-12 7.4L4 20.5l1.4-4A8.3 8.3 0 1 1 21 11.4z"/><path d="M8.6 11.3h.01M12 11.3h.01M15.4 11.3h.01"/>',
+  message:'<path d="M21 11.4a8.3 8.3 0 0 1-12 7.4L4 20.5l1.4-4A8.3 8.3 0 1 1 21 11.4z"/><path d="M8 11.5h8M8 14h5"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
   users:'<circle cx="9" cy="8" r="3.1"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M15.6 5.5a3.1 3.1 0 0 1 0 5M17.5 19a5.6 5.6 0 0 0-3-5"/>',
   cat:'<path d="M5.5 4 7 8.3M18.5 4 17 8.3"/><path d="M5.5 9.5C5.5 14 8 17.5 12 17.5s6.5-3.5 6.5-8"/><path d="M9.6 12h.01M14.4 12h.01M10.8 14.4c.7.5 1.7.5 2.4 0"/>',
@@ -2140,16 +2146,16 @@ function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
-const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',travel:'云程'};
+const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
-  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:()=>{musicInit();go('music');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
+  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:()=>{musicInit();go('music');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
 function curAppKey(){const p=cur().p;
-  const map={browser:'browser',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',gs:'games',uc:'games',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
+  const map={browser:'browser',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',gs:'games',uc:'games',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
   if(map[p])return map[p];
   if(p==='wechat'&&wxTab==='moments')return 'moments';
   return null;}
@@ -5134,6 +5140,58 @@ function notifyMail(c,letter){if(c.muted)return;playDing();lockNotify((c.remark|
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('mail');};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},5500);}
 setInterval(scanMail,300000);setTimeout(scanMail,15000);
+/* ===== 电话 + 短信 ===== */
+function phState(){S.phoneapp=S.phoneapp||{};const p=S.phoneapp;if(!p.tab)p.tab='recents';if(!Array.isArray(p.recents))p.recents=[];if(!p.sms||typeof p.sms!=='object')p.sms={};if(!p.read||typeof p.read!=='object')p.read={};if(!Array.isArray(p.contacts))p.contacts=[];if(!Array.isArray(p.voicemail))p.voicemail=[];if(!Array.isArray(p.favorites))p.favorites=[];if(!p.blocked||typeof p.blocked!=='object')p.blocked={};if(p.keypad==null)p.keypad='';return p;}
+function phDigits(n){return (''+(n||'')).replace(/[^\d+]/g,'');}
+function phNorm(n){n=phDigits(n);return n.replace(/^\+?86/,'').replace(/^0+/,'')||n;}
+function phFmt(n){n=phDigits(n);const d=n.replace(/\D/g,'');if(!d)return '';if(n[0]==='+')return n.replace(/(\+\d{2})(\d{3,4})(\d{4})(\d*)/,'$1 $2 $3 $4').trim();return d.replace(/(\d{3})(\d{4})(\d{0,4})(.*)/,(_,a,b,c,e)=>[a,b,c,e].filter(Boolean).join(' '));}
+function phHash(s){s=''+(s||'');let h=0;for(let i=0;i<s.length;i++)h=((h*31)+s.charCodeAt(i))|0;return h;}
+function phRoleNumber(c){if(!c)return '';if(!c.phone)c.phone='13'+String(Math.abs(phHash(c.id||c.name||'role'))).padStart(9,'0').slice(0,9);return c.phone;}
+function phAllContacts(){const p=phState(),rows=[];S.contacts.filter(c=>!c.deleted).forEach(c=>rows.push({kind:'role',id:c.id,num:phRoleNumber(c),name:c.remark||c.name,avatar:c.avatar,blocked:!!c.blocked||!!p.blocked[phNorm(phRoleNumber(c))]}));p.contacts.forEach(x=>{if(!x.deleted)rows.push({kind:'custom',id:x.id,num:x.num,name:x.name||x.num,avatar:x.avatar||'',blocked:!!x.blocked||!!p.blocked[phNorm(x.num)]});});return rows;}
+function phFind(n){const key=phNorm(n);return phAllContacts().find(x=>phNorm(x.num)===key)||null;}
+function phName(n){const x=phFind(n);return x?(x.name||x.num):phFmt(n);}
+function phAvatar(n,cls){const x=phFind(n),v=x&&x.avatar;return v?av(v,cls||'sm'):`<div class="avatar ${cls||'sm'}">${esc((x&&x.name?Array.from(x.name)[0]:'?'))}</div>`;}
+function phWhen(t){const d=new Date(t||Date.now()),now=new Date();if(d.toDateString()===now.toDateString())return hm(t);const y=new Date(now);y.setDate(now.getDate()-1);if(d.toDateString()===y.toDateString())return '昨天';return (d.getMonth()+1)+'月'+d.getDate()+'日';}
+function phSound(type){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const seq=type==='sms'?[[1046,.07],[1396,.08]]:[[440,.12],[523,.12],[659,.18]];let at=_audio.currentTime;seq.forEach(x=>{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=x[0];o.type='triangle';g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(Math.min(1,.16*volMul()),at+.015);g.gain.exponentialRampToValueAtTime(.001,at+x[1]);o.start(at);o.stop(at+x[1]+.02);at+=x[1]+.05;});}catch(_){}}
+function phTab(t){phState().tab=t;save();render();}
+function phNav(){const p=phState(),un=phUnreadCount(),vm=p.voicemail.filter(v=>!v.read).length;return `<div class="phtab">${[['fav','star','收藏'],['recents','clock','最近'],['contacts','user','通讯录'],['keypad','dots','拨号'],['sms','message','信息'],['voicemail','mic','留言']].map(x=>`<div class="tb ${p.tab===x[0]?'on':''}" onclick="phTab('${x[0]}')">${svgIc(x[1],23,p.tab===x[0]?'#0a84ff':'#fff',1.8)}<span>${x[2]}${x[0]==='sms'&&un?`(${un})`:x[0]==='voicemail'&&vm?`(${vm})`:''}</span></div>`).join('')}</div>`;}
+function renderPhoneApp(){const p=phState(),tab=p.tab||'recents',title={fav:'个人收藏',recents:'最近通话',contacts:'通讯录',keypad:'拨号键盘',sms:'信息',voicemail:'语音留言'}[tab]||'电话';return `<div class="phoneui"><div class="phtop"><button class="phbtn" onclick="home()">‹</button>${tab==='recents'?`<div class="phseg"><button class="${p.filter==='missed'?'':'on'}" onclick="phState().filter='all';save();render()">所有</button><button class="${p.filter==='missed'?'on':''}" onclick="phState().filter='missed';save();render()">未接来电</button></div>`:'<span></span>'}<button class="phbtn" onclick="phMore()">${svgIc('dots',22,'#fff')}</button></div><div class="phtitle">${title}</div>${tab==='keypad'?'':`<div class="phsearch">${svgIc('search',19,'#aaa')}<input id="phq" placeholder="搜索" oninput="renderPhoneSearch(this.value)" value="${esc(p.q||'')}">${svgIc('mic',19,'#aaa')}</div>`}<div class="phbody" id="phbody">${phBody(tab)}</div>${phNav()}</div>`;}
+function phBody(tab){if(tab==='contacts')return phContactsHTML();if(tab==='keypad')return phKeypadHTML();if(tab==='sms')return phSmsListHTML();if(tab==='fav')return phFavHTML();if(tab==='voicemail')return phVoicemailHTML();return phRecentsHTML();}
+function renderPhoneSearch(q){const p=phState();p.q=q||'';const b=$('#phbody');if(b)b.innerHTML=phBody(p.tab||'recents');}
+function phFilterRows(rows){const q=(phState().q||'').trim().toLowerCase();if(!q)return rows;return rows.filter(r=>(r.name||'').toLowerCase().includes(q)||(''+r.num).includes(q));}
+function phRecentsHTML(){const p=phState();let rows=phFilterRows((p.recents||[]).slice().reverse());if(p.filter==='missed')rows=rows.filter(r=>r.status==='missed');return rows.length?rows.map(r=>`<div class="phrow ${r.status==='missed'?'phmiss':''}" onclick="phCall('${esc(r.num)}')">${phAvatar(r.num,'sm')}<div class="phmain"><div class="phname">${r.status==='blocked'?'⊘ ':''}${esc(phName(r.num))}</div><div class="phsub">${r.dir==='out'?'↗':'↙'} 主号 ${r.kind==='video'?'视频':'电话'}${r.status==='missed'?' · 未接':''}</div></div><div class="phright">${r.dur?phDur(r.dur):phWhen(r.time)}</div><div class="phinfo" onclick="event.stopPropagation();go('phonecontact',{num:'${esc(r.num)}'})">i</div></div>`).join(''):'<div class="empty">还没有通话记录</div>';}
+function phContactsHTML(){const rows=phFilterRows(phAllContacts()).sort((a,b)=>(a.name||'').localeCompare(b.name||''));return `${rows.map(x=>`<div class="phrow" onclick="go('phonecontact',{num:'${esc(x.num)}'})">${phAvatar(x.num,'sm')}<div class="phmain"><div class="phname">${esc(x.name)}</div><div class="phsub">${esc(phFmt(x.num))}${x.blocked?' · 已屏蔽':''}</div></div><div class="phright">›</div></div>`).join('')||'<div class="empty">暂无联系人</div>'}<button class="btn p" style="margin-top:14px" onclick="phEditContact('')">新建联系人</button>`;}
+function phFavHTML(){const p=phState(),rows=(p.favorites||[]).map(n=>phFind(n)||{num:n,name:phFmt(n)});return rows.length?rows.map(x=>`<div class="phrow" onclick="go('phonecontact',{num:'${esc(x.num)}'})">${phAvatar(x.num,'sm')}<div class="phmain"><div class="phname">${esc(x.name)}</div><div class="phsub">${esc(phFmt(x.num))}</div></div><div class="phright">›</div></div>`).join(''):'<div class="empty">还没有收藏联系人</div>';}
+function phKeypadHTML(){const p=phState(),keys=[['1',''],['2','ABC'],['3','DEF'],['4','GHI'],['5','JKL'],['6','MNO'],['7','PQRS'],['8','TUV'],['9','WXYZ'],['*',''],['0','+'],['#','']];return `<div class="phnum">${esc(phFmt(p.keypad||''))}</div><div class="phkeys">${keys.map(k=>`<button class="phkey" onclick="phKey('${k[0]}')">${k[0]}<small>${k[1]}</small></button>`).join('')}</div><button class="phcallbtn" onclick="phCall(phState().keypad)">${svgIc('phonecall',34,'#fff')}</button><div style="text-align:center;margin-top:10px"><button class="phbtn" onclick="phBackspace()">删除</button></div>`;}
+function phSmsListHTML(){const p=phState(),nums=Object.keys(p.sms||{}).filter(n=>(p.sms[n]||[]).length).sort((a,b)=>((p.sms[b].slice(-1)[0]||{}).time||0)-((p.sms[a].slice(-1)[0]||{}).time||0));return `${nums.length?nums.map(n=>{const a=p.sms[n],m=a[a.length-1],un=a.filter(x=>x.from==='them'&&!x.read).length;return `<div class="phrow" onclick="openPhoneSMS('${esc(n)}')"><span style="width:8px;color:#0a84ff">${un?'●':''}</span>${phAvatar(n,'sm')}<div class="phmain"><div class="phname">${esc(phName(n))}</div><div class="phsub">${esc(m.text||'')}</div></div><div class="phright">${phWhen(m.time)} ›</div></div>`;}).join(''):'<div class="empty">还没有短信</div>'}<button class="btn p" style="margin-top:14px" onclick="phNewSms()">新信息</button>`;}
+function phVoicemailHTML(){const p=phState(),rows=phFilterRows((p.voicemail||[]).slice().reverse());return rows.length?rows.map(v=>`<div class="phrow ${v.read?'':'phmiss'}" onclick="phPlayVM('${v.id}')">${phAvatar(v.num,'sm')}<div class="phmain"><div class="phname">${esc(phName(v.num))}</div><div class="phsub">${esc(v.text||'未接来电语音留言')} · ${phWhen(v.time)}</div></div><div class="phright">${v.dur||12}s</div></div>`).join(''):'<div class="empty">没有语音留言</div>';}
+function phUnreadCount(){const p=phState();let n=0;Object.values(p.sms||{}).forEach(a=>a.forEach(m=>{if(m.from==='them'&&!m.read)n++;}));return n;}
+function phKey(k){const p=phState();if(k==='0'&&!p.keypad)p.keypad='+';else p.keypad=(p.keypad||'')+k;save();render();}
+function phBackspace(){const p=phState();p.keypad=(p.keypad||'').slice(0,-1);save();render();}
+function phDur(s){s=+s||0;return Math.floor(s/60)+':'+(s%60).toString().padStart(2,'0');}
+function phAddRecent(num,dir,status,kind,dur){const p=phState();num=phDigits(num);if(!num)return;p.recents.push({id:uid(),num,dir:dir||'out',status:status||'ok',kind:kind||'voice',dur:+dur||0,time:Date.now()});if(p.recents.length>120)p.recents=p.recents.slice(-120);save(300);}
+function phCall(num){num=phDigits(num);if(!num){toast('先输入号码');return;}const x=phFind(num);if(phState().blocked[phNorm(num)]||(x&&x.blocked)){phAddRecent(num,'out','blocked','voice',0);toast('此联系人已屏蔽');render();return;}phSound('call');if(x&&x.kind==='role'){phAddRecent(num,'out','ok','voice',0);placeCall(x.id,'voice');}else{phAddRecent(num,'out','missed','voice',0);phAddVoicemail(num,'无人接听。');toast('号码暂时无法接通');render();}}
+function phMsgTo(num){openPhoneSMS(num);}
+function phAddVoicemail(num,text){const p=phState();p.voicemail.push({id:uid(),num:phDigits(num),text:text||'未接来电语音留言',time:Date.now(),dur:8+Math.floor(Math.random()*20),read:false});if(p.voicemail.length>80)p.voicemail=p.voicemail.slice(-80);save(300);}
+function phPlayVM(id){const p=phState(),v=p.voicemail.find(x=>x.id===id);if(!v)return;v.read=true;save();toast('语音留言：'+(v.text||'未接来电'));render();}
+function renderPhoneContact(num){num=phDigits(num);const x=phFind(num)||{num,name:phFmt(num),avatar:'',kind:'custom'},p=phState(),fav=p.favorites.includes(phNorm(num)),blocked=!!p.blocked[phNorm(num)]||!!x.blocked;return `<div class="phoneui"><div class="phtop"><button class="phbtn" onclick="back()">‹</button><button class="phbtn" onclick="phEditContact('${esc(num)}')">编辑</button></div><div class="phdetail">${phAvatar(num,'lg')}<div class="phtitle" style="font-size:30px;margin:8px 0 4px">${esc(x.name||phFmt(num))}</div><div style="color:#aaa">${esc(phFmt(num))}</div><div class="phacts"><div class="phact" onclick="phMsgTo('${esc(num)}')">${svgIc('message',24,'#fff')}信息</div><div class="phact" onclick="phCall('${esc(num)}')">${svgIc('phonecall',24,'#fff')}电话</div><div class="phact" onclick="phVideoCall('${esc(num)}')">${svgIc('video',24,'#fff')}视频</div><div class="phact" onclick="phToggleFav('${esc(num)}')">${svgIc('star',24,fav?'#ffd60a':'#fff',1.8)}收藏</div></div><div class="phcard"><div class="it"><span>电话</span><span class="v">${esc(phFmt(num))}</span></div><div class="it" onclick="phMsgTo('${esc(num)}')"><span>发送信息</span><span class="v">›</span></div><div class="it" onclick="phAddVoicemail('${esc(num)}','我给你留了一条语音，看到回我。');toast('已添加语音留言');render()"><span>模拟语音留言</span><span class="v">›</span></div></div><div class="phcard"><div class="it danger" onclick="phToggleBlock('${esc(num)}')"><span>${blocked?'取消屏蔽':'屏蔽联系人'}</span><span class="v">›</span></div><div class="it danger" onclick="phDeleteContact('${esc(num)}')"><span>删除联系人/记录</span><span class="v">›</span></div></div></div></div>`;}
+function phVideoCall(num){const x=phFind(num);phSound('call');if(x&&x.kind==='role'){phAddRecent(num,'out','ok','video',0);placeCall(x.id,'video');}else{phAddRecent(num,'out','missed','video',0);toast('视频电话未接通');render();}}
+function phToggleFav(num){const p=phState(),k=phNorm(num),i=p.favorites.indexOf(k);if(i>=0)p.favorites.splice(i,1);else p.favorites.push(k);save();render();}
+function phToggleBlock(num){const p=phState(),k=phNorm(num);if(p.blocked[k])delete p.blocked[k];else p.blocked[k]=true;const x=phFind(num);if(x&&x.kind==='custom'){const c=p.contacts.find(z=>z.id===x.id);if(c)c.blocked=!!p.blocked[k];}save();render();}
+async function phDeleteContact(num){const p=phState(),k=phNorm(num);if(!await uiConfirm('删除这个联系人和本地短信/通话记录？'))return;p.contacts=(p.contacts||[]).filter(x=>phNorm(x.num)!==k);delete p.sms[phDigits(num)];Object.keys(p.sms).forEach(n=>{if(phNorm(n)===k)delete p.sms[n];});p.recents=(p.recents||[]).filter(r=>phNorm(r.num)!==k);p.voicemail=(p.voicemail||[]).filter(v=>phNorm(v.num)!==k);p.favorites=(p.favorites||[]).filter(n=>n!==k);delete p.blocked[k];save();closeModal();go('phoneapp');toast('已删除');}
+function phEditContact(num){const x=num?phFind(num):null;openModal(`<h3>${x?'编辑联系人':'新建联系人'}</h3><div class="field"><label>姓名/备注</label><input id="ph_name" value="${esc((x&&x.name)||'')}" placeholder="联系人姓名"></div><div class="field"><label>电话号码</label><input id="ph_num" value="${esc((x&&x.num)||'')}" placeholder="手机号或短号"></div><div class="field"><label>头像</label><input id="ph_av" value="${esc((x&&x.avatar)||'')}" placeholder="Emoji 或图片地址，可留空"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="phSaveContact('${esc(num||'')}')">保存</button></div>`);}
+function phSaveContact(old){const p=phState(),name=$('#ph_name').value.trim(),num=phDigits($('#ph_num').value.trim()),avatar=$('#ph_av').value.trim();if(!num){toast('号码不能为空');return;}let row=old&&(p.contacts||[]).find(x=>phNorm(x.num)===phNorm(old));if(!row){row={id:uid()};p.contacts.push(row);}row.name=name||num;row.num=num;row.avatar=avatar;save();closeModal();render();toast('已保存联系人');}
+function phNewSms(){openModal(`<h3>新信息</h3><div class="field"><label>收件人号码</label><input id="ph_sms_to" placeholder="输入号码"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="var n=phDigits($('#ph_sms_to').value);if(n){closeModal();openPhoneSMS(n)}else toast('先输入号码')">开始</button></div>`);}
+function openPhoneSMS(num){num=phDigits(num);const p=phState();(p.sms[num]||[]).forEach(m=>{if(m.from==='them')m.read=true;});p.read[num]=Date.now();save();go('phonesms',{num});}
+function renderPhoneSMS(num){num=phDigits(num);const arr=(phState().sms[num]||[]);return `<div class="smschat"><div class="smshead"><button class="phbtn back" onclick="back()">‹</button>${phAvatar(num,'lg')}<div class="smsname" onclick="go('phonecontact',{num:'${esc(num)}'})">${esc(phName(num))} ›</div><div class="smsmeta">信息 · 短信<br>${esc(phFmt(num))}</div></div><div class="smsbody" id="smsbody"><div class="smsdate">${arr.length?fmtDT(arr[0].time):fmtDT(Date.now())}</div>${arr.map(m=>`<div class="smsmsg ${m.from==='me'?'me':'them'}"><div class="smsbubble" onclick="phSmsMenu('${esc(num)}','${m.id}')">${esc(m.text)}</div></div>`).join('')}</div><div class="smsbar"><button onclick="go('phonecontact',{num:'${esc(num)}'})">+</button><textarea id="smsin" placeholder="信息 · 短信" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();phSendSms('${esc(num)}')}"></textarea><button onclick="phSendSms('${esc(num)}')">↑</button></div></div>`;}
+function phSmsArr(num){const p=phState();num=phDigits(num);return p.sms[num]||(p.sms[num]=[]);}
+function phSendSms(num){const ta=$('#smsin'),text=(ta&&ta.value||'').trim();if(!text)return;num=phDigits(num);if(phState().blocked[phNorm(num)]){toast('已屏蔽，不能发送');return;}ta.value='';const arr=phSmsArr(num);arr.push({id:uid(),from:'me',text,time:Date.now(),read:true});if(arr.length>300)arr.splice(0,arr.length-300);save();render();const x=phFind(num);if(x&&x.kind==='role')setTimeout(()=>phRoleSmsReply(x.id,num,text),900+Math.random()*1000);}
+async function phRoleSmsReply(id,num,userText){const c=getC(id);if(!c||c.blocked||phState().blocked[phNorm(num)])return;try{const arr=phSmsArr(num).slice(-12).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+m.text).join('\n');const sys=buildSystem(c)+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。请像真实短信一样短一点、自然口语，1到2句。只输出短信正文，不要方括号指令。';let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{max:220,temp:.8});r=cleanReply(r).replace(/\n+/g,' ').trim().slice(0,180);if(!r)return;phReceiveSms(num,r,c);}catch(e){}}
+function phReceiveSms(num,text,c){const arr=phSmsArr(num);arr.push({id:uid(),from:'them',text,time:Date.now(),read:cur().p==='phonesms'&&cur().num===num});if(arr.length>300)arr.splice(0,arr.length-300);save();phSound('sms');lockNotify((c&&(c.remark||c.name))||phName(num),text,{avatar:c&&c.avatar,target:{type:'phonesms',id:num}});if(cur().p==='phonesms'&&cur().num===num)render();}
+function phSmsMenu(num,mid){openModal(`<h3>短信操作</h3><div class="btns"><button class="btn d" onclick="phDeleteSms('${esc(num)}','${mid}')">删除这条</button><button class="btn g" onclick="closeModal()">取消</button></div>`);}
+function phDeleteSms(num,mid){const a=phSmsArr(num),i=a.findIndex(m=>m.id===mid);if(i>=0)a.splice(i,1);save();closeModal();render();}
+async function phClearAll(kind){const p=phState();if(kind==='recents'){if(await uiConfirm('清空全部通话记录？')){p.recents=[];save();render();}}else if(kind==='sms'){if(await uiConfirm('清空全部短信？')){p.sms={};p.read={};save();render();}}else if(kind==='vm'){if(await uiConfirm('清空全部语音留言？')){p.voicemail=[];save();render();}}}
+function phMore(){const tab=phState().tab;openModal(`<h3>电话</h3><div class="section"><div class="it" onclick="phEditContact('')"><span>新建联系人</span><span class="v">›</span></div><div class="it danger" onclick="phClearAll('recents');closeModal()"><span>清空通话记录</span><span class="v">›</span></div><div class="it danger" onclick="phClearAll('sms');closeModal()"><span>清空全部短信</span><span class="v">›</span></div><div class="it danger" onclick="phClearAll('vm');closeModal()"><span>清空语音留言</span><span class="v">›</span></div></div>`);}
 function soupCfg(cid){openModal(`<h3>海龟汤设置</h3>
   <div class="field"><label>类别</label><select id="sc_cat"><option>悬疑</option><option>恐怖</option><option>搞笑</option><option>温情</option><option>脑洞</option></select></div>
   <div class="field"><label>难度</label><select id="sc_dif"><option>简单</option><option selected>中等</option><option>烧脑</option></select></div>
@@ -7412,6 +7470,7 @@ function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const l
 function hideCallBanner(){const b=$('#callBanner');if(b)b.className='msgbanner';}
 function openIncoming(){if(!_call)return;audioUnlock();_call.opened=true;hideCallBanner();renderCall();}
 function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话';_call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();
+  const cc0=getC(id);if(cc0){phAddRecent(phRoleNumber(cc0),'in','missed',kindTxt.indexOf('视频')>=0?'video':'voice',0);phAddVoicemail(phRoleNumber(cc0),'未接来电语音留言');}
   msgs(id).push({role:'user',type:'sys',content:'未接来电 · '+kindTxt,time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
   const c=getC(id);if(c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，响了好一会儿ta都没接（未接来电）。你有点担心又有点不爽，主动发条消息问ta去哪了/在干嘛/怎么不接电话（符合你心情值和人设，别凶过头）。]'),1500);}
 let _callRejectFollow={};
@@ -7429,6 +7488,7 @@ function answerCall(autoByThem){if(!_call)return;audioUnlock();ringStop();clearT
     : '这通电话是'+S.me.name+'主动打给你的，你刚接通。之后提起时绝对不要说成你打给ta。';
   callAI('[系统：'+dirText+(_call.kind==='video'?' 这是视频电话。':' 这是语音电话。')+(proR?' 这通是你自己主动打给ta的，因为你'+proR+'。开口先自然把你主动找ta的心情说出来，口语化短句。':' 自然开口，口语化短句。')+']');}
 function declineCall(){if(!_call)return;ringStop();endCallTimers();hideCallBanner();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming',wasCb=!!_call._cb,_kind=_call.kind;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
+  const c0=getC(id);if(c0)phAddRecent(phRoleNumber(c0),wasIn?'in':'out',wasIn?'missed':'canceled',_kind,0);
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
   _call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();if(cur().p==='chat')render();
   const c=getC(id);if(wasIn&&c&&!c.blocked){
@@ -7441,6 +7501,7 @@ function hangupCall(byAI,reason){if(!_call)return;blip(300,.3);endCallTimers();h
   _call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();if(cur().p==='chat')render();
   summarizeCall(id,kindTxt,_sess);
   const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';const dirTxt=_dir==='incoming'?'这通电话最初是你主动打给'+S.me.name+'的。':'这通电话最初是'+S.me.name+'主动打给你的。';
+  if(c)phAddRecent(phRoleNumber(c),_dir==='incoming'?'in':'out','ok',_kind,dur);
   if(c){c._lastCallEnded={ts:Date.now(),kind:_kind,dir:_dir,byAI:!!byAI,endedBy:byAI?'role':'user',reason:reason||'',dur};save();}
   if(c&&!c.blocked){
     if(byAI){if(reason!=='wxlogin')setTimeout(()=>aiReply(id,'[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。'+dirTxt+'挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'),2500);}
