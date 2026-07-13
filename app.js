@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v471 · 多引擎情绪语音';
+const APP_VER='v472 · Fish音色拉取修复';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -2218,7 +2218,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div style="padding:0 14px 8px">${[['https://api.minimax.io','speech-02-turbo','海螺·省钱'],['https://api.minimax.io','speech-02-hd','海螺·高清'],['https://api.minimax.io','speech-2.8-turbo','海螺2.8·快速'],['https://api.minimax.io','speech-2.8-hd','海螺2.8·表演'],['https://api.elevenlabs.io','eleven_flash_v2_5','Eleven·省额度'],['https://api.elevenlabs.io','eleven_multilingual_v2','Eleven·稳定'],['https://api.elevenlabs.io','eleven_v3','Eleven v3·情绪'],['https://api.fish.audio','s2.1-pro-free','Fish S2.1·免费'],['https://api.hume.ai','octave-2','Hume Octave 2']].map(m=>`<span onclick="pickTtsProvider('${m[0]}','${m[1]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[2]}</span>`).join('')}</div>
       <div style="padding:0 14px 4px;font-size:12px;color:#9aa">海螺常用音色（点一下填入"默认音色"）：</div>
       <div style="padding:0 14px 8px">${[['male-qn-qingse','青涩青年'],['male-qn-jingying','精英青年'],['male-qn-badao','霸道青年'],['presenter_male','男主持'],['audiobook_male_1','有声书男'],['female-shaonv','少女'],['female-yujie','御姐'],['presenter_female','女主持']].map(v=>`<span onclick="pickVoice('${v[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${v[1]}</span>`).join('')}</div>
-      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="pullVoices()">拉取我的全部音色（含克隆·海螺）</button></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="pullVoices()">拉取我的全部音色（含克隆）</button></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testTTS()">测试语音（会响一声）</button></div><div id="testT" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
       <div style="padding:6px 14px;font-weight:600;color:#7bd38d;font-size:13px">语音转文字（让角色听懂你录的语音·可选）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
@@ -2386,11 +2386,17 @@ const VOICE_PRESETS=[
   {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
 ];
 function mergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
+function fishVoiceItems(d){const raw=Array.isArray(d)?d:(Array.isArray(d&&d.items)?d.items:(Array.isArray(d&&d.results)?d.results:(Array.isArray(d&&d.data)?d.data:(Array.isArray(d&&d.models)?d.models:[]))));
+  return raw.map(v=>{const id=v&&String(v.id||v._id||v.reference_id||v.model_id||'').trim(),name=v&&String(v.title||v.name||v.display_name||v.description||id||'Fish 音色').trim();return id?{id,name,clone:true}:null;}).filter(Boolean);}
 async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
   toast('正在拉取音色…');
   try{if(ttsUseRelay()){const d=await aiRelay('tts_voices',{});_voiceList=mergeVoicePresets((d&&d.voices)||[]);_voiceQ='';showVoicePicker();return;}
-    if(!/minimax/i.test(base)){toast('这个只支持海螺(MiniMax)，地址要填 api.minimaxi.com');return;}
     if(!key){toast('先填上面的 API Key，或打开 AI账户里的“使用内置AI”');return;}
+    if(/fish\.?audio/i.test(base)){const r=await fetch(base+'/model?self=true&page_size=100',{method:'GET',headers:{'Authorization':'Bearer '+key}});
+      let d=null;try{d=await r.json();}catch(_){}
+      if(!r.ok){toast('Fish拉取失败：'+(d&&(d.message||d.error)||r.status));return;}
+      _voiceList=fishVoiceItems(d);_voiceQ='';if(!_voiceList.length){toast('Fish账号里没拉到音色，先确认克隆已完成');return;}showVoicePicker();return;}
+    if(!/minimax/i.test(base)){toast('当前只支持 Fish 或海螺拉取音色');return;}
     const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
     const url=base+'/v1/get_voice'+(group?('?GroupId='+encodeURIComponent(group)):'');
     const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});

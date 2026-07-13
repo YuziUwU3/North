@@ -39,6 +39,7 @@ const context = vm.createContext({ ttsUseRelay: () => false });
 for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsBracketPerformance", "ttsVoiceProfile"]) {
   vm.runInContext(functionSource(name), context);
 }
+vm.runInContext(functionSource("fishVoiceItems"), context);
 
 assert.equal(context.ttsRequestedCue("Be meaner. Lower your voice."), "质问");
 assert.equal(context.ttsRequestedCue("Please whisper and speak softly."), "低声");
@@ -113,5 +114,10 @@ assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);
 assert.match(source, /'https:\/\/api\.fish\.audio','s2\.1-pro-free'/);
 assert.match(source, /'https:\/\/api\.hume\.ai','octave-2'/);
 assert.match(source, /'X-Hume-Api-Key':tts\.key/);
+assert.match(source, /function fishVoiceItems/);
+assert.match(source, /base\+'\/model\?self=true&page_size=100'/);
+assert.deepEqual(JSON.parse(JSON.stringify(context.fishVoiceItems({ items: [{ _id: "fish-voice-id", title: "我的克隆" }] }))), [
+  { id: "fish-voice-id", name: "我的克隆", clone: true },
+]);
 
 console.log("voice prosody tests passed");
