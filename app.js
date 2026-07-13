@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v474 · Fish情绪语音细调';
+const APP_VER='v475 · 修复视频动作字幕';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -6889,10 +6889,12 @@ function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］�
   return t;}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
 const CONTROL_TAG_RE=new RegExp('[\\[【]\\s*(?:'+TAGWORDS+')(?:\\s*[\\|｜:：][^\\]】]*)?\\s*[\\]】]','g');
-function stripCallControlTags(line,c,id){let t=normTag(line);
+function stripCallControlTags(line,c,id,keepActions){let t=normTag(line);
   t=t.replace(/[\[【]\s*心情值\s*[\|｜:：]\s*([+\-]?\d{1,3})\s*[\]】]/g,(m,n)=>{if(c&&id)adjMood(id,parseInt(n,10)||0);return '';});
   t=t.replace(/[\[【]\s*心情\s*[\|｜:：]\s*([^\]】]*)\s*[\]】]/g,(m,v)=>{if(c)c.mood=(v||'').trim();return '';});
-  return t.replace(CONTROL_TAG_RE,'').replace(/\[[^\]]*\]/g,'').replace(/【[^】]*】/g,'').trim();}
+  t=t.replace(CONTROL_TAG_RE,'').replace(/\[[^\]]*\]/g,'');
+  if(!keepActions)t=t.replace(/【[^】]*】/g,'');
+  return t.trim();}
 const CARD_RE=/^[\[【]\s*(转账|红包|位置|图片|照片|文件)\s*[\|｜]\s*([^\]】]*)[\]】]$/;
 function cleanPhotoDescText(t){return (t||'').replace(/^[\s:：,，。；;]+|[\s\]】]+$/g,'').replace(/[|｜]/g,'，').trim().slice(0,420);}
 function normalizeImageLine(line){
@@ -7544,7 +7546,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     maybeAffectionShift(_call.id,c,_luc,content);
     maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
-    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;l=stripCallControlTags(l,c,_call.id);if(!l)return;
+    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;l=stripCallControlTags(l,c,_call.id,video);if(!l)return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
       else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned)splitActions(cleaned).forEach(p=>pieces.push(p));}});
     // 把"外语原文 + 紧跟的（中文翻译）"配成一组，字幕里一起显示、只读原文、停顿一次，避免字幕快闪/翻译跟原文脱节
