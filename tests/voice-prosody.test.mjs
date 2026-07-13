@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsBracketPerformance", "ttsVoiceProfile"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
@@ -58,6 +58,9 @@ const hume2 = { base: "https://api.hume.ai", model: "octave-2" };
 assert.equal(context.ttsStyleKind(eleven3), "eleven");
 assert.equal(context.ttsStyleKind(fish21), "fish");
 assert.equal(context.ttsStyleKind(hume2), "hume");
+assert.equal(context.ttsBracketPerformance("Tell me why you lied.", "questioning", "fish", true), "[frustrated][confident] Tell me [emphasis] why you lied.");
+assert.equal(context.ttsBracketPerformance("I am jealous.", "jealous", "fish", true), "[jealous] I am jealous.");
+assert.equal(context.ttsBracketPerformance("Please whisper.", "whisper", "fish", true), "[whispering] Please whisper.");
 assert.equal(context.ttsBracketPerformance("Tell me the truth.", "质问", "eleven", true), "[angry, controlled] Tell me the truth.");
 assert.equal(context.ttsBracketPerformance("Come here.", "亲亲", "fish", true), "[kissing softly] Come here.");
 context.ttsCleanBase = (x) => String(x || "").trim();
@@ -114,6 +117,8 @@ assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);
 assert.match(source, /'https:\/\/api\.fish\.audio','s2\.1-pro-free'/);
 assert.match(source, /'https:\/\/api\.hume\.ai','octave-2'/);
 assert.match(source, /'X-Hume-Api-Key':tts\.key/);
+assert.match(source, /function ttsFishTags/);
+assert.match(source, /function ttsFishPerformance/);
 assert.match(source, /aiRelay\('external_tts',\{provider:'fish'/);
 assert.match(source, /function fishVoiceItems/);
 assert.match(source, /base\+'\/model\?self=true&page_size=100'/);
