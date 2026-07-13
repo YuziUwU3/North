@@ -325,7 +325,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v472 · Fish音色拉取修复';
+const APP_VER='v473 · Fish语音中转修复';
 const VOICE_MAX_CHARS=300;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
 function defState(){return{
@@ -940,6 +940,7 @@ async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio)
 async function _ttsOnce(t,vid,tts,opt){let r;
   if(ttsUseRelay()){const vp=ttsVoiceProfile(t,opt,tts),d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:vp});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab)return {err:'内置AI无音频'};return {buf:ab};}
   if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
+    if(aiCoreUrl()){try{const d=await aiRelay('external_tts',{provider:'fish',base:tts.base,key:tts.key,model:tts.model||'s2.1-pro-free',voice_id:vid,text:t});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(ab)return {buf:ab};return {err:'Fish中转无音频'};}catch(e){if(!/unknown-action/i.test(String((e&&e.message)||e)))return {err:String((e&&e.message)||e).replace(/^内置AI失败：/,'')};}}
     r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
   else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
   else if(/hume\.ai/i.test(tts.base)){const url=tts.base.replace(/\/+$/,'')+'/v0/tts/file',version=/octave-1/i.test(tts.model||'')?'1':'2';

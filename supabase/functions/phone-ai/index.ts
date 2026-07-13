@@ -237,6 +237,16 @@ function audioToDataUrl(audio: string) {
   return "data:audio/mpeg;base64," + compact;
 }
 
+function arrayBufferToBase64(ab: ArrayBuffer) {
+  const bytes = new Uint8Array(ab);
+  let out = "";
+  const step = 0x8000;
+  for (let i = 0; i < bytes.length; i += step) {
+    out += String.fromCharCode(...bytes.subarray(i, i + step));
+  }
+  return btoa(out);
+}
+
 type TTSVoiceSetting = { speed?: number; vol?: number; pitch?: number; emotion?: string };
 
 function safeTTSVoiceSetting(input: TTSVoiceSetting | null | undefined) {
@@ -306,6 +316,36 @@ async function minimaxVoices() {
     clone: false,
   })).filter((v: { id: string }) => v.id);
   return clones.concat(system);
+}
+
+async function externalFishTTS(body: Record<string, unknown>) {
+  const base = String(body.base || "https://api.fish.audio").replace(/\/+$/, "");
+  const key = String(body.key || "").trim();
+  const text = String(body.text || "").trim();
+  const voiceId = String(body.voice_id || "").trim();
+  const model = String(body.model || "s2.1-pro-free").trim();
+  if (!key) throw new Error("missing-fish-key");
+  if (!voiceId) throw new Error("missing-fish-voice");
+  if (!text) throw new Error("missing-tts-text");
+  if ([...text].length > 300) throw new Error("tts-text-too-long");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${key}`,
+  };
+  if (model) headers.model = model;
+  const r = await fetch(base + "/v1/tts", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ text, reference_id: voiceId, format: "mp3", normalize: true }),
+  });
+  if (!r.ok) {
+    const detail = await r.text().catch(() => "");
+    throw new Error(`fish-tts-http-${r.status}: ${detail.slice(0, 180)}`);
+  }
+  const ab = await r.arrayBuffer();
+  if (!ab.byteLength) throw new Error("fish-no-audio");
+  const type = r.headers.get("Content-Type") || "audio/mpeg";
+  return { audio: `data:${type};base64,${arrayBufferToBase64(ab)}`, model, voice_id: voiceId };
 }
 
 Deno.serve(async (req) => {
@@ -442,6 +482,13 @@ Deno.serve(async (req) => {
     if (action === "tts_voices") {
       const voices = await minimaxVoices();
       return json({ ok: true, voices });
+    }
+
+    if (action === "external_tts") {
+      const provider = String(body.provider || "").toLowerCase();
+      if (provider !== "fish") throw new Error("unsupported-external-tts-provider");
+      const data = await externalFishTTS(body);
+      return json({ ok: true, data });
     }
 
     return json({ ok: false, error: "unknown-action" }, 404);
