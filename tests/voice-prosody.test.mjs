@@ -117,6 +117,11 @@ assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSe
 assert.match(backend, /if \(allowed\.has\(emotion\)\) out\.emotion = emotion/);
 assert.doesNotMatch(backend, /: "neutral";/);
 assert.match(backend, /if \(chars > 300\)/);
+assert.match(backend, /ledger_id: c\.ledgerId/);
+assert.match(backend, /action === "tts_refund"/);
+assert.match(backend, /function refundTtsLedger/);
+assert.match(source, /ttsRefundLedger\(ledger,'tts-no-audio'\)/);
+assert.match(source, /ttsRefundAudio\(ab,'tts-decode-failed'\)/);
 
 const route = { enabled: true, relay: false, base: "https://api.minimax.io", key: "sk-direct" };
 const routeContext = vm.createContext({

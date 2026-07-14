@@ -204,6 +204,33 @@ async function refund(userId: string, clientSecret: string, feature: string, poi
   await finishCharge(ledgerId, false, { refunded: true, reason });
 }
 
+async function refundTtsLedger(userId: string, clientSecret: string, ledgerId: string, reason: string) {
+  if (!ledgerId) throw new Error("missing-ledger-id");
+  const { data: row, error } = await supabase
+    .from("phone_ai_ledger")
+    .select("id,user_id,kind,feature,points,status,created_at,meta")
+    .eq("id", ledgerId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!row) throw new Error("ledger-not-found");
+  if (row.kind !== "charge" || row.feature !== "tts" || Number(row.points || 0) >= 0) throw new Error("ledger-not-refundable");
+  if (row.status !== "done") return { refunded: 0, reason: "already-not-done" };
+  if (Date.now() - new Date(row.created_at).getTime() > 30 * 60 * 1000) throw new Error("ledger-too-old");
+  const { data: oldRefund } = await supabase
+    .from("phone_ai_ledger")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("kind", "refund")
+    .eq("request_id", ledgerId)
+    .maybeSingle();
+  if (oldRefund) return { refunded: 0, reason: "already-refunded" };
+  const points = Math.abs(Number(row.points || 0));
+  await refund(userId, clientSecret, "tts", points, ledgerId, reason || "tts-client-failed");
+  const acct = await ensureAccount(userId, clientSecret);
+  return { refunded: points, balance: acct.points || 0 };
+}
+
 async function failCharged(ledgerId: string, cost: number, balance: number, model: string, e: unknown) {
   const reason = errText(e);
   const note = "模型请求已经发出，按一次成本计费；失败原因：" + reason;
@@ -507,7 +534,14 @@ Deno.serve(async (req) => {
         estimated_cny: Number((chars * cnyPerChar).toFixed(4)),
         postpaid: true,
       });
-      return json({ ok: true, data, charged: c.cost, balance: c.balance, chars });
+      return json({ ok: true, data, charged: c.cost, balance: c.balance, chars, ledger_id: c.ledgerId });
+    }
+
+    if (action === "tts_refund") {
+      const ledgerId = String(body.ledger_id || "").trim();
+      const reason = String(body.reason || "tts-client-failed").slice(0, 180);
+      const res = await refundTtsLedger(userId, clientSecret, ledgerId, reason);
+      return json({ ok: true, ...res });
     }
 
     if (action === "tts_voices") {
