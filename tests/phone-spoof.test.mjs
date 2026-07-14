@@ -49,7 +49,7 @@ assert.match(source, /绝对不要说“你是谁\/哪位\/你发给我\/发错�
 const aliasContext = vm.createContext({
   S: { me: { name: "North", callName: "Bei" }, offline: {} },
   powerConfig: () => ({}),
-  selectRelevantMemory: () => ({ items: [] }),
+  selectRelevantMemory: () => ({ items: [{ score: 99 }] }),
   memoryTerms: (s) => String(s || "").match(/[\u3400-\u9fff]{1,}|[a-zA-Z]{2,}/g) || [],
   memoryList: () => [],
   memoryText: (v) => String(v || ""),
@@ -81,11 +81,22 @@ const role = { id: "r1", name: "Mr North", remark: "Mr North", callme: "kitten",
 
 assert.equal(aliasContext.phAliasOnlyGenericGuess("你是哥哥吗"), true);
 assert.equal(aliasContext.phAliasIdentityClue("你是哥哥吗", role), false);
+assert.equal(aliasContext.phAliasIdentityClue("我只是好奇", role), false);
 assert.equal(aliasContext.phSpoofExposed("[识破]", "你是哥哥吗", role), false);
+assert.equal(aliasContext.phSpoofExposed("[识破]", "我只是好奇", role), false);
 assert.equal(aliasContext.phSpoofExposed("[识破]", "你是 Sir 吗", role), true);
 assert.equal(aliasContext.phSmsAdmitLine("不是。猜猜看，还有两次机会。"), "嗯，是我。猜猜看，还有两次机会。");
 assert.doesNotMatch(aliasContext.phSmsAdmitLine("不是。猜猜看，还有两次机会。"), /不是/);
 assert.equal(aliasContext.phSmsAdmitLine("嗯，是我。不是。猜猜看。"), "嗯，是我。猜猜看。");
 assert.doesNotMatch(aliasContext.phSmsAdmitLine("嗯，是我。不是。猜猜看。"), /不是/);
+
+const polishContext = vm.createContext({
+  phCleanSmsText: (s) => String(s || ""),
+  phSpoofNoWrongSms: (s) => String(s || ""),
+  phSpoofSmsFallback: () => "换一个更有钩子的开场。",
+});
+vm.runInContext(functionSource("phSpoofSmsPolish"), polishContext);
+assert.equal(polishContext.phSpoofSmsPolish("睡了吗。", {}, "seed", "open"), "换一个更有钩子的开场。");
+assert.equal(polishContext.phSpoofSmsPolish("睡没睡？", {}, "seed", "open"), "换一个更有钩子的开场。");
 
 console.log("phone spoof guard tests passed");
