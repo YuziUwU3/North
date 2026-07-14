@@ -46,4 +46,46 @@ for (const bad of ["认错人了", "不好意思找错人了", "我发错人了"
 assert.match(source, /禁止天气、苏州、路过、方便聊吗、猜猜我是谁、打错、发错、认错人、找错人、弄错人、误会了、不认识/);
 assert.match(source, /绝对不要说“你是谁\/哪位\/你发给我\/发错了\/认错人\/找错人\/弄错人\/误会了\/不认识\/不是本人”/);
 
+const aliasContext = vm.createContext({
+  S: { me: { name: "North", callName: "Bei" }, offline: {} },
+  powerConfig: () => ({}),
+  selectRelevantMemory: () => ({ items: [] }),
+  memoryTerms: (s) => String(s || "").match(/[\u3400-\u9fff]{1,}|[a-zA-Z]{2,}/g) || [],
+  memoryList: () => [],
+  memoryText: (v) => String(v || ""),
+  summaryCleanText: (_, t) => String(t || ""),
+  lifeNotes: () => [],
+  isLover: () => false,
+  behaviorStore: () => ({ items: [] }),
+  behaviorOn: () => false,
+  setInterval: () => 0,
+  setTimeout: () => 0,
+});
+
+for (const name of [
+  "phEscRe",
+  "phCallAdmits",
+  "phSmsAdmitLine",
+  "phAliasNormText",
+  "phAliasGenericTerm",
+  "phAliasOnlyGenericGuess",
+  "phAliasPrivateTerms",
+  "phAliasPrivateSources",
+  "phAliasIdentityClue",
+  "phSpoofExposed",
+]) {
+  vm.runInContext(functionSource(name), aliasContext);
+}
+
+const role = { id: "r1", name: "Mr North", remark: "Mr North", callme: "kitten", selfcall: "Sir", catchphrase: "", power: {} };
+
+assert.equal(aliasContext.phAliasOnlyGenericGuess("你是哥哥吗"), true);
+assert.equal(aliasContext.phAliasIdentityClue("你是哥哥吗", role), false);
+assert.equal(aliasContext.phSpoofExposed("[识破]", "你是哥哥吗", role), false);
+assert.equal(aliasContext.phSpoofExposed("[识破]", "你是 Sir 吗", role), true);
+assert.equal(aliasContext.phSmsAdmitLine("不是。猜猜看，还有两次机会。"), "嗯，是我。猜猜看，还有两次机会。");
+assert.doesNotMatch(aliasContext.phSmsAdmitLine("不是。猜猜看，还有两次机会。"), /不是/);
+assert.equal(aliasContext.phSmsAdmitLine("嗯，是我。不是。猜猜看。"), "嗯，是我。猜猜看。");
+assert.doesNotMatch(aliasContext.phSmsAdmitLine("嗯，是我。不是。猜猜看。"), /不是/);
+
 console.log("phone spoof guard tests passed");
