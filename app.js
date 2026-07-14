@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v517 · 语音退款与通话过滤';
+const APP_VER='v518 · 微调通话节奏与记忆保存';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -7607,7 +7607,7 @@ function showMood(id){const c=getC(id);openModal(`<h3>${esc(c.remark||c.name)} �
 function c_mute(id){const c=getC(id);c.muted=!c.muted;save();render();}
 function memoryManualAdd(id,text){const c=getC(id),r=rememberForChar(c,text);if(r!=='none')save();if(r==='conflict')toast('这条和已有记忆不同，聊天时会先向你确认');editMemory(id);}
 function memoryDeleteAt(id,i){const c=getC(id),list=memoryList(c),old=list[i];if(old==null)return;list.splice(i,1);delete memoryMetaStore(c)[memoryNorm(old)];save();editMemory(id);}
-function memoryEditAt(id,i,text){const c=getC(id),list=memoryList(c),old=list[i],v=aboutMeNoteText(text);if(!v)return;delete memoryMetaStore(c)[memoryNorm(old)];list[i]=v;memoryMetaStore(c)[memoryNorm(v)]={createdAt:Date.now(),lastConfirmedAt:Date.now(),confidence:1,importance:3,scope:memoryScopeKey()};save();editMemory(id);}
+function memoryEditAt(id,i,text){const c=getC(id),list=memoryList(c),old=list[i],v=aboutMeNoteText(text);if(!v){toast('内容为空，未保存');return;}delete memoryMetaStore(c)[memoryNorm(old)];list[i]=v;memoryMetaStore(c)[memoryNorm(v)]={createdAt:Date.now(),lastConfirmedAt:Date.now(),confidence:1,importance:3,scope:memoryScopeKey()};saveNow();editMemory(id);toast('记忆已保存');}
 function editMemory(id){const c=getC(id),list=memoryList(c);
   openModal(`<h3>${esc(c.remark||c.name)} 的记忆</h3>
     <div class="hint">这里保存长期记忆。聊天时只会取当前话题真正相关的少量内容，不会把全部旧事硬塞进回复。</div>
@@ -7672,9 +7672,10 @@ function editSummary(id){const c=getC(id);c.summaries=c.summaries||(c.summary?[{
   <button class="btn p" style="margin-bottom:12px" onclick="(function(){var v=$('#sm_new').value.trim();if(v){getC('${id}').summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:v,imp:3});save();editSummary('${id}');}})()">添加</button>
   ${c.summaries.length?c.summaries.slice().reverse().map((x,ri)=>{const i=c.summaries.length-1-ri;return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1"><small style="color:#888">${esc(x.time)}　<span onclick="sumSetImp('${id}',${i})" style="color:#f5b301;cursor:pointer" title="点击改重要度">${stars(x.imp)}</span></small><div>${esc(summaryCleanText(c,x.text))}</div></div><div style="white-space:nowrap"><span onclick="editSumItem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="getC('${id}').summaries.splice(${i},1);save();editSummary('${id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;}).join(''):'<div class="empty">还没有总结</div>'}
   <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
-function sumSetImp(id,i){const c=getC(id);const x=c.summaries&&c.summaries[i];if(!x)return;const v=prompt('这条记忆的重要度（1-5，5最珍贵·永久保留）：',x.imp||3);if(v==null)return;const n=Math.max(1,Math.min(5,parseInt(v,10)||3));x.imp=n;save();editSummary(id);}
+function sumSetImp(id,i){const c=getC(id);const x=c.summaries&&c.summaries[i];if(!x)return;const v=prompt('这条记忆的重要度（1-5，5最珍贵·永久保留）：',x.imp||3);if(v==null)return;const n=Math.max(1,Math.min(5,parseInt(v,10)||3));x.imp=n;saveNow();editSummary(id);}
+function summaryEditAt(id,i,text){const c=getC(id),x=c&&c.summaries&&c.summaries[i];if(!x)return;const v=(''+(text||'')).replace(/\s+/g,' ').trim();if(!v){toast('内容为空，未保存');return;}x.text=summaryCleanText(c,v);x.ts=Date.now();x.time=x.time||sumStamp();saveNow();editSummary(id);toast('概要已保存');}
 function editSumItem(id,i){const c=getC(id);openModal(`<h3>编辑这条概要</h3><div class="field"><small style="color:#888">${esc(c.summaries[i].time)}</small><textarea id="si_t" rows="3">${esc(c.summaries[i].text)}</textarea></div>
-  <div class="btns"><button class="btn g" onclick="editSummary('${id}')">返回</button><button class="btn p" onclick="(function(){getC('${id}').summaries[${i}].text=$('#si_t').value.trim();save();editSummary('${id}');})()">保存</button></div>`);}
+  <div class="btns"><button class="btn g" onclick="editSummary('${id}')">返回</button><button class="btn p" onclick="summaryEditAt('${id}',${i},$('#si_t').value)">保存</button></div>`);}
 
 /* =================== 通话 =================== */
 let _call=null,_ring=null,_callTimer=null,_callSilTimer=null,_callMissT=null;
@@ -7954,7 +7955,7 @@ async function callAI(sysNote,opts){if(!_call)return;
       save();
       _call.sub={who:'them',text:u.orig+(u.trans?'\n'+u.trans:'')};updateCallSub();
       const spoken=pickSpoken(u.orig,_vlang);
-      if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed});_voiceInterjectionUsed=true;await sleep(950);}else await sleep(Math.max(1700,u.orig.length*150));}
+      if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed});_voiceInterjectionUsed=true;await sleep(820);}else await sleep(Math.max(1550,u.orig.length*140));}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}
