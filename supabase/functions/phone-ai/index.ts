@@ -78,6 +78,10 @@ function errText(e: unknown) {
   return String((e as Error)?.message || e || "error");
 }
 
+function isTtsVoiceAccessError(e: unknown) {
+  return /(invalid-voice-id|voice[_\s-]*id|access to this voice|don't have access|no access|permission|forbidden|unauthori[sz]ed|401|403|404)/i.test(errText(e));
+}
+
 function publicAccount(acct: any) {
   if (!acct) return acct;
   const { client_secret: _clientSecret, ...rest } = acct;
@@ -462,8 +466,33 @@ Deno.serve(async (req) => {
         if (voiceId !== DEFAULT_TTS_VOICE && errText(e).includes("invalid-voice-id")) {
           voiceId = DEFAULT_TTS_VOICE;
           voiceFallback = true;
-          data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
+          try {
+            data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
+          } catch (fallbackError) {
+            if (isTtsVoiceAccessError(fallbackError)) {
+              return json({
+                ok: false,
+                error: "tts-voice-not-accessible: " + errText(fallbackError),
+                charged: 0,
+                refunded: 0,
+                billed: false,
+                requested_voice_id: requestedVoiceId,
+                fallback_voice_id: DEFAULT_TTS_VOICE,
+              }, 400);
+            }
+            throw fallbackError;
+          }
         } else {
+          if (isTtsVoiceAccessError(e)) {
+            return json({
+              ok: false,
+              error: "tts-voice-not-accessible: " + errText(e),
+              charged: 0,
+              refunded: 0,
+              billed: false,
+              requested_voice_id: requestedVoiceId,
+            }, 400);
+          }
           throw e;
         }
       }

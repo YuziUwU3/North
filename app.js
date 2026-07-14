@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v499 · 匿名私密识破';
+const APP_VER='v500 · 语音失败不扣点';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -994,7 +994,7 @@ async function ttsArr(text,o,opt){opt=opt||{};const tts=ttsCfg(),raw=ttsCleanBas
   if(!ttsApiOn())return null;const vid=(v&&v.ttsVoice)||(tts&&tts.voice)||'';
   if(ttsUseRelay()){
     try{const res=await _ttsOnce(t,vid,tts,opt);if(res&&res.buf)return res.buf;if(!opt.quiet)toast('语音API错误 '+((res&&res.err)||'无音频'));return null;}
-    catch(e){if(!opt.quiet)toast('语音API错误 '+(((e&&e.message)||'网络').replace(/^内置AI失败：/,'')));return null;}
+    catch(e){const msg=String((e&&e.message)||'网络').replace(/^内置AI失败：/,'');const voiceAccess=/tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access/i.test(msg);if(voiceAccess&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);if(!opt.quiet)toast('语音API错误 '+msg+(voiceAccess?'（未扣AI点数，请检查音色ID权限）':''));return null;}
   }
   let lastErr='',tries=Math.max(1,Math.min(3,+opt.tries||3));
   for(let i=0;i<tries;i++){if(i>0)await new Promise(r=>setTimeout(r,i*600));/* 退避：0 → 0.6s → 1.2s */
@@ -1033,7 +1033,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  _swReady=navigator.serviceWorker.register('sw.js?v=499').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
+  _swReady=navigator.serviceWorker.register('sw.js?v=500').then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
