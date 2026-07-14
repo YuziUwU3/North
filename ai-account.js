@@ -99,10 +99,11 @@ async function aiTestVoice(){const text='我在测试这条语音的花销和声
     const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||AI_DEFAULT_TTS_VOICE,model:'speech-02-turbo'}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(d==='__T_O__'){_aiVoiceTestStatus='语音测试超时，未完成生成';toast('语音测试超时');return;}
     const ledger=d&&(d.ledger_id||d.ledgerId||d.request_id),audio=d&&d.data&&d.data.audio;if(!audio){if(typeof ttsRefundLedger==='function')await ttsRefundLedger(ledger,'tts-test-no-audio');_aiVoiceTestStatus='没有拿到语音，请检查音色或后台余额';toast('没有拿到语音');setTimeout(()=>aiAccountRefresh(true,true),600);return;}
-    const ab=typeof ttsLedgerSet==='function'?ttsLedgerSet(await fetch(audio).then(x=>x.arrayBuffer()),ledger):await fetch(audio).then(x=>x.arrayBuffer());const buf=await decodeBuf(ab);
+    let raw;try{raw=await fetch(audio).then(x=>{if(!x.ok)throw new Error('HTTP '+x.status);return x.arrayBuffer();});}catch(_){if(typeof ttsRefundLedger==='function')await ttsRefundLedger(ledger,'tts-test-fetch-failed');_aiVoiceTestStatus='语音文件下载失败，已退回本次AI点数';toast('下载失败，已退回本次AI点数');setTimeout(()=>aiAccountRefresh(true,true),800);return;}
+    const ab=typeof ttsLedgerSet==='function'?ttsLedgerSet(raw,ledger):raw;const buf=await decodeBuf(ab);
     if(buf){playBuf(buf);_aiVoiceTestStatus='语音测试成功';toast('语音测试成功');setTimeout(()=>aiAccountRefresh(true,true),800);}
     else{if(typeof ttsRefundAudio==='function')await ttsRefundAudio(ab,'tts-test-decode-failed');_aiVoiceTestStatus='拿到语音数据，但播放失败，已退回本次AI点数';toast('播放失败，已退回本次AI点数');setTimeout(()=>aiAccountRefresh(true,true),800);}
-  }catch(e){_aiVoiceTestStatus='语音测试失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,'');toast(_aiVoiceTestStatus);setTimeout(()=>aiAccountRefresh(true,true),800);}
+  }catch(e){let refunded=false;if(typeof ttsRefundError==='function')refunded=await ttsRefundError(e,'tts-test-client-error');_aiVoiceTestStatus='语音测试失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,'')+(refunded?'，已退回本次AI点数':'');toast(_aiVoiceTestStatus);setTimeout(()=>aiAccountRefresh(true,true),800);}
   finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')render();}}
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId(),points:0},pricing:null,plans:null,ledger:[]};
