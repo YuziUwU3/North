@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<title>North 修复缓存</title>
+<style>
+html,body{margin:0;height:100%;background:#101114;color:#f2f2f3;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}
+.box{width:min(86vw,340px);padding:26px 20px;border:1px solid rgba(255,255,255,.1);border-radius:20px;background:#1c1d22;box-shadow:0 18px 50px rgba(0,0,0,.36)}
+.ico{font-size:38px;margin-bottom:10px}.t{font-size:18px;font-weight:700}.m{font-size:13px;color:#aaa;line-height:1.7;margin:10px 0 18px}
+button,a{display:block;width:100%;box-sizing:border-box;border:0;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:700;text-decoration:none}
+button{background:#ff8fab;color:white}a{margin-top:10px;background:#2d2f36;color:#ddd}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="ico">🛠</div>
+  <div class="t">修复小手机缓存</div>
+  <div class="m" id="msg">如果刷出了很老的版本，点下面按钮会清掉网页缓存和 Service Worker。不会删除聊天、角色、密钥。</div>
+  <button id="btn">清缓存并打开最新版</button>
+  <a href="./小手机.html?v=526&open=repair">直接打开最新版</a>
+</div>
+<script>
+async function repair(){
+  var msg=document.getElementById('msg'),btn=document.getElementById('btn');
+  if(btn)btn.disabled=true;
+  if(msg)msg.textContent='正在清理旧缓存…';
+  try{if(window.caches){var ks=await caches.keys();await Promise.all(ks.map(function(k){return caches.delete(k)}));}}catch(e){}
+  try{if(navigator.serviceWorker){var rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(function(r){return r.unregister()}));}}catch(e){}
+  if(msg)msg.textContent='清理完成，正在打开最新版…';
+  location.replace('./小手机.html?v=526&open='+Date.now());
+}
+document.getElementById('btn').onclick=repair;
+</script>
+</body>
+</html>
