@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v522 · 通话称呼翻译修正';
+const APP_VER='v523 · 内置语音聊天兜底';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -980,6 +980,8 @@ function ttsLedgerFromError(e){const d=e&&e.data;return String((e&&(e.ledger_id|
 async function ttsRefundLedger(id,reason){try{if(!id||!aiCoreOn())return;const d=await aiRelay('tts_refund',{ledger_id:id,reason:reason||'tts-client-failed'});if(d&&d.refunded&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),400);}catch(_){}}
 async function ttsRefundAudio(ab,reason){const id=ttsLedgerGet(ab);if(id)await ttsRefundLedger(id,reason);}
 async function ttsRefundError(e,reason){const id=ttsLedgerFromError(e);if(!id||e&&e._ttsRefunded)return false;await ttsRefundLedger(id,reason);try{e._ttsRefunded=true;}catch(_){}return true;}
+function ttsVoiceAccessErrorText(s){return /tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access|permission|forbidden|unauthorized|401|403|404/i.test(String(s||''));}
+function ttsRelayVoiceIds(roleVoice,tts){const ids=[],add=x=>{x=String(x||'').trim();if(x&&!ids.includes(x))ids.push(x);};add(roleVoice);add(tts&&tts.voice);add(DEFAULT_TTS_VOICE);return ids;}
 async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
 async function _ttsOnce(t,vid,tts,opt){let r;
   if(ttsUseRelay()){let d,ledger='';try{d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo'});const data=d&&d.data;ledger=d&&(d.ledger_id||d.ledgerId||d.request_id);const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab){await ttsRefundLedger(ledger,'tts-no-audio');return {err:'内置AI无音频'};}return {buf:ttsLedgerSet(ab,ledger)};}catch(e){if(ledger){await ttsRefundLedger(ledger,'tts-audio-fetch-failed');try{e._ttsRefunded=true;}catch(_){};}else await ttsRefundError(e,'tts-relay-error');throw e;}}
@@ -1005,8 +1007,10 @@ async function _ttsOnce(t,vid,tts,opt){let r;
 async function ttsArr(text,o,opt){opt=opt||{};const tts=ttsCfg(),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;
   if(!ttsApiOn())return null;const vid=(v&&v.ttsVoice)||(tts&&tts.voice)||'';
   if(ttsUseRelay()){
-    try{const res=await _ttsOnce(t,vid,tts,opt);if(res&&res.buf)return res.buf;if(!opt.quiet)toast('语音API错误 '+((res&&res.err)||'无音频'));return null;}
-    catch(e){const refunded=await ttsRefundError(e,'tts-client-error');const msg=String((e&&e.message)||'网络').replace(/^内置AI失败：/,'');const voiceAccess=/tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access/i.test(msg);if((voiceAccess||refunded)&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);if(!opt.quiet)toast('语音API错误 '+msg+(voiceAccess?'（未扣AI点数，请检查音色ID权限）':refunded?'（已退回本次AI点数）':''));return null;}
+    const ids=ttsRelayVoiceIds(v&&v.ttsVoice,tts);let lastMsg='',usedFallback=false;
+    for(let i=0;i<ids.length;i++){try{const res=await _ttsOnce(t,ids[i],tts,opt);if(res&&res.buf){if(i>0)usedFallback=true;return res.buf;}lastMsg=(res&&res.err)||'无音频';if(!ttsVoiceAccessErrorText(lastMsg))break;}catch(e){lastMsg=String((e&&e.message)||'网络').replace(/^内置AI失败：/,'');if(ttsVoiceAccessErrorText(lastMsg)&&i<ids.length-1){usedFallback=true;continue;}const refunded=await ttsRefundError(e,'tts-client-error');if((ttsVoiceAccessErrorText(lastMsg)||refunded)&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);if(!opt.quiet)toast('语音API错误 '+lastMsg+(ttsVoiceAccessErrorText(lastMsg)?'（未扣AI点数，请检查音色ID权限）':refunded?'（已退回本次AI点数）':''));return null;}}
+    if(usedFallback&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);
+    if(!opt.quiet)toast('语音API错误 '+(lastMsg||'无音频'));return null;
   }
   let lastErr='',tries=Math.max(1,Math.min(3,+opt.tries||3));
   for(let i=0;i<tries;i++){if(i>0)await new Promise(r=>setTimeout(r,i*600));/* 退避：0 → 0.6s → 1.2s */

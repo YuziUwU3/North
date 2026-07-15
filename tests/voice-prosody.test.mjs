@@ -35,8 +35,8 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-const context = vm.createContext({ ttsUseRelay: () => false });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix"]) {
+const context = vm.createContext({ ttsUseRelay: () => false, DEFAULT_TTS_VOICE: "male-qn-qingse" });
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
@@ -110,6 +110,9 @@ for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted",
 
 assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo'\}\)/);
 assert.doesNotMatch(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:/);
+assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("bad-role-voice", { voice: "account-default" }))), ["bad-role-voice", "account-default", "male-qn-qingse"]);
+assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("account-default", { voice: "account-default" }))), ["account-default", "male-qn-qingse"]);
+assert.equal(context.ttsVoiceAccessErrorText("you don't have access to this voice_id"), true);
 assert.match(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
 assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
 assert.match(backend, /model = "speech-02-turbo"/);
