@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v520 · 共享位置大地图';
+const APP_VER='v521 · 位置卡片格式防漏';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -3181,11 +3181,11 @@ function checkCalendar(){if(pruneDailyMood())save();if(!S._calFired)S._calFired=
 setInterval(checkCalendar,60000);setTimeout(checkCalendar,4000);
 async function holidayGreet(id,hol){const c=getC(id);try{
   const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+hol+'，请你给'+S.me.name+'发一句节日祝福，并单独一行 [红包|金额|祝福语] 发个应景红包——金额走心、用有寓意的吉利数（如 520、1314、521、188、888 或跟'+hol+'相关的数字），别太小气。]'}]);
-  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;const mm=lineToMsg(l,c);if(!mm)return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
+  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;lineToMsgs(l,c).forEach(mm=>{if(!mm)return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
 }catch(e){}}
 async function remindEvent(id,e){const c=getC(id);try{
   const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+e.date+'，'+S.me.name+'的日程「'+e.title+'」'+(e.type==='period'?'（姨妈期，要多关心、提醒喝热水别吃凉的）':'')+'，请你提醒ta、关心一下。]'}]);
-  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;const mm=lineToMsg(l,c);if(!mm)return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
+  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;lineToMsgs(l,c).forEach(mm=>{if(!mm)return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
 }catch(e2){}}
 
 /* ====================== X (推特) ====================== */
@@ -7403,6 +7403,18 @@ function cleanWechatVisibleLine(line,cch){
   if(WX_ACTION_RE.test(t)&&/^[【（(\[]/.test(t)&&/[】）)\]]$/.test(t))return '';
   return t.trim();
 }
+function wxLocationMsg(cch,name,address){const loc=roleLiveLoc(cch,(name||'')+' '+(address||''));return {role:'assistant',type:'location',name:(name||loc.name||'位置').trim(),address:(address||loc.address||'').trim(),loc,id:uid()};}
+function lineToMsgs(line,cch){
+  const cleaned=cleanWechatVisibleLine(line,cch);
+  if(!cleaned)return [];
+  const locRe=/[\[【]\s*位置\s*[|｜]\s*([^\]|】\]]*)(?:[|｜]\s*([^\]】]*))?[\]】]/g;
+  if(!locRe.test(cleaned)){const one=lineToMsg(cleaned,cch);return one?[one]:[];}
+  locRe.lastIndex=0;let out=[],last=0,m;
+  const pushText=s=>{s=(s||'').replace(/^[\s，,。；;：:]+|[\s，,。；;：:]+$/g,'').trim();if(!s)return;const t=cleanWechatVisibleLine(s,cch);if(t&&!/^[\[【]\s*位置/.test(t))out.push({role:'assistant',type:'text',content:t});};
+  while((m=locRe.exec(cleaned))){pushText(cleaned.slice(last,m.index));out.push(wxLocationMsg(cch,m[1]||'',m[2]||''));last=locRe.lastIndex;}
+  pushText(cleaned.slice(last));
+  return out;
+}
 function lineToMsg(line,cch){
   line=cleanWechatVisibleLine(line,cch);
   if(!line)return null;
@@ -7415,7 +7427,7 @@ function lineToMsg(line,cch){
   const f=m[2].split('|');
   if(m[1]==='转账')return {role:'assistant',type:'transfer',amount:+f[0]||0,note:f[1],received:false,id:uid()};
   if(m[1]==='红包')return {role:'assistant',type:'redpacket',amount:+f[0]||0,note:f[1],received:false,id:uid()};
-  if(m[1]==='位置'){const loc=roleLiveLoc(cch,(f[0]||'')+' '+(f[1]||''));return {role:'assistant',type:'location',name:f[0]||loc.name,address:f[1]||loc.address,loc,id:uid()};}
+  if(m[1]==='位置')return wxLocationMsg(cch,f[0]||'',f[1]||'');
   if(m[1]==='文件')return {role:'assistant',type:'file',name:f[0]||'文件',size:f[1]||''};
   // 图片：开了「AI 真图」就真生成一张，否则只放文字占位
   const desc=f[0]||'';
@@ -7549,26 +7561,28 @@ async function aiReply(id,note,replyToken){if(replyToken==null&&!note)replyToken
       mm=line.match(/^\[表情\|?([^\]]*)\]$/);if(mm){if(!c.noSticker){const stk=aiPickSticker(mm[1]);if(stk){const sm={role:'assistant',type:'sticker',img:stk.img,meaning:stk.meaning,time:Date.now(),id:uid()};msgs(id).push(sm);notifyIncoming(c,sm);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
       if(/^\[收藏表情\]$/.test(line)){const last=[...msgs(id)].reverse().find(m=>m.role==='user'&&m.type==='sticker'&&m.img);if(last){S.aiStickers=S.aiStickers||[];if(!S.aiStickers.some(s=>s.img===last.img)){S.aiStickers.push({img:last.img,meaning:last.meaning||''});save();toast('ta收藏了你的表情');}}continue;}
       mm=line.match(/^\[引用\|(.+)\]$/);if(mm){if(S.settings.quoteOn!==false)pendQuote=_matchMyLine(id,(mm[1]||'').trim());continue;}
-      const base=lineToMsg(line,c);
-      if(!base)continue;
-      if((base.type==='transfer'||base.type==='redpacket')&&msgs(id).some(x=>x.role==='assistant'&&x.type===base.type&&Math.abs((+x.amount||0)-(+base.amount||0))<0.01&&Date.now()-(x.time||0)<180000))continue;/* 3分钟内同额转账/红包不重复 */
-      if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
-      if(base.type==='text'&&LEAKRE.test(line))continue;
-      if(base.type==='text')base.content=deCallFmt(base.content);
-      if(base.type==='text'&&txtN>=cap)continue;/* 上限按完整语义气泡计数，不能在一句话/动作中间截掉后半段 */
-      if(base.type==='text')txtN++;
-      const parts=base.type==='text'?splitActions(base.content):[null];
-      for(let pi=0;pi<parts.length;pi++){
-        if(replyStale(id,replyToken))break;
-        await sleep(pi>0?roleMessageGap(parts[pi]):0);
-        if(replyStale(id,replyToken))break;
-        const msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
-        if(pendQuote&&(msg.type==='text'||msg.type==='voice')){msg.quote={who:'me',text:pendQuote};pendQuote=null;}
-        msg.time=Date.now();msg.id=uid();msgs(id).push(msg);save();
-        if(msg.type==='image')photoTail=3;
-        notifyIncoming(c,msg);
-        if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){appendChatHTML(cb,bubbleRow(c,msg),{replaceTyping:true});typingEl=null;}}
-        else if(cur().p==='wechat')render();}}
+      const bases=lineToMsgs(line,c);
+      for(const base of bases){
+        if(!base)continue;
+        if((base.type==='transfer'||base.type==='redpacket')&&msgs(id).some(x=>x.role==='assistant'&&x.type===base.type&&Math.abs((+x.amount||0)-(+base.amount||0))<0.01&&Date.now()-(x.time||0)<180000))continue;/* 3分钟内同额转账/红包不重复 */
+        if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
+        if(base.type==='text'&&LEAKRE.test(line))continue;
+        if(base.type==='text')base.content=deCallFmt(base.content);
+        if(base.type==='text'&&txtN>=cap)continue;/* 上限按完整语义气泡计数，不能在一句话/动作中间截掉后半段 */
+        if(base.type==='text')txtN++;
+        const parts=base.type==='text'?splitActions(base.content):[null];
+        for(let pi=0;pi<parts.length;pi++){
+          if(replyStale(id,replyToken))break;
+          await sleep(pi>0?roleMessageGap(parts[pi]):0);
+          if(replyStale(id,replyToken))break;
+          const msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
+          if(pendQuote&&(msg.type==='text'||msg.type==='voice')){msg.quote={who:'me',text:pendQuote};pendQuote=null;}
+          msg.time=Date.now();msg.id=uid();msgs(id).push(msg);save();
+          if(msg.type==='image')photoTail=3;
+          notifyIncoming(c,msg);
+          if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){appendChatHTML(cb,bubbleRow(c,msg),{replaceTyping:true});typingEl=null;}}
+          else if(cur().p==='wechat')render();}}
+      }
     if(typingEl&&typingEl.isConnected)typingEl.remove();
     if(_hlPlan&&got){hlRecord(c,_hlPlan,content);save();}
     if(_idleNote){idleDiag(got?'AI回复已生成':'AI回复为空');idleDebugPatch({aiStatus:'已调用',aiResult:got?'已生成角色消息':'AI回复为空',aiFinishedAt:Date.now(),blockedBy:got?'':'AI回复为空'});}
@@ -8274,7 +8288,7 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;if(wxL
     if(!opts.intent)S._spySeen[id]=Date.now();save();callAI(cn);return;
   }
   try{const recent=lastRounds(msgs(id),8).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content),alreadySaid=(''+(opts.alreadySaid||opts.lead||'')).replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/\s+/g,' ').trim().slice(0,700),continuity='[系统：查手机只是刚才对话里的插入动作。你查完后必须承接正在聊的话题和语气，不许突然跳去问睡觉、吃饭、在干嘛等无关日常。'+(alreadySaid?'【下面这些话你在查手机前已经完整发给ta了，绝对不能再复述、改写或重新列一遍】：“'+alreadySaid+'”。查完只说实际新发现和新的反应。':'')+'如果刚才在谈某个人和'+S.me.name+'是什么关系，就只围绕这段关系和实际查到的内容继续。]',memCtx=selectRelevantMemory(c,note+' '+alreadySaid+' '+recent.map(x=>x.content).join(' '),3),sys=buildSystem(c,{selectiveMemory:true,memoryItems:memCtx.items})+memoryRetrievalPrompt(c,memCtx);const content=await chatAPI([{role:'system',content:sys},...recent,{role:'user',content:note+'\n'+continuity}],{aux:c.model==='aux',complete:true});
-    applyAuxTags(content,c,id);let spySent=false;const spyNovel=[];for(const rawLine of splitBubbles(content)){const l=cleanRolePunct(rawLine),_lt=(''+l).trim(),_mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);continue;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];continue;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))continue;if(replyRecentlySent(id,l,10*60000,spyNovel))continue;await sleep(spySent?roleMessageGap(l):0);const mm=lineToMsg(l,c);if(!mm)continue;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);spyNovel.push(l);spySent=true;save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}if(!opts.intent)S._spySeen[id]=Date.now();save();
+    applyAuxTags(content,c,id);let spySent=false;const spyNovel=[];for(const rawLine of splitBubbles(content)){const l=cleanRolePunct(rawLine),_lt=(''+l).trim(),_mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);continue;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=_mo[1];continue;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))continue;if(replyRecentlySent(id,l,10*60000,spyNovel))continue;await sleep(spySent?roleMessageGap(l):0);const mms=lineToMsgs(l,c);if(!mms.length)continue;for(const mm of mms){if(!mm)continue;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);}spyNovel.push(l);spySent=true;save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}if(!opts.intent)S._spySeen[id]=Date.now();save();
     if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
   }catch(e){}}
 // 按他意愿单项查岗时取某一类的真实数据；没有就返回空（绝不让他编）
