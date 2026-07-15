@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=2;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v519 · 陌生互动角色开关';
+const APP_VER='v520 · 共享位置大地图';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1502,6 +1502,7 @@ function render(){
   else if(c.p==='worldbook')html=renderWorldbook();
   else if(c.p==='wechat')html=renderWeChat();
   else if(c.p==='chat')html=renderChat(c.id);
+  else if(c.p==='livemap')html=renderLiveMap(c.id,c.mid);
   else if(c.p==='pffriends')html=renderPhoneFriends();
   else if(c.p==='pfchat')html=renderPhoneFriendChat(c.id);
   else if(c.p==='pfgroup')html=renderPhoneFriendGroup(c.gid);
@@ -4687,6 +4688,81 @@ function tvCity(n){return TV_CITIES.find(x=>x.n===n)||{n:n||'',c:'---',i:0};}
 function cityFromText(text){text=''+(text||'');const hit=TV_CITIES.find(x=>text.indexOf(x.n)>=0||text.indexOf(x.c)>=0);return hit?hit.n:'';}
 function meHomeCity(){return (S.me&&S.me.city)||cityFromText((S.me&&S.me.place||'')+' '+(S.me&&S.me.persona||''))||'';}
 function charHomeCity(c){return (c&&c.city)||cityFromText(((c&&c.persona)||'')+' '+((c&&c.signature)||'')+' '+((c&&c.job)||''))||'';}
+const LIVE_LOC_CITIES=[
+ {n:'北京',country:'中国',x:462,y:260,a:['北京','PEK','中国首都']},{n:'上海',country:'中国',x:526,y:328,a:['上海','SHA']},{n:'苏州',country:'中国',x:512,y:322,a:['苏州','SZV']},{n:'杭州',country:'中国',x:501,y:350,a:['杭州','HGH']},{n:'南京',country:'中国',x:488,y:316,a:['南京','NKG']},{n:'广州',country:'中国',x:446,y:445,a:['广州','CAN']},{n:'深圳',country:'中国',x:455,y:468,a:['深圳','SZX']},{n:'成都',country:'中国',x:355,y:364,a:['成都','CTU']},{n:'重庆',country:'中国',x:384,y:378,a:['重庆','CKG']},{n:'武汉',country:'中国',x:445,y:356,a:['武汉','WUH']},{n:'西安',country:'中国',x:404,y:315,a:['西安','XIY']},{n:'青岛',country:'中国',x:506,y:278,a:['青岛','TAO']},{n:'厦门',country:'中国',x:492,y:424,a:['厦门','XMN']},{n:'香港',country:'中国',x:461,y:482,a:['香港','HKG']},{n:'台北',country:'中国',x:524,y:435,a:['台北','台湾']},
+ {n:'东京',country:'日本',x:763,y:322,a:['东京','日本','日本人','HND','Tokyo']},{n:'大阪',country:'日本',x:724,y:343,a:['大阪','Osaka']},{n:'札幌',country:'日本',x:760,y:238,a:['札幌','北海道']},
+ {n:'首尔',country:'韩国',x:634,y:286,a:['首尔','韩国','韩国人','Seoul','ICN']},{n:'釜山',country:'韩国',x:654,y:331,a:['釜山','Busan']},
+ {n:'纽约',country:'美国',x:184,y:282,a:['纽约','美国','美国人','New York','JFK']},{n:'洛杉矶',country:'美国',x:84,y:360,a:['洛杉矶','LA','Los Angeles','LAX']},{n:'旧金山',country:'美国',x:78,y:330,a:['旧金山','San Francisco']},{n:'西雅图',country:'美国',x:84,y:286,a:['西雅图','Seattle']},{n:'芝加哥',country:'美国',x:150,y:294,a:['芝加哥','Chicago']},{n:'华盛顿',country:'美国',x:186,y:312,a:['华盛顿','Washington']}
+];
+function liveLocHash(s){let h=2166136261;for(const ch of String(s||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return Math.abs(h>>>0);}
+function liveLocCity(text,fallback){
+  text=''+(text||'');let best=null,bestLen=0;
+  LIVE_LOC_CITIES.forEach(c=>{[c.n].concat(c.a||[]).forEach(k=>{k=''+k;if(k&&text.toLowerCase().indexOf(k.toLowerCase())>=0&&k.length>bestLen){best=c;bestLen=k.length;}});});
+  if(best)return best;
+  if(/日本|日籍|Japanese/i.test(text))return LIVE_LOC_CITIES.find(x=>x.n==='东京');
+  if(/韩国|韩籍|Korean/i.test(text))return LIVE_LOC_CITIES.find(x=>x.n==='首尔');
+  if(/美国|美籍|American|USA|United States/i.test(text))return LIVE_LOC_CITIES.find(x=>x.n==='纽约');
+  if(/中国|中籍|Chinese/i.test(text))return LIVE_LOC_CITIES.find(x=>x.n==='上海');
+  return LIVE_LOC_CITIES.find(x=>x.n===(fallback||''))||LIVE_LOC_CITIES.find(x=>x.n==='苏州');
+}
+function liveLocJitter(base,seed,range){const h=liveLocHash(seed),r=range||18;return {x:Math.max(38,Math.min(962,base.x+((h%2001)/1000-1)*r)),y:Math.max(58,Math.min(592,base.y+(((h>>8)%2001)/1000-1)*r))};}
+function liveLocAddr(city,seed,kind){const pools={
+  中国:['老城区附近','河边街区','地铁站旁','商场附近','安静小区门口','公司楼下','咖啡店附近'],
+  日本:['车站附近','商店街转角','公寓楼下','便利店旁','写字楼附近','河岸步道'],
+  韩国:['地铁口附近','住宅区楼下','咖啡店旁','汉江附近','公司附近','便利店门口'],
+  美国:['downtown 附近','公寓街区','咖啡店门口','地铁站附近','办公楼下','街角停车点']
+};const arr=pools[city.country]||pools['中国'],p=arr[liveLocHash(seed)%arr.length];return city.country+' · '+city.n+' · '+p+(kind?' · '+kind:'');}
+function meLiveLoc(){
+  const text=[S.me&&S.me.city,curLoc(),S.me&&S.me.place,S.me&&S.me.persona].filter(Boolean).join(' '),city=liveLocCity(text,meHomeCity()||'苏州'),p=liveLocJitter(city,'me|'+todayStr(),10);
+  return Object.assign({city:city.n,country:city.country,name:'我的位置',address:curLoc()||liveLocAddr(city,'me','当前位置'),who:'me'},p);
+}
+function roleLiveLoc(c,hint){
+  c=c||{};const text=[hint,c.city,charHomeCity(c),c.persona,c.signature,c.job,c.place].filter(Boolean).join(' '),city=liveLocCity(text,charHomeCity(c)||'上海'),p=liveLocJitter(city,(c.id||c.name||'role')+'|'+todayStr()+'|'+(hint||''),20);
+  return Object.assign({city:city.n,country:city.country,name:(hint&&String(hint).trim())||((c.remark||c.name||'TA')+'的位置'),address:liveLocAddr(city,(c.id||c.name||'role')+'|addr'),who:'role'},p);
+}
+function liveLocForMsg(c,m,me){
+  if(m&&m.loc&&Number.isFinite(+m.loc.x)&&Number.isFinite(+m.loc.y))return Object.assign({},m.loc,{name:m.name||m.loc.name,address:m.address||m.loc.address});
+  return me?meLiveLoc():roleLiveLoc(c,(m&&((m.name||'')+' '+(m.address||'')))||'');
+}
+function liveLocTrail(c){
+  const base=roleLiveLoc(c),seed=(c&&c.id||'role')+'|trail|'+todayStr(),names={中国:['家附近','早餐店','工作地点','午后咖啡','晚间散步'],日本:['公寓附近','车站','工作地点','便利店','夜间街口'],韩国:['住处附近','地铁站','工作地点','咖啡店','汉江步道'],美国:['apartment','coffee stop','workplace','downtown','evening walk']}[base.country]||['家附近','路上','工作地点','咖啡店','晚间散步'],times=['08:10','10:35','14:20','18:40','21:05'];
+  return names.map((n,i)=>{const p=liveLocJitter(base,seed+'|'+i,34+i*4);return Object.assign({label:n,time:times[i]||hm(),city:base.city,country:base.country,address:base.country+' · '+base.city+' · '+n},p);});
+}
+let _liveMap=null;
+function liveMapInit(key,focus){if(!_liveMap||_liveMap.key!==key){_liveMap={key,z:.86,x:190-(focus.x*.86),y:265-(focus.y*.86),down:false};}return _liveMap;}
+function liveMapTransform(){const s=_liveMap||{x:0,y:0,z:1};return 'translate('+s.x+'px,'+s.y+'px) scale('+s.z+')';}
+function lmApply(){const el=document.getElementById('lmLayer');if(el&&_liveMap)el.style.transform=liveMapTransform();}
+function lmDown(e){if(!_liveMap)return;_liveMap.down=true;_liveMap.sx=e.clientX;_liveMap.sy=e.clientY;_liveMap.ox=_liveMap.x;_liveMap.oy=_liveMap.y;try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}}
+function lmMove(e){if(!_liveMap||!_liveMap.down)return;_liveMap.x=_liveMap.ox+(e.clientX-_liveMap.sx);_liveMap.y=_liveMap.oy+(e.clientY-_liveMap.sy);lmApply();}
+function lmUp(){if(_liveMap)_liveMap.down=false;}
+function lmZoom(d){if(!_liveMap)return;const old=_liveMap.z,nw=Math.max(.55,Math.min(2.2,old+d));_liveMap.x=190-((190-_liveMap.x)/old)*nw;_liveMap.y=285-((285-_liveMap.y)/old)*nw;_liveMap.z=nw;lmApply();}
+function lmWheel(e){e.preventDefault();lmZoom(e.deltaY<0?.12:-.12);}
+function lmCenter(who){if(!_liveMap)return;const el=document.querySelector('.lmmarker.'+who);if(!el)return;const x=+el.dataset.x||500,y=+el.dataset.y||320;_liveMap.x=190-x*_liveMap.z;_liveMap.y=285-y*_liveMap.z;lmApply();}
+function liveLocCardHTML(c,m,me){
+  const loc=liveLocForMsg(c,m,me),nm=m.name||loc.name,addr=m.address||loc.address,mid=m.id||'',rid=c&&c.id||'';
+  return `<div class="card cloc loccard" onclick="event.stopPropagation();go('livemap',{id:'${rid}',mid:'${mid}'})"><div class="locmini"><div class="locgrid"></div><i class="locroute"></i><span class="locpin">${svgIc('location',18,'#fff')}</span><span class="locpulse"></span><b>${esc(loc.city||'共享位置')}</b></div><div class="info"><div class="n">${esc(nm||'共享位置')}</div><div class="a">${esc(addr||'点击查看实时位置和今日足迹')}</div><div class="locmeta">共享位置 · 今日足迹</div></div></div>`;
+}
+function renderLiveMap(id,mid){
+  const c=getC(id)||{},arr=msgs(id),m=arr.find(x=>x.id===mid)||{},me=m.role==='user',roleLoc=roleLiveLoc(c,(m.name||'')+' '+(m.address||'')),myLoc=meLiveLoc(),focus=me?myLoc:roleLoc,state=liveMapInit(id+'|'+(mid||'latest'),focus),trail=liveLocTrail(c),pts=trail.concat([roleLoc]).map(p=>p.x+','+p.y).join(' '),labels=['北京','上海','苏州','首尔','东京','纽约','洛杉矶'].map(n=>LIVE_LOC_CITIES.find(x=>x.n===n)).filter(Boolean),addrShort=((roleLoc.address||'').split(' · ').pop()||roleLoc.address||'当前位置');
+  const mark=(p,cls,title)=>`<div class="lmmarker ${cls}" data-x="${p.x}" data-y="${p.y}" style="left:${p.x}px;top:${p.y}px"><span></span><b>${esc(title)}</b><small>${esc(p.address||'')}</small></div>`;
+  return `<div class="nav lmnav"><span class="l" onclick="back()">‹</span><span class="t">共享位置</span><span class="r" onclick="lmCenter('role')">${svgIc('location',18,'#e8edf5')}</span></div>
+  <div class="livemap">
+    <div class="lmhead"><div><small>${esc(c.remark||c.name||'TA')}</small><b>${esc(roleLoc.city)} · ${esc(addrShort)}</b></div><button onclick="lmCenter('me')">我的位置</button></div>
+    <div id="livemap" class="lmview" onpointerdown="lmDown(event)" onpointermove="lmMove(event)" onpointerup="lmUp(event)" onpointercancel="lmUp()" onwheel="lmWheel(event)">
+      <div id="lmLayer" class="lmlayer" style="transform:${liveMapTransform()}">
+        <div class="lmcountry usa">UNITED STATES</div><div class="lmcountry china">CHINA</div><div class="lmcountry korea">KOREA</div><div class="lmcountry japan">JAPAN</div>
+        <i class="lmriver r1"></i><i class="lmriver r2"></i><i class="lmroad a"></i><i class="lmroad b"></i><i class="lmroad c"></i>
+        <svg class="lmsvg" viewBox="0 0 1000 640" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="rgba(255,255,255,.62)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 8"/></svg>
+        ${labels.map(p=>`<em class="lmlabel" style="left:${p.x}px;top:${p.y}px">${esc(p.n)}</em>`).join('')}
+        ${trail.map((p,i)=>`<div class="lmtrail" style="left:${p.x}px;top:${p.y}px"><i>${i+1}</i><b>${esc(p.time)}</b><small>${esc(p.label)}</small></div>`).join('')}
+        ${mark(myLoc,'me','我')}
+        ${mark(roleLoc,'role',c.remark||c.name||'TA')}
+      </div>
+    </div>
+    <div class="lmtools"><button onclick="lmZoom(.14)">＋</button><button onclick="lmZoom(-.14)">－</button><button onclick="lmCenter('role')">TA</button><button onclick="lmCenter('me')">我</button></div>
+    <div class="lmfoot"><b>今日足迹</b>${trail.map(p=>`<div><span>${esc(p.time)}</span><strong>${esc(p.label)}</strong><small>${esc(p.city)}</small></div>`).join('')}</div>
+  </div>`;
+}
 function tvSameCity(a,b){return tvStampKey(a)===tvStampKey(b)&&!!tvStampKey(a);}
 function tvLegTimes(from,to,seed){const intl=tvCity(from).i||tvCity(to).i;const dh=7+(Math.abs(seed||0)%12),dm=(Math.abs(seed||0)%4)*15,dur=intl?(8+Math.abs(seed||0)%7):(1+Math.abs(seed||0)%3);let ah=dh+dur;return {dep:tvP2(dh)+':'+tvP2(dm),arr:tvP2(ah%24)+':'+tvP2(dm),nd:ah>=24};}
 function tvP2(n){return ('0'+n).slice(-2);}
@@ -6643,7 +6719,7 @@ function buildPart(c,m,me){
   }
   if(m.type==='transfer')return payCard('t',m,me);
   if(m.type==='redpacket')return payCard('r',m,me);
-  if(m.type==='location')return `<div class="card cloc"><div class="map">📍</div><div class="info"><div class="n">${esc(m.name)}</div><div class="a">${esc(m.address||'')}</div></div></div>`;
+  if(m.type==='location')return liveLocCardHTML(c,m,me);
   if(m.type==='file')return `<div class="card cfile"><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc(m.size||'')}</div></div></div>`;
   if(m.type==='spycard')return `<div class="card"><div class="cpay" style="background:#5b6b9c"><div class="big">📱</div><div><div class="t1">小手机查看权限</div><div class="t2">已授权随时查看我的手机</div></div></div><div class="cfoot">权限卡片</div></div>`;
   if(m.type==='ticket'&&m.trip)return tvTicketCardHTML(m.trip,getC(m.trip.cid));
@@ -6884,7 +6960,8 @@ function cLoc(id){$('#panel').classList.remove('show');openModal(`<h3>位置</h3
   <div class="field"><label>地址</label><input id="lc_a" placeholder="苏州市…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doLoc('${id}')">发送</button></div>`);}
 function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');return;}closeModal();
-  pushMsg(id,{role:'user',type:'location',name:n,address:$('#lc_a').value.trim(),id:uid()});scheduleReply(id);}
+  const a=$('#lc_a').value.trim(),base=meLiveLoc(),city=liveLocCity(n+' '+a,base.city),p=liveLocJitter(city,'me-send|'+n+'|'+a,8);
+  pushMsg(id,{role:'user',type:'location',name:n,address:a||liveLocAddr(city,'me-send'),loc:Object.assign(base,p,{name:n,address:a||liveLocAddr(city,'me-send'),city:city.n,country:city.country}),id:uid()});scheduleReply(id);}
 
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
@@ -7338,7 +7415,7 @@ function lineToMsg(line,cch){
   const f=m[2].split('|');
   if(m[1]==='转账')return {role:'assistant',type:'transfer',amount:+f[0]||0,note:f[1],received:false,id:uid()};
   if(m[1]==='红包')return {role:'assistant',type:'redpacket',amount:+f[0]||0,note:f[1],received:false,id:uid()};
-  if(m[1]==='位置')return {role:'assistant',type:'location',name:f[0],address:f[1]};
+  if(m[1]==='位置'){const loc=roleLiveLoc(cch,(f[0]||'')+' '+(f[1]||''));return {role:'assistant',type:'location',name:f[0]||loc.name,address:f[1]||loc.address,loc,id:uid()};}
   if(m[1]==='文件')return {role:'assistant',type:'file',name:f[0]||'文件',size:f[1]||''};
   // 图片：开了「AI 真图」就真生成一张，否则只放文字占位
   const desc=f[0]||'';
