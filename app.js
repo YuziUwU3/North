@@ -325,9 +325,9 @@ let _pfTapLast=null;
 function pfGroupAvatarTap(ev,gid,id){try{ev.preventDefault();ev.stopPropagation();}catch(_){}const now=Date.now(),key=gid+'|'+((''+id).toUpperCase());if(_pfTapLast&&_pfTapLast.key===key&&now-_pfTapLast.t<340){_pfTapLast=null;pfAtEnd();phoneFriendGroupPat(gid,id);return;}_pfTapLast={key,t:now};pfAtEnd();}
 function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagation();}catch(_){}pfAtEnd();_pfTapLast=null;phoneFriendGroupPat(gid,id);}
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
-const SHARE_EPOCH=2;
+const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v523 · 内置语音聊天兜底';
+const APP_VER='v524 · 邀请码全员重验';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
