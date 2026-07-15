@@ -85,10 +85,13 @@ assert.equal(aliasContext.phAliasIdentityClue("我只是好奇", role), false);
 assert.equal(aliasContext.phSpoofExposed("[识破]", "你是哥哥吗", role), false);
 assert.equal(aliasContext.phSpoofExposed("[识破]", "我只是好奇", role), false);
 assert.equal(aliasContext.phSpoofExposed("[识破]", "你是 Sir 吗", role), true);
-assert.equal(aliasContext.phSmsAdmitLine("不是。猜猜看，还有两次机会。"), "嗯，是我。猜猜看，还有两次机会。");
-assert.doesNotMatch(aliasContext.phSmsAdmitLine("不是。猜猜看，还有两次机会。"), /不是/);
-assert.equal(aliasContext.phSmsAdmitLine("嗯，是我。不是。猜猜看。"), "嗯，是我。猜猜看。");
-assert.doesNotMatch(aliasContext.phSmsAdmitLine("嗯，是我。不是。猜猜看。"), /不是/);
+const admitLine = aliasContext.phSmsAdmitLine("不是。猜猜看，还有两次机会。", role);
+assert.match(admitLine, /猜猜看/);
+assert.doesNotMatch(admitLine, /不是/);
+assert.notEqual(admitLine, "嗯，是我。猜猜看，还有两次机会。");
+const cleanedAdmitLine = aliasContext.phSmsAdmitLine("嗯，是我。不是。猜猜看。", role);
+assert.match(cleanedAdmitLine, /猜猜看/);
+assert.doesNotMatch(cleanedAdmitLine, /不是/);
 
 const polishContext = vm.createContext({
   phCleanSmsText: (s) => String(s || ""),
