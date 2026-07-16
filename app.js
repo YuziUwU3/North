@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v527 · 强制更新主屏幕版本';
+const APP_VER='v528 · 修复语音气泡与记忆格式';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1052,7 +1052,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=527';
+  const url='sw.js?v=528';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -7613,7 +7613,20 @@ function rateAndText(raw){let imp=3,text=(raw||'').trim();const m=text.match(/^\
 function trimSentence(t,max){t=(''+t).trim();if(t.length<=max)return t;const s=t.slice(0,max);let last=-1;for(const ch of ['。','！','？','…','!','?','.','~','～']){const k=s.lastIndexOf(ch);if(k>last)last=k;}return last>max*0.4?s.slice(0,last+1):s.trim();}
 // 总结要用角色平常叫用户的称呼，不能泛称“对方/ta”，否则长期记忆会变冷、变散。
 function summaryUserLabel(c){return ((c&&c.callme)||S.me.callName||S.me.name||'你').trim();}
-function summaryCleanText(c,text){let t=(''+(text||'')).replace(/\s+/g,' ').trim(),label=summaryUserLabel(c),names=[S.me&&S.me.name,S.me&&S.me.callName,'North'];names.filter(n=>n&&n!=='我'&&n!==label).forEach(n=>{const q=(''+n).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');t=t.replace(new RegExp(q,'gi'),label);});if(label)t=t.replace(/对方|ta|TA/g,label);return t;}
+function summaryStripModelNoise(t){t=(''+(t||'')).replace(/[\u200b-\u200d\ufeff]/g,'').replace(/\s+/g,' ').trim();
+  t=t.replace(/^重要度\s*[:：]?\s*[1-5][^\u4e00-\u9fa5A-Za-z0-9【[]*/,'').trim();
+  let prefix='',m=t.match(/^(【(?:语音通话|视频通话|小黑屋|线下约会[^】]*|电话短信|陌生短信|陌生来电)】)\s*/);if(m){prefix=m[1];t=t.slice(m[0].length).trim();}
+  const meta='(?:语气|情绪|心情|称呼|叫法|昵称|身份|角色扮演|可能会叫|会叫|喊|叫|生气|吃醋|撒娇|委屈|难过|低沉|温柔|冷淡|强硬|安慰|质问)';
+  for(let i=0;i<4;i++){
+    t=t.replace(new RegExp('^\\s*[\\[【(（]\\s*'+meta+'[^\\]】)）]{0,80}[\\]】)）]\\s*[:：、,，；;]?\\s*'),'').trim();
+    t=t.replace(new RegExp('^\\s*'+meta+'\\s*[:：]\\s*[^。！？!?；;]{0,50}[。！？!?；;]?\\s*'),'').trim();
+  }
+  t=t.replace(new RegExp('[（(][^）)]{0,120}'+meta+'[^）)]{0,120}[）)]','g'),'');
+  t=t.replace(/^(?:[\u4e00-\u9fa5A-Za-z0-9^~～_·]{1,12}\s*[\/／|｜、]\s*){1,8}[\u4e00-\u9fa5A-Za-z0-9^~～_·]{1,12}\s*/,'').trim();
+  t=t.replace(/(?:^|[。！？!?；;]\s*)(?:\[[^\]]{1,80}\]|【(?!语音通话|视频通话|小黑屋|线下约会)[^】]{1,80}】)\s*/g,m=>/[\[【](?:语气|情绪|心情|称呼|格式|系统|角色扮演|可能会叫|会叫)[\s\S]*[\]】]/.test(m)?m.replace(/[\[【][\s\S]*[\]】]\s*/,'') : m);
+  t=t.replace(/\s+([，。！？；：,.!?;:])/g,'$1').replace(/([（(【[])\s+/g,'$1').replace(/\s+([）)】\]])/g,'$1').replace(/\s{2,}/g,' ').trim();
+  return prefix?(prefix+(t?' '+t:'')):t;}
+function summaryCleanText(c,text){let t=summaryStripModelNoise(text),label=summaryUserLabel(c),names=[S.me&&S.me.name,S.me&&S.me.callName,'North'];names.filter(n=>n&&n!=='我'&&n!==label).forEach(n=>{const q=(''+n).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');t=t.replace(new RegExp(q,'gi'),label);});if(label)t=t.replace(/对方|ta|TA/g,label);return summaryStripModelNoise(t);}
 function summaryNorm(text){return summaryCleanText(null,text).toLowerCase().replace(new RegExp(summaryUserLabel(null).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),'').replace(/今天|今晚|刚才|后来|然后|这次|我们|事情|感觉|觉得|记得|已经|还是|就是|真的|有点/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'');}
 function summarySimilarity(a,b){a=summaryNorm(a);b=summaryNorm(b);if(!a||!b)return 0;if(a===b||a.includes(b)||b.includes(a))return 1;const grams=s=>{const z=new Set();for(let i=0;i<s.length-1;i++)z.add(s.slice(i,i+2));return z;},x=grams(a),y=grams(b);if(!x.size||!y.size)return 0;let hit=0;x.forEach(v=>{if(y.has(v))hit++;});return 2*hit/(x.size+y.size);}
 // 视角铁律：防止总结把“他做的”和“我做的”搞反；正文不写设备主人的真实名字。
@@ -7629,14 +7642,14 @@ async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summ
   const upto=all.length-keep;if((!c._summaryCursorV2)&&(!c._sumCount||c._sumCount<0)&&(c.summaries||[]).length){c._sumCount=upto;c._summaryCursorV2=true;pruneSummaries(c);save();return;}const done=Math.max(0,Math.min(upto,+c._sumCount||0));if(upto-done<6)return;
   const chunk=all.slice(done,upto).map(m=>{if(!m||m._call||m.type==='sys')return'';const t=msgToText(m);if(!t)return '';const who=m.role==='user'?summaryUserLabel(c):c.name;return who+'：'+t;}).filter(Boolean).join('\n');if(!chunk){c._sumCount=upto;c._summaryCursorV2=true;save();return;}
   const prior=(c.summaries||[]).slice(-8).map(x=>'· '+summaryCleanText(c,x.text)).join('\n');
-  try{const ul=summaryUserLabel(c),sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面只包含你和「'+ul+'」尚未总结过的新文字聊天。用第一人称写成一段完整日记：用"我"指你自己('+c.name+')，只用「'+ul+'」称呼聊天对象，禁止写“对方/ta/TA/那个人”这种泛称。只记录这批新消息里新增的重要事实、约定、喜好、状态或关系变化，2到3句、每句完整，不要重述已有总结。'+(prior?'\n【已有总结·禁止重复】\n'+prior:'')+perspRule(c)+IMP_INSTR},{role:'user',content:chunk}],{max:320,temp:.35});
+  try{const ul=summaryUserLabel(c),sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面只包含你和「'+ul+'」尚未总结过的新文字聊天。用第一人称写成一段完整日记：用"我"指你自己('+c.name+')，只用「'+ul+'」称呼聊天对象，禁止写“对方/ta/TA/那个人”这种泛称。只记录这批新消息里新增的重要事实、约定、喜好、状态或关系变化，2到3句、每句完整，不要重述已有总结。正文禁止列称呼候选、禁止写“宝宝/老婆/念念”这种斜杠列表，禁止写括号里的语气/情绪/角色扮演说明，禁止输出系统格式说明。'+(prior?'\n【已有总结·禁止重复】\n'+prior:'')+perspRule(c)+IMP_INSTR},{role:'user',content:chunk}],{max:320,temp:.35});
     if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text){addSummary(c,trimSentence(rt.text,180),rt.imp);c._sumCount=upto;c._summaryCursorV2=true;save();}}
   }catch(e){}}
 async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
   const cms=msgs(id).filter(m=>m._call&&(!sess||m._cs===sess));if(!cms.length)return;
   const text=cms.map(m=>(m.role==='user'?summaryUserLabel(c):c.name)+'：'+((m.content||(m.type==='voice'?(m.content||'[语音]'):''))||'')).filter(x=>x.slice(-1)!=='：').join('\n');
   if(!text.trim())return;
-  try{const ul=summaryUserLabel(c),sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和「'+ul+'」刚才这通'+kindTxt+'里说的话。请用第一人称【较完整地】把这通'+kindTxt+'记成一段记忆：只记这通电话新增的事情、重要的点和你的感受。用"我"指你自己('+c.name+')，只用「'+ul+'」称呼聊天对象，禁止写“对方/ta/TA/那个人”这种泛称。写3到5句（一两百字）、每句话完整，是你的口吻和视角，直接写正文，别分点别带前缀。'+perspRule(c)+IMP_INSTR},{role:'user',content:text}],{max:600,temp:.45});
+  try{const ul=summaryUserLabel(c),sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和「'+ul+'」刚才这通'+kindTxt+'里说的话。请用第一人称【较完整地】把这通'+kindTxt+'记成一段记忆：只记这通电话新增的事情、重要的点和你的感受。用"我"指你自己('+c.name+')，只用「'+ul+'」称呼聊天对象，禁止写“对方/ta/TA/那个人”这种泛称。写3到5句（一两百字）、每句话完整，是你的口吻和视角，直接写正文，别分点别带前缀。正文禁止列称呼候选、禁止写斜杠称呼列表，禁止写括号里的语气/情绪/角色扮演说明，禁止输出系统格式说明。'+perspRule(c)+IMP_INSTR},{role:'user',content:text}],{max:600,temp:.45});
     if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text)addSummary(c,trimSentence(rt.text,320),rt.imp,'【'+kindTxt+'】');}
   }catch(e){}}
 let _replyTimers={};

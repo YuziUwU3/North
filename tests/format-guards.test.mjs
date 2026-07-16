@@ -37,7 +37,7 @@ function functionSource(name) {
 const context = vm.createContext({
   S: { me: { name: "North", callName: "北" } },
 });
-for (const name of ["parsePayCardLine", "summaryUserLabel", "summaryCleanText", "summaryNorm", "isRefusal", "isOOCLine"]) {
+for (const name of ["parsePayCardLine", "summaryUserLabel", "summaryStripModelNoise", "summaryCleanText", "summaryNorm", "isRefusal", "isOOCLine"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -69,5 +69,15 @@ const c = { name: "先生", callme: "小狗" };
 assert.equal(context.summaryUserLabel(c), "小狗");
 assert.equal(context.summaryCleanText(c, "我今天和对方说好了，ta以后不那样叫我。"), "我今天和小狗说好了，小狗以后不那样叫我。");
 assert.equal(context.summaryCleanText(c, "North哭了以后，我哄了TA。"), "小狗哭了以后，我哄了小狗。");
+
+const c2 = { name: "\u5148\u751f", callme: "\u5b9d\u5b9d" };
+assert.equal(
+  context.summaryCleanText(c2, "\u3010\u8bed\u97f3\u901a\u8bdd\u3011 \u5b9d\u5b9d/\u8001\u5a46/\u5ff5\u5ff5\uff08\u751f\u6c14\u558a\u5b9d\u5b9d/\u8001\u5a46/\u5ff5\u5ff5\uff0c\u89d2\u8272\u626e\u6f14\u53ef\u80fd\u4f1a\u53eb\u4e3b\u4eba\uff09 \u6df1\u591c\u70b9\u5916\u5356\u5403\u70e4\u4e32\u3002"),
+  "\u3010\u8bed\u97f3\u901a\u8bdd\u3011 \u6df1\u591c\u70b9\u5916\u5356\u5403\u70e4\u4e32\u3002",
+);
+assert.equal(
+  context.summaryCleanText(c2, "\u91cd\u8981\u5ea6\uff1a4\n[\u5fc3\u60c5|\u751f\u6c14] \u6211\u548cTA\u8bf4\u597d\u4e86\uff0c\u4ee5\u540e\u4e0d\u518d\u8fd9\u6837\u53eb\u6211\u3002"),
+  "\u6211\u548c\u5b9d\u5b9d\u8bf4\u597d\u4e86\uff0c\u4ee5\u540e\u4e0d\u518d\u8fd9\u6837\u53eb\u6211\u3002",
+);
 
 console.log("format guard tests passed");
