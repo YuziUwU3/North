@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v530 · 轻量缓存清理';
+const APP_VER='v531 · 电话字幕同步';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1062,7 +1062,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=530';
+  const url='sw.js?v=531';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2365,6 +2365,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it">主动消息间隔(分钟)<input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>主动找你时打电话几率<br><small style="color:#888">0=只发消息；越高他越爱直接打来(语音/视频)</small></span><input id="s_callprob" type="number" min="0" max="100" value="${S.settings.callProb==null?35:S.settings.callProb}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话静默多久他来问你(分钟)<br><small style="color:#888">通话中你没出声，过这么久他会轻声问你在不在；填 0 = 关闭，全程不打扰</small></span><input id="s_callsilent" type="number" min="0" max="60" value="${S.settings.callSilentMin==null?3:S.settings.callSilentMin}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it" style="flex-wrap:wrap"><span>电话软件语音同步 <b style="color:#0a84ff">${phPhoneVoiceOffset()}ms</b><small style="color:#888;display:block">只调电话App：0最稳；声音仍慢就往右，字幕想更早一点就往左</small></span><input id="s_phoffset" type="range" min="-600" max="1200" step="100" value="${phPhoneVoiceOffset()}" style="width:100%;margin-top:6px" oninput="S.settings.phoneVoiceOffset=+this.value;save();this.previousElementSibling.querySelector('b').textContent=this.value+'ms'"></div>
       <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
       <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
@@ -2426,7 +2427,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
-  S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));save();toast('已保存 ✅');}
+  S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));save();toast('已保存 ✅');}
 // 一键清空所有数据：清掉全部聊天/活动痕迹，但保留 你和角色的人设·头像、API设置、主屏布局
 async function clearAllData(){
   if(!await uiConfirm('确定清空所有数据吗？\n\n会清掉：所有聊天、记忆、朋友圈、X/抖音、查手机、线下约会、钱包账单、日历、任务、心情、信箱等全部记录。\n会保留：你和角色的人设·头像、API设置、主屏布局。\n\n清空后无法恢复！建议先「导出备份」。'))return;
@@ -5402,12 +5403,23 @@ function phSpoofNoWrong(c,r){const s=String(r||'').trim(),bad=/打错|拨错|发
 function phSpoofNoWrongSms(r){const s=String(r||'').trim();return /打错|发错|错号|认错人|认错了|找错人|弄错人|发错人|看错人|误会了|不是本人|不认识你|不认识|你(给我|发给我|找我|联系我)|你是谁|哪位|谁啊|谁呀|声音不对|听起来|声线|wrong number|wrong person|texted the wrong|mistake|mistaken|you texted me|who is this|who are you/i.test(s)?'你先回答刚才那句。':s;}
 function phCallCleanRoleReply(raw,c){let r=phCleanSmsText(cleanReply(phStripDecisionTags(raw)||'')).replace(/^[\[【]\s*通话语气\s*[|｜:：][^\]】]*[\]】]\s*/,'').trim();if(!r)return '';const lang=(getVoice(c).lang||'zh');if(lang==='zh')return r.replace(/\n+/g,' ').trim().slice(0,220);return r.split(/\n+/).map(x=>callNormalizeLine(x.trim(),lang)).filter(Boolean).join('\n').slice(0,260);}
 function phCallSpokenText(text,c){const lang=(getVoice(c).lang||'zh');if(lang==='zh')return pickSpoken(text,lang);return String(text||'').split(/\n+/).map(x=>x.trim()).filter(x=>x&&!/^[（(][^）)]*[）)]$/.test(x)).map(x=>pickSpoken(x,lang)).filter(Boolean).join(' ').trim();}
-function phCallUnits(text,c){const lang=(getVoice(c).lang||'zh'),src=String(text||'').trim();if(!src)return[];if(lang==='zh')return src.split(/(?<=[。！？!?])\s*/).map(x=>x.trim()).filter(Boolean).slice(0,4).map(x=>({orig:x,trans:''}));const units=[];src.split(/\n+/).map(x=>callNormalizeLine(x.trim(),lang)).filter(Boolean).forEach(p=>{const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p),pair=p.match(/^(.+?)[（(]([^）)]*[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff][^）)]*)[）)]$/);if(isTrans){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;return;}if(pair){units.push({orig:callNormalizeLine(pair[1].trim(),lang),trans:callNormalizeLine('（'+pair[2].trim()+'）',lang)});return;}units.push({orig:p,trans:''});});return units.slice(0,4);}
+function phCallUnits(text,c){const lang=(getVoice(c).lang||'zh'),src=String(text||'').trim();if(!src)return[];if(lang==='zh')return src.split(/(?<=[。！？!?])\s*/).map(x=>x.trim()).filter(Boolean).slice(0,4).map(x=>({orig:x,trans:''}));const units=[];
+  src.split(/\n+/).map(x=>callNormalizeLine(x.trim(),lang)).filter(Boolean).forEach(p=>{let used=false,last=0;const re=/([^（）()]+?)\s*[（(]([^）)]*[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff][^）)]*)[）)]/g;let m;
+    while((m=re.exec(p))){const orig=callNormalizeLine(m[1].trim(),lang),trans=callNormalizeLine('（'+m[2].trim()+'）',lang);if(orig){units.push({orig,trans});used=true;}last=re.lastIndex;}
+    const tail=callNormalizeLine(p.slice(last).trim(),lang);if(used){if(tail&&!/^[（(][^）)]*[）)]$/.test(tail))units.push({orig:tail,trans:''});return;}
+    const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p),pair=p.match(/^(.+?)[（(]([^）)]*[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff][^）)]*)[）)]$/);if(isTrans){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;return;}if(pair){units.push({orig:callNormalizeLine(pair[1].trim(),lang),trans:callNormalizeLine('（'+pair[2].trim()+'）',lang)});return;}units.push({orig:p,trans:''});});
+  return units.slice(0,4);}
 function phSimStopVoice(){try{if(_curSrc){_curSrc.stop();_curSrc=null;}}catch(_){}try{if(_curAudio){_curAudio.pause();_curAudio=null;}}catch(_){}try{if('speechSynthesis'in window)speechSynthesis.cancel();}catch(_){}}
 function phSimMuteToggle(){const c=phState().simCall;if(!c)return;c.muted=!c.muted;if(c.muted)phSimStopVoice();save();render();toast(c.muted?'已静音角色声音':'已恢复角色声音');}
-async function phSimSpeak(text){if(!ttsApiOn())return;const c=phState().simCall;if(!c||c.muted||!c.meta||!c.meta.aliasToRole||c.meta.spoof)return;const role=getC(c.meta.roleId);if(!role||role.blocked)return;const spoken=phCallSpokenText(text,role);if(!spoken)return;try{await speakWait(spoken,role,{cue:ttsAutoCue(spoken,role)});}catch(_){}}
+function phPhoneVoiceOffset(){return Math.max(-600,Math.min(1200,+((S.settings&&S.settings.phoneVoiceOffset)||0)));}
+function phSimCanSpeak(role){const c=phState().simCall;return !!(ttsApiOn()&&c&&!c.muted&&c.meta&&c.meta.aliasToRole&&!c.meta.spoof&&role&&role.id&&getC(role.id)&&!role.blocked);}
+async function phSimSpeak(text,role,opt){opt=opt||{};if(!phSimCanSpeak(role))return false;const spoken=phCallSpokenText(text,role);if(!spoken)return false;try{await speakWait(spoken,role,{cue:ttsAutoCue(spoken,role),onAudioStart:opt.onAudioStart});return true;}catch(_){return false;}}
 function phSimLine(c,from,text){if(!c)return;from=from||'them';const tx=String(text||'').slice(0,260),ts=Date.now(),ttl=Math.max(1800,Math.min(5600,1300+[...tx].length*95));c.lines=Array.isArray(c.lines)?c.lines:[];c.lines.push({from,text:tx,time:ts});if(c.lines.length>80)c.lines=c.lines.slice(-80);c.sub={from,text:tx,time:ts,ttl,hold:from==='me'};if(from==='me')return;setTimeout(()=>{try{const now=phState().simCall;if(now&&now.id===c.id&&now.sub&&now.sub.time===ts&&!now.sub.hold){now.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},ttl);}
-async function phSimRoleSay(callId,text,role){const units=phCallUnits(text,role);if(!units.length)return;for(const u of units){const c=phState().simCall;if(!c||c.id!==callId||c.state!=='active')return;const line=u.orig+(u.trans?'\n'+u.trans:'');phSimLine(c,'them',line);save();render();await phSimSpeak(line);await sleep(Math.max(900,Math.min(1800,600+[...(u.orig||'')].length*35)));}}
+async function phSimRoleSay(callId,text,role){const units=phCallUnits(text,role);if(!units.length)return;for(const u of units){const c=phState().simCall;if(!c||c.id!==callId||c.state!=='active')return;const line=u.orig+(u.trans?'\n'+u.trans:''),canSpeak=phSimCanSpeak(role);let shown=false;const show=()=>{const now=phState().simCall;if(!now||now.id!==callId||now.state!=='active'||shown)return;shown=true;phSimLine(now,'them',line);if(canSpeak&&now.sub&&now.sub.text===line)now.sub.hold=true;save();if(cur().p==='phonecall')render();},off=phPhoneVoiceOffset();
+    if(canSpeak){let preT=null;if(c.sub&&!c.sub.hold){c.sub=null;save();if(cur().p==='phonecall')render();}if(off<0)preT=setTimeout(show,Math.max(0,600+off));await phSimSpeak(line,role,{onAudioStart:()=>{if(preT)clearTimeout(preT);setTimeout(show,Math.max(0,off));}});if(!shown)show();}
+    else{show();await sleep(Math.max(900,Math.min(1800,600+[...(u.orig||'')].length*35)));}
+    const now=phState().simCall;if(now&&now.id===callId&&now.sub&&now.sub.text===line&&now.sub.hold){now.sub.hold=false;save(100);if(cur().p==='phonecall')render();}
+    await sleep(Math.max(360,Math.min(1100,520+[...(u.orig||'')].length*18)));}}
 function phStrangerRejectAction(text){text=String(text||'');if(/诈骗|骚扰|推销|贷款|中奖|链接|http|验证码|转账|裸聊|加群|刷流水|提现吗|威胁|辱骂|滚|骗子|广告/.test(text))return'block';if(/打错|不认识|哪位|找谁|别打|别联系|没空|挂了/.test(text))return'hangup';return'';}
 function phDecisionFromRaw(raw,heard){const t=String(raw||''),u=String(heard||'');if(/[\[【]\s*(拉黑|屏蔽|加入黑名单)\s*[\]】]/.test(t))return'block';if(/[\[【]\s*(挂断|拒接|结束通话)\s*[\]】]/.test(t))return'hangup';return phStrangerRejectAction(u);}
 function phStripDecisionTags(t){return String(t||'').replace(/[\[【]\s*(?:拉黑|屏蔽|加入黑名单|挂断|拒接|结束通话|识破|看穿)\s*[\]】]/g,'').trim();}
