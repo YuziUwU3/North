@@ -301,7 +301,7 @@ function pfBubblePart(m,me,bstyle){if(m&&m.recalled)return `<div class="bubble r
   if(p.type==='group_invite'){const st=m.inviteStatus||'',done=st==='accepted'||st==='declined';return `<div class="card" style="width:250px;background:linear-gradient(145deg,#291d34,#1c2636);border:1px solid #51415f" ${done||me?'':`onclick="event.stopPropagation()"`}><div style="padding:13px"><div style="font-size:11px;color:#d9b8ff;margin-bottom:6px">${svgIc('users',13,'#d9b8ff')} 小手机群聊邀请</div><div style="font-size:16px;color:#fff;font-weight:700">${esc(p.groupName||'小手机群聊')}</div><div style="font-size:12px;color:#b8b0c6;line-height:1.6;margin-top:7px">${me?'已发送邀请':'邀请人：'+esc(p.inviterName||'小手机好友')}</div>${(!me&&!done)?`<div style="display:flex;gap:8px;margin-top:12px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();pfGroupInviteAccept('${m.id}','${p.inviteId}',true)">同意</button><button class="minibtn" onclick="event.stopPropagation();pfGroupInviteAccept('${m.id}','${p.inviteId}',false)">拒绝</button></div>`:st?`<div style="font-size:12px;color:#9ea0aa;margin-top:10px">${st==='accepted'?'已同意':'已拒绝'}</div>`:''}</div><div class="cfoot" style="color:#bda8d8;background:rgba(255,255,255,.06)">群聊邀请</div></div>`;}
   if(p.type==='game_room_ready'||p.type==='game_room_start'||p.type==='game_room_chat')return bubbleSingleHTML(pfMsgPreview(m),'',bstyle,me);
   if(p.type==='sticker')return `<div class="stickermsg">${isImg(p.img)?`<img src="${p.img}">`:''}${p.meaning?`<div class="stkm">${esc(p.meaning)}</div>`:''}${!me?`<button class="minibtn pfcollect" onclick="event.stopPropagation();pfSaveSticker('${m.id}')">收藏</button>`:''}</div>`;
-  if(p.type==='image')return `<div class="imagemsg" onclick="event.stopPropagation();viewImg('${p.img||''}')">${isImg(p.img)?`<img src="${p.img}">`:'[图片]'}</div>`;
+  if(p.type==='image')return `<div class="imagemsg" onclick="event.stopPropagation();${p.img?`viewImg('${p.img||''}')`:''}">${isImg(p.img)?`<img src="${p.img}">`:(p.cleaned?'[图片缓存已清理]':'[图片]')}</div>`;
   if(p.type==='transfer'||p.type==='redpacket'){const red=p.type==='redpacket',done=!!m.received,kind=red?'r':'t',cls='cpay '+(done?'done':kind),ic=svgIc(red?'redpacket':'money',30,'#fff'),rn=m.receivedBy?pfNameById(m.receivedBy):'对方',t1=done?(me?esc(rn+'已收'):'已收款'):(red?esc(p.note||'恭喜发财'):'¥'+(+p.amount).toFixed(2)),t2=done?'¥'+(+p.amount).toFixed(2):(red?'领取红包':esc(p.note||'转账')),handler=(!me&&!done)?`onclick="event.stopPropagation();pfReceivePay('${m.id}')"`:'',mark=(me&&done)?`<div class="paystatus">${red?'已领取':'已收款'}</div>`:'';
     return `<div class="card" ${handler}><div class="${cls}"><div class="big">${ic}</div><div><div class="t1">${t1}</div><div class="t2">${t2}</div></div></div><div class="cfoot">微信${red?'红包':'转账'}</div></div>${mark}`;}
   return bubbleSingleHTML(pfMsgPreview(m),'',bstyle,me);}
@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v529 · 清理美化与语音对齐';
+const APP_VER='v530 · 轻量缓存清理';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1062,7 +1062,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=529';
+  const url='sw.js?v=530';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2405,8 +2405,10 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div id="set_backup">
     <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
-    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">只导出美化</button><button class="btn d" onclick="clearRoleCacheKeepBeauty()">清除缓存</button></div>
-    <div class="hint" style="text-align:center;padding:2px 14px">清除缓存会保留小手机真人好友/群聊/聊天和所有美化，只清掉虚拟角色、记忆、电话短信、信箱等乱数据。</div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">只导出美化</button><button class="btn g" onclick="clearRoleCacheKeepBeauty()">清理缓存垃圾</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">只清聊天记录里的图片/语音缓存和失效旧图；不删角色、记忆、文字聊天、真人好友/群聊、壁纸、美化图和音乐背景。</div>
+    <div class="btns" style="margin-top:8px"><button class="btn d" onclick="clearAllChatRecords()">一键清空所有聊天记录</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">清空角色微信聊天、小手机真人好友私聊和真人群聊；不删角色、好友、群成员、记忆、人设和美化。</div>
     </div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
@@ -6740,7 +6742,7 @@ function buildPart(c,m,me){
   if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#1f2229,#5d6675);border:1px solid rgba(255,255,255,.12)"><div class="big" style="display:flex;align-items:center;justify-content:center">${svgIc('music',34,'#f4f4f6')}</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">${svgIc('note',14,'#8f96a3')} 点击进入一起听</div></div>`;
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
-    if(!m.src)return `<div class="imgmsg imgfail">[图片]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.6">${m.failed?'生成失败':''}</small></div>`;
+    if(!m.src)return `<div class="imgmsg imgfail">[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.6">${m.failed?'生成失败':''}</small></div>`;
     const vs=m.role==='user'?(m.visionState==='pending'?`<div style="font-size:10px;color:#999;text-align:right;margin-top:3px">正在把图片交给识图模型…</div>`:m.visionState==='failed'?`<div onclick="event.stopPropagation();retryVisionMessage('${c.id}','${m.id}')" style="font-size:10px;color:#b9a6a6;text-align:right;margin-top:3px;cursor:pointer">识图失败 · 点这里重试</div>`:m.visionState==='success'?`<div style="font-size:10px;color:#888;text-align:right;margin-top:3px">已看清${m.visionFallback&&m.visionModel?' · '+esc(m.visionModel)+' 备用':''}</div>`:''):'';
     return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>${vs}`;
   }
@@ -8488,12 +8490,43 @@ function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFrien
     beautyArchive:data.beautyArchive||null};}
 async function exportBeautyData(){const data=await fullBackupState(),pack=beautyPackFrom(data),blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='North美化包_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出美化包');}
-async function clearRoleCacheKeepBeauty(){if(!await uiConfirm('清除缓存/乱数据？\n\n会清掉：创建的虚拟角色、角色聊天、记忆、朋友圈、电话短信、信箱、钱包账单、日程、临时状态等。\n\n不会清掉：小手机真人好友、真人群聊和聊天、主屏/锁屏/通话壁纸、桌面顺序、小组件、头像和美化图片。\n\n建议先导出完整备份。',{danger:true}))return;
-  const old=await fullBackupState(),fresh=defState(),me=old.me||{};
-  fresh.settings=old.settings||fresh.settings;fresh.worldbook=[];fresh.contacts=[];fresh.messages={};fresh.groups=[];fresh.couple=null;fresh.moments=[];fresh.friendRequests=[];fresh.mail=[];fresh.x=defState().x;fresh.spy={};fresh.offline={};fresh.shop=defState().shop;fresh.food=defState().food;fresh.calendar=[];fresh.phoneapp=defState().phoneapp;fresh.roleplay={};fresh.browser={q:'',items:[],history:[]};fresh._proactiveDone={};fresh._proactiveCount={};fresh._mailCount={};
-  ['name','wxid','avatar','signature','persona','city','age','adultConsent','homeBg','lockBg','callBg','theme','wxTheme','appLayout','appIcons','widgets','momentCover','status','place','battery','charging','onlineMode','steps','stepDate','accounts','active','phoneFriend'].forEach(k=>{if(me[k]!=null)fresh.me[k]=me[k];});
-  fresh.me.balance=me.balance==null?fresh.me.balance:me.balance;fresh.me.bills=Array.isArray(me.bills)?me.bills:[];fresh.weather=old.weather||null;fresh.music=old.music||fresh.music;fresh.aiStickers=old.aiStickers||[];fresh.beautyArchive=beautyPackFrom(old);
-  S=fresh;initAccounts();try{await imgDel('__messages');}catch(_){}save();try{closeModal();}catch(_){}try{home();}catch(_){render();}toast('已清理缓存，真人好友和美化都保留了');}
+function cacheMediaSize(v){v=''+(v||'');if(!v)return 0;if(/^idb-audio:/i.test(v)){try{return ((_imgCache&&_imgCache['__audio_'+v.slice(10)])||'').length||0;}catch(_){return 0;}}return /^(data:image\/|data:audio\/|idb:)/i.test(v)?v.length:0;}
+function mergeCacheStat(a,b){a.n+=(b&&b.n)||0;a.bytes+=(b&&b.bytes)||0;return a;}
+function cleanChatMediaMsg(m){const r={n:0,bytes:0};if(!m||typeof m!=='object')return r;
+  if(m.type==='image'&&m.src){r.bytes+=cacheMediaSize(m.src);m.src='';m.mediaCleaned=true;m.visionState=m.visionState==='pending'?'failed':m.visionState;if(!m.desc)m.desc='图片缓存已清理';r.n++;}
+  if(m.type==='voice'&&m.audio){r.bytes+=cacheMediaSize(m.audio);clearVoiceAudio(m);m.mediaCleaned=true;r.n++;}
+  return r;}
+function cleanChatMediaStore(store){const r={n:0,bytes:0};if(!store||typeof store!=='object')return r;
+  Object.keys(store).forEach(k=>{if(k==='__idb'||k==='id')return;const a=store[k];if(!Array.isArray(a))return;a.forEach(m=>mergeCacheStat(r,cleanChatMediaMsg(m)));});
+  return r;}
+function cleanPfMediaMsg(m){const r={n:0,bytes:0};if(!m||typeof m!=='object')return r;const body=m.body||m.text||m.content,p=pfUnpack(body);if(!p||p.type!=='image'||!p.img)return r;
+  r.bytes+=cacheMediaSize(p.img);p.img='';p.cleaned=1;const nb=pfPack(p);if(m.body!=null)m.body=nb;else if(m.text!=null)m.text=nb;else m.content=nb;r.n++;return r;}
+function cleanPfMediaStore(store){const r={n:0,bytes:0};if(!store||typeof store!=='object')return r;
+  Object.keys(store).forEach(k=>{if(k==='__idb'||k==='id')return;const a=store[k];if(!Array.isArray(a))return;a.forEach(m=>mergeCacheStat(r,cleanPfMediaMsg(m)));});
+  return r;}
+function cacheSizeText(bytes){bytes=+bytes||0;if(bytes>=1048576)return (bytes/1048576).toFixed(2)+'MB';if(bytes>=1024)return (bytes/1024).toFixed(1)+'KB';return bytes?bytes+'B':'';}
+async function clearRoleCacheKeepBeauty(){if(!await uiConfirm('清理缓存垃圾？\n\n只会清掉聊天记录里的图片缓存、语音音频缓存和失效旧图引用。\n\n不会删除：角色、记忆、文字聊天、朋友圈、信箱、电话短信、真人好友/群聊、壁纸、美化图片、音乐背景。',{danger:false}))return;
+  if(_bootImagesPromise)try{await _bootImagesPromise;}catch(_){}
+  const total={n:0,bytes:0};
+  mergeCacheStat(total,cleanChatMediaStore(S.messages));
+  const p=phoneFriendState();mergeCacheStat(total,cleanPfMediaStore(p.messages));mergeCacheStat(total,cleanPfMediaStore(p.groupMessages));
+  try{imgGC();}catch(_){}
+  save(0);try{render();}catch(_){}
+  toast(total.n?('已清理聊天媒体缓存 '+total.n+' 项'+(total.bytes?'，约 '+cacheSizeText(total.bytes):'')):'没有发现可清的聊天媒体，已整理旧缓存引用');}
+function clearStoreVoiceAudio(store){try{Object.keys(store||{}).forEach(k=>{if(k==='__idb'||k==='id')return;const a=store[k];if(Array.isArray(a))a.forEach(m=>{if(m&&m.type==='voice')clearVoiceAudio(m);});});}catch(_){}}
+async function clearAllChatRecords(){if(!await uiConfirm('清空所有聊天记录？\n\n会清空：角色微信聊天、小手机真人好友私聊、真人群聊。\n不会删除：角色、真人好友、群成员、记忆、人设、头像、美化图片。\n\n清空后无法恢复，建议先导出备份。',{danger:true}))return;
+  if(!await uiConfirm('最后确认：真的清空所有聊天记录吗？\n好友和群还在，但聊天内容会变空。',{danger:true}))return;
+  if(_bootImagesPromise)try{await _bootImagesPromise;}catch(_){}
+  const p=phoneFriendState(),now=Date.now();
+  clearStoreVoiceAudio(S.messages);S.messages={};try{delete _heavy.messages;_heavyReady.delete('messages');await imgDel('__messages');}catch(_){}
+  p.messages={};p.groupMessages={};p.friendRead={};p.groupRead={};p.clearBefore=p.clearBefore||{};p.groupClearBefore=p.groupClearBefore||{};
+  (p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id||'')).toUpperCase();if(id)p.clearBefore[id]=now;});
+  (p.groups||[]).forEach(g=>{const gid=g&&(g.group_id||g.id);if(gid)p.groupClearBefore[gid]=now;});
+  p.lastSync=now;p._forceFullSync=0;
+  try{const key=pfMsgStoreKey();delete _heavy['pfMessages:'+key];_heavyReady.delete('pfMessages:'+key);await imgDel(key);}catch(_){}
+  try{imgGC();}catch(_){}
+  save(0);try{closeModal();}catch(_){}try{render();}catch(_){}
+  toast('已清空所有聊天记录，角色/好友/群聊都保留了');}
 /* ---------- ☁️ 云同步 ---------- */
 function cloudId(){S.settings=S.settings||{};if(!S.settings.cloudId)S.settings.cloudId='yb_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);save();return S.settings.cloudId;}
 async function cloudBackup(){const U=cloudUrl(),K=cloudKey();if(!U||!K)throw new Error('还没填云地址/Key，先在云同步里填一下');const id=cloudId();const data=JSON.stringify(await fullBackupState());/* 完整存档(含消息/图)，和导出一致 */
@@ -8536,7 +8569,7 @@ function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=n
 function storageMeter(){const si=storageInfo();const col=si.pct>=92?'#fa5151':si.pct>=75?'#ffb83b':'#19a463';
   return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
     <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${si.pct}%;background:${col};transition:.3s"></div></div>
-    <div class="hint" style="padding:7px 0 0">${si.pct>=92?'接近上限了，先导出备份，再用「清除缓存」瘦身。':si.pct>=75?'数据偏多，但图片和长聊天会尽量搬进大空间；保存正常时不用急着清。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}</div></div></div>`;}
+    <div class="hint" style="padding:7px 0 0">${si.pct>=92?'接近上限了，先导出备份，再用「清理缓存垃圾」瘦身。':si.pct>=75?'数据偏多，但图片和长聊天会尽量搬进大空间；保存正常时不用急着清。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}</div></div></div>`;}
 let _storeWarned=false;
 function checkStorageWarn(){if(_storeWarned)return;const si=storageInfo();if(si.pct<96||(si.okRecently&&si.pct<99))return;const last=+(S.settings&&S.settings.storageWarnAt||0);if(Date.now()-last<86400000)return;S.settings.storageWarnAt=Date.now();_storeWarned=true;save(0);
   openModal(`<h3>手机存储快满了</h3><div style="font-size:14px;line-height:1.9;color:#333">已经用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB（${si.pct}%）</b>。<br>快满了的话新消息、新照片可能存不进去。<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 删掉一些旧图片或用不到的聊天</div>
