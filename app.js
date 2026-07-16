@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v528 · 修复语音气泡与记忆格式';
+const APP_VER='v529 · 清理美化与语音对齐';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -370,10 +370,10 @@ try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.i
 function mergeStateData(d,opt){const n=Object.assign(defState(),d||{});if(opt&&opt.keepPhoneFriend){const old=S&&S.me&&S.me.phoneFriend,has=d&&d.me&&d.me.phoneFriend&&d.me.phoneFriend.id;if(old&&!has){n.me=n.me||{};n.me.phoneFriend=old;}if(n.messages&&n.messages.__idb==='messages'&&S.messages&&!S.messages.__idb)n.messages=S.messages;}return n;}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return mergeStateData(v);}catch(e){}return seed();}
 let _bootImagesPromise=null;
-let _saveTimer=null,_savePending=false,_saveLast=0;
+let _saveTimer=null,_savePending=false,_saveLast=0,_saveOkLast=0;
 function saveNow(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}
   if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;
-  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();}catch(e){toast('存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
+  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();_saveOkLast=_saveLast;}catch(e){toast('存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
 function save(delay){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
 let _imgCache={},_imgRev=new Map(),_imgReady=new Set(),_imgSeq=0,_heavy={},_heavyReady=new Set();
@@ -583,11 +583,21 @@ function friendMetaGet(c,k){const map={blockedAt:'_blockedAt',readdedAt:'_readde
 function friendMetaSet(c,k,v){if(!c)return;if(isMain()){const map={blockedAt:'_blockedAt',readdedAt:'_readdedAt',readdKnown:'_readdKnown',blockDur:'_blockDur'};c[map[k]]=v;}else friendMeta(c,true)[k]=v;}
 function friendMetaClear(c){if(!c)return;if(isMain()){delete c._blockedAt;delete c._readdedAt;delete c._readdKnown;delete c._blockDur;}else if(c._friendMeta)delete c._friendMeta[actId()];}
 function altIdentityPrompt(c){const known=msgs(c.id).filter(m=>m&&m.type!=='sys').length>1;return '\n\n# 当前聊天身份（小号与大号严格分开）\n现在跟你聊天的是小号身份「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没有额外自我介绍）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观不变；但主账号里的恋爱关系、昵称、拉黑和重新添加记录都不属于这个小号，绝对不能带过来。\n- 只认当前小号聊天框里真实发生过的历史。'+(known?'你和这个小号【之前已经聊过】，上面的聊天记录就是你们的共同上下文；你认得ta，不能突然问“你谁”、不能说第一次见，也不能凭空说ta拉黑后又加回你。':'这是这个小号刚开始和你建立联系，按普通新网友的分寸慢慢认识。')+'\n- 你人设里原本的恋人/未婚妻/对象不是当前这个小号身份，除非当前聊天以后自然发展出自己的关系；不要把主账号的亲密回忆直接套过来。\n- 重要：你不能拉黑'+S.me.name+'，也不要输出[拉黑]。';}
-function initAccounts(){if(S.me.age==null)S.me.age=18;if(S.me.adultConsent==null)S.me.adultConsent=true;if(S.me.city==null)S.me.city='';if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[{id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||'',city:S.me.city||'',age:S.me.age,adultConsent:S.me.adultConsent!==false}];
+function accountIdOK(id){return typeof id==='string'&&/^[a-zA-Z0-9_-]{2,32}$/.test(id);}
+function normalizeAccount(a,idx,seen){a=(a&&typeof a==='object')?a:{};seen=seen||new Set();let id=(a.id||'').toString().trim();
+  if(idx===0||id==='main')id='main';
+  if(!accountIdOK(id))id='acc_'+Math.random().toString(36).slice(2,7);
+  while(seen.has(id))id='acc_'+Math.random().toString(36).slice(2,7);seen.add(id);
+  return {id,name:(a.name||S.me.name||'我').toString().trim()||'我',wxid:(a.wxid||genWxid()).toString().trim()||genWxid(),avatar:a.avatar||S.me.avatar||'🙂',persona:(a.persona||'').toString(),signature:(a.signature||'').toString(),city:(a.city||S.me.city||'').toString(),age:Math.max(0,Math.round(+(a.age==null?S.me.age:a.age)||18)),adultConsent:a.adultConsent!==false,balance:a.balance==null?(id==='main'?(+S.me.balance||0):188):(+a.balance||0),bills:Array.isArray(a.bills)?a.bills:(id==='main'?(S.me.bills||[]):[])};
+}
+function initAccounts(){S.me=S.me||{};if(S.me.age==null)S.me.age=18;if(S.me.adultConsent==null)S.me.adultConsent=true;if(S.me.city==null)S.me.city='';
+  const raw=Array.isArray(S.me.accounts)?S.me.accounts.filter(a=>a&&typeof a==='object'):[];
+  if(!raw.length)raw.push({id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||'',city:S.me.city||'',age:S.me.age,adultConsent:S.me.adultConsent!==false,balance:S.me.balance,bills:S.me.bills});
+  const seen=new Set();S.me.accounts=raw.map((a,i)=>normalizeAccount(a,i,seen));
+  if(!S.me.accounts.find(a=>a.id==='main'))S.me.accounts.unshift(normalizeAccount({id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||'',city:S.me.city||'',age:S.me.age,adultConsent:S.me.adultConsent!==false,balance:S.me.balance,bills:S.me.bills},0,new Set()));
   if(!S.me.active||!S.me.accounts.find(a=>a.id===S.me.active))S.me.active='main';
-  S.me.accounts.forEach(a=>{if(a.city==null)a.city='';if(a.balance==null)a.balance=(a.id==='main'?(+S.me.balance||0):188);if(!a.bills)a.bills=(a.id==='main'?(S.me.bills||[]):[]);if(a.age==null)a.age=S.me.age||18;if(a.adultConsent==null)a.adultConsent=true;});
-  const act=S.me.accounts.find(a=>a.id===S.me.active);if(act){S.me.balance=act.balance;S.me.bills=act.bills;S.me.city=act.city||S.me.city||'';S.me.age=act.age||18;S.me.adultConsent=act.adultConsent!==false;}
-  S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};});syncBlocks();}
+  const act=S.me.accounts.find(a=>a.id===S.me.active)||S.me.accounts[0];if(act){S.me.active=act.id;S.me.name=act.name;S.me.wxid=act.wxid;S.me.avatar=act.avatar;S.me.persona=act.persona||'';S.me.signature=act.signature||'';S.me.city=act.city||'';S.me.age=act.age||18;S.me.adultConsent=act.adultConsent!==false;S.me.balance=act.balance;S.me.bills=act.bills;}
+  (S.contacts||[]).forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};});syncBlocks();}
 function msgs(id){const k=mkey(id);return S.messages[k]||(S.messages[k]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
 // 取最近 n 个回合。一个回合 = 我方发一条文字 + 他随后回复的所有气泡；【一整通电话/视频只算 1 个回合】（哪怕里面来回很多句），免得长通话把文字聊天记录挤出窗口。通话原文仍会带上（有 160 条硬上限），更早的内容靠"对话概要"长期记忆。
@@ -1052,7 +1062,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=528';
+  const url='sw.js?v=529';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1488,6 +1498,7 @@ function buildSystem(c,opt){
 /* =================== 渲染路由 =================== */
 let stack=[{p:'home'}];
 let wxTab='chats';
+let _scrollBottomOnce={};
 function go(p,params){if(idleForceBlockNav(p,params))return;stack.push(Object.assign({p},params));render();}
 function back(){const c=cur();if(c&&c.p==='chat'&&idleForceActive(c.id)){toast('先陪ta一会儿');return;}if(stack.length>1){stack.pop();render();}}
 function home(){if(idleForceBlockNav('home'))return;stack=[{p:'home'}];render();}
@@ -1501,7 +1512,7 @@ function appendChatHTML(cb,html,opt){if(!cb||!html)return null;opt=opt||{};const
   if(node&&node.classList&&node.classList.contains('msg')&&opt.animate!==false)node.classList.add('msg-enter');
   if(stick)requestAnimationFrame(()=>{try{cb.scrollTo({top:cb.scrollHeight,behavior:opt.smooth===false?'auto':'smooth'});}catch(_){cb.scrollTop=cb.scrollHeight;}});return node;}
 function captureRenderScroll(c){const t=renderScrollTarget(c);if(!t)return null;const el=document.getElementById(t.id);if(!el)return{key:renderPageKey(c),id:t.id,had:false};const bottom=Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight);return{key:renderPageKey(c),id:t.id,had:true,top:el.scrollTop,bottom,nearBottom:bottom<80};}
-function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;const el=document.getElementById(t.id);if(!el)return;const same=st&&st.had&&st.key===renderPageKey(c)&&st.id===t.id;if(t.stick){if(!same||st.nearBottom)el.scrollTop=el.scrollHeight;else el.scrollTop=st.top;}else if(same){el.scrollTop=st.top;}}
+function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;const el=document.getElementById(t.id);if(!el)return;const key=renderPageKey(c),force=_scrollBottomOnce&&_scrollBottomOnce[key];if(force){delete _scrollBottomOnce[key];requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});el.scrollTop=el.scrollHeight;return;}const same=st&&st.had&&st.key===key&&st.id===t.id;if(t.stick){if(!same||st.nearBottom)el.scrollTop=el.scrollHeight;else el.scrollTop=st.top;}else if(same){el.scrollTop=st.top;}}
 function render(){
   const c=cur();const app=$('#app');
   const _force=idleForceState();if(_force&&(c.p!=='chat'||c.id!==_force.id)){stack=stack.filter(s=>s.p!=='chat');stack.push({p:'chat',id:_force.id});return render();}
@@ -2394,6 +2405,8 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div id="set_backup">
     <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">只导出美化</button><button class="btn d" onclick="clearRoleCacheKeepBeauty()">清除缓存</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">清除缓存会保留小手机真人好友/群聊/聊天和所有美化，只清掉虚拟角色、记忆、电话短信、信箱等乱数据。</div>
     </div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
@@ -5771,12 +5784,12 @@ let _accountTapAt=0;
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
   const now=Date.now();if(now-_accountTapAt<350)return;_accountTapAt=now;switchAccount(aid);}
 function accountSwitchFromEvent(ev){if(ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-noswitch]'))return;const el=ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-switch]');if(!el)return;accountSwitchTap(ev,el.getAttribute('data-account-switch'));}
-function accountMgr(){const acts=S.me.accounts||[];
+function accountMgr(){initAccounts();const acts=S.me.accounts||[];
   openModal(`<h3>我的小号</h3><div class="hint">切换不同身份和角色聊天。每个身份有<b>独立的聊天记录</b>；角色可能拉黑某个身份，你换个身份就能重新搜微信号加回。当前：<b>${esc(S.me.name)}</b></div>
    ${acts.map(a=>`<div class="section"><div class="it" data-account-switch="${a.id}" style="cursor:pointer" role="button" tabindex="0" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div>${a.id===actId()?'<span class="v">当前</span>':`<button type="button" class="minibtn" data-account-switch="${a.id}" style="background:#07c160;color:#fff" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">切换</button>`}<span class="v" data-account-noswitch="1" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span data-account-noswitch="1" style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
    <button class="btn p" style="margin-top:8px" onclick="editAccount()">＋ 新建小号</button>
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function switchAccount(aid){if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t)return;
+function switchAccount(aid){initAccounts();if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t){toast('这个小号数据坏了，已自动整理一次');initAccounts();accountMgr();return;}
   S.me.active=aid;S.me.name=t.name;S.me.wxid=t.wxid;S.me.avatar=t.avatar;S.me.persona=t.persona||'';S.me.signature=t.signature||'';S.me.city=t.city||'';
   S.me.age=t.age||18;S.me.adultConsent=t.adultConsent!==false;
   if(t.balance==null)t.balance=(aid==='main'?0:188);if(!t.bills)t.bills=[];S.me.balance=t.balance;S.me.bills=t.bills;
@@ -5790,7 +5803,7 @@ function triggerAltReports(){if(!isMain())return;for(const c of S.contacts){if(c
       ?'[系统：有个叫「'+who+'」的人(用别的微信号)加了你、还聊了几句。主动、【简短】跟'+S.me.name+'(你恋人)报备一下：有人加你了、是谁、你什么态度。两三句话就好，别逐句复述聊天。]'
       :'[系统：你之前已经跟'+S.me.name+'报备过有人(「'+who+'」)加你。现在你们又聊了些新的：'+recent+'。【简短】跟'+S.me.name+'说下近况(又聊了啥、你态度)，两三句就好，别再说"有人加我"那套、别逐句复述。]';
     scheduleReply(c.id,note);break;}}}
-function editAccount(aid){const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',city:'',_new:true};if(!a)return;
+function editAccount(aid){initAccounts();const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',city:'',_new:true};if(!a)return;
   openModal(`<h3>${aid&&!a._new?'编辑身份':'新建小号'}</h3>
    <div class="field"><label>头像</label><div class="avline">${av(a.avatar,'sm')}<input id="ac_av" value="${esc(a.avatar)}"><button class="minibtn" onclick="pickFile('image/*',async f=>{$('#ac_av').value=await compress(f,256,.8)})">📷</button></div></div>
    <div class="field"><label>昵称</label><input id="ac_name" value="${esc(a.name)}" placeholder="这个身份叫什么"></div>
@@ -5800,10 +5813,11 @@ function editAccount(aid){const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{i
    <div class="field"><label><input id="ac_adult" type="checkbox" ${a.adultConsent!==false?'checked':''}> 成年资料</label></div>
    <div class="field"><label>身份设定（角色会知道你以这个身份跟ta聊）</label><textarea id="ac_per" rows="3" placeholder="比如：陌生网友 / 新同事 / 假装是别人 / 记者…">${esc(a.persona||'')}</textarea></div>
    <div class="btns"><button class="btn g" onclick="accountMgr()">返回</button><button class="btn p" onclick="saveAccount('${a.id}',${!!a._new})">保存</button></div>`);}
-function saveAccount(id,isNew){const a=isNew?{id,balance:188,bills:[]}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
+function saveAccount(id,isNew){initAccounts();let a=isNew?{id,balance:188,bills:[]}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
+  if(isNew){const used=new Set((S.me.accounts||[]).map(x=>x.id));while(!accountIdOK(a.id)||used.has(a.id)){a.id='acc_'+Math.random().toString(36).slice(2,7);}}
   a.name=$('#ac_name').value.trim()||'小号';a.wxid=$('#ac_wxid').value.trim()||genWxid();a.avatar=$('#ac_av').value.trim()||'🙂';a.city=($('#ac_city')&&$('#ac_city').value.trim())||'';a.persona=$('#ac_per').value.trim();
   {const ag=$('#ac_age');a.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#ac_adult');a.adultConsent=!ad||ad.checked;}
-  if(isNew)S.me.accounts.push(a);
+  a.signature=a.signature||'';if(a.balance==null)a.balance=188;if(!Array.isArray(a.bills))a.bills=[];if(isNew)S.me.accounts.push(a);
   if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.city=a.city||'';S.me.persona=a.persona;S.me.age=a.age;S.me.adultConsent=a.adultConsent!==false;}
   save();accountMgr();}
 async function delAccount(id){if(id==='main')return;if(!await uiConfirm('删除这个小号？它的聊天记录也会清掉'))return;
@@ -7997,11 +8011,12 @@ function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_
 function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}
 function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
   stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;const um={role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session};msgs(id).push(um);behaviorOnUserMsg(id,um);lifeNoteOnUserMsg(id,um);emotionOnUserMsg(id,um);save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}if(_call&&callOnUserSay(m.content||''))return;callAI();});}
-function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
+function playBufWait(buf,onStart){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();if(onStart)try{onStart();}catch(_){}s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
 async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;const t=ttsSafeProsody(ttsCleanBase(text),c),vp=ttsVoiceProfile(text,opt,ttsCfg());
   if(!t)return new Promise(r=>setTimeout(r,1100));
-  if(ttsApiOn()){const ab=await ttsArr(text,c,opt);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);}else if(ab){await ttsRefundAudio(ab,'tts-decode-failed');}return;}
-  return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=(+v.rate||1)*vp.speed;u.pitch=(+v.pitch||1)+vp.pitch*.08;u.volume=Math.max(0,Math.min(1,vp.vol));if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(res,Math.max(2500,t.length*200));}catch(e){res();}});}
+  let started=false;const start=()=>{if(started)return;started=true;if(opt.onAudioStart)try{opt.onAudioStart();}catch(_){}};
+  if(ttsApiOn()){const ab=await ttsArr(text,c,opt);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf,start);}else if(ab){await ttsRefundAudio(ab,'tts-decode-failed');}return;}
+  return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=(+v.rate||1)*vp.speed;u.pitch=(+v.pitch||1)+vp.pitch*.08;u.volume=Math.max(0,Math.min(1,vp.vol));if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();start();speechSynthesis.speak(u);setTimeout(res,Math.max(2200,t.length*185));}catch(e){res();}});}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   const um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);behaviorOnUserMsg(_call.id,um);lifeNoteOnUserMsg(_call.id,um);emotionOnUserMsg(_call.id,um);save();_call.sub={who:'me',text:t};updateCallSub();
   if(callOnUserSay(t))return;callAI();}
@@ -8081,9 +8096,9 @@ async function callAI(sysNote,opts){if(!_call)return;
       msgs(c.id).push({role:'assistant',type:'text',content:u.orig,time:Date.now(),id:uid(),_call:true,_ck:video?'video':'voice',_cs:sess});
       if(u.trans)msgs(c.id).push({role:'assistant',type:'text',content:u.trans,time:Date.now(),id:uid(),_call:true,_ck:video?'video':'voice',_cs:sess});
       save();
-      _call.sub={who:'them',text:u.orig+(u.trans?'\n'+u.trans:'')};updateCallSub();
       const spoken=pickSpoken(u.orig,_vlang);
-      if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed});_voiceInterjectionUsed=true;await sleep(820);}else await sleep(Math.max(1550,u.orig.length*140));}
+      const subText=u.orig+(u.trans?'\n'+u.trans:'');
+      if(_call.replyVoice&&!c.muted&&spoken){let shown=false;await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed,onAudioStart:()=>{shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}}});_voiceInterjectionUsed=true;if(!shown&&_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();await sleep(620);}else await sleep(360);}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(Math.max(1150,u.orig.length*105));}}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}
@@ -8455,12 +8470,30 @@ function uiConfirm(msg,opt){opt=opt||{};return new Promise(res=>{let el=document
   document.getElementById('cfmYes').onclick=()=>done(true);});}
 function askConfirm(msg,onYes,opt){uiConfirm(msg,opt).then(v=>{if(v){try{onYes&&onYes();}catch(e){}}});}
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
-function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}if(lockClearTarget({type:'chat',id},true))save(500);stack=stack.filter(s=>s.p!=='chat');go('chat',{id});}
+function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}if(lockClearTarget({type:'chat',id},true))save(500);stack=stack.filter(s=>s.p!=='chat');_scrollBottomOnce['chat:'+id]=Date.now();go('chat',{id});}
 
 /* ---------- 备份 ---------- */
 async function exportData(){const data=await fullBackupState();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='North备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出');}
 function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=mergeStateData(d,{keepPhoneFriend:true});phoneFriendState();save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
+function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
+function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
+  return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
+    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place']),
+    phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
+    phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
+    music:pickObj(music,['bg','cover','theme','layout','widgets']),
+    contacts:(data.contacts||[]).map(c=>pickObj(c,['id','name','remark','avatar','chatBg','bubbleStyle','phone','region'])),
+    groups:(data.groups||[]).map(g=>pickObj(g,['id','name','avatar','chatBg','bubbleStyle','memberBubbleStyles'])),
+    beautyArchive:data.beautyArchive||null};}
+async function exportBeautyData(){const data=await fullBackupState(),pack=beautyPackFrom(data),blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='North美化包_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出美化包');}
+async function clearRoleCacheKeepBeauty(){if(!await uiConfirm('清除缓存/乱数据？\n\n会清掉：创建的虚拟角色、角色聊天、记忆、朋友圈、电话短信、信箱、钱包账单、日程、临时状态等。\n\n不会清掉：小手机真人好友、真人群聊和聊天、主屏/锁屏/通话壁纸、桌面顺序、小组件、头像和美化图片。\n\n建议先导出完整备份。',{danger:true}))return;
+  const old=await fullBackupState(),fresh=defState(),me=old.me||{};
+  fresh.settings=old.settings||fresh.settings;fresh.worldbook=[];fresh.contacts=[];fresh.messages={};fresh.groups=[];fresh.couple=null;fresh.moments=[];fresh.friendRequests=[];fresh.mail=[];fresh.x=defState().x;fresh.spy={};fresh.offline={};fresh.shop=defState().shop;fresh.food=defState().food;fresh.calendar=[];fresh.phoneapp=defState().phoneapp;fresh.roleplay={};fresh.browser={q:'',items:[],history:[]};fresh._proactiveDone={};fresh._proactiveCount={};fresh._mailCount={};
+  ['name','wxid','avatar','signature','persona','city','age','adultConsent','homeBg','lockBg','callBg','theme','wxTheme','appLayout','appIcons','widgets','momentCover','status','place','battery','charging','onlineMode','steps','stepDate','accounts','active','phoneFriend'].forEach(k=>{if(me[k]!=null)fresh.me[k]=me[k];});
+  fresh.me.balance=me.balance==null?fresh.me.balance:me.balance;fresh.me.bills=Array.isArray(me.bills)?me.bills:[];fresh.weather=old.weather||null;fresh.music=old.music||fresh.music;fresh.aiStickers=old.aiStickers||[];fresh.beautyArchive=beautyPackFrom(old);
+  S=fresh;initAccounts();try{await imgDel('__messages');}catch(_){}save();try{closeModal();}catch(_){}try{home();}catch(_){render();}toast('已清理缓存，真人好友和美化都保留了');}
 /* ---------- ☁️ 云同步 ---------- */
 function cloudId(){S.settings=S.settings||{};if(!S.settings.cloudId)S.settings.cloudId='yb_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);save();return S.settings.cloudId;}
 async function cloudBackup(){const U=cloudUrl(),K=cloudKey();if(!U||!K)throw new Error('还没填云地址/Key，先在云同步里填一下');const id=cloudId();const data=JSON.stringify(await fullBackupState());/* 完整存档(含消息/图)，和导出一致 */
@@ -8499,13 +8532,13 @@ let _cloudAutoT=0;function cloudAutoTick(){if(!(S.settings&&S.settings.cloudAuto
 setInterval(cloudAutoTick,600000);setTimeout(()=>{if(S.settings&&S.settings.cloudAuto)cloudBackup().catch(()=>{});},9000);
 /* ---------- 存储用量 ---------- */
 function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=new Blob([s||JSON.stringify(S)]).size;}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
-  const CAP=5*1024*1024;return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100))};}
-function storageMeter(){const si=storageInfo();const col=si.pct>=80?'#fa5151':si.pct>=60?'#ffb83b':'#19a463';
+  const CAP=5*1024*1024;return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100)),okRecently:_saveOkLast&&Date.now()-_saveOkLast<180000};}
+function storageMeter(){const si=storageInfo();const col=si.pct>=92?'#fa5151':si.pct>=75?'#ffb83b':'#19a463';
   return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
     <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${si.pct}%;background:${col};transition:.3s"></div></div>
-    <div class="hint" style="padding:7px 0 0">${si.pct>=80?'快满了！赶紧导出备份，再删点旧图片/聊天。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}</div></div></div>`;}
+    <div class="hint" style="padding:7px 0 0">${si.pct>=92?'接近上限了，先导出备份，再用「清除缓存」瘦身。':si.pct>=75?'数据偏多，但图片和长聊天会尽量搬进大空间；保存正常时不用急着清。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}</div></div></div>`;}
 let _storeWarned=false;
-function checkStorageWarn(){if(_storeWarned)return;const si=storageInfo();if(si.pct<80)return;_storeWarned=true;
+function checkStorageWarn(){if(_storeWarned)return;const si=storageInfo();if(si.pct<96||(si.okRecently&&si.pct<99))return;const last=+(S.settings&&S.settings.storageWarnAt||0);if(Date.now()-last<86400000)return;S.settings.storageWarnAt=Date.now();_storeWarned=true;save(0);
   openModal(`<h3>手机存储快满了</h3><div style="font-size:14px;line-height:1.9;color:#333">已经用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB（${si.pct}%）</b>。<br>快满了的话新消息、新照片可能存不进去。<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 删掉一些旧图片或用不到的聊天</div>
     <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">立即导出备份</button></div>`);}
 function storageFullAlert(){openModal(`<h3>存储已经满了！</h3><div style="font-size:14px;line-height:1.9;color:#333">刚才有内容没能存进去。<br><br>赶紧：<br>1️⃣ 点下面导出备份（别让数据丢了）<br>2️⃣ 删掉一些旧照片/旧聊天腾地方</div>
