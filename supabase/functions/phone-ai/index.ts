@@ -56,6 +56,14 @@ function guardedImagePrompt(prompt: unknown) {
   return `${IMAGE_GUARD}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 1000)}`;
 }
 
+function guardedChatImagePrompt(prompt: unknown, size: string) {
+  const request = String(prompt || "casual phone photo").slice(0, 1000);
+  return `Generate exactly one realistic casual phone photo for this request:
+${request}
+
+Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same young adult male character wearing it. If a person is requested, avoid a clear front-facing face by using a natural side, back, lowered gaze, crop, or occlusion. Size: ${size}. Return the image only.`;
+}
+
 const PLANS = [
   { id: "p_990", name: "轻量体验", amount_cny: 9.9, points: 250, tag: "初次尝试" },
   { id: "p_2990", name: "日常畅聊", amount_cny: 29.9, points: 850, tag: "推荐" },
@@ -332,8 +340,9 @@ async function openai(path: string, body: unknown, timeoutMs = 180000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort("upstream-timeout"), Math.max(1000, timeoutMs));
   try {
-    const urls = [base + path];
-    if (!/\/v1$/i.test(base)) urls.push(base + "/v1" + path);
+    const urls = /\/v1$/i.test(base)
+      ? [base + path]
+      : [base + "/v1" + path, base + path];
     let lastError: unknown = null;
     for (const url of urls) {
       try {
@@ -413,7 +422,9 @@ function relayImageResult(data: any) {
     const url = markdown || plain;
     if (url) return { data: [{ url }] };
   }
-  throw new Error("relay-image-empty");
+  const preview = candidates.find((item) => item.length < 500 && !/^data:/i.test(item))
+    ?.replace(/\s+/g, " ").trim().slice(0, 180);
+  throw new Error("relay-image-empty" + (preview ? ": " + preview : ""));
 }
 
 function shouldRetryImageAsChat(reason: string) {
@@ -862,32 +873,39 @@ Deno.serve(async (req) => {
       try {
         const prompt = guardedImagePrompt(body.prompt).slice(0, 1600);
         let upstream: any;
-        try {
-          const richBody = {
-            model,
-            prompt,
-            n: 1,
-            size,
-            quality: "medium",
-            output_format: "jpeg",
-            output_compression: 88,
-            response_format: "url",
-          };
-          try {
-            upstream = await openai("/images/generations", richBody, 140000);
-          } catch (richError) {
-            const richReason = errText(richError);
-            if (!shouldRetryImagePlain(richReason)) throw richError;
-            upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000);
-          }
-        } catch (firstError) {
-          const firstReason = errText(firstError);
-          if (!shouldRetryImageAsChat(firstReason)) throw firstError;
+        const chatBody = {
+          model,
+          messages: [{ role: "user", content: guardedChatImagePrompt(body.prompt, size) }],
+          max_tokens: 1200,
+        };
+        if (/^gpt-image-2$/i.test(model)) {
           endpoint = "chat-completions";
-          upstream = await openai("/chat/completions", {
-            model,
-            messages: [{ role: "user", content: prompt + `\n\nReturn one generated image for this request. Size: ${size}.` }],
-          }, 90000);
+          upstream = await openai("/chat/completions", chatBody, 90000);
+        } else {
+          try {
+            const richBody = {
+              model,
+              prompt,
+              n: 1,
+              size,
+              quality: "medium",
+              output_format: "jpeg",
+              output_compression: 88,
+              response_format: "url",
+            };
+            try {
+              upstream = await openai("/images/generations", richBody, 120000);
+            } catch (richError) {
+              const richReason = errText(richError);
+              if (!shouldRetryImagePlain(richReason)) throw richError;
+              upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000);
+            }
+          } catch (firstError) {
+            const firstReason = errText(firstError);
+            if (!shouldRetryImageAsChat(firstReason)) throw firstError;
+            endpoint = "chat-completions";
+            upstream = await openai("/chat/completions", chatBody, 90000);
+          }
         }
         const data = relayImageResult(upstream);
         await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint, quality: "medium", size });
