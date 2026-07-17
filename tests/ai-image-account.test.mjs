@@ -13,6 +13,8 @@ assert.match(app,/if\(aiImageRelayOn\(\)\)\{const d=await aiRelay\('image'/);
 assert.match(app,/function imageGenerationAvailable\(\)/);
 assert.doesNotMatch(app,/if\(aiCoreOn\(\)\)\{const d=await aiRelay\('image'/);
 assert.match(app,/function imageGenerateExternal\(base,key,model,prompt,size\)/);
+assert.match(app,/const urls=\/\\\/v1\$\/i\.test\(b\)\?\[b\+path\]:\[b\+'\/v1'\+path,b\+path\]/);
+assert.match(app,/接口返回网页HTML，不是API JSON/);
 assert.match(app,/function imageCollectValues\(v,out\)/);
 assert.match(app,/inlineData&&v\.inlineData\.data/);
 assert.match(app,/response_format:'b64_json'/);

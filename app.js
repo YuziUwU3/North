@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v542 · 香蕉生图返回兼容';
+const APP_VER='v543 · 生图路径纠错';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -734,9 +734,9 @@ async function visionAPI(dataURL,prompt,opt){opt=opt||{};const a=S.settings.visi
   const z=new Error('vision-fail: '+((last&&last.message)||'模型没有收到图片'));z.visionInfo=(last&&last.visionInfo)||primaryError;throw z;
 }
 /* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
-function imageApiUrls(base,path){const b=(''+base).replace(/\/+$/,'');const urls=[b+path];if(!/\/v1$/i.test(b))urls.push(b+'/v1'+path);return urls.filter((x,i,a)=>x&&a.indexOf(x)===i);}
+function imageApiUrls(base,path){const b=(''+base).replace(/\/+$/,'');const urls=/\/v1$/i.test(b)?[b+path]:[b+'/v1'+path,b+path];return urls.filter((x,i,a)=>x&&a.indexOf(x)===i);}
 function imageRespErr(d){const msg=d&&d.choices&&d.choices[0]&&d.choices[0].message,txt=msg&&msg.content;return ((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||(d&&d.message)||(typeof txt==='string'&&txt)||'').slice(0,260);}
-function imageShouldRetryChat(status,msg){return status===400||status===404||status===405||status===422||status===500||status===501||/unsupported|not support|not found|does not exist|images\/generations|image.*endpoint|渠道不存在|可用渠道不存在|available.*channel|no image|empty/i.test(''+msg);}
+function imageShouldRetryChat(status,msg){return status===400||status===404||status===405||status===422||status===500||status===501||/html|doctype|网页|unsupported|not support|not found|does not exist|images\/generations|image.*endpoint|渠道不存在|可用渠道不存在|available.*channel|no image|empty/i.test(''+msg);}
 function imageCollectValues(v,out){if(!v||out.length>40)return;if(typeof v==='string'){out.push(v);return;}if(Array.isArray(v)){v.forEach(x=>imageCollectValues(x,out));return;}if(typeof v!=='object')return;
   if(v.url)out.push(v.url);if(v.b64_json)out.push(v.b64_json);if(v.data&&/image\//i.test(v.mime_type||v.mimeType||''))out.push('data:'+(v.mime_type||v.mimeType)+';base64,'+v.data);
   if(v.inlineData&&v.inlineData.data)out.push('data:'+(v.inlineData.mimeType||'image/png')+';base64,'+v.inlineData.data);
@@ -752,7 +752,7 @@ function imageResultURL(d){const direct=d&&d.data&&d.data[0];if(direct&&(direct.
   for(const raw of cands){const data=(''+raw).match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i);if(data)return data[0].replace(/\s+/g,'');const md=(''+raw).match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i),plain=(''+raw).match(/https?:\/\/[^\s<>"')\]]+/i);if(md||plain)return (md&&md[1])||(plain&&plain[0]);}
   return '';
 }
-async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000);const txt=await res.text();let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(res.ok)return {res,d,url};last={res,d,url};if(![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
+async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000),ct=(res.headers.get('content-type')||'').toLowerCase();const txt=await res.text(),html=/html/.test(ct)||/^\s*<!doctype\s+html|^\s*<html[\s>]/i.test(txt);let d=null;try{d=txt&&!html?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(html)d={message:'接口返回网页HTML，不是API JSON；已继续尝试 /v1 路径',html:true};if(res.ok&&!html)return {res,d,url};last={res,d,url};if(!html&&![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
 async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt||'一张生活照').slice(0,600),target=size||'1024x1536';
   const geminiImage=/gemini.*image/i.test(model),rich=geminiImage?{model,prompt:p,n:1,size:target,response_format:'b64_json'}:{model,prompt:p,n:1,size:target,quality:'medium',output_format:'jpeg',output_compression:88,response_format:'url'};
   let out=await imagePostCompat(base,key,'/images/generations',rich,180000),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
