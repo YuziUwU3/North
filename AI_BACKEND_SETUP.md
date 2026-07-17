@@ -32,7 +32,7 @@ OPENAI_BASE_URL=https://vg.v1api.cc/v1
 CHAT_MODEL=gemini-2.5-pro
 VISION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gpt-image-2
-FREE_POINTS=30
+FREE_POINTS=20
 ```
 
 注意：Supabase 不允许自定义 Secret 以 `SUPABASE_` 开头，所以这里用的是 `PHONE_SUPABASE_URL` 和 `PHONE_SERVICE_ROLE_KEY`。
@@ -84,7 +84,7 @@ select phone_ai_grant_points('这里换成用户ID', 1000, 'test');
 
 ## 8. 充值与音色克隆订单
 
-当前点数套餐为 `¥9.9/250点`、`¥29.9/850点`、`¥59.9/1800点`、`¥99.9/3200点`；新账户首次赠送 30 点。
+当前点数套餐为 `¥9.9/250点`、`¥29.9/850点`、`¥59.9/1800点`、`¥99.9/3200点`；新账户首次赠送 20 点。
 
 快速音色克隆为一次性服务，价格 `¥19.9/个`，不会增加账户点数。确认收到付款后执行：
 

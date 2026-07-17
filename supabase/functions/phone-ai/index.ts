@@ -3,7 +3,7 @@
 // PHONE_SUPABASE_URL, PHONE_SERVICE_ROLE_KEY
 // OPENAI_API_KEY（现有聊天/识图/图片生成中转站）
 // 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL, IMAGE_MODEL=gpt-image-2
-// 可选：FREE_POINTS=30（新账户首次体验赠送，设置为 0 可关闭）
+// 可选：FREE_POINTS=20（新账户首次体验赠送，设置为 0 可关闭）
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
@@ -152,7 +152,7 @@ function getSecret(req: Request, body: any) {
 }
 
 async function ensureAccount(userId: string, clientSecret: string) {
-  const free = Math.max(0, Number(Deno.env.get("FREE_POINTS") ?? 30) || 0);
+  const free = Math.max(0, Number(Deno.env.get("FREE_POINTS") ?? 20) || 0);
   const { data: old, error: selErr } = await supabase
     .from("phone_ai_accounts")
     .select("user_id,points,disabled,free_granted,client_secret")
@@ -809,7 +809,7 @@ Deno.serve(async (req) => {
           output_format: "jpeg",
           output_compression: 72,
           response_format: "url",
-        }, 105000);
+        }, 145000);
         const data = relayImageResult(upstream);
         await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint: "images-generations", quality: "low", size });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
