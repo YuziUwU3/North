@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v540 · 外置香蕉生图兼容';
+const APP_VER='v541 · 通话字幕同步修正';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -2382,7 +2382,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it">主动消息间隔(分钟)<input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>主动找你时打电话几率<br><small style="color:#888">0=只发消息；越高他越爱直接打来(语音/视频)</small></span><input id="s_callprob" type="number" min="0" max="100" value="${S.settings.callProb==null?35:S.settings.callProb}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话静默多久他来问你(分钟)<br><small style="color:#888">通话中你没出声，过这么久他会轻声问你在不在；填 0 = 关闭，全程不打扰</small></span><input id="s_callsilent" type="number" min="0" max="60" value="${S.settings.callSilentMin==null?3:S.settings.callSilentMin}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
-      <div class="it" style="flex-wrap:wrap"><span>电话软件语音同步 <b style="color:#0a84ff">${phPhoneVoiceOffset()}ms</b><small style="color:#888;display:block">只调电话App：0最稳；声音仍慢就往右，字幕想更早一点就往左</small></span><input id="s_phoffset" type="range" min="-600" max="1200" step="100" value="${phPhoneVoiceOffset()}" style="width:100%;margin-top:6px" oninput="S.settings.phoneVoiceOffset=+this.value;save();this.previousElementSibling.querySelector('b').textContent=this.value+'ms'"></div>
+      <div class="it" style="flex-wrap:wrap"><span>通话语音同步 <b style="color:#0a84ff">${phPhoneVoiceOffset()}ms</b><small style="color:#888;display:block">同时调电话App和微信电话：0最稳；声音仍慢就往右，字幕想更早一点就往左</small></span><input id="s_phoffset" type="range" min="-600" max="1200" step="100" value="${phPhoneVoiceOffset()}" style="width:100%;margin-top:6px" oninput="S.settings.phoneVoiceOffset=+this.value;save();this.previousElementSibling.querySelector('b').textContent=this.value+'ms'"></div>
       <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
       <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
@@ -5436,13 +5436,14 @@ function phCallUnits(text,c){const lang=(getVoice(c).lang||'zh'),src=String(text
 function phSimStopVoice(){try{if(_curSrc){_curSrc.stop();_curSrc=null;}}catch(_){}try{if(_curAudio){_curAudio.pause();_curAudio=null;}}catch(_){}try{if('speechSynthesis'in window)speechSynthesis.cancel();}catch(_){}}
 function phSimMuteToggle(){const c=phState().simCall;if(!c)return;c.muted=!c.muted;if(c.muted)phSimStopVoice();save();render();toast(c.muted?'已静音角色声音':'已恢复角色声音');}
 function phPhoneVoiceOffset(){return Math.max(-600,Math.min(1200,+((S.settings&&S.settings.phoneVoiceOffset)||0)));}
+function phReleaseSimSub(callId,line){const now=phState().simCall;if(!now||now.id!==callId||!now.sub||now.sub.text!==line||!now.sub.hold)return;now.sub.hold=false;now.sub.time=Date.now();save(100);setTimeout(()=>{try{const c=phState().simCall;if(c&&c.id===callId&&c.sub&&c.sub.text===line&&!c.sub.hold){c.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},Math.max(900,Math.min(3600,1300+[...String(line||'')].length*45)));}
 function phSimCanSpeak(role){const c=phState().simCall;return !!(ttsApiOn()&&c&&!c.muted&&c.meta&&c.meta.aliasToRole&&!c.meta.spoof&&role&&role.id&&getC(role.id)&&!role.blocked);}
 async function phSimSpeak(text,role,opt){opt=opt||{};if(!phSimCanSpeak(role))return false;const spoken=phCallSpokenText(text,role);if(!spoken)return false;try{await speakWait(spoken,role,{cue:ttsAutoCue(spoken,role),onAudioStart:opt.onAudioStart});return true;}catch(_){return false;}}
 function phSimLine(c,from,text){if(!c)return;from=from||'them';const tx=String(text||'').slice(0,260),ts=Date.now(),ttl=Math.max(1800,Math.min(5600,1300+[...tx].length*95));c.lines=Array.isArray(c.lines)?c.lines:[];c.lines.push({from,text:tx,time:ts});if(c.lines.length>80)c.lines=c.lines.slice(-80);c.sub={from,text:tx,time:ts,ttl,hold:from==='me'};if(from==='me')return;setTimeout(()=>{try{const now=phState().simCall;if(now&&now.id===c.id&&now.sub&&now.sub.time===ts&&!now.sub.hold){now.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},ttl);}
 async function phSimRoleSay(callId,text,role){const units=phCallUnits(text,role);if(!units.length)return;for(const u of units){const c=phState().simCall;if(!c||c.id!==callId||c.state!=='active')return;const line=u.orig+(u.trans?'\n'+u.trans:''),canSpeak=phSimCanSpeak(role);let shown=false;const show=()=>{const now=phState().simCall;if(!now||now.id!==callId||now.state!=='active'||shown)return;shown=true;phSimLine(now,'them',line);if(canSpeak&&now.sub&&now.sub.text===line)now.sub.hold=true;save();if(cur().p==='phonecall')render();},off=phPhoneVoiceOffset();
     if(canSpeak){let preT=null;if(c.sub&&!c.sub.hold){c.sub=null;save();if(cur().p==='phonecall')render();}if(off<0)preT=setTimeout(show,Math.max(0,600+off));await phSimSpeak(line,role,{onAudioStart:()=>{if(preT)clearTimeout(preT);setTimeout(show,Math.max(0,off));}});if(!shown)show();}
     else{show();await sleep(Math.max(900,Math.min(1800,600+[...(u.orig||'')].length*35)));}
-    const now=phState().simCall;if(now&&now.id===callId&&now.sub&&now.sub.text===line&&now.sub.hold){now.sub.hold=false;save(100);if(cur().p==='phonecall')render();}
+    phReleaseSimSub(callId,line);
     await sleep(Math.max(360,Math.min(1100,520+[...(u.orig||'')].length*18)));}}
 function phStrangerRejectAction(text){text=String(text||'');if(/诈骗|骚扰|推销|贷款|中奖|链接|http|验证码|转账|裸聊|加群|刷流水|提现吗|威胁|辱骂|滚|骗子|广告/.test(text))return'block';if(/打错|不认识|哪位|找谁|别打|别联系|没空|挂了/.test(text))return'hangup';return'';}
 function phDecisionFromRaw(raw,heard){const t=String(raw||''),u=String(heard||'');if(/[\[【]\s*(拉黑|屏蔽|加入黑名单)\s*[\]】]/.test(t))return'block';if(/[\[【]\s*(挂断|拒接|结束通话)\s*[\]】]/.test(t))return'hangup';return phStrangerRejectAction(u);}
@@ -8136,7 +8137,7 @@ async function callAI(sysNote,opts){if(!_call)return;
       save();
       const spoken=pickSpoken(u.orig,_vlang);
       const subText=u.orig+(u.trans?'\n'+u.trans:'');
-      if(_call.replyVoice&&!c.muted&&spoken){let shown=false;await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed,onAudioStart:()=>{shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}}});_voiceInterjectionUsed=true;if(!shown&&_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();await sleep(620);}else await sleep(360);}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(Math.max(1150,u.orig.length*105));}}
+      if(_call.replyVoice&&!c.muted&&spoken){let shown=false,preT=null;const show=()=>{if(shown)return;shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}};const off=phPhoneVoiceOffset();if(off<0)preT=setTimeout(show,Math.max(0,600+off));await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed,onAudioStart:()=>{if(preT)clearTimeout(preT);setTimeout(show,Math.max(0,off));}});_voiceInterjectionUsed=true;if(!shown&&_call&&_call.session===sess){show();await sleep(620);}else await sleep(360);}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(Math.max(1150,u.orig.length*105));}}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}

@@ -163,5 +163,8 @@ assert.deepEqual(JSON.parse(JSON.stringify(context.fishVoiceItems({ items: [{ _i
 assert.match(backend, /if \(action === "external_tts"\)/);
 assert.match(backend, /async function externalFishTTS/);
 assert.match(backend, /headers\.model = model/);
+assert.match(source, /通话语音同步/);
+assert.match(source, /function phReleaseSimSub\(callId,line\)/);
+assert.match(source, /const off=phPhoneVoiceOffset\(\);if\(off<0\)preT=setTimeout\(show,Math.max\(0,600\+off\)\)/);
 
 console.log("voice prosody tests passed");
