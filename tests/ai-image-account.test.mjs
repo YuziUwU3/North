@@ -13,6 +13,9 @@ assert.match(app,/if\(aiImageRelayOn\(\)\)\{const d=await aiRelay\('image'/);
 assert.match(app,/function imageGenerationAvailable\(\)/);
 assert.doesNotMatch(app,/if\(aiCoreOn\(\)\)\{const d=await aiRelay\('image'/);
 assert.match(app,/function imageGenerateExternal\(base,key,model,prompt,size\)/);
+assert.match(app,/function imageCollectValues\(v,out\)/);
+assert.match(app,/inlineData&&v\.inlineData\.data/);
+assert.match(app,/response_format:'b64_json'/);
 assert.match(app,/gemini-3\.1-flash-image-preview/);
 assert.match(app,/gemini-3-pro-image-preview/);
 

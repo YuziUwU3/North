@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v541 · 通话字幕同步修正';
+const APP_VER='v542 · 香蕉生图返回兼容';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -735,18 +735,26 @@ async function visionAPI(dataURL,prompt,opt){opt=opt||{};const a=S.settings.visi
 }
 /* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
 function imageApiUrls(base,path){const b=(''+base).replace(/\/+$/,'');const urls=[b+path];if(!/\/v1$/i.test(b))urls.push(b+'/v1'+path);return urls.filter((x,i,a)=>x&&a.indexOf(x)===i);}
-function imageRespErr(d){return ((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||(d&&d.message)||'').slice(0,260);}
+function imageRespErr(d){const msg=d&&d.choices&&d.choices[0]&&d.choices[0].message,txt=msg&&msg.content;return ((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||(d&&d.message)||(typeof txt==='string'&&txt)||'').slice(0,260);}
 function imageShouldRetryChat(status,msg){return status===400||status===404||status===405||status===422||status===500||status===501||/unsupported|not support|not found|does not exist|images\/generations|image.*endpoint|渠道不存在|可用渠道不存在|available.*channel|no image|empty/i.test(''+msg);}
+function imageCollectValues(v,out){if(!v||out.length>40)return;if(typeof v==='string'){out.push(v);return;}if(Array.isArray(v)){v.forEach(x=>imageCollectValues(x,out));return;}if(typeof v!=='object')return;
+  if(v.url)out.push(v.url);if(v.b64_json)out.push(v.b64_json);if(v.data&&/image\//i.test(v.mime_type||v.mimeType||''))out.push('data:'+(v.mime_type||v.mimeType)+';base64,'+v.data);
+  if(v.inlineData&&v.inlineData.data)out.push('data:'+(v.inlineData.mimeType||'image/png')+';base64,'+v.inlineData.data);
+  if(v.inline_data&&v.inline_data.data)out.push('data:'+(v.inline_data.mime_type||'image/png')+';base64,'+v.inline_data.data);
+  if(v.fileData&&v.fileData.fileUri)out.push(v.fileData.fileUri);if(v.file_data&&v.file_data.file_uri)out.push(v.file_data.file_uri);
+  Object.keys(v).forEach(k=>{if(!/token|key|authorization/i.test(k))imageCollectValues(v[k],out);});
+}
 function imageResultURL(d){const direct=d&&d.data&&d.data[0];if(direct&&(direct.url||direct.b64_json))return direct.url||('data:image/jpeg;base64,'+direct.b64_json);
   const msg=d&&d.choices&&d.choices[0]&&d.choices[0].message,cands=[],add=v=>{v=String(v||'').trim();if(v)cands.push(v);};
   add(msg&&(msg.image_url&&msg.image_url.url||msg.image_url));(Array.isArray(msg&&msg.images)?msg.images:[]).forEach(x=>add(x&&(x.image_url&&x.image_url.url||x.image_url||x.url||x.b64_json)));
   if(Array.isArray(msg&&msg.content))msg.content.forEach(p=>add(p&&(p.image_url&&p.image_url.url||p.image_url||p.url||p.text)));else add(msg&&msg.content);
+  imageCollectValues(d,cands);
   for(const raw of cands){const data=(''+raw).match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i);if(data)return data[0].replace(/\s+/g,'');const md=(''+raw).match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i),plain=(''+raw).match(/https?:\/\/[^\s<>"')\]]+/i);if(md||plain)return (md&&md[1])||(plain&&plain[0]);}
   return '';
 }
 async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000);const txt=await res.text();let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(res.ok)return {res,d,url};last={res,d,url};if(![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
 async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt||'一张生活照').slice(0,600),target=size||'1024x1536';
-  const rich={model,prompt:p,n:1,size:target,quality:'medium',output_format:'jpeg',output_compression:88,response_format:'url'};
+  const geminiImage=/gemini.*image/i.test(model),rich=geminiImage?{model,prompt:p,n:1,size:target,response_format:'b64_json'}:{model,prompt:p,n:1,size:target,quality:'medium',output_format:'jpeg',output_compression:88,response_format:'url'};
   let out=await imagePostCompat(base,key,'/images/generations',rich,180000),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
   if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
@@ -754,7 +762,7 @@ async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt
   if(url)return {url,endpoint:'images-generations',model};
   if(!res||!res.ok&&imageShouldRetryChat(res.status,err)){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。尺寸：'+target}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
   if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
-  throw new Error('没拿到图片');
+  throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
 }
 async function genImage(prompt){
   if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
