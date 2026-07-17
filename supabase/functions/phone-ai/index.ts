@@ -686,6 +686,30 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "invalid-review-decision" }, 400);
     }
 
+    if (action === "admin_delete_order") {
+      requireAdmin(req, body);
+      const purchaseId = String(body.purchase_id || "").trim();
+      if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) {
+        return json({ ok: false, error: "invalid-purchase-id" }, 400);
+      }
+      const { data: purchase, error: findError } = await supabase
+        .from("phone_ai_purchases")
+        .select("id,proof_path")
+        .eq("id", purchaseId)
+        .maybeSingle();
+      if (findError) throw findError;
+      if (!purchase) return json({ ok: false, error: "purchase-not-found" }, 404);
+      const { error: deleteError } = await supabase
+        .from("phone_ai_purchases")
+        .delete()
+        .eq("id", purchaseId);
+      if (deleteError) throw deleteError;
+      if (purchase.proof_path) {
+        await supabase.storage.from(PROOF_BUCKET).remove([purchase.proof_path]).catch(() => null);
+      }
+      return json({ ok: true });
+    }
+
     const userId = getUser(req, body);
     if (!userId) return json({ ok: false, error: "missing-user" }, 400);
     const clientSecret = getSecret(req, body);

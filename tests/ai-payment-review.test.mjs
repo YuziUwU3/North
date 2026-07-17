@@ -34,6 +34,9 @@ assert.match(backend, /action === "admin_orders"/);
 assert.match(backend, /createSignedUrl\(row\.proof_path, 600\)/);
 assert.match(backend, /action === "admin_review"/);
 assert.match(backend, /supabase\.rpc\("phone_ai_confirm_purchase"/);
+assert.match(backend, /action === "admin_delete_order"/);
+assert.match(backend, /\.from\("phone_ai_purchases"\)[\s\S]*\.delete\(\)/);
+assert.match(backend, /\.from\(PROOF_BUCKET\)\.remove\(\[purchase\.proof_path\]\)/);
 assert.match(backend, /requireAdmin\(req, body\)/);
 assert.match(backend, /admin-unauthorized"\) \? 401/);
 
@@ -55,6 +58,8 @@ assert.match(adminApp, /admin_auth/);
 assert.match(adminApp, /admin_orders/);
 assert.match(adminApp, /admin_subscribe/);
 assert.match(adminApp, /admin_review/);
+assert.match(adminApp, /admin_delete_order/);
+assert.match(adminApp, /删除记录/);
 assert.match(adminApp, /payment_ref:paymentRef/);
 assert.match(adminApp, /setTimeout\(async \(\) =>[\s\S]*15000\)/);
 assert.match(adminSw, /self\.addEventListener\('push'/);

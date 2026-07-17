@@ -98,7 +98,10 @@ function renderOrders() {
         <div><b>审核说明</b>${esc(order.review_note || '无')}</div>
       </div>
       ${order.proof_url ? `<button style="border:0;background:transparent;padding:0;width:100%" onclick="openProof('${esc(order.proof_url)}')"><img class="proof" src="${esc(order.proof_url)}" alt="付款截图"></button>` : '<div class="sub">没有付款截图</div>'}
-      ${order.status === 'pending' && order.review_status === 'submitted' ? `<div class="actions"><button class="btn danger" onclick="openReject('${esc(order.id)}')">驳回</button><button class="btn approve" onclick="openApprove('${esc(order.id)}')">确认到账并加点</button></div>` : ''}
+      <div class="actions">
+        ${order.status === 'pending' && order.review_status === 'submitted' ? `<button class="btn danger" onclick="openReject('${esc(order.id)}')">驳回</button><button class="btn approve" onclick="openApprove('${esc(order.id)}')">确认到账并加点</button>` : ''}
+        <button class="btn danger" onclick="openDeleteOrder('${esc(order.id)}')">删除记录</button>
+      </div>
     </article>`;
   }).join('');
 }
@@ -155,6 +158,14 @@ window.openReject = (id) => {
     <label class="field"><span>原因</span><textarea id="rejectNote" maxlength="300" placeholder="例如：未在账单中查到、金额不一致、截图不清晰"></textarea></label>
     <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn danger" onclick="reviewOrder('${esc(id)}','reject')">确认驳回</button></div>`);
 };
+window.openDeleteOrder = (id) => {
+  const order = orders.find((item) => item.id === id);
+  if (!order) return;
+  openSheet(`<h2>删除订单记录</h2>
+    <p>这只会从核对后台和用户订单列表里移除这条记录，并删除对应付款截图。已经确认到账的点数不会被扣回。</p>
+    <p>订单 <b>${esc(shortId(order.id))}</b> · ${order.provider === 'wechat' ? '微信' : '支付宝'} ¥${Number(order.amount_cny || 0).toFixed(2)}</p>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn danger" onclick="deleteOrder('${esc(id)}')">确认删除</button></div>`);
+};
 window.closeSheet = closeSheet;
 window.reviewOrder = async (id, decision) => {
   if (busy) return;
@@ -176,6 +187,21 @@ window.reviewOrder = async (id, decision) => {
     await loadOrders(true);
   } catch (error) {
     alert('处理失败：' + error.message);
+  } finally {
+    busy = false;
+  }
+};
+window.deleteOrder = async (id) => {
+  if (busy) return;
+  busy = true;
+  try {
+    await api('admin_delete_order', {purchase_id:id});
+    closeSheet();
+    orders = orders.filter((item) => item.id !== id);
+    renderOrders();
+    await loadOrders(false);
+  } catch (error) {
+    alert('删除失败：' + error.message);
   } finally {
     busy = false;
   }
