@@ -19,7 +19,7 @@ const AI_PAYMENT_CHANNELS=[
 const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
 const AI_PURCHASE_NOTICE='生图API原生成功率约50%，单次扣费0.3元，算上失败重试和平台手续费，一张合格成品实际成本0.62-0.79元（已经尽力压低成本，原先每张成本在1元以上），定价统一按1元/张收取。定价不含人工辛苦费，全程自愿消费，没有强制消费。即便用户生成依旧失败，在接口已经扣费的情况下，你（用户）这边，会返还点数。本服务优势是出图稳定、出图速度较快；如果觉得不合适，大家可以自行去API站点购买接口。本系统只适合自己用的接口不稳定、花费更高的人使用。点数请按需购买，少量多次。购买点数之后不要更换浏览器，更换浏览器会导致点数消失！！！请将点数用完之后再换浏览器，如因换浏览器或手机而导致点数消失概不负责。';
 function aiPageScroll(){const sc=typeof $==='function'?$('.scroll'):null;return sc?sc.scrollTop:0;}
-function aiRenderStable(){const top=aiPageScroll();render();setTimeout(()=>{const n=typeof $==='function'?$('.scroll'):null;if(n)n.scrollTop=top;},0);}
+function aiRenderStable(){const top=aiPageScroll(),page=typeof $==='function'?$('#app .page'):null;if(page&&typeof cur==='function'&&cur().p==='aiaccount')page.innerHTML=renderAIAccount();else render();requestAnimationFrame(()=>{const n=typeof $==='function'?$('.scroll'):null;if(n)n.scrollTop=top;});}
 function aiHiddenPurchases(){const ac=aiCoreInit();if(!Array.isArray(ac.hiddenPurchases))ac.hiddenPurchases=[];return ac.hiddenPurchases;}
 function aiVisiblePurchases(){const hidden=new Set(aiHiddenPurchases().map(String));return (_aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases:[]).filter(x=>!hidden.has(String(x&&x.id||'')));}
 function aiHidePurchase(id){if(!id)return;const arr=aiHiddenPurchases(),sid=String(id);if(!arr.map(String).includes(sid))arr.unshift(sid);aiCoreInit().hiddenPurchases=arr.slice(0,80);save();aiRenderStable();toast('订单已从本机列表移除');}
@@ -173,7 +173,7 @@ function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);
 function aiToggleCore(){const ac=aiCoreInit();ac.enabled=false;save();aiRenderStable();toast('内置 AI 主通道已固定关闭');}
 function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();aiRenderStable();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
 function aiToggleImageApi(){if(aiImageReady()===false){toast('图片中转站尚未配置，暂时不能开启');return;}const cfg=aiImageInit();cfg.enabled=!aiImageRelayOn();save();aiRenderStable();toast(cfg.enabled?'图片生成已开启':'图片生成已关闭');}
-function aiImageFailText(e){const raw=String((e&&e.message)||e||'').replace(/^内置AI失败：/,'').slice(0,160);if(/upstream-timeout|timeout|timed out|aborted/i.test(raw))return '中转站生成超时，通常不是密钥错误；本次点数已退回，可以稍后换短一点的描述再试。';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(raw))return '中转站密钥或权限异常，本次点数已退回。';if(/404|model.*not.*found|not found/i.test(raw))return '接口地址或图片模型不匹配，本次点数已退回。';return raw||'图片生成失败，本次点数已退回。';}
+function aiImageFailText(e){const full=String((e&&e.message)||e||'').replace(/^内置AI失败：/,'');const raw=full.slice(0,180);if(/429|No images were successfully|relay-image-empty|no image/i.test(full))return '中转站上游这次没有成功出图或正在限流排队；后台花费为0时不会扣真实费用，本次AI点数已退回。稍后再试，或把描述写短一点。';if(/upstream-timeout|timeout|timed out|aborted/i.test(full))return '中转站生成超时，通常不是密钥错误；本次点数已退回，可以稍后换短一点的描述再试。';if(/fetch|network|load failed|cors/i.test(full))return '网络等待太久断开；如果后台显示429/花费0，说明是中转站上游没有成功出图，不是密钥或付款问题。';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(full))return '中转站密钥或权限异常，本次点数已退回。';if(/404|model.*not.*found|not found/i.test(full))return '接口地址或图片模型不匹配，本次点数已退回。';return raw||'图片生成失败，本次点数已退回。';}
 function aiOpenImageGenerator(){if(aiImageReady()===false){toast('图片中转站尚未配置');return;}if(!aiImageRelayOn()){toast('请先打开「启用图片生成」');return;}if(_aiImageBusy){toast('上一张图片还在生成中');return;}
   openModal(`<h3>图片生成</h3>
     <div class="hint" style="margin-bottom:10px">gpt-image-2 中转站 · 每张 ${aiPrice('image')} 点。生成失败自动退点。</div>
@@ -182,10 +182,10 @@ function aiOpenImageGenerator(){if(aiImageReady()===false){toast('图片中转�
     <button class="btn p" style="margin-top:10px" onclick="aiGenerateAccountImage()">生成图片 · ${aiPrice('image')}点</button>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 async function aiGenerateAccountImage(){if(_aiImageBusy)return;if(!aiImageRelayOn()){toast('图片生成没有开启');return;}const prompt=(document.getElementById('ai_image_prompt')&&document.getElementById('ai_image_prompt').value||'').trim(),size=(document.getElementById('ai_image_size')&&document.getElementById('ai_image_size').value)||'1024x1024';if(!prompt){toast('先写图片内容');return;}
-  _aiImageBusy=true;_aiImageStatus='正在调用图片中转站，请稍等…';_aiImageResult='';closeModal();if(cur().p==='aiaccount')render();
+  _aiImageBusy=true;_aiImageStatus='正在调用图片中转站，请稍等…';_aiImageResult='';closeModal();if(cur().p==='aiaccount')aiRenderStable();
   try{const d=await aiRelay('image',{prompt,size}),it=d&&d.data&&d.data.data&&d.data.data[0],raw=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!raw)throw new Error('图片中转站没有返回图片');_aiImageResult=typeof stableImageSrc==='function'?await stableImageSrc(raw):raw;_aiImageStatus='图片生成成功，已扣除 '+Number(d.charged||aiPrice('image'))+' 点';toast('图片生成成功');}
   catch(e){const refunded=e&&e.data&&Number(e.data.refunded||0),msg=aiImageFailText(e);_aiImageStatus='生成失败'+(refunded?'，已退回 '+refunded+' 点':'')+'：'+msg;toast(refunded?'生成失败，点数已退回':'图片生成失败');}
-  finally{_aiImageBusy=false;setTimeout(()=>aiAccountRefresh(true,true),500);if(cur().p==='aiaccount')render();}}
+  finally{_aiImageBusy=false;setTimeout(()=>aiAccountRefresh(true,true),500);if(cur().p==='aiaccount')aiRenderStable();}}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
 async function aiPullVoices(){toast('正在拉取音色…');

@@ -373,6 +373,14 @@ function relayImageResult(data: any) {
   throw new Error("relay-image-empty");
 }
 
+function imageFailCode(reason: string) {
+  if (/429|No images were successfully|relay-image-empty/i.test(reason)) return "image-upstream-no-output-or-rate-limit";
+  if (/upstream-timeout|timeout|aborted/i.test(reason)) return "image-upstream-timeout";
+  if (/401|403|unauthori|forbidden|no access|invalid.*key/i.test(reason)) return "image-auth-or-permission";
+  if (/404|model.*not.*found|not found/i.test(reason)) return "image-model-or-endpoint";
+  return "image-upstream-failed";
+}
+
 function hexToBase64(hex: string) {
   let bin = "";
   for (let i = 0; i < hex.length; i += 2) bin += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
@@ -815,16 +823,20 @@ Deno.serve(async (req) => {
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
         const reason = errText(e);
+        const reasonCode = imageFailCode(reason);
         await refund(userId, clientSecret, "image", c.cost, c.ledgerId, reason);
         const acct = await ensureAccount(userId, clientSecret);
         return json({
           ok: false,
           error: "relay-image-failed-refunded: " + reason,
+          reason_code: reasonCode,
           charged: 0,
           refunded: c.cost,
           balance: acct.points || 0,
           billed: false,
-          note: "中转站图片生成失败，本次点数已自动退回",
+          note: reasonCode === "image-upstream-no-output-or-rate-limit"
+            ? "中转站上游没有成功出图或正在限流，本次点数已自动退回"
+            : "中转站图片生成失败，本次点数已自动退回",
         }, 502);
       }
     }

@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v538 · 订单清理与生图超时优化';
+const APP_VER='v539 · 生图失败提示与开关稳态';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -626,7 +626,9 @@ function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/10
 
 /* =================== API =================== */
 function apiErrorCN(status,raw){status=+status||0;const src=String(raw||'').replace(/\s+/g,' ').trim();let tip='接口返回异常，请检查地址、密钥和模型名';
-  if(status===400)tip='请求格式或模型名不兼容；先确认模型名完全正确，再换兼容接口测试';
+  if(/relay-image-failed-refunded|model-http-429|status_code[=:]\s*429|No images were successfully|relay-image-empty/i.test(src))tip='图片中转站上游这次没有成功出图或正在限流排队，本次点数已退回；后台花费为0说明没有扣到真实费用。稍后再试，或把描述写短一点。';
+  else if(/relay-image.*upstream-timeout|upstream-timeout/i.test(src))tip='图片中转站上游生成超时，本次点数会自动退回；这通常不是密钥错误，是上游排队太久。';
+  else if(status===400)tip='请求格式或模型名不兼容；先确认模型名完全正确，再换兼容接口测试';
   else if(status===401)tip='API Key 无效、过期或没有正确填写；重新复制密钥，注意不要带空格';
   else if(status===402)tip='账户余额或点数不足，需要充值后再试';
   else if(status===403)tip='密钥没有这个模型的权限，或平台限制了地区/IP；去平台控制台检查权限';
@@ -641,7 +643,7 @@ function apiErrorCN(status,raw){status=+status||0;const src=String(raw||'').repl
   else if(status===503)tip='服务暂时拥堵或维护中；稍后重试';
   else if(status===504)tip='上游响应超时；稍后重试或换速度更快的模型';
   else if(!status&&/abort|timeout|超时/i.test(src))tip='请求超时；检查网络、接口地址，或换响应更快的模型';
-  else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='网络连接失败或接口禁止网页跨域；确认网址能访问，并询问平台是否支持网页调用（CORS）';
+  else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='网络连接失败或接口等待太久断开；如果刚才是生成图片，多半是中转站上游排队/限流，不是付款或密钥错误。';
   const cn=/[\u4e00-\u9fa5]/.test(src)?src.slice(0,90):'';return(status?'HTTP '+status+'：':'')+tip+(cn&&cn.indexOf(tip)<0?'（'+cn+'）':'');}
 function apiCaughtCN(e){const s=String((e&&e.message)||e||'');const m=s.match(/HTTP\s*(\d{3})/i);return apiErrorCN(m?+m[1]:0,s);}
 function aiCoreOn(){return false;}
@@ -659,7 +661,7 @@ function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}c
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
   const uid=aiUserId(),sec=aiUserSecret();
-  let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},190000);}catch(e){throw new Error(apiCaughtCN(e));}
+  let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},action==='image'?360000:190000);}catch(e){throw new Error(apiCaughtCN(e));}
   const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(msg)?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
   if(typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);
   return d;}
