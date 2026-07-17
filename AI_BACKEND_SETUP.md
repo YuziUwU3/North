@@ -32,7 +32,7 @@ OPENAI_BASE_URL=https://vg.v1api.cc/v1
 CHAT_MODEL=gemini-2.5-pro
 VISION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gpt-image-2
-FREE_POINTS=0
+FREE_POINTS=30
 ```
 
 注意：Supabase 不允许自定义 Secret 以 `SUPABASE_` 开头，所以这里用的是 `PHONE_SUPABASE_URL` 和 `PHONE_SERVICE_ROLE_KEY`。
@@ -79,3 +79,15 @@ select phone_ai_grant_points('这里换成用户ID', 1000, 'test');
 3. 点测试连接。
 4. 打开“使用内置AI”。
 5. 给角色的语音音色设置成 API 音色，再测试语音。
+
+## 8. 充值与音色克隆订单
+
+当前点数套餐为 `¥9.9/250点`、`¥29.9/850点`、`¥59.9/1800点`、`¥99.9/3200点`；新账户首次赠送 30 点。
+
+快速音色克隆为一次性服务，价格 `¥19.9/个`，不会增加账户点数。确认收到付款后执行：
+
+```sql
+select phone_ai_confirm_purchase('订单UUID', '支付宝或微信流水号');
+```
+
+该函数支持重复执行保护。音色克隆订单确认后，在订单列表显示“音色克隆”，用户按联系方式发送订单号、已获授权的干净音频和角色名称。

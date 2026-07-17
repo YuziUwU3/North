@@ -78,3 +78,5 @@ begin
   return v_balance;
 end;
 $$;
+
+-- 个人收款码阶段的订单确认函数见 supabase_ai_recharge_v533.sql。

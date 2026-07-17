@@ -1,17 +1,25 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiUnlocked=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='';
+let _aiAcct=null,_aiAcctBusy=false,_aiUnlocked=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiPayBusy=false;
 const AI_VOICE_PRESETS=[
   {id:'phonevoice20260709b',name:'月岛萤',clone:true,preset:true},
   {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
 ];
 const AI_DEFAULT_TTS_VOICE='male-qn-qingse';
+const AI_RECHARGE_FALLBACK=[
+  {id:'p_990',name:'轻量体验',amount_cny:9.9,points:250,tag:'初次尝试'},
+  {id:'p_2990',name:'日常畅聊',amount_cny:29.9,points:850,tag:'推荐'},
+  {id:'p_5990',name:'深度陪伴',amount_cny:59.9,points:1800,tag:'更耐用'},
+  {id:'p_9990',name:'长期相伴',amount_cny:99.9,points:3200,tag:'单点更省'},
+  {id:'svc_clone_1990',name:'快速音色克隆',amount_cny:19.9,points:0,kind:'service',tag:'一次性服务'}
+];
+const AI_PAYMENT_CHANNELS=[
+  {id:'alipay',name:'支付宝',qr:'./pay-assets/alipay-receive.jpg',url:'https://qr.alipay.com/fkx10690k51wzfzjiusi25e'},
+  {id:'wechat',name:'微信支付',qr:'./pay-assets/wechat-receive.jpg',url:'wxp://f2f0lVGTDekFcpCiykQIBN6eIi4U3AgLK_6P-So5V0ZLA4szqzbZp3beFjBR0SFV_GL1'}
+];
+const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
 function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 
-function openAIAccount(){if(_aiUnlocked){go('aiaccount');return;}
-  openModal(`<h3>AI账户密码</h3><div class="hint">这里是后台测试入口，输入密码后进入。</div>
-    <div class="field"><input id="ai_pin" type="password" inputmode="numeric" maxlength="8" placeholder="输入密码"></div>
-    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="aiUnlock()">进入</button></div>`);
-  setTimeout(()=>{const el=$('#ai_pin');if(el){el.focus();el.onkeydown=e=>{if(e.key==='Enter')aiUnlock();};}},60);}
+function openAIAccount(){_aiUnlocked=true;go('aiaccount');}
 function aiUnlock(){const v=(($('#ai_pin')||{}).value||'').trim();if(v!=='0414'){toast('密码不对');return;}_aiUnlocked=true;closeModal();go('aiaccount');}
 function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
 function aiVoiceEnabled(){return typeof ttsEnabled==='function'?ttsEnabled(S.settings.tts||{}):!!((S.settings.tts||{}).enabled);}
@@ -20,16 +28,43 @@ function aiExternalTts(){const t=(typeof ttsCfg==='function'?ttsCfg():(S.setting
 function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:120,tts:10,summary:2};return p[k]||0;}
 function aiLedgerTime(v){if(!v)return '';const d=new Date(v);if(isNaN(d))return String(v).replace('T',' ').slice(0,16);return d.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}
 function aiLedgerRows(){const rows=((_aiAcct&&_aiAcct.ledger)||[]).slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)),names={chat:'聊天',vision:'识图',image:'生图',tts:'语音',summary:'总结',manual:'手动加点',free:'赠送'};return rows.length?rows.map(x=>{const meta=x.meta||{},failed=x.status==='failed',billed=failed&&(meta.charged||x.billed),title=(names[x.feature]||x.feature)+(failed?(billed?' · 失败已计费':' · 失败未计费'):'');const note=meta.note||x.note||(failed?(meta.reason||'模型返回失败'):'');return `<div class="bill"><div><b>${esc(title)}</b><small>${esc(aiLedgerTime(x.created_at))}${note?' · '+esc(String(note).slice(0,80)):''}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`;}).join(''):'<div class="empty">还没有流水</div>';}
+function aiRechargePlans(){return _aiAcct&&Array.isArray(_aiAcct.plans)&&_aiAcct.plans.length?_aiAcct.plans:AI_RECHARGE_FALLBACK;}
+function aiPlanById(id){return aiRechargePlans().find(x=>String(x.id)===String(id));}
+function aiPaymentChannel(id){return AI_PAYMENT_CHANNELS.find(x=>x.id===id);}
+function aiPurchaseIsService(x){return Number(x&&x.points||0)===0&&Math.abs(Number(x&&x.amount_cny||0)-19.9)<.01;}
+function aiPurchaseRows(){const rows=(_aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases:[]).slice(0,6),status={pending:'等待核对',paid:'已确认',cancelled:'已取消',refunded:'已退款'};
+  return rows.length?rows.map(x=>{const service=aiPurchaseIsService(x);return `<div class="bill"><div><b>${esc(status[x.status]||x.status)} · ${esc(x.provider==='wechat'?'微信':'支付宝')}</b><small>${esc(aiLedgerTime(x.created_at))} · 订单 ${esc(String(x.id||'').slice(0,8).toUpperCase())}</small></div><div class="${x.status==='paid'?'pos':''}">${service?'音色克隆':Number(x.points||0).toLocaleString()+'点'}</div></div>`;}).join(''):'<div class="hint" style="padding:0 14px 12px">还没有充值或服务订单</div>';}
+function aiRechargeCards(){return aiRechargePlans().filter(p=>p.kind!=='service').map((p,i)=>`<button onclick="aiOpenRecharge('${esc(p.id)}')" style="min-width:0;text-align:left;border:1px solid ${i===1?'rgba(255,183,210,.7)':'rgba(255,255,255,.1)'};background:${i===1?'#24212a':'#1c1d22'};color:#f5f5f7;border-radius:8px;padding:13px 12px;cursor:pointer">
+    <span style="display:block;font-size:12px;color:${i===1?'#ffb7d2':'#9297a1'}">${esc(p.tag||p.name||'充值套餐')}</span>
+    <b style="display:block;font-size:23px;margin:5px 0 2px;letter-spacing:0">${Number(p.points||0).toLocaleString()}<small style="font-size:12px;font-weight:500;color:#a8adb6;margin-left:3px">点</small></b>
+    <span style="font-size:14px;color:#e1e2e6">¥${Number(p.amount_cny||0).toFixed(1)}</span>
+    <small style="display:block;color:#747985;margin-top:5px">约 ${Math.floor(Number(p.points||0)/Math.max(1,aiPrice('tts')))} 条普通语音</small>
+  </button>`).join('');}
+function aiServiceCards(){return aiRechargePlans().filter(p=>p.kind==='service').map(p=>`<button onclick="aiOpenRecharge('${esc(p.id)}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border:1px solid rgba(255,255,255,.12);background:#1c1d22;color:#f5f5f7;border-radius:8px;padding:14px;cursor:pointer">
+    <span><b style="display:block;font-size:16px">${esc(p.name)}</b><small style="display:block;color:#8f949d;margin-top:5px">一次克隆、试听并接入小手机</small></span>
+    <b style="font-size:20px;white-space:nowrap">¥${Number(p.amount_cny||0).toFixed(1)}</b>
+  </button>`).join('');}
 
 function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);},80);
   const bal=_aiAcct&&_aiAcct.account?(_aiAcct.account.points||0):'--';
   const voice=(tts.voice)||'未选择';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" onclick="aiAccountRefresh()">刷新</span></div>
   <div class="scroll" style="background:#0f1117;color:#e8eaf0;padding:12px">
-    <div style="background:linear-gradient(135deg,#1f2937,#4f46e5);border-radius:16px;padding:18px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.12)">
-      <div style="font-size:12px;color:#c7d2fe">小手机内置AI点数</div>
+    <div style="background:#17191f;border-radius:8px;padding:18px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 28px rgba(0,0,0,.2)">
+      <div style="font-size:12px;color:#aeb4bf">小手机内置AI点数</div>
       <div style="font-size:38px;font-weight:700;margin:6px 0">${bal}</div>
       <div style="font-size:12px;color:#cbd5e1;word-break:break-all">用户ID：${esc(id)} <button class="minibtn" onclick="aiCopyId()" style="margin-left:6px">复制</button></div>
+    </div>
+    <div style="display:flex;align-items:end;justify-content:space-between;padding:5px 2px 9px">
+      <div><b style="font-size:17px">充值点数</b><small style="display:block;color:#777;margin-top:3px">新用户赠送30点，付款后按订单核对到账</small></div>
+      <button class="minibtn" onclick="aiAccountRefresh()">刷新到账</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">${aiRechargeCards()}</div>
+    <div style="padding:5px 2px 9px"><b style="font-size:17px">音色服务</b><small style="display:block;color:#777;margin-top:3px">请确认拥有声音授权，再提交干净音频</small></div>
+    <div style="margin-bottom:12px">${aiServiceCards()}</div>
+    <div class="section">
+      <div style="padding:12px 14px;font-weight:600;color:#d8dbe2">充值与服务订单</div>
+      ${aiPurchaseRows()}
     </div>
     <div class="section">
       <div class="it"><span>使用内置AI<br><small style="color:#888">聊天/识图/生图主通道暂不开放；开启需要管理密码。语音API有单独开关。</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
@@ -46,8 +81,44 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">最近流水<small style="display:block;color:#777;font-weight:400;margin-top:3px">按本地时间显示，最多保留80条</small></div>
       <div id="ai_ledger">${aiLedgerRows()}</div>
     </div>
-    <div class="hint">充值套餐已暂时隐藏。测试阶段由你在 Supabase 手动给用户ID加点。</div>
+    <div class="hint">个人收款码暂不支持自动支付回调。付款后保留订单号，核对完成后点数会进入本账户。</div>
   </div>`;}
+
+function aiOpenRecharge(planId){const p=aiPlanById(planId);if(!p)return;
+  openModal(`<h3>${esc(p.name||'充值点数')}</h3>
+    <div style="text-align:center;padding:6px 0 14px"><b style="font-size:30px">${p.kind==='service'?'1 个音色':Number(p.points||0).toLocaleString()+'点'}</b><div style="color:#999;margin-top:4px">应付 ¥${Number(p.amount_cny||0).toFixed(1)}</div></div>
+    <div class="hint">${p.kind==='service'?'包含一次快速克隆、试听和接入小手机。付款后添加微信，发送订单号、已获授权的干净音频和角色名称。':'选择付款方式后会创建专属订单，并尝试打开对应收款页。付款金额必须与套餐一致。'}</div>
+    <div class="btns" style="margin-top:12px">
+      <button class="btn" style="background:#1677ff;color:#fff" ${_aiPayBusy?'disabled':''} onclick="aiCreatePurchase('${esc(p.id)}','alipay')">支付宝</button>
+      <button class="btn" style="background:#07c160;color:#fff" ${_aiPayBusy?'disabled':''} onclick="aiCreatePurchase('${esc(p.id)}','wechat')">微信支付</button>
+    </div>
+    <button class="btn g" style="margin-top:10px" onclick="closeModal()">暂不充值</button>`);}
+
+async function aiCreatePurchase(planId,provider){if(_aiPayBusy)return;const p=aiPlanById(planId),channel=aiPaymentChannel(provider);if(!p||!channel)return;_aiPayBusy=true;
+  try{const d=await aiRelay('purchase_create',{plan_id:planId,provider});if(!_aiAcct)_aiAcct={};if(d.purchase){_aiAcct.purchases=_aiAcct.purchases||[];_aiAcct.purchases.unshift(d.purchase);_aiAcct.purchases=_aiAcct.purchases.slice(0,12);}aiShowPayment(d.purchase,p,d.payment_note,channel);setTimeout(()=>aiLaunchPayment(provider,true),550);}
+  catch(e){toast('创建订单失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}
+  finally{_aiPayBusy=false;}}
+
+function aiShowPayment(purchase,plan,note,channel){if(!purchase||!plan||!channel)return;const oid=String(purchase.id||'');
+  openModal(`<h3>${esc(channel.name)}收款码</h3>
+    <div style="text-align:center;color:#999;font-size:13px;margin-bottom:8px">支付 ¥${Number(plan.amount_cny||0).toFixed(1)} · ${plan.kind==='service'?'快速音色克隆 1 个':'到账 '+Number(plan.points||0).toLocaleString()+'点'}</div>
+    <img src="${esc(channel.qr)}" alt="${esc(channel.name)}收款码" onclick="viewImg('${esc(channel.qr)}')" style="display:block;width:min(72vw,280px);max-height:44vh;object-fit:contain;margin:0 auto;border-radius:8px;background:#fff">
+    <div style="margin:12px 0;background:#202126;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;color:#ddd;font-size:13px;line-height:1.7">
+      订单号：<b>${esc(oid.slice(0,8).toUpperCase())}</b><br>付款备注：<b>${esc(note||'')}</b><br>
+      <small style="color:#888">${plan.kind==='service'?'付款后添加微信并发送订单号，等待人工确认。':'付款后返回小手机，等待核对并点击“刷新到账”。'}</small>
+    </div>
+    <div class="btns"><button class="btn g" onclick="aiCopyPayment('${esc(note||oid)}')">复制备注</button><button class="btn p" onclick="aiLaunchPayment('${esc(channel.id)}')">打开${esc(channel.name)}</button></div>
+    ${plan.kind==='service'?`<button class="btn p" style="margin-top:10px;background:#3a3d46" onclick="aiShowCloneContact('${esc(note||oid)}')">添加微信办理</button>`:''}
+    <button class="btn g" style="margin-top:10px" onclick="closeModal();aiAccountRefresh()">我已支付，刷新订单</button>`);}
+
+function aiShowCloneContact(note){openModal(`<h3>添加微信办理音色克隆</h3>
+  <div class="hint" style="margin-bottom:10px">添加后请发送：<b>${esc(note||'克隆订单号')}</b>、已获授权的干净音频、角色名称。请勿提交未经本人许可的真人声音。</div>
+  <img src="${esc(AI_CLONE_CONTACT_QR)}" alt="音色克隆联系方式" onclick="viewImg('${esc(AI_CLONE_CONTACT_QR)}')" style="display:block;width:min(76vw,300px);max-height:58vh;object-fit:contain;margin:0 auto;border-radius:8px;background:#fff">
+  <div class="btns" style="margin-top:12px"><button class="btn g" onclick="aiCopyPayment('${esc(note||'')}')">复制订单号</button><button class="btn p" onclick="viewImg('${esc(AI_CLONE_CONTACT_QR)}')">查看大图</button></div>
+  <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+
+function aiCopyPayment(text){try{navigator.clipboard&&navigator.clipboard.writeText(text);}catch(_){}toast('已复制付款备注');}
+function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);if(!c||!c.url)return;if(!automatic)toast('正在打开'+c.name+'…');try{location.href=c.url;}catch(_){if(!automatic)toast('没有自动打开，请长按保存收款码后扫码');}}
 
 function aiToggleCore(){const ac=aiCoreInit();if(ac.enabled){ac.enabled=false;save();render();toast('已关闭内置AI');return;}
   openModal(`<h3>开启内置AI</h3><div class="hint">聊天/识图/生图主通道暂不开放。确认要开启请输入管理密码。</div>
@@ -107,7 +178,7 @@ async function aiTestVoice(){const text='我在测试这条语音的花销和声
   finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')render();}}
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId(),points:0},pricing:null,plans:null,ledger:[]};
-  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.account)_aiAcct.account=d.account;
+  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(d.account)_aiAcct.account=d.account;
   if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;}
   if(d.charged){const feature=action||'chat';_aiAcct.ledger=_aiAcct.ledger||[];_aiAcct.ledger.unshift({kind:'charge',feature,points:-d.charged,balance_after:d.balance,status:d.ok===false?'failed':'done',billed:!!d.billed,note:d.note||d.error||'',created_at:new Date().toISOString()});_aiAcct.ledger=_aiAcct.ledger.slice(0,80);}
   if(cur().p==='aiaccount')setTimeout(()=>{if(cur().p==='aiaccount')render();},30);}

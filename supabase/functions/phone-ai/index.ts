@@ -4,7 +4,7 @@
 // OPENAI_API_KEY
 // 可选：OPENAI_BASE_URL=https://api.openai.com/v1
 // 可选：CHAT_MODEL=gpt-4o-mini, VISION_MODEL=gpt-4o-mini, IMAGE_MODEL=gpt-image-2
-// 可选：FREE_POINTS=0（测试期建议 0，发布后再按邀请码或支付结果赠送）
+// 可选：FREE_POINTS=30（新账户首次体验赠送，设置为 0 可关闭）
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
@@ -57,9 +57,11 @@ function guardedImagePrompt(prompt: unknown) {
 }
 
 const PLANS = [
-  { id: "p_990", name: "体验包", amount_cny: 9.9, points: 1000 },
-  { id: "p_1990", name: "标准包", amount_cny: 19.9, points: 2300 },
-  { id: "p_3990", name: "大容量包", amount_cny: 39.9, points: 5000 },
+  { id: "p_990", name: "轻量体验", amount_cny: 9.9, points: 250, tag: "初次尝试" },
+  { id: "p_2990", name: "日常畅聊", amount_cny: 29.9, points: 850, tag: "推荐" },
+  { id: "p_5990", name: "深度陪伴", amount_cny: 59.9, points: 1800, tag: "更耐用" },
+  { id: "p_9990", name: "长期相伴", amount_cny: 99.9, points: 3200, tag: "单点更省" },
+  { id: "svc_clone_1990", name: "快速音色克隆", amount_cny: 19.9, points: 0, kind: "service", tag: "一次性服务" },
 ];
 
 const supabase = createClient(
@@ -99,7 +101,7 @@ function getSecret(req: Request, body: any) {
 }
 
 async function ensureAccount(userId: string, clientSecret: string) {
-  const free = Math.max(0, Number(Deno.env.get("FREE_POINTS") || 0) || 0);
+  const free = Math.max(0, Number(Deno.env.get("FREE_POINTS") ?? 30) || 0);
   const { data: old, error: selErr } = await supabase
     .from("phone_ai_accounts")
     .select("user_id,points,disabled,free_granted,client_secret")
@@ -399,7 +401,49 @@ Deno.serve(async (req) => {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(80);
-      return json({ ok: true, account: publicAccount(acct), pricing: PRICE, plans: PLANS, ledger: ledger || [] });
+      const { data: purchases } = await supabase
+        .from("phone_ai_purchases")
+        .select("id,provider,amount_cny,points,status,created_at,paid_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(12);
+      return json({
+        ok: true,
+        account: publicAccount(acct),
+        pricing: PRICE,
+        plans: PLANS,
+        ledger: ledger || [],
+        purchases: purchases || [],
+      });
+    }
+
+    if (action === "purchase_create") {
+      await ensureAccount(userId, clientSecret);
+      const planId = String(body.plan_id || "").trim();
+      const provider = String(body.provider || "").trim().toLowerCase();
+      const plan = PLANS.find((item) => item.id === planId);
+      if (!plan) return json({ ok: false, error: "invalid-purchase-plan" }, 400);
+      if (provider !== "alipay" && provider !== "wechat") {
+        return json({ ok: false, error: "invalid-payment-provider" }, 400);
+      }
+      const { data: purchase, error } = await supabase
+        .from("phone_ai_purchases")
+        .insert({
+          user_id: userId,
+          provider,
+          amount_cny: plan.amount_cny,
+          points: plan.points,
+          status: "pending",
+        })
+        .select("id,provider,amount_cny,points,status,created_at")
+        .single();
+      if (error) throw error;
+      return json({
+        ok: true,
+        purchase,
+        plan,
+        payment_note: `${plan.kind === "service" ? "CLONE" : "AI"}-${String(purchase.id).replace(/-/g, "").slice(0, 10).toUpperCase()}`,
+      });
     }
 
     if (action === "chat") {
