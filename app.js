@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v536 · 官方图片生成与购买提醒';
+const APP_VER='v537 · 中转站图片与点数提醒';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -733,7 +733,7 @@ async function visionAPI(dataURL,prompt,opt){opt=opt||{};const a=S.settings.visi
 }
 /* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
 async function genImage(prompt){
-  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536',quality:'medium'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('官方图片接口没有返回图片');return url;}
+  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
   const ch=S.settings.chat||{};
   const base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,'');
   const key=(S.settings.imgKey||ch.key)||'';
@@ -1065,7 +1065,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=536';
+  const url='sw.js?v=537';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2393,7 +2393,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     </div>
     <div class="section" id="set_image">
       <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
-      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时生成图片；AI账户里开启官方图片时每张30点，外置接口则按对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
+      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时生成图片；AI账户里开启中转站图片时每张20点，外置接口则按对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
       <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>

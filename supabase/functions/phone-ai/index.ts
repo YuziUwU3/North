@@ -1,10 +1,8 @@
 // 小手机内置 AI · Supabase Edge Function
 // 环境变量：
 // PHONE_SUPABASE_URL, PHONE_SERVICE_ROLE_KEY
-// OPENAI_API_KEY（现有聊天/识图中转站）
-// 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL
-// OPENAI_IMAGE_API_KEY（仅官方 OpenAI 图片接口，和中转站完全分开）
-// 可选：OPENAI_IMAGE_MODEL=gpt-image-2
+// OPENAI_API_KEY（现有聊天/识图/图片生成中转站）
+// 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL, IMAGE_MODEL=gpt-image-2
 // 可选：FREE_POINTS=30（新账户首次体验赠送，设置为 0 可关闭）
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -19,7 +17,7 @@ const cors = {
 const PRICE: Record<string, number> = {
   chat: 10,
   vision: 25,
-  image: 30,
+  image: 20,
   tts: 10,
   summary: 2,
 };
@@ -259,6 +257,40 @@ async function refund(userId: string, clientSecret: string, feature: string, poi
   await finishCharge(ledgerId, false, { refunded: true, reason });
 }
 
+async function recoverStalePendingCharges(userId: string, clientSecret: string) {
+  const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const { data: pending } = await supabase.from("phone_ai_ledger")
+    .select("id,feature,points")
+    .eq("user_id", userId)
+    .eq("kind", "charge")
+    .eq("feature", "image")
+    .eq("status", "pending")
+    .lt("created_at", cutoff)
+    .limit(8);
+  for (const row of pending || []) {
+    const points = Math.abs(Number(row.points || 0));
+    if (!points) continue;
+    const { data: claimed } = await supabase.from("phone_ai_ledger")
+      .update({ status: "failed", meta: { refunded: true, reason: "stale-pending-auto-refund" } })
+      .eq("id", row.id)
+      .eq("status", "pending")
+      .select("id");
+    if (!claimed?.length) continue;
+    const acct = await ensureAccount(userId, clientSecret);
+    const next = Number(acct.points || 0) + points;
+    await supabase.from("phone_ai_accounts").update({ points: next }).eq("user_id", userId);
+    await supabase.from("phone_ai_ledger").insert({
+      user_id: userId,
+      kind: "refund",
+      feature: row.feature || "image",
+      points,
+      balance_after: next,
+      request_id: row.id,
+      meta: { reason: "stale-pending-auto-refund" },
+    });
+  }
+}
+
 async function refundTtsLedger(userId: string, clientSecret: string, ledgerId: string, reason: string) {
   if (!ledgerId) throw new Error("missing-ledger-id");
   const { data: row, error } = await supabase
@@ -293,31 +325,52 @@ async function failCharged(ledgerId: string, cost: number, balance: number, mode
   return json({ ok: false, error: "model-failed-charged: " + reason, charged: cost, balance, billed: true, note }, 502);
 }
 
-async function openai(path: string, body: unknown) {
+async function openai(path: string, body: unknown, timeoutMs = 180000) {
   const base = (Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/+$/, "");
   const key = Deno.env.get("OPENAI_API_KEY") || "";
   if (!key) throw new Error("missing-openai-key");
-  const r = await fetch(base + path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify(body),
-  });
-  const data = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(`model-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
-  return data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort("upstream-timeout"), Math.max(1000, timeoutMs));
+  try {
+    const r = await fetch(base + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(`model-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-async function openaiImage(body: unknown) {
-  const key = Deno.env.get("OPENAI_IMAGE_API_KEY") || "";
-  if (!key) throw new Error("missing-openai-image-key");
-  const r = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify(body),
-  });
-  const data = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(`official-image-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 220)}`);
-  return data;
+function relayImageResult(data: any) {
+  const direct = data?.data?.[0];
+  if (direct?.url || direct?.b64_json) return { data: [direct] };
+  const message = data?.choices?.[0]?.message || {};
+  const candidates: string[] = [];
+  const add = (value: unknown) => {
+    const text = String(value || "").trim();
+    if (text) candidates.push(text);
+  };
+  add(message?.image_url?.url || message?.image_url);
+  for (const item of Array.isArray(message?.images) ? message.images : []) {
+    add(item?.image_url?.url || item?.image_url || item?.url || item?.b64_json);
+  }
+  if (Array.isArray(message?.content)) {
+    for (const part of message.content) add(part?.image_url?.url || part?.image_url || part?.url || part?.text);
+  } else add(message?.content);
+  for (const raw of candidates) {
+    const dataUrl = raw.match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i)?.[0]?.replace(/\s+/g, "");
+    if (dataUrl) return { data: [{ b64_json: dataUrl.slice(dataUrl.indexOf(",") + 1) }] };
+    const markdown = raw.match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i)?.[1];
+    const plain = raw.match(/https?:\/\/[^\s<>"')\]]+/i)?.[0];
+    const url = markdown || plain;
+    if (url) return { data: [{ url }] };
+  }
+  throw new Error("relay-image-empty");
 }
 
 function hexToBase64(hex: string) {
@@ -569,6 +622,7 @@ Deno.serve(async (req) => {
     if (!clientSecret) return json({ ok: false, error: "missing-secret" }, 400);
 
     if (action === "account") {
+      await recoverStalePendingCharges(userId, clientSecret);
       const acct = await ensureAccount(userId, clientSecret);
       const { data: ledger } = await supabase
         .from("phone_ai_ledger")
@@ -587,7 +641,7 @@ Deno.serve(async (req) => {
         account: publicAccount(acct),
         pricing: PRICE,
         plans: PLANS,
-        capabilities: { image: !!Deno.env.get("OPENAI_IMAGE_API_KEY") },
+        capabilities: { image: !!(Deno.env.get("OPENAI_API_KEY") && Deno.env.get("OPENAI_BASE_URL")) },
         ledger: ledger || [],
         purchases: purchases || [],
       });
@@ -742,19 +796,22 @@ Deno.serve(async (req) => {
 
     if (action === "image") {
       const c = await charge(userId, clientSecret, "image");
-      const model = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-2";
+      const model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
       const allowedSizes = new Set(["1024x1024", "1024x1536", "1536x1024"]);
       const size = allowedSizes.has(String(body.size || "")) ? String(body.size) : "1024x1024";
       try {
-        const data = await openaiImage({
+        const upstream = await openai("/images/generations", {
           model,
           prompt: guardedImagePrompt(body.prompt).slice(0, 1600),
           n: 1,
           size,
-          quality: "medium",
+          quality: "low",
           output_format: "jpeg",
-        });
-        await finishCharge(c.ledgerId, true, { model, provider: "official-openai", quality: "medium", size });
+          output_compression: 72,
+          response_format: "url",
+        }, 105000);
+        const data = relayImageResult(upstream);
+        await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint: "images-generations", quality: "low", size });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
         const reason = errText(e);
@@ -762,12 +819,12 @@ Deno.serve(async (req) => {
         const acct = await ensureAccount(userId, clientSecret);
         return json({
           ok: false,
-          error: "official-image-failed-refunded: " + reason,
+          error: "relay-image-failed-refunded: " + reason,
           charged: 0,
           refunded: c.cost,
           balance: acct.points || 0,
           billed: false,
-          note: "官方图片生成失败，本次点数已自动退回",
+          note: "中转站图片生成失败，本次点数已自动退回",
         }, 502);
       }
     }

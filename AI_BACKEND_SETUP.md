@@ -31,14 +31,13 @@ OPENAI_API_KEY=你的聊天/识图中转站 key
 OPENAI_BASE_URL=https://vg.v1api.cc/v1
 CHAT_MODEL=gemini-2.5-pro
 VISION_MODEL=gemini-2.5-pro
-OPENAI_IMAGE_API_KEY=你的官方 OpenAI API Key（仅用于图片生成）
-OPENAI_IMAGE_MODEL=gpt-image-2
+IMAGE_MODEL=gpt-image-2
 FREE_POINTS=30
 ```
 
 注意：Supabase 不允许自定义 Secret 以 `SUPABASE_` 开头，所以这里用的是 `PHONE_SUPABASE_URL` 和 `PHONE_SERVICE_ROLE_KEY`。
 
-图片生成固定请求官方 `https://api.openai.com/v1/images/generations`，不会读取或覆盖聊天中转站的 `OPENAI_BASE_URL`。
+图片生成复用已经部署的 `OPENAI_BASE_URL` 和 `OPENAI_API_KEY`，通过中转站的 `/v1/images/generations` 请求 `IMAGE_MODEL`。不需要额外配置官方 OpenAI Key。
 
 ## 4. 海螺语音 Secrets
 
@@ -60,7 +59,7 @@ TTS_CNY_PER_CHAR=0.0002
 ```text
 文字聊天：10 点 / 次
 识图：25 点 / 次
-生成图片：120 点 / 张
+生成图片：20 点 / 张
 语音生成：10 点 / 次
 总结：2 点 / 次
 ```

@@ -49,8 +49,8 @@ assert.match(account,/function aiLaunchPayment\(provider,automatic\)/);
 assert.match(account,/\.\/pay-assets\/alipay-receive\.jpg/);
 assert.match(account,/\.\/pay-assets\/wechat-receive\.jpg/);
 assert.match(account,/\.\/pay-assets\/wechat-contact\.jpg/);
-assert.match(html,/ai-account\.js\?v=536/);
-assert.match(sw,/north-shell-v536/);
+assert.match(html,/ai-account\.js\?v=537/);
+assert.match(sw,/north-shell-v537/);
 
 for(const file of ['alipay-receive.jpg','wechat-receive.jpg','wechat-contact.jpg']){
   const stat=fs.statSync(path.join(root,'pay-assets',file));
