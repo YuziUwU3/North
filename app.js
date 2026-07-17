@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v544 · 存储提醒修正';
+const APP_VER='v545 · 引用上下文修正';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -786,6 +786,12 @@ async function fillGenImage(msg,prompt){
 }
 
 /* =================== 提示词 =================== */
+function quoteContextText(m,kind){
+  const q=(m&&m.quote&&m.quote.text?String(m.quote.text).trim():'');
+  if(!q)return '';
+  if(m.quote.who==='ta')return kind==='voice'?'（我引用了你刚说的那句「'+q+'」，就这一句）':'（我引用了你刚说的那句「'+q+'」，专门就这一句，我说：）';
+  return kind==='voice'?'（我引用了我前面说的那句「'+q+'」，就这一句）':'（我引用了我前面说的那句「'+q+'」，现在补充说：）';
+}
 function msgToText(m){
   if(m.role==='assistant'){
     if(m.type==='familycard')return '[我给你开通了一张亲属卡，每月额度¥'+(m.quota||0)+(m.bound?'，你已绑定，可以用我的额度买东西':'，等你接受绑定')+']';
@@ -809,7 +815,7 @@ function msgToText(m){
     case 'familybuy':return '[我刚用你给的亲属卡买了「'+m.name+'」，花了¥'+(+m.price).toFixed(2)+'，本月这卡已用¥'+(+m.used).toFixed(2)+'/'+(+m.quota).toFixed(0)+']';
     case 'familyreq':return '[我向你申请绑定一张亲属卡，想用你的额度买点东西]';
     case 'weblink':return '[我转发给你一条联网搜到的资料：'+m.title+'——'+((m.snippet||'').slice(0,120))+']';
-    case 'text':return (m.quote&&m.quote.who==='ta'&&m.quote.text)?('（我引用了你刚说的那句「'+m.quote.text+'」，专门就这一句，我说：）'+m.content):m.content;
+    case 'text':{const q=quoteContextText(m,'text');return q?(q+(m.content||'')):(m.content||'');}
     case 'image':return m.desc?'[我发了一张照片。你已经看到了真实画面，画面是：'+m.desc+'。请直接结合画面回应，绝对不要说图片没收到、没显示或识图失败。]':m.visionState==='pending'?'[我刚发了一张照片，画面仍在载入；先等待识图完成，不要抢先回复，也不要说没收到图片。]':'[我发了一张照片，图片已经送达，但这一张的画面解析失败。不要谎称图片没收到或没显示，也不要反复让我重发；若当前还有文字消息，先回应文字。]';
     case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
     case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+']';
@@ -830,7 +836,7 @@ function msgToText(m){
       const fl=tr.flier==='me'?S.me.name:'你';return '[机票·登机牌：'+(tr.from||'')+'→'+(tr.to||'')+'，'+tvMD(tr.date)+' '+(tr.dep||'')+'，'+cls+'，'+fl+'飞。'+(tr.by==='me'?(tr.flier==='me'?(S.me.name+'要飞去'+tr.to+'见你'):(S.me.name+'给你订了票、请你飞去'+tr.to+'见面')):('你订了票要飞去'+(tr.to||'')+'见'+S.me.name))+'，到'+tvMD(tr.date)+'有一场线下见面]';}
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
     case 'dycard':return m.mine?('[我把我自己发的抖音视频分享给你——「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']'):('[我转发给你一条抖音视频——@'+m.author+'：「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']');
-    case 'voice':{const vq=(m.quote&&m.quote.who==='ta'&&m.quote.text)?'（我引用了你刚说的那句「'+m.quote.text+'」，就这一句）':'';return m.content?('[语音消息]'+vq+m.content):'['+S.me.name+'发了条语音]';}
+    case 'voice':{const vq=quoteContextText(m,'voice');return m.content?('[语音消息]'+vq+m.content):'['+S.me.name+'发了条语音]';}
     case 'sticker':return '[表情'+(m.meaning?'：'+m.meaning:'')+']';
     case 'chatlog':return '[我转发给你一份聊天记录《'+m.title+'》，内容：'+(m.lines||[]).map(l=>l.who+'说'+l.text).join('；').slice(0,200)+']';
     case 'tcollect':return '[你收下了我的转账 ¥'+(+m.amount).toFixed(2)+']';
@@ -1415,7 +1421,7 @@ function buildSystem(c,opt){
     if(_co&&_co.on&&_co.cid===c.id)s+='\n\n# 你正在和'+S.me.name+'一起逛街（进行中）\n你俩此刻正一起用购物App逛街、边看边挑东西：你会自己看中/想买些东西让ta同意，ta想买的也会来问你同不同意。ta聊到"一起买的/你挑的/刚看的那个"时，你心里清楚这事正在发生，自然接着聊。';
     else if(_co&&_co.endedCid===c.id&&_co.endedAt&&Date.now()-_co.endedAt<86400000){const _mins=Math.round((Date.now()-_co.endedAt)/60000);const _when=_mins<1?'就在刚刚':(_mins<60?_mins+'分钟前':_mins<1440?'大约'+Math.round(_mins/60)+'小时前':'昨天');
       s+='\n\n# 你们刚一起逛完街（'+_when+'结束）\n'+_when+'你和'+S.me.name+'一起在购物App逛了街'+(_co.endedDetail?('，最后的小票是：'+_co.endedDetail):(_co.endedItems?('，两人一起挑并买下了：'+_co.endedItems):'（东西还在购物车里/没买啥）'))+'。你要分清楚：哪些是你自己看中/想买的，哪些是'+S.me.name+'想买而你同意的，谁付款也要说对。ta提起时别装不知道、别说没这回事，自然承接、可以回味或吐槽刚才逛街的事。';}}
-  if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
+  if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话，也可能引用ta自己前面说过的话来专门补充追问——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"或"（我引用了我前面说的那句「…」…）"，这时【只针对被引用的那一句】结合ta新发的话回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(!opt.selectiveMemory&&_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+summaryCleanText(c,x.text)).join('\n');
   if(!opt.selectiveMemory){const _pd=powerDynamicPrompt(c);if(_pd)s+=_pd;const _kd=bdsmKnowledgeBasePrompt(c);if(_kd)s+=_kd;const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}

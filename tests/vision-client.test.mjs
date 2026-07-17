@@ -52,7 +52,7 @@ for (const name of [
   "uniq", "visionModels", "visionImagePart", "visionNoImageText", "roleImageFailureText", "visionText",
   "visionData", "visionNativeURL", "visionIsClaude", "visionErrKind",
   "visionPostOpenAI", "visionPostAnthropic", "visionAvailableModels", "visionFallbackModels",
-  "visionTryModel", "visionAPI", "msgToText",
+  "visionTryModel", "visionAPI", "quoteContextText", "msgToText",
 ]) vm.runInContext(functionSource(name), context);
 
 assert.equal(context.visionNativeURL("https://vg.v1api.cc/v1"), "https://vg.v1api.cc/v1/messages");
@@ -62,6 +62,9 @@ assert.equal(context.visionNativeURL("https://x.test/v1/chat/completions"), "htt
 assert.equal(context.visionText({ choices: [{ message: { content: "OpenAI string" } }] }), "OpenAI string");
 assert.equal(context.visionText({ choices: [{ message: { content: [{ type: "text", text: "parts" }] } }] }), "parts");
 assert.equal(context.visionText({ content: [{ type: "text", text: "Anthropic" }] }), "Anthropic");
+assert.match(context.msgToText({ role: "user", type: "text", content: "补上", quote: { who: "ta", text: "车里那张" } }), /车里那张/);
+assert.match(context.msgToText({ role: "user", type: "text", content: "之前那张补上", quote: { who: "me", text: "小狗看主人的皮鞋" } }), /小狗看主人的皮鞋/);
+assert.match(context.msgToText({ role: "user", type: "voice", content: "就这句", quote: { who: "me", text: "刚才那张照片" } }), /刚才那张照片/);
 assert.equal(context.visionNoImageText("没有看到任何图片附件"), true);
 assert.equal(context.roleImageFailureText("图片识别失败了，你说给我听"), true);
 assert.match(context.msgToText({ role: "user", type: "image", visionState: "pending", desc: "" }), /先等待识图完成/);
