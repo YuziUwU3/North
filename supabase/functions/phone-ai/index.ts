@@ -868,12 +868,13 @@ Deno.serve(async (req) => {
             prompt,
             n: 1,
             size,
-            quality: "low",
+            quality: "medium",
             output_format: "jpeg",
-            output_compression: 72,
+            output_compression: 88,
+            response_format: "url",
           };
           try {
-            upstream = await openai("/images/generations", richBody, 120000);
+            upstream = await openai("/images/generations", richBody, 140000);
           } catch (richError) {
             const richReason = errText(richError);
             if (!shouldRetryImagePlain(richReason)) throw richError;
@@ -889,7 +890,7 @@ Deno.serve(async (req) => {
           }, 90000);
         }
         const data = relayImageResult(upstream);
-        await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint, quality: "low", size });
+        await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint, quality: "medium", size });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
         const reason = errText(e);
