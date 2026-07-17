@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v543 · 生图路径纠错';
+const APP_VER='v544 · 存储提醒修正';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -371,9 +371,10 @@ function mergeStateData(d,opt){const n=Object.assign(defState(),d||{});if(opt&&o
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return mergeStateData(v);}catch(e){}return seed();}
 let _bootImagesPromise=null;
 let _saveTimer=null,_savePending=false,_saveLast=0,_saveOkLast=0;
+function isQuotaError(e){const n=(e&&e.name||'')+' '+(e&&e.message||'');return /quota|storage|exceeded|full/i.test(n);}
 function saveNow(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}
   if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;
-  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();_saveOkLast=_saveLast;}catch(e){toast('存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
+  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();_saveOkLast=_saveLast;}catch(e){toast(isQuotaError(e)?'核心存档写不进去了，先导出备份再清理旧聊天/图片':'保存失败，先别退出，建议导出备份');try{storageFullAlert(e);}catch(_){}}}
 function save(delay){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
 let _imgCache={},_imgRev=new Map(),_imgReady=new Set(),_imgSeq=0,_heavy={},_heavyReady=new Set();
@@ -8609,17 +8610,21 @@ async function cloudRestoreOther(){const oid=(($('#cl_other')||{}).value||'').tr
 let _cloudAutoT=0;function cloudAutoTick(){if(!(S.settings&&S.settings.cloudAuto))return;const now=Date.now();if(now-_cloudAutoT<300000)return;_cloudAutoT=now;cloudBackup().catch(()=>{});}
 setInterval(cloudAutoTick,600000);setTimeout(()=>{if(S.settings&&S.settings.cloudAuto)cloudBackup().catch(()=>{});},9000);
 /* ---------- 存储用量 ---------- */
+let _storageEstimate={usage:0,quota:0,ts:0};
+function refreshStorageEstimate(){try{if(!(navigator.storage&&navigator.storage.estimate))return;navigator.storage.estimate().then(x=>{if(x&&x.quota){_storageEstimate={usage:+x.usage||0,quota:+x.quota||0,ts:Date.now()};}}).catch(()=>{});}catch(_){}}
 function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=new Blob([s||JSON.stringify(S)]).size;}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
-  const CAP=5*1024*1024;return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100)),okRecently:_saveOkLast&&Date.now()-_saveOkLast<180000};}
-function storageMeter(){const si=storageInfo();const col=si.pct>=92?'#fa5151':si.pct>=75?'#ffb83b':'#19a463';
+  const CAP=5*1024*1024,est=(_storageEstimate&&Date.now()-_storageEstimate.ts<120000)?_storageEstimate:null;
+  const devicePct=est&&est.quota?Math.min(100,Math.round(est.usage/est.quota*100)):0;
+  return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100)),deviceMb:est?est.usage/1048576:0,deviceCapMb:est?est.quota/1048576:0,devicePct,hasDevice:!!est,okRecently:_saveOkLast&&Date.now()-_saveOkLast<180000};}
+function storageMeter(){refreshStorageEstimate();const si=storageInfo();const col=si.pct>=92?'#fa5151':si.pct>=75?'#ffb83b':'#19a463';
   return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
     <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${si.pct}%;background:${col};transition:.3s"></div></div>
-    <div class="hint" style="padding:7px 0 0">${si.pct>=92?'接近上限了，先导出备份，再用「清理缓存垃圾」瘦身。':si.pct>=75?'数据偏多，但图片和长聊天会尽量搬进大空间；保存正常时不用急着清。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}</div></div></div>`;}
+    <div class="hint" style="padding:7px 0 0">${si.pct>=92?'核心存档偏大，但图片和长聊天会自动搬进大空间；只要保存正常，不会再误弹满额提醒。':si.pct>=75?'核心存档偏多，保存正常时不用急着清。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}${si.hasDevice?`<br>浏览器总空间约 ${si.deviceMb.toFixed(1)} / ${si.deviceCapMb.toFixed(0)}MB（${si.devicePct}%）`:''}</div></div></div>`;}
 let _storeWarned=false;
-function checkStorageWarn(){if(_storeWarned)return;const si=storageInfo();if(si.pct<96||(si.okRecently&&si.pct<99))return;const last=+(S.settings&&S.settings.storageWarnAt||0);if(Date.now()-last<86400000)return;S.settings.storageWarnAt=Date.now();_storeWarned=true;save(0);
-  openModal(`<h3>手机存储快满了</h3><div style="font-size:14px;line-height:1.9;color:#333">已经用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB（${si.pct}%）</b>。<br>快满了的话新消息、新照片可能存不进去。<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 删掉一些旧图片或用不到的聊天</div>
+function checkStorageWarn(){refreshStorageEstimate();if(_storeWarned)return;const si=storageInfo();const realDanger=si.hasDevice&&si.devicePct>=92,coreDanger=si.pct>=99&&!si.okRecently;if(!realDanger&&!coreDanger)return;const last=+(S.settings&&S.settings.storageWarnAt||0);if(Date.now()-last<86400000)return;S.settings.storageWarnAt=Date.now();_storeWarned=true;save(0);
+  openModal(`<h3>${realDanger?'手机存储快满了':'核心存档偏大'}</h3><div style="font-size:14px;line-height:1.9;color:#333">${realDanger?`浏览器总空间已经用了 <b style="color:#fa5151">${si.devicePct}%</b>。`:`核心存档用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB</b>，最近没有确认保存成功。`}<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 用「清理缓存垃圾」或删一些旧聊天图片</div>
     <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">立即导出备份</button></div>`);}
-function storageFullAlert(){openModal(`<h3>存储已经满了！</h3><div style="font-size:14px;line-height:1.9;color:#333">刚才有内容没能存进去。<br><br>赶紧：<br>1️⃣ 点下面导出备份（别让数据丢了）<br>2️⃣ 删掉一些旧照片/旧聊天腾地方</div>
+function storageFullAlert(e){const quota=isQuotaError(e);openModal(`<h3>${quota?'核心存档写不进去了':'保存失败'}</h3><div style="font-size:14px;line-height:1.9;color:#333">刚才有内容没能存进去。${quota?'<br>这通常是浏览器给 localStorage 的小额度满了，不代表手机总存储真的满。':''}<br><br>建议：<br>1️⃣ 点下面导出备份<br>2️⃣ 用「清理缓存垃圾」或删一些旧聊天图片</div>
   <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">立即导出备份</button></div>`);}
 
 /* ---------- 时钟 & 启动 ---------- */
