@@ -38,6 +38,7 @@ const context = vm.createContext({
   hasCN: (text) => /[\u3400-\u9fff]/.test(text || ""),
   CJK_RE: /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g,
   splitBubbles: (text) => (text || "").split("\n").map((s) => s.trim()).filter(Boolean),
+  ttsCueKind: (cue) => cue || "",
 });
 
 for (const name of [
@@ -47,6 +48,8 @@ for (const name of [
   "callNormalizeForeignOrig",
   "callNormalizeLine",
   "callIsActionLine",
+  "callHasVideoAction",
+  "ensureVideoCallAction",
   "hasForeign",
   "callBadForeignMix",
   "callBadForeignLine",
@@ -67,7 +70,12 @@ assert.equal(context.callBadForeignLine("【凑近镜头笑】", "英语"), fals
 assert.equal(context.callDrifted("baby嘴还敢硬?\n（宝贝还敢顶嘴？）", "英语"), true);
 assert.equal(context.callDrifted("任务是23:59之前交完\n（任务截止时间是23:59）", "英语"), true);
 assert.equal(context.callDrifted("【凑近镜头笑】\nBaby, still talking back?\n（宝贝，还敢顶嘴？）", "英语"), false);
+assert.equal(context.callHasVideoAction("你好\n【凑近镜头笑】"), true);
+assert.equal(context.callHasVideoAction("你好\n[挂断]"), false);
+assert.equal(context.ensureVideoCallAction("你好", "laugh"), "你好\n【看着镜头轻轻笑了一下】");
+assert.equal(context.ensureVideoCallAction("你好\n【抬手整理衣领】", "tense"), "你好\n【抬手整理衣领】");
 assert.match(source, /英文原文行不能夹中文称谓/);
 assert.match(source, /中文翻译必须写“宝贝\/亲爱的”/);
+assert.match(source, /每一轮回复都必须至少有1行动作/);
 
 console.log("call format tests passed");

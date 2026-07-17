@@ -164,6 +164,11 @@ assert.match(backend, /if \(action === "external_tts"\)/);
 assert.match(backend, /async function externalFishTTS/);
 assert.match(backend, /headers\.model = model/);
 assert.match(source, /通话语音同步/);
+assert.match(source, /通话整体节奏/);
+assert.match(source, /function callPaceRate\(\)/);
+assert.match(source, /s\.playbackRate\.value=callPaceRate\(\)/);
+assert.match(source, /u\.rate=\(\+v\.rate\|\|1\)\*vp\.speed\*callPaceRate\(\)/);
+assert.match(source, /if\(video\)content=ensureVideoCallAction\(content,_callCueTag\)/);
 assert.match(source, /function phReleaseSimSub\(callId,line\)/);
 assert.match(source, /const off=phPhoneVoiceOffset\(\);if\(off<0\)preT=setTimeout\(show,Math.max\(0,600\+off\)\)/);
 
