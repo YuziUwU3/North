@@ -27,15 +27,18 @@ phone-ai
 ```text
 PHONE_SUPABASE_URL=你的 Supabase 项目地址
 PHONE_SERVICE_ROLE_KEY=你的 service_role key
-OPENAI_API_KEY=你的聊天/识图/生图中转站 key
+OPENAI_API_KEY=你的聊天/识图中转站 key
 OPENAI_BASE_URL=https://vg.v1api.cc/v1
 CHAT_MODEL=gemini-2.5-pro
 VISION_MODEL=gemini-2.5-pro
-IMAGE_MODEL=gpt-image-2
+OPENAI_IMAGE_API_KEY=你的官方 OpenAI API Key（仅用于图片生成）
+OPENAI_IMAGE_MODEL=gpt-image-2
 FREE_POINTS=30
 ```
 
 注意：Supabase 不允许自定义 Secret 以 `SUPABASE_` 开头，所以这里用的是 `PHONE_SUPABASE_URL` 和 `PHONE_SERVICE_ROLE_KEY`。
+
+图片生成固定请求官方 `https://api.openai.com/v1/images/generations`，不会读取或覆盖聊天中转站的 `OPENAI_BASE_URL`。
 
 ## 4. 海螺语音 Secrets
 

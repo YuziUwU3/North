@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v535 · 付款核对管理台';
+const APP_VER='v536 · 官方图片生成与购买提醒';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -339,7 +339,7 @@ function defState(){return{
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
     hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, callSilentMin:3, manualReply:true, humanLike:true, initiative:true, currentActivity:true, personaGuard:true,
-    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
+    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, aiImage:{enabled:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
@@ -646,6 +646,9 @@ function apiErrorCN(status,raw){status=+status||0;const src=String(raw||'').repl
 function apiCaughtCN(e){const s=String((e&&e.message)||e||'');const m=s.match(/HTTP\s*(\d{3})/i);return apiErrorCN(m?+m[1]:0,s);}
 function aiCoreOn(){return false;}
 function aiCoreUrl(){return (((S.settings&&S.settings.aiCore&&S.settings.aiCore.url)||'').trim()).replace(/\/+$/,'');}
+function aiImageInit(){S.settings=S.settings||{};S.settings.aiImage=S.settings.aiImage||{enabled:false};return S.settings.aiImage;}
+function aiImageRelayOn(){return !!(aiImageInit().enabled&&aiCoreUrl());}
+function imageGenerationAvailable(){const ch=S.settings.chat||{};return aiImageRelayOn()||!!((S.settings.imgBase||ch.base)&&(S.settings.imgKey||ch.key));}
 function ttsCfg(){S.settings=S.settings||{};S.settings.tts=S.settings.tts||{};return S.settings.tts;}
 function ttsExternalOn(t){return !!(t&&t.base&&t.key);}
 function ttsRelayOn(t){return !!(t&&t.relay&&aiCoreUrl());}
@@ -730,7 +733,7 @@ async function visionAPI(dataURL,prompt,opt){opt=opt||{};const a=S.settings.visi
 }
 /* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
 async function genImage(prompt){
-  if(aiCoreOn()){const d=await aiRelay('image',{prompt,model:S.settings.imgModel||'',size:'1024x1536',quality:'medium'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/png;base64,'+it.b64_json):''));if(!url)throw new Error('内置AI没返回图片');return url;}
+  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536',quality:'medium'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('官方图片接口没有返回图片');return url;}
   const ch=S.settings.chat||{};
   const base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,'');
   const key=(S.settings.imgKey||ch.key)||'';
@@ -1062,7 +1065,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=535';
+  const url='sw.js?v=536';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1491,7 +1494,7 @@ function buildSystem(c,opt){
   if(idleForceActive(c.id))s+='\n\n# 当前聊天状态\n'+S.me.name+'刚被你拉回聊天里。你可以自然地留ta陪你，也可以在你愿意提前放ta走时，单独一行写 [放行]。这条指令只会解除停留状态，不会显示出来。不要在可见消息里提系统、网页、按钮、快捷指令、后台、锁死、强制、扣住、把你扣这儿了；用你的性格自然表达。不要重复上一轮开头，也不要每次都说同一种抱怨。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
-  if(S.settings.imgGen&&(aiCoreOn()||(S.settings.chat&&S.settings.chat.key)))s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人”，你就不要入镜。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不要露清晰正脸，只能低头、背影、侧影、遮挡或局部。想发就发，别一次发一堆。';
+  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人”，你就不要入镜。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不要露清晰正脸，只能低头、背影、侧影、遮挡或局部。想发就发，别一次发一堆。';
   return s;
 }
 
@@ -2390,7 +2393,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     </div>
     <div class="section" id="set_image">
       <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
-      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时真生成一张图（不露脸·贴合人设身形），每张耗几分钱token、约半分钟；关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
+      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时生成图片；AI账户里开启官方图片时每张30点，外置接口则按对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
       <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
@@ -7483,7 +7486,7 @@ function lineToMsg(line,cch){
   if(m[1]==='文件')return {role:'assistant',type:'file',name:f[0]||'文件',size:f[1]||''};
   // 图片：开了「AI 真图」就真生成一张，否则只放文字占位
   const desc=f[0]||'';
-  if(S.settings.imgGen&&(aiCoreOn()||(S.settings.chat&&S.settings.chat.key))){
+  if(S.settings.imgGen&&imageGenerationAvailable()){
     const prompt=charImgPrompt(cch,desc);
     const msg={role:'assistant',type:'image',src:'',pending:true,desc,genPrompt:prompt,id:uid()};
     setTimeout(()=>fillGenImage(msg,prompt),50);

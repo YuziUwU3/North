@@ -1,9 +1,10 @@
 // 小手机内置 AI · Supabase Edge Function
 // 环境变量：
 // PHONE_SUPABASE_URL, PHONE_SERVICE_ROLE_KEY
-// OPENAI_API_KEY
-// 可选：OPENAI_BASE_URL=https://api.openai.com/v1
-// 可选：CHAT_MODEL=gpt-4o-mini, VISION_MODEL=gpt-4o-mini, IMAGE_MODEL=gpt-image-2
+// OPENAI_API_KEY（现有聊天/识图中转站）
+// 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL
+// OPENAI_IMAGE_API_KEY（仅官方 OpenAI 图片接口，和中转站完全分开）
+// 可选：OPENAI_IMAGE_MODEL=gpt-image-2
 // 可选：FREE_POINTS=30（新账户首次体验赠送，设置为 0 可关闭）
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -18,7 +19,7 @@ const cors = {
 const PRICE: Record<string, number> = {
   chat: 10,
   vision: 25,
-  image: 120,
+  image: 30,
   tts: 10,
   summary: 2,
 };
@@ -306,6 +307,19 @@ async function openai(path: string, body: unknown) {
   return data;
 }
 
+async function openaiImage(body: unknown) {
+  const key = Deno.env.get("OPENAI_IMAGE_API_KEY") || "";
+  if (!key) throw new Error("missing-openai-image-key");
+  const r = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(`official-image-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 220)}`);
+  return data;
+}
+
 function hexToBase64(hex: string) {
   let bin = "";
   for (let i = 0; i < hex.length; i += 2) bin += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
@@ -573,6 +587,7 @@ Deno.serve(async (req) => {
         account: publicAccount(acct),
         pricing: PRICE,
         plans: PLANS,
+        capabilities: { image: !!Deno.env.get("OPENAI_IMAGE_API_KEY") },
         ledger: ledger || [],
         purchases: purchases || [],
       });
@@ -727,25 +742,33 @@ Deno.serve(async (req) => {
 
     if (action === "image") {
       const c = await charge(userId, clientSecret, "image");
-      let model = "";
+      const model = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-2";
+      const allowedSizes = new Set(["1024x1024", "1024x1536", "1536x1024"]);
+      const size = allowedSizes.has(String(body.size || "")) ? String(body.size) : "1024x1024";
       try {
-        model = body.model || Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
-        const data = await openai("/images/generations", {
+        const data = await openaiImage({
           model,
           prompt: guardedImagePrompt(body.prompt).slice(0, 1600),
           n: 1,
-          size: body.size || "1024x1536",
-          quality: body.quality || "medium",
+          size,
+          quality: "medium",
           output_format: "jpeg",
         });
-        await finishCharge(c.ledgerId, true, { model });
+        await finishCharge(c.ledgerId, true, { model, provider: "official-openai", quality: "medium", size });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
-        if (errText(e).includes("missing-openai-key")) {
-          await refund(userId, clientSecret, "image", c.cost, c.ledgerId, errText(e));
-          throw e;
-        }
-        return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
+        const reason = errText(e);
+        await refund(userId, clientSecret, "image", c.cost, c.ledgerId, reason);
+        const acct = await ensureAccount(userId, clientSecret);
+        return json({
+          ok: false,
+          error: "official-image-failed-refunded: " + reason,
+          charged: 0,
+          refunded: c.cost,
+          balance: acct.points || 0,
+          billed: false,
+          note: "官方图片生成失败，本次点数已自动退回",
+        }, 502);
       }
     }
 
