@@ -372,6 +372,31 @@ function relayImageResult(data: any) {
     const text = String(value || "").trim();
     if (text) candidates.push(text);
   };
+  const collect = (value: unknown, depth = 0) => {
+    if (!value || depth > 8 || candidates.length > 80) return;
+    if (typeof value === "string") {
+      add(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) collect(item, depth + 1);
+      return;
+    }
+    if (typeof value !== "object") return;
+    const v = value as Record<string, any>;
+    add(v.url);
+    add(v.b64_json);
+    if (v.data && /image\//i.test(String(v.mime_type || v.mimeType || ""))) {
+      add(`data:${v.mime_type || v.mimeType};base64,${v.data}`);
+    }
+    if (v.inlineData?.data) add(`data:${v.inlineData.mimeType || "image/png"};base64,${v.inlineData.data}`);
+    if (v.inline_data?.data) add(`data:${v.inline_data.mime_type || "image/png"};base64,${v.inline_data.data}`);
+    add(v.fileData?.fileUri);
+    add(v.file_data?.file_uri);
+    for (const [key, item] of Object.entries(v)) {
+      if (!/token|key|authorization/i.test(key)) collect(item, depth + 1);
+    }
+  };
   add(message?.image_url?.url || message?.image_url);
   for (const item of Array.isArray(message?.images) ? message.images : []) {
     add(item?.image_url?.url || item?.image_url || item?.url || item?.b64_json);
@@ -379,6 +404,7 @@ function relayImageResult(data: any) {
   if (Array.isArray(message?.content)) {
     for (const part of message.content) add(part?.image_url?.url || part?.image_url || part?.url || part?.text);
   } else add(message?.content);
+  collect(data);
   for (const raw of candidates) {
     const dataUrl = raw.match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i)?.[0]?.replace(/\s+/g, "");
     if (dataUrl) return { data: [{ b64_json: dataUrl.slice(dataUrl.indexOf(",") + 1) }] };
@@ -392,6 +418,10 @@ function relayImageResult(data: any) {
 
 function shouldRetryImageAsChat(reason: string) {
   return /available.*channel|渠道不存在|可用渠道不存在|unsupported.*endpoint|unsupported.*path|not.*support.*images|images\/generations|image.*endpoint|model-http-400|model-http-404|model-http-500/i.test(reason);
+}
+
+function shouldRetryImagePlain(reason: string) {
+  return /unknown|unsupported|invalid|extra inputs|not allowed|response_format|output_format|output_compression|quality|size/i.test(reason);
 }
 
 function imageFailCode(reason: string) {
@@ -833,7 +863,7 @@ Deno.serve(async (req) => {
         const prompt = guardedImagePrompt(body.prompt).slice(0, 1600);
         let upstream: any;
         try {
-          upstream = await openai("/images/generations", {
+          const richBody = {
             model,
             prompt,
             n: 1,
@@ -841,8 +871,14 @@ Deno.serve(async (req) => {
             quality: "low",
             output_format: "jpeg",
             output_compression: 72,
-            response_format: "url",
-          }, 90000);
+          };
+          try {
+            upstream = await openai("/images/generations", richBody, 120000);
+          } catch (richError) {
+            const richReason = errText(richError);
+            if (!shouldRetryImagePlain(richReason)) throw richError;
+            upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000);
+          }
         } catch (firstError) {
           const firstReason = errText(firstError);
           if (!shouldRetryImageAsChat(firstReason)) throw firstError;
@@ -850,7 +886,7 @@ Deno.serve(async (req) => {
           upstream = await openai("/chat/completions", {
             model,
             messages: [{ role: "user", content: prompt + `\n\nReturn one generated image for this request. Size: ${size}.` }],
-          }, 45000);
+          }, 90000);
         }
         const data = relayImageResult(upstream);
         await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint, quality: "low", size });
