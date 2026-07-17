@@ -842,7 +842,7 @@ Deno.serve(async (req) => {
             output_format: "jpeg",
             output_compression: 72,
             response_format: "url",
-          }, 145000);
+          }, 90000);
         } catch (firstError) {
           const firstReason = errText(firstError);
           if (!shouldRetryImageAsChat(firstReason)) throw firstError;
@@ -850,7 +850,7 @@ Deno.serve(async (req) => {
           upstream = await openai("/chat/completions", {
             model,
             messages: [{ role: "user", content: prompt + `\n\nReturn one generated image for this request. Size: ${size}.` }],
-          }, 210000);
+          }, 45000);
         }
         const data = relayImageResult(upstream);
         await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint, quality: "low", size });
