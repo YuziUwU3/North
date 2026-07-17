@@ -332,15 +332,32 @@ async function openai(path: string, body: unknown, timeoutMs = 180000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort("upstream-timeout"), Math.max(1000, timeoutMs));
   try {
-    const r = await fetch(base + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    const data = await r.json().catch(() => null);
-    if (!r.ok) throw new Error(`model-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
-    return data;
+    const urls = [base + path];
+    if (!/\/v1$/i.test(base)) urls.push(base + "/v1" + path);
+    let lastError: unknown = null;
+    for (const url of urls) {
+      try {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        const text = await r.text();
+        let data: any = null;
+        try {
+          data = text ? JSON.parse(text) : null;
+        } catch {
+          data = text ? { response: text.slice(0, 180) } : null;
+        }
+        if (!r.ok) throw new Error(`model-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
+        return data;
+      } catch (e) {
+        lastError = e;
+        if (/upstream-timeout|aborted/i.test(errText(e))) throw e;
+      }
+    }
+    throw lastError || new Error("model-request-failed");
   } finally {
     clearTimeout(timer);
   }
@@ -373,11 +390,15 @@ function relayImageResult(data: any) {
   throw new Error("relay-image-empty");
 }
 
+function shouldRetryImageAsChat(reason: string) {
+  return /available.*channel|渠道不存在|可用渠道不存在|unsupported.*endpoint|unsupported.*path|not.*support.*images|images\/generations|image.*endpoint|model-http-400|model-http-404|model-http-500/i.test(reason);
+}
+
 function imageFailCode(reason: string) {
   if (/429|No images were successfully|relay-image-empty/i.test(reason)) return "image-upstream-no-output-or-rate-limit";
   if (/upstream-timeout|timeout|aborted/i.test(reason)) return "image-upstream-timeout";
   if (/401|403|unauthori|forbidden|no access|invalid.*key/i.test(reason)) return "image-auth-or-permission";
-  if (/404|model.*not.*found|not found/i.test(reason)) return "image-model-or-endpoint";
+  if (/404|model.*not.*found|not found|渠道不存在|可用渠道不存在|available.*channel|unsupported.*endpoint|unsupported.*path/i.test(reason)) return "image-model-or-endpoint";
   return "image-upstream-failed";
 }
 
@@ -807,19 +828,32 @@ Deno.serve(async (req) => {
       const model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
       const allowedSizes = new Set(["1024x1024", "1024x1536", "1536x1024"]);
       const size = allowedSizes.has(String(body.size || "")) ? String(body.size) : "1024x1024";
+      let endpoint = "images-generations";
       try {
-        const upstream = await openai("/images/generations", {
-          model,
-          prompt: guardedImagePrompt(body.prompt).slice(0, 1600),
-          n: 1,
-          size,
-          quality: "low",
-          output_format: "jpeg",
-          output_compression: 72,
-          response_format: "url",
-        }, 145000);
+        const prompt = guardedImagePrompt(body.prompt).slice(0, 1600);
+        let upstream: any;
+        try {
+          upstream = await openai("/images/generations", {
+            model,
+            prompt,
+            n: 1,
+            size,
+            quality: "low",
+            output_format: "jpeg",
+            output_compression: 72,
+            response_format: "url",
+          }, 145000);
+        } catch (firstError) {
+          const firstReason = errText(firstError);
+          if (!shouldRetryImageAsChat(firstReason)) throw firstError;
+          endpoint = "chat-completions";
+          upstream = await openai("/chat/completions", {
+            model,
+            messages: [{ role: "user", content: prompt + `\n\nReturn one generated image for this request. Size: ${size}.` }],
+          }, 210000);
+        }
         const data = relayImageResult(upstream);
-        await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint: "images-generations", quality: "low", size });
+        await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint, quality: "low", size });
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
         const reason = errText(e);

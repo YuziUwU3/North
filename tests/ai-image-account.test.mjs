@@ -12,6 +12,9 @@ assert.match(app,/function aiImageRelayOn\(\)\{return !!\(aiImageInit\(\)\.enabl
 assert.match(app,/if\(aiImageRelayOn\(\)\)\{const d=await aiRelay\('image'/);
 assert.match(app,/function imageGenerationAvailable\(\)/);
 assert.doesNotMatch(app,/if\(aiCoreOn\(\)\)\{const d=await aiRelay\('image'/);
+assert.match(app,/function imageGenerateExternal\(base,key,model,prompt,size\)/);
+assert.match(app,/gemini-3\.1-flash-image-preview/);
+assert.match(app,/gemini-3-pro-image-preview/);
 
 assert.match(account,/启用图片生成/);
 assert.match(account,/图片中转站/);
@@ -28,6 +31,7 @@ assert.match(account,/如因换浏览器或手机而导致点数消失概不负�
 assert.match(backend,/image: 20/);
 assert.match(backend,/Deno\.env\.get\("IMAGE_MODEL"\) \|\| "gpt-image-2"/);
 assert.match(backend,/openai\("\/images\/generations"/);
+assert.match(backend,/urls\.push\(base \+ "\/v1" \+ path\)/);
 assert.match(backend,/function relayImageResult\(data: any\)/);
 assert.match(backend,/provider: "configured-relay"/);
 assert.match(backend,/quality: "low"/);

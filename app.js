@@ -734,6 +734,28 @@ async function visionAPI(dataURL,prompt,opt){opt=opt||{};const a=S.settings.visi
   const z=new Error('vision-fail: '+((last&&last.message)||'模型没有收到图片'));z.visionInfo=(last&&last.visionInfo)||primaryError;throw z;
 }
 /* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
+function imageApiUrls(base,path){const b=(''+base).replace(/\/+$/,'');const urls=[b+path];if(!/\/v1$/i.test(b))urls.push(b+'/v1'+path);return urls.filter((x,i,a)=>x&&a.indexOf(x)===i);}
+function imageRespErr(d){return ((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||(d&&d.message)||'').slice(0,260);}
+function imageShouldRetryChat(status,msg){return status===400||status===404||status===405||status===422||status===500||status===501||/unsupported|not support|not found|does not exist|images\/generations|image.*endpoint|渠道不存在|可用渠道不存在|available.*channel|no image|empty/i.test(''+msg);}
+function imageResultURL(d){const direct=d&&d.data&&d.data[0];if(direct&&(direct.url||direct.b64_json))return direct.url||('data:image/jpeg;base64,'+direct.b64_json);
+  const msg=d&&d.choices&&d.choices[0]&&d.choices[0].message,cands=[],add=v=>{v=String(v||'').trim();if(v)cands.push(v);};
+  add(msg&&(msg.image_url&&msg.image_url.url||msg.image_url));(Array.isArray(msg&&msg.images)?msg.images:[]).forEach(x=>add(x&&(x.image_url&&x.image_url.url||x.image_url||x.url||x.b64_json)));
+  if(Array.isArray(msg&&msg.content))msg.content.forEach(p=>add(p&&(p.image_url&&p.image_url.url||p.image_url||p.url||p.text)));else add(msg&&msg.content);
+  for(const raw of cands){const data=(''+raw).match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i);if(data)return data[0].replace(/\s+/g,'');const md=(''+raw).match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i),plain=(''+raw).match(/https?:\/\/[^\s<>"')\]]+/i);if(md||plain)return (md&&md[1])||(plain&&plain[0]);}
+  return '';
+}
+async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000);const txt=await res.text();let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(res.ok)return {res,d,url};last={res,d,url};if(![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
+async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt||'一张生活照').slice(0,600),target=size||'1024x1536';
+  const rich={model,prompt:p,n:1,size:target,quality:'medium',output_format:'jpeg',output_compression:88,response_format:'url'};
+  let out=await imagePostCompat(base,key,'/images/generations',rich,180000),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
+  if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  let url=res&&res.ok?imageResultURL(d):'';
+  if(url)return {url,endpoint:'images-generations',model};
+  if(!res||!res.ok&&imageShouldRetryChat(res.status,err)){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。尺寸：'+target}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
+  if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
+  throw new Error('没拿到图片');
+}
 async function genImage(prompt){
   if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
   const ch=S.settings.chat||{};
@@ -741,17 +763,7 @@ async function genImage(prompt){
   const key=(S.settings.imgKey||ch.key)||'';
   if(!base||!key)throw new Error('还没设置绘图/聊天 API');
   const model=(S.settings.imgModel||'gpt-image-2');
-  const body0={model,prompt:(prompt||'一张生活照').slice(0,600),n:1,size:'1024x1536',quality:'medium',output_format:'jpeg',output_compression:88};
-  async function post(body){const res=await fetchT(base+'/images/generations',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},180000);const d=await res.json().catch(()=>null);return {res,d};}
-  let out=await post(body0),res=out.res,d=out.d;
-  const err=((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'').toLowerCase();
-  if(!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|size)|extra inputs are not permitted|not allowed/.test(err)){out=await post({model,prompt:body0.prompt,n:1,size:'1024x1536'});res=out.res;d=out.d;}
-  if(!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await post({model:'gpt-4o-image',prompt:body0.prompt,n:1,size:'1024x1536'});res=out.res;d=out.d;}
-  if(!res.ok)throw new Error(apiErrorCN(res.status,(d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'生图失败'));
-  const it=d&&d.data&&d.data[0];
-  let url=it&&(it.url||(it.b64_json?('data:image/png;base64,'+it.b64_json):''));
-  if(!url)throw new Error('没拿到图片');
-  return url;
+  return (await imageGenerateExternal(base,key,model,prompt,'1024x1536')).url;
 }
 async function stableImageSrc(url){if(!url)return '';if(/^data:image\//i.test(url))return url;
   try{const r=await fetchT(url,{mode:'cors'},30000);if(!r.ok)return url;const b=await r.blob();
@@ -2399,9 +2411,9 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
       <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
-      <div style="padding:0 14px 6px">${[['gpt-image-2','image-2·推荐(日常感更强)'],['gpt-4o-image','4o图·兼容备选']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
+      <div style="padding:0 14px 6px">${[['gpt-image-2','image-2·推荐(日常感更强)'],['gpt-4o-image','4o图·兼容备选'],['gemini-3.1-flash-image-preview','banana2·快'],['gemini-3-pro-image-preview','banana pro·质感']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
       <div class="btns" style="padding:0 14px 4px"><button class="btn g" onclick="testImg()">测试出图（真生成一张·约半分钟）</button></div><div id="testImgO" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
-      <div class="hint" style="padding:0 14px 12px">走 <b>/images/generations</b> 接口。现在会默认按更像手机随手拍的方式出图，并给每个角色固定一组视觉锚点，尽量别每次都像换了个人。<b>先点「测试出图」</b>确认模型能用；若你的转发接口不支持新参数，系统会自动回退到兼容模式。</div>
+      <div class="hint" style="padding:0 14px 12px">优先走 <b>/images/generations</b>，地址没写 /v1 时会自动补试；若接口不支持图片路径，会改走 <b>/chat/completions</b> 解析图片。<b>先点「测试出图」</b>确认模型能用。</div>
     </div>
     </div>
     <div id="testOut" style="display:none"></div>
@@ -2496,12 +2508,8 @@ async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999
   const model=($('#s_imgmodel')&&$('#s_imgmodel').value.trim())||S.settings.imgModel||'gpt-image-2';
   if(!base||!key){o.style.color='#e85';o.textContent='先填接口地址和Key（留空会用聊天模型的，但聊天那栏也得先填好）';return;}
   const t0=Date.now();
-  try{const r=await fetchT(base+'/images/generations',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,prompt:'一只可爱的小猫坐在窗台上，阳光明媚，真实照片质感',n:1,size:'1024x1024'})},180000);
-    const d=await r.json().catch(()=>null);const sec=Math.round((Date.now()-t0)/1000);
-    if(!r.ok){o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,(d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'失败');return;}
-    const it=d&&d.data&&d.data[0];const url=it&&(it.url||(it.b64_json?'b64':''));
-    if(url){o.style.color='#19a463';o.innerHTML='✅ 出图成功（'+sec+'秒）这个模型能用 👍'+(typeof url==='string'&&url.indexOf('http')===0?'　<a href="'+esc(url)+'" target="_blank" style="color:#54a0ff">点开看</a>':'');}
-    else{o.style.color='#e85';o.textContent='❌ 没返回图片（'+sec+'秒）：这个模型可能不支持出图，换一个再测';}
+  try{const out=await imageGenerateExternal(base,key,model,'一只可爱的小猫坐在窗台上，阳光明媚，真实照片质感','1024x1024'),sec=Math.round((Date.now()-t0)/1000),url=out&&out.url;
+    o.style.color='#19a463';o.innerHTML='✅ 出图成功（'+sec+'秒，'+esc(out.endpoint||'image')+'）这个模型能用 👍'+(typeof url==='string'&&url.indexOf('http')===0?'　<a href="'+esc(url)+'" target="_blank" style="color:#54a0ff">点开看</a>':'');
   }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
 async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(iOS必须如此),否则第二次测试时上下文已挂起、网络回来再播就没声 */
   const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
