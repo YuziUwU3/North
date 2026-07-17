@@ -7,10 +7,11 @@
 // 可选：FREE_POINTS=30（新账户首次体验赠送，设置为 0 可关闭）
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import webpush from "npm:web-push@3.6.7";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-phone-user, x-phone-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-phone-user, x-phone-secret, x-admin-token",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -68,6 +69,57 @@ const supabase = createClient(
   Deno.env.get("PHONE_SUPABASE_URL") || "",
   Deno.env.get("PHONE_SERVICE_ROLE_KEY") || "",
 );
+const PROOF_BUCKET = "phone-ai-payment-proofs";
+
+function secureEqual(a: string, b: string) {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function requireAdmin(req: Request, body: any) {
+  const supplied = String(req.headers.get("x-admin-token") || body?.admin_token || "").trim();
+  const expected = String(Deno.env.get("ADMIN_ACCESS_TOKEN") || "").trim();
+  if (!expected || !secureEqual(supplied, expected)) throw new Error("admin-unauthorized");
+}
+
+function proofBytes(dataUrl: unknown) {
+  const match = String(dataUrl || "").match(/^data:(image\/(?:jpeg|png|webp));base64,([a-z0-9+/=\s]+)$/i);
+  if (!match) throw new Error("invalid-proof-image");
+  const mime = match[1].toLowerCase();
+  const raw = atob(match[2].replace(/\s+/g, ""));
+  if (!raw.length || raw.length > 2 * 1024 * 1024) throw new Error("proof-image-too-large");
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return { bytes, mime, ext: mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg" };
+}
+
+async function sendAdminPush(title: string, body: string, purchaseId: string) {
+  const publicKey = String(Deno.env.get("VAPID_PUBLIC_KEY") || "").trim();
+  const privateKey = String(Deno.env.get("VAPID_PRIVATE_KEY") || "").trim();
+  const subject = String(Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com").trim();
+  if (!publicKey || !privateKey) return;
+  const { data: subscriptions } = await supabase
+    .from("phone_ai_admin_push")
+    .select("endpoint,p256dh,auth");
+  if (!subscriptions?.length) return;
+  webpush.setVapidDetails(subject, publicKey, privateKey);
+  const payload = JSON.stringify({ title, body, purchase_id: purchaseId, url: "./?order=" + purchaseId });
+  await Promise.all(subscriptions.map(async (item: any) => {
+    try {
+      await webpush.sendNotification({
+        endpoint: item.endpoint,
+        keys: { p256dh: item.p256dh, auth: item.auth },
+      }, payload, { TTL: 600, urgency: "high" });
+    } catch (error: any) {
+      const status = Number(error?.statusCode || error?.status || 0);
+      if (status === 404 || status === 410) {
+        await supabase.from("phone_ai_admin_push").delete().eq("endpoint", item.endpoint);
+      }
+    }
+  }));
+}
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -388,6 +440,115 @@ Deno.serve(async (req) => {
   try {
     const body = (await req.json().catch(() => ({}))) || {};
     const action = String(body.action || "").trim();
+
+    if (action === "admin_config") {
+      return json({
+        ok: true,
+        vapid_public_key: String(Deno.env.get("VAPID_PUBLIC_KEY") || ""),
+        push_enabled: !!Deno.env.get("VAPID_PUBLIC_KEY"),
+      });
+    }
+
+    if (action === "admin_auth") {
+      requireAdmin(req, body);
+      return json({ ok: true });
+    }
+
+    if (action === "admin_subscribe") {
+      requireAdmin(req, body);
+      const subscription = body.subscription || {};
+      const endpoint = String(subscription.endpoint || "").trim();
+      const p256dh = String(subscription.keys?.p256dh || "").trim();
+      const auth = String(subscription.keys?.auth || "").trim();
+      if (!endpoint.startsWith("https://") || !p256dh || !auth) {
+        return json({ ok: false, error: "invalid-push-subscription" }, 400);
+      }
+      const { error } = await supabase.from("phone_ai_admin_push").upsert({
+        endpoint: endpoint.slice(0, 1000),
+        p256dh: p256dh.slice(0, 300),
+        auth: auth.slice(0, 300),
+        user_agent: String(body.user_agent || "").slice(0, 300),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "endpoint" });
+      if (error) throw error;
+      return json({ ok: true });
+    }
+
+    if (action === "admin_orders") {
+      requireAdmin(req, body);
+      const scope = String(body.scope || "pending");
+      let query = supabase
+        .from("phone_ai_purchases")
+        .select("id,user_id,plan_id,provider,amount_cny,points,status,review_status,payer_hint,claimed_paid_at,proof_path,review_submitted_at,reviewed_at,review_note,external_order_id,created_at,paid_at")
+        .order("review_submitted_at", { ascending: false, nullsFirst: false })
+        .limit(100);
+      if (scope === "pending") query = query.eq("status", "pending").eq("review_status", "submitted");
+      const { data: rows, error } = await query;
+      if (error) throw error;
+      const users = [...new Set((rows || []).map((row: any) => row.user_id).filter(Boolean))];
+      const balances = new Map<string, number>();
+      if (users.length) {
+        const { data: accounts } = await supabase
+          .from("phone_ai_accounts")
+          .select("user_id,points")
+          .in("user_id", users);
+        (accounts || []).forEach((account: any) => balances.set(account.user_id, Number(account.points || 0)));
+      }
+      const orders = await Promise.all((rows || []).map(async (row: any) => {
+        let proof_url = "";
+        if (row.proof_path) {
+          const { data } = await supabase.storage.from(PROOF_BUCKET).createSignedUrl(row.proof_path, 600);
+          proof_url = data?.signedUrl || "";
+        }
+        return { ...row, account_points: balances.get(row.user_id) || 0, proof_url };
+      }));
+      const { count } = await supabase
+        .from("phone_ai_purchases")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .eq("review_status", "submitted");
+      return json({ ok: true, orders, pending_count: count || 0 });
+    }
+
+    if (action === "admin_review") {
+      requireAdmin(req, body);
+      const purchaseId = String(body.purchase_id || "").trim();
+      const decision = String(body.decision || "").trim();
+      if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) {
+        return json({ ok: false, error: "invalid-purchase-id" }, 400);
+      }
+      if (decision === "approve") {
+        const paymentRef = String(body.payment_ref || "").trim();
+        if (paymentRef.length < 4) return json({ ok: false, error: "payment-reference-required" }, 400);
+        const { data: balance, error } = await supabase.rpc("phone_ai_confirm_purchase", {
+          p_purchase_id: purchaseId,
+          p_payment_ref: paymentRef.slice(0, 120),
+        });
+        if (error) throw error;
+        return json({ ok: true, balance });
+      }
+      if (decision === "reject") {
+        const note = String(body.review_note || "payment not found").trim().slice(0, 300);
+        const { data: rejected, error } = await supabase
+          .from("phone_ai_purchases")
+          .update({
+            status: "cancelled",
+            review_status: "rejected",
+            reviewed_at: new Date().toISOString(),
+            review_note: note,
+          })
+          .eq("id", purchaseId)
+          .eq("status", "pending")
+          .eq("review_status", "submitted")
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!rejected) return json({ ok: false, error: "purchase-not-reviewable" }, 409);
+        return json({ ok: true });
+      }
+      return json({ ok: false, error: "invalid-review-decision" }, 400);
+    }
+
     const userId = getUser(req, body);
     if (!userId) return json({ ok: false, error: "missing-user" }, 400);
     const clientSecret = getSecret(req, body);
@@ -403,7 +564,7 @@ Deno.serve(async (req) => {
         .limit(80);
       const { data: purchases } = await supabase
         .from("phone_ai_purchases")
-        .select("id,provider,amount_cny,points,status,created_at,paid_at")
+        .select("id,plan_id,provider,amount_cny,points,status,review_status,review_submitted_at,reviewed_at,review_note,created_at,paid_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(12);
@@ -426,16 +587,26 @@ Deno.serve(async (req) => {
       if (provider !== "alipay" && provider !== "wechat") {
         return json({ ok: false, error: "invalid-payment-provider" }, 400);
       }
+      const { count: pendingCount } = await supabase
+        .from("phone_ai_purchases")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "pending");
+      if ((pendingCount || 0) >= 3) {
+        return json({ ok: false, error: "too-many-pending-orders" }, 429);
+      }
       const { data: purchase, error } = await supabase
         .from("phone_ai_purchases")
         .insert({
           user_id: userId,
+          plan_id: plan.id,
           provider,
           amount_cny: plan.amount_cny,
           points: plan.points,
           status: "pending",
+          review_status: "unsubmitted",
         })
-        .select("id,provider,amount_cny,points,status,created_at")
+        .select("id,plan_id,provider,amount_cny,points,status,review_status,created_at")
         .single();
       if (error) throw error;
       return json({
@@ -444,6 +615,65 @@ Deno.serve(async (req) => {
         plan,
         payment_note: `${plan.kind === "service" ? "CLONE" : "AI"}-${String(purchase.id).replace(/-/g, "").slice(0, 10).toUpperCase()}`,
       });
+    }
+
+    if (action === "purchase_submit") {
+      await ensureAccount(userId, clientSecret);
+      const purchaseId = String(body.purchase_id || "").trim();
+      if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) {
+        return json({ ok: false, error: "invalid-purchase-id" }, 400);
+      }
+      const { data: purchase, error: purchaseError } = await supabase
+        .from("phone_ai_purchases")
+        .select("id,user_id,plan_id,provider,amount_cny,points,status,review_status,proof_path,created_at")
+        .eq("id", purchaseId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (purchaseError) throw purchaseError;
+      if (!purchase) return json({ ok: false, error: "purchase-not-found" }, 404);
+      if (purchase.status !== "pending") return json({ ok: false, error: "purchase-not-pending" }, 409);
+      if (purchase.review_status === "submitted") {
+        return json({ ok: true, purchase, already_submitted: true });
+      }
+      if (Date.now() - new Date(purchase.created_at).getTime() > 24 * 60 * 60 * 1000) {
+        return json({ ok: false, error: "purchase-expired" }, 410);
+      }
+      const image = proofBytes(body.proof_image);
+      const path = `${userId}/${purchaseId}/${Date.now()}.${image.ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from(PROOF_BUCKET)
+        .upload(path, image.bytes, { contentType: image.mime, upsert: false });
+      if (uploadError) throw uploadError;
+      const claimed = new Date(String(body.claimed_paid_at || ""));
+      const claimedPaidAt = Number.isFinite(claimed.getTime()) ? claimed.toISOString() : new Date().toISOString();
+      const payerHint = String(body.payer_hint || "").trim().slice(0, 80);
+      const { data: submitted, error: updateError } = await supabase
+        .from("phone_ai_purchases")
+        .update({
+          review_status: "submitted",
+          payer_hint: payerHint,
+          claimed_paid_at: claimedPaidAt,
+          proof_path: path,
+          review_submitted_at: new Date().toISOString(),
+          review_note: null,
+        })
+        .eq("id", purchaseId)
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .neq("review_status", "submitted")
+        .select("id,plan_id,provider,amount_cny,points,status,review_status,review_submitted_at,created_at")
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!submitted) {
+        await supabase.storage.from(PROOF_BUCKET).remove([path]);
+        return json({ ok: false, error: "purchase-submit-conflict" }, 409);
+      }
+      await sendAdminPush(
+        "新的付款核对申请",
+        `${purchase.provider === "wechat" ? "微信" : "支付宝"} ¥${Number(purchase.amount_cny).toFixed(2)} · ${userId}`,
+        purchaseId,
+      );
+      return json({ ok: true, purchase: submitted });
     }
 
     if (action === "chat") {
@@ -603,7 +833,11 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: "unknown-action" }, 404);
   } catch (e) {
     const msg = errText(e);
-    const status = msg.includes("no-balance") ? 402 : (msg.includes("disabled") || msg.includes("bad-client-secret")) ? 403 : 500;
+    const status = msg.includes("admin-unauthorized") ? 401
+      : /invalid-proof-image|proof-image-too-large/.test(msg) ? 400
+      : msg.includes("no-balance") ? 402
+      : (msg.includes("disabled") || msg.includes("bad-client-secret")) ? 403
+      : 500;
     return json({ ok: false, error: msg }, status);
   }
 });

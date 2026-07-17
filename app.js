@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v534 · AI账户免密码';
+const APP_VER='v535 · 付款核对管理台';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -644,7 +644,7 @@ function apiErrorCN(status,raw){status=+status||0;const src=String(raw||'').repl
   else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='网络连接失败或接口禁止网页跨域；确认网址能访问，并询问平台是否支持网页调用（CORS）';
   const cn=/[\u4e00-\u9fa5]/.test(src)?src.slice(0,90):'';return(status?'HTTP '+status+'：':'')+tip+(cn&&cn.indexOf(tip)<0?'（'+cn+'）':'');}
 function apiCaughtCN(e){const s=String((e&&e.message)||e||'');const m=s.match(/HTTP\s*(\d{3})/i);return apiErrorCN(m?+m[1]:0,s);}
-function aiCoreOn(){return !!(S.settings&&S.settings.aiCore&&S.settings.aiCore.enabled);}
+function aiCoreOn(){return false;}
 function aiCoreUrl(){return (((S.settings&&S.settings.aiCore&&S.settings.aiCore.url)||'').trim()).replace(/\/+$/,'');}
 function ttsCfg(){S.settings=S.settings||{};S.settings.tts=S.settings.tts||{};return S.settings.tts;}
 function ttsExternalOn(t){return !!(t&&t.base&&t.key);}
@@ -990,7 +990,7 @@ const _ttsLedgerMap=typeof WeakMap!=='undefined'?new WeakMap():null;
 function ttsLedgerSet(ab,id){try{if(ab&&id&&_ttsLedgerMap)_ttsLedgerMap.set(ab,String(id));}catch(_){}return ab;}
 function ttsLedgerGet(ab){try{return ab&&_ttsLedgerMap?_ttsLedgerMap.get(ab):'';}catch(_){return '';}}
 function ttsLedgerFromError(e){const d=e&&e.data;return String((e&&(e.ledger_id||e.ledgerId||e.request_id))||(d&&(d.ledger_id||d.ledgerId||d.request_id))||'');}
-async function ttsRefundLedger(id,reason){try{if(!id||!aiCoreOn())return;const d=await aiRelay('tts_refund',{ledger_id:id,reason:reason||'tts-client-failed'});if(d&&d.refunded&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),400);}catch(_){}}
+async function ttsRefundLedger(id,reason){try{if(!id||!ttsUseRelay())return;const d=await aiRelay('tts_refund',{ledger_id:id,reason:reason||'tts-client-failed'});if(d&&d.refunded&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),400);}catch(_){}}
 async function ttsRefundAudio(ab,reason){const id=ttsLedgerGet(ab);if(id)await ttsRefundLedger(id,reason);}
 async function ttsRefundError(e,reason){const id=ttsLedgerFromError(e);if(!id||e&&e._ttsRefunded)return false;await ttsRefundLedger(id,reason);try{e._ttsRefunded=true;}catch(_){}return true;}
 function ttsVoiceAccessErrorText(s){return /tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access|permission|forbidden|unauthorized|401|403|404/i.test(String(s||''));}
@@ -1062,7 +1062,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=534';
+  const url='sw.js?v=535';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;

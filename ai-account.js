@@ -1,5 +1,5 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiPayBusy=false;
+let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false;
 const AI_VOICE_PRESETS=[
   {id:'phonevoice20260709b',name:'月岛萤',clone:true,preset:true},
   {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
@@ -20,7 +20,7 @@ const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
 function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 
 function openAIAccount(){go('aiaccount');}
-function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
+function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};S.settings.aiCore.enabled=false;if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
 function aiVoiceEnabled(){return typeof ttsEnabled==='function'?ttsEnabled(S.settings.tts||{}):!!((S.settings.tts||{}).enabled);}
 function aiVoiceRelayOn(){return !!((S.settings.tts||{}).relay&&aiCoreUrl());}
 function aiExternalTts(){const t=(typeof ttsCfg==='function'?ttsCfg():(S.settings.tts||{}));return t&&t.base&&t.key?t:null;}
@@ -31,8 +31,8 @@ function aiRechargePlans(){return _aiAcct&&Array.isArray(_aiAcct.plans)&&_aiAcct
 function aiPlanById(id){return aiRechargePlans().find(x=>String(x.id)===String(id));}
 function aiPaymentChannel(id){return AI_PAYMENT_CHANNELS.find(x=>x.id===id);}
 function aiPurchaseIsService(x){return Number(x&&x.points||0)===0&&Math.abs(Number(x&&x.amount_cny||0)-19.9)<.01;}
-function aiPurchaseRows(){const rows=(_aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases:[]).slice(0,6),status={pending:'等待核对',paid:'已确认',cancelled:'已取消',refunded:'已退款'};
-  return rows.length?rows.map(x=>{const service=aiPurchaseIsService(x);return `<div class="bill"><div><b>${esc(status[x.status]||x.status)} · ${esc(x.provider==='wechat'?'微信':'支付宝')}</b><small>${esc(aiLedgerTime(x.created_at))} · 订单 ${esc(String(x.id||'').slice(0,8).toUpperCase())}</small></div><div class="${x.status==='paid'?'pos':''}">${service?'音色克隆':Number(x.points||0).toLocaleString()+'点'}</div></div>`;}).join(''):'<div class="hint" style="padding:0 14px 12px">还没有充值或服务订单</div>';}
+function aiPurchaseRows(){const rows=(_aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases:[]).slice(0,8);
+  return rows.length?rows.map(x=>{const service=aiPurchaseIsService(x),review=String(x.review_status||'unsubmitted');let label=x.status==='paid'?'已确认到账':x.status==='refunded'?'已退款':x.status==='cancelled'?(review==='rejected'?'未通过核对':'已取消'):(review==='submitted'?'等待人工核对':'等待上传凭证');const action=x.status==='pending'&&review!=='submitted'?`<button class="minibtn" style="margin-top:6px" onclick="aiOpenPurchaseClaim('${esc(x.id)}')">上传截图</button>`:'';return `<div class="bill"><div><b>${esc(label)} · ${esc(x.provider==='wechat'?'微信':'支付宝')}</b><small>${esc(aiLedgerTime(x.created_at))} · 订单 ${esc(String(x.id||'').slice(0,8).toUpperCase())}</small>${x.review_note?`<small style="color:#e7a0a8">${esc(x.review_note)}</small>`:''}${action}</div><div class="${x.status==='paid'?'pos':''}">${service?'音色克隆':Number(x.points||0).toLocaleString()+'点'}</div></div>`;}).join(''):'<div class="hint" style="padding:0 14px 12px">还没有充值或服务订单</div>';}
 function aiRechargeCards(){return aiRechargePlans().filter(p=>p.kind!=='service').map((p,i)=>`<button onclick="aiOpenRecharge('${esc(p.id)}')" style="min-width:0;text-align:left;border:1px solid ${i===1?'rgba(255,183,210,.7)':'rgba(255,255,255,.1)'};background:${i===1?'#24212a':'#1c1d22'};color:#f5f5f7;border-radius:8px;padding:13px 12px;cursor:pointer">
     <span style="display:block;font-size:12px;color:${i===1?'#ffb7d2':'#9297a1'}">${esc(p.tag||p.name||'充值套餐')}</span>
     <b style="display:block;font-size:23px;margin:5px 0 2px;letter-spacing:0">${Number(p.points||0).toLocaleString()}<small style="font-size:12px;font-weight:500;color:#a8adb6;margin-left:3px">点</small></b>
@@ -66,7 +66,6 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       ${aiPurchaseRows()}
     </div>
     <div class="section">
-      <div class="it"><span>使用内置AI<br><small style="color:#888">聊天/识图/生图主通道可直接开启；语音API有单独开关。</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
       <div class="it"><span>内置语音<br><small style="color:#888">开：角色语音条和语音电话走部署后台；关：若设置里填了外置海螺，则走外置海螺。</small></span><span class="sw ${aiVoiceRelayOn()?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
     </div>
     <div class="section">
@@ -80,7 +79,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">最近流水<small style="display:block;color:#777;font-weight:400;margin-top:3px">按本地时间显示，最多保留80条</small></div>
       <div id="ai_ledger">${aiLedgerRows()}</div>
     </div>
-    <div class="hint">个人收款码暂不支持自动支付回调。付款后保留订单号，核对完成后点数会进入本账户。</div>
+    <div class="hint">个人收款码暂不支持自动支付回调。付款后上传付款截图；管理员核对真实账单并确认后，点数才会进入本账户。</div>
   </div>`;}
 
 function aiOpenRecharge(planId){const p=aiPlanById(planId);if(!p)return;
@@ -104,11 +103,28 @@ function aiShowPayment(purchase,plan,note,channel){if(!purchase||!plan||!channel
     <img src="${esc(channel.qr)}" alt="${esc(channel.name)}收款码" onclick="viewImg('${esc(channel.qr)}')" style="display:block;width:min(72vw,280px);max-height:44vh;object-fit:contain;margin:0 auto;border-radius:8px;background:#fff">
     <div style="margin:12px 0;background:#202126;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;color:#ddd;font-size:13px;line-height:1.7">
       订单号：<b>${esc(oid.slice(0,8).toUpperCase())}</b><br>付款备注：<b>${esc(note||'')}</b><br>
-      <small style="color:#888">${plan.kind==='service'?'付款后添加微信并发送订单号，等待人工确认。':'付款后返回小手机，等待核对并点击“刷新到账”。'}</small>
+      <small style="color:#888">${plan.kind==='service'?'付款后上传付款截图，再添加微信发送订单号和音频。':'付款后上传付款截图，等待管理员核对真实账单。'}</small>
     </div>
     <div class="btns"><button class="btn g" onclick="aiCopyPayment('${esc(note||oid)}')">复制备注</button><button class="btn p" onclick="aiLaunchPayment('${esc(channel.id)}')">打开${esc(channel.name)}</button></div>
     ${plan.kind==='service'?`<button class="btn p" style="margin-top:10px;background:#3a3d46" onclick="aiShowCloneContact('${esc(note||oid)}')">添加微信办理</button>`:''}
-    <button class="btn g" style="margin-top:10px" onclick="closeModal();aiAccountRefresh()">我已支付，刷新订单</button>`);}
+    <button class="btn g" style="margin-top:10px" onclick="aiOpenPurchaseClaim('${esc(oid)}')">上传付款截图，提交核对</button>`);}
+
+function aiClaimPurchase(id){return _aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases.find(x=>String(x.id)===String(id)):null;}
+function aiClaimLocalTime(){const d=new Date(),pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+function aiOpenPurchaseClaim(purchaseId){const p=aiClaimPurchase(purchaseId);if(!p){toast('订单信息已过期，请先刷新 AI 账户');return;}_aiClaimFile=null;openModal(`<h3>提交付款核对</h3>
+  <div class="hint" style="margin-bottom:10px">订单 ${esc(String(p.id||'').slice(0,8).toUpperCase())} · ${p.provider==='wechat'?'微信':'支付宝'} ¥${Number(p.amount_cny||0).toFixed(2)}<br>请上传本订单的真实付款截图。截图只用于申请核对，不代表已经到账；管理员仍会核对收款账单。</div>
+  <label class="field" style="display:block"><span>付款截图</span><input id="ai_claim_file" type="file" accept="image/jpeg,image/png,image/webp" onchange="aiClaimPick(this)"></label>
+  <div id="ai_claim_preview" style="display:none;margin:8px 0;text-align:center"></div>
+  <label class="field" style="display:block"><span>付款账号昵称或尾号（选填）</span><input id="ai_claim_hint" maxlength="80" placeholder="方便在账单里核对"></label>
+  <label class="field" style="display:block"><span>付款时间</span><input id="ai_claim_time" type="datetime-local" value="${esc(aiClaimLocalTime())}"></label>
+  <button class="btn p" id="ai_claim_submit" style="margin-top:10px" onclick="aiSubmitPurchaseClaim('${esc(p.id)}')">提交给管理员核对</button>
+  <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function aiClaimPick(input){const file=input&&input.files&&input.files[0];if(!file)return;const ok=/^image\/(jpeg|png|webp)$/i.test(file.type||'');if(!ok){input.value='';toast('请上传 JPG、PNG 或 WebP 图片');return;}if(file.size>12*1024*1024){input.value='';toast('原图不能超过 12MB');return;}_aiClaimFile=file;const box=document.getElementById('ai_claim_preview'),url=URL.createObjectURL(file);if(box){box.style.display='block';box.innerHTML=`<img src="${url}" alt="付款截图预览" style="max-width:100%;max-height:34vh;object-fit:contain;border-radius:8px">`;setTimeout(()=>URL.revokeObjectURL(url),30000);}}
+async function aiClaimImageData(file){return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('读取截图失败'));reader.onload=()=>{const img=new Image();img.onerror=()=>reject(new Error('截图格式无法读取'));img.onload=()=>{let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height,scale=Math.min(1,1600/Math.max(w,h));w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);let data=canvas.toDataURL('image/jpeg',.82);if(data.length>2.65*1024*1024)data=canvas.toDataURL('image/jpeg',.68);if(data.length>2.8*1024*1024){reject(new Error('截图压缩后仍过大，请裁剪后重试'));return;}resolve(data);};img.src=String(reader.result||'');};reader.readAsDataURL(file);});}
+async function aiSubmitPurchaseClaim(purchaseId){if(_aiClaimBusy)return;if(!_aiClaimFile){toast('请先选择付款截图');return;}const btn=document.getElementById('ai_claim_submit'),hint=document.getElementById('ai_claim_hint'),time=document.getElementById('ai_claim_time');_aiClaimBusy=true;if(btn){btn.disabled=true;btn.textContent='正在安全上传…';}
+  try{const proof=await aiClaimImageData(_aiClaimFile);const d=await aiRelay('purchase_submit',{purchase_id:purchaseId,proof_image:proof,payer_hint:(hint&&hint.value||'').trim(),claimed_paid_at:(time&&time.value)||''});if(!_aiAcct)_aiAcct={};_aiAcct.purchases=_aiAcct.purchases||[];const i=_aiAcct.purchases.findIndex(x=>String(x.id)===String(purchaseId));if(i>=0)_aiAcct.purchases[i]=Object.assign({},_aiAcct.purchases[i],d.purchase||{},{review_status:'submitted'});closeModal();render();toast('已提交，管理员核对后会自动到账');}
+  catch(e){toast('提交失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}
+  finally{_aiClaimBusy=false;if(btn){btn.disabled=false;btn.textContent='提交给管理员核对';}}}
 
 function aiShowCloneContact(note){openModal(`<h3>添加微信办理音色克隆</h3>
   <div class="hint" style="margin-bottom:10px">添加后请发送：<b>${esc(note||'克隆订单号')}</b>、已获授权的干净音频、角色名称。请勿提交未经本人许可的真人声音。</div>
@@ -119,8 +135,7 @@ function aiShowCloneContact(note){openModal(`<h3>添加微信办理音色克隆<
 function aiCopyPayment(text){try{navigator.clipboard&&navigator.clipboard.writeText(text);}catch(_){}toast('已复制付款备注');}
 function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);if(!c||!c.url)return;if(!automatic)toast('正在打开'+c.name+'…');try{location.href=c.url;}catch(_){if(!automatic)toast('没有自动打开，请长按保存收款码后扫码');}}
 
-function aiToggleCore(){const ac=aiCoreInit();if(ac.enabled){ac.enabled=false;save();render();toast('已关闭内置AI');return;}
-  ac.enabled=true;save();render();toast('已开启内置AI');}
+function aiToggleCore(){const ac=aiCoreInit();ac.enabled=false;save();render();toast('内置 AI 主通道已固定关闭');}
 function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();render();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
