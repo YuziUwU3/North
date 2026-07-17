@@ -11,7 +11,9 @@ const version = app.match(/APP_VER='v(\d+)\b/)?.[1];
 assert.ok(version, 'app.js must expose a numeric APP_VER');
 
 assert.match(html, new RegExp(`app\\.js\\?v=${version}\\b`));
+assert.match(html, new RegExp(`ai-account\\.js\\?v=${version}\\b`));
 assert.match(html, new RegExp(`sw\\.js\\?v=${version}\\b`));
+assert.match(html, new RegExp(`searchParams\\.set\\('v','${version}'\\)`));
 assert.match(app, new RegExp(`sw\\.js\\?v=${version}\\b`));
 assert.match(sw, new RegExp(`north-shell-v${version}\\b`));
 assert.match(index, new RegExp(`小手机\\.html\\?v=${version}\\b`));

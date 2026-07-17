@@ -4,6 +4,7 @@ import path from 'node:path';
 
 const root=path.resolve(import.meta.dirname,'..');
 const account=fs.readFileSync(path.join(root,'ai-account.js'),'utf8');
+const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const backend=fs.readFileSync(path.join(root,'supabase/functions/phone-ai/index.ts'),'utf8');
 const sql=fs.readFileSync(path.join(root,'supabase_ai_recharge_v533.sql'),'utf8');
 const html=fs.readFileSync(path.join(root,'小手机.html'),'utf8');
@@ -36,7 +37,10 @@ assert.match(sql,/voice_clone_service/);
 assert.match(sql,/if v_purchase\.points > 0 then/);
 assert.match(sql,/revoke all on function phone_ai_confirm_purchase\(uuid, text\) from anon/);
 
-assert.match(account,/function openAIAccount\(\)\{_aiUnlocked=true;go\('aiaccount'\);\}/);
+assert.match(account,/function openAIAccount\(\)\{go\('aiaccount'\);\}/);
+assert.doesNotMatch(account,/ai_pin|ai_core_pin|aiCoreUnlock|0414|206414|管理密码/);
+assert.match(app,/输入 \$\{esc\(c\.remark\|\|c\.name\)\} 的手机密码/);
+assert.match(app,/function spyChangePwd\(id\)/);
 assert.match(account,/function aiCreatePurchase\(planId,provider\)/);
 assert.match(account,/function aiShowPayment\(purchase,plan,note,channel\)/);
 assert.match(account,/function aiShowCloneContact\(note\)/);
@@ -45,8 +49,8 @@ assert.match(account,/function aiLaunchPayment\(provider,automatic\)/);
 assert.match(account,/\.\/pay-assets\/alipay-receive\.jpg/);
 assert.match(account,/\.\/pay-assets\/wechat-receive\.jpg/);
 assert.match(account,/\.\/pay-assets\/wechat-contact\.jpg/);
-assert.match(html,/ai-account\.js\?v=533/);
-assert.match(sw,/north-shell-v533/);
+assert.match(html,/ai-account\.js\?v=534/);
+assert.match(sw,/north-shell-v534/);
 
 for(const file of ['alipay-receive.jpg','wechat-receive.jpg','wechat-contact.jpg']){
   const stat=fs.statSync(path.join(root,'pay-assets',file));

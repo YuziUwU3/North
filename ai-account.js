@@ -1,5 +1,5 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiUnlocked=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiPayBusy=false;
+let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiPayBusy=false;
 const AI_VOICE_PRESETS=[
   {id:'phonevoice20260709b',name:'月岛萤',clone:true,preset:true},
   {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
@@ -19,8 +19,7 @@ const AI_PAYMENT_CHANNELS=[
 const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
 function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 
-function openAIAccount(){_aiUnlocked=true;go('aiaccount');}
-function aiUnlock(){const v=(($('#ai_pin')||{}).value||'').trim();if(v!=='0414'){toast('密码不对');return;}_aiUnlocked=true;closeModal();go('aiaccount');}
+function openAIAccount(){go('aiaccount');}
 function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
 function aiVoiceEnabled(){return typeof ttsEnabled==='function'?ttsEnabled(S.settings.tts||{}):!!((S.settings.tts||{}).enabled);}
 function aiVoiceRelayOn(){return !!((S.settings.tts||{}).relay&&aiCoreUrl());}
@@ -67,7 +66,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       ${aiPurchaseRows()}
     </div>
     <div class="section">
-      <div class="it"><span>使用内置AI<br><small style="color:#888">聊天/识图/生图主通道暂不开放；开启需要管理密码。语音API有单独开关。</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
+      <div class="it"><span>使用内置AI<br><small style="color:#888">聊天/识图/生图主通道可直接开启；语音API有单独开关。</small></span><span class="sw ${ac.enabled?'on':''}" onclick="aiToggleCore()"></span></div>
       <div class="it"><span>内置语音<br><small style="color:#888">开：角色语音条和语音电话走部署后台；关：若设置里填了外置海螺，则走外置海螺。</small></span><span class="sw ${aiVoiceRelayOn()?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
     </div>
     <div class="section">
@@ -121,11 +120,7 @@ function aiCopyPayment(text){try{navigator.clipboard&&navigator.clipboard.writeT
 function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);if(!c||!c.url)return;if(!automatic)toast('正在打开'+c.name+'…');try{location.href=c.url;}catch(_){if(!automatic)toast('没有自动打开，请长按保存收款码后扫码');}}
 
 function aiToggleCore(){const ac=aiCoreInit();if(ac.enabled){ac.enabled=false;save();render();toast('已关闭内置AI');return;}
-  openModal(`<h3>开启内置AI</h3><div class="hint">聊天/识图/生图主通道暂不开放。确认要开启请输入管理密码。</div>
-    <div class="field"><input id="ai_core_pin" type="password" inputmode="numeric" maxlength="8" placeholder="输入管理密码"></div>
-    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="aiCoreUnlock()">开启</button></div>`);
-  setTimeout(()=>{const el=$('#ai_core_pin');if(el){el.focus();el.onkeydown=e=>{if(e.key==='Enter')aiCoreUnlock();};}},60);}
-function aiCoreUnlock(){const v=(($('#ai_core_pin')||{}).value||'').trim();if(v!=='206414'){toast('管理密码不对');return;}const ac=aiCoreInit();ac.enabled=true;save();closeModal();render();toast('已开启内置AI');}
+  ac.enabled=true;save();render();toast('已开启内置AI');}
 function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();render();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
