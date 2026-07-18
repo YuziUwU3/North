@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v559 · 约会状态与小号稳态';
+const APP_VER='v560 · 未结束约会恢复';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1097,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=559';
+  const url='sw.js?v=560';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4529,9 +4529,12 @@ let _off=null;
 function offData(id){S.offline=S.offline||{};if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false,daypart:''};return S.offline[id];}
 function offlineFocusStart(id,o){if(!id||!o||!o.started)return;S.offlineFocus={id,session:o.session||'',startedAt:o.startedAt||Date.now()};}
 function offlineFocusStop(id){const f=S.offlineFocus;if(!f||!id||f.id===id)S.offlineFocus=null;}
-function offlineRepairState(){let changed=false;Object.keys(S.offline||{}).forEach(id=>{const o=S.offline[id];if(o&&o.started&&(!o.session||!o.startedAt)){o.started=false;o.session='';o.startedAt=0;o.introSeen=false;o.endedAt=o.endedAt||Date.now();changed=true;}});const f=S.offlineFocus,o=f&&S.offline&&S.offline[f.id];if(f&&(!o||!o.started||!o.session||!o.startedAt||f.session!==o.session)){S.offlineFocus=null;changed=true;}if(changed)save();return changed;}
+function offlineLegacyStartedAt(o){const times=(o&&o.msgs||[]).map(m=>+(m&&(+m.time||+m.ts))||0).filter(Boolean),when=Date.parse(o&&o.when||'');return(times.length?Math.min(...times):(Number.isFinite(when)&&when>0?when:0))||+(o&&o.endedAt)||Date.now();}
+function offlineCanResume(o){return !!(o&&!o.started&&!o.session&&!o.startedAt&&(o.msgs||[]).length&&o.endedAt);}
+function offlineRepairState(){let changed=false;Object.keys(S.offline||{}).forEach(id=>{const o=S.offline[id];if(o&&o.started&&(!o.session||!o.startedAt)){o.session=o.session||uid();o.startedAt=o.startedAt||offlineLegacyStartedAt(o);o.endedAt=0;changed=true;}});const f=S.offlineFocus,o=f&&S.offline&&S.offline[f.id];if(f&&(!o||!o.started)){S.offlineFocus=null;changed=true;}else if(f&&o&&(f.session!==o.session||f.startedAt!==o.startedAt)){S.offlineFocus={id:f.id,session:o.session,startedAt:o.startedAt};changed=true;}if(changed)save();return changed;}
 function offlineFocusActive(){offlineRepairState();const f=S.offlineFocus;if(!f)return false;const o=S.offline&&S.offline[f.id];if(!o||!o.started||f.session!==o.session){S.offlineFocus=null;save();return false;}return true;}
 function offlineDeactivate(id,o,clearMsgs){if(!o)return;o.started=false;o.session='';o.startedAt=0;o.introSeen=false;o.endedAt=Date.now();if(clearMsgs)o.msgs=[];offlineFocusStop(id);if(_off&&_off.id===id)_off=null;}
+function offlineResume(id,o){o.started=true;o.session=uid();o.startedAt=offlineLegacyStartedAt(o);o.endedAt=0;o.introSeen=true;offlineFocusStart(id,o);save();_off={id,busy:false};go('off',{id});toast('已恢复上次未结束的约会');}
 const DAYPARTS=['白天','中午','下午','傍晚','晚上','深夜'];
 function dayPartNow(){const h=new Date().getHours();return h<5?'深夜':h<9?'清晨':h<11?'上午':h<13?'中午':h<17?'下午':h<19?'傍晚':h<23?'晚上':'深夜';}
 function offDateTime(ts){if(!ts)return'';const d=new Date(ts);return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
@@ -4547,11 +4550,11 @@ function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messag
 function declineDate(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
 function openOfflineMenu(){S.offline=S.offline||{};offlineRepairState();const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
   openModal(`<h3>线下约会</h3><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
-   ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" role="button" tabindex="0" onclick="offlinePickTap(event,'${c.id}')" ontouchend="offlinePickTap(event,'${c.id}')" onpointerup="offlinePickTap(event,'${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
+   ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" role="button" tabindex="0" onclick="offlinePickTap(event,'${c.id}')" ontouchend="offlinePickTap(event,'${c.id}')" onpointerup="offlinePickTap(event,'${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):offlineCanResume(o)?'上次约会未结束 · 点击继续':(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 let _offlinePickAt=0;
 function offlinePickTap(ev,cid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_offlinePickAt<350)return;_offlinePickAt=now;offlineEnter(cid);}
-function offlineEnter(cid){offlineRepairState();closeModal();const o=offData(cid);if(o.started){offlineFocusStart(cid,o);save();_off={id:cid,busy:false};go('off',{id:cid});return;}offlineInvite(cid);}
+function offlineEnter(cid){offlineRepairState();closeModal();const o=offData(cid);if(o.started){offlineFocusStart(cid,o);save();_off={id:cid,busy:false};go('off',{id:cid});return;}if(offlineCanResume(o)){offlineResume(cid,o);return;}offlineInvite(cid);}
 function offlineInvite(cid){const c=getC(cid);
   openModal(`<h3>约 ${esc(c.remark||c.name)} 见面</h3>
    <div class="field"><label>约会地点</label><input id="of_loc" placeholder="比如：江边咖啡馆 / 你家 / 电影院"></div>
