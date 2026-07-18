@@ -14,8 +14,9 @@ const SHARE_GATE=true, SHARE_PW='';
    你自己用云端"主码"(可反复用)进，代码里不留后门。 */
 const GATE_URL='https://lkhlyfpssmrjkkzhuzag.supabase.co';
 const GATE_KEY='sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
+function normalizeInviteCode(code){return String(code||'').trim().replace(/\s+/g,'').toUpperCase();}
 async function redeemInvite(code){try{
-  const r=await fetch(GATE_URL+'/rest/v1/rpc/redeem_invite',{method:'POST',headers:{'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'},body:JSON.stringify({p_code:code})});
+  const r=await fetch(GATE_URL+'/rest/v1/rpc/redeem_invite',{method:'POST',headers:{'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'},body:JSON.stringify({p_code:normalizeInviteCode(code)})});
   if(!r.ok)return {ok:false,err:'验证服务出错('+r.status+')，稍后再试'};
   const v=await r.json();return {ok:v===true};
 }catch(e){return {ok:false,err:'连不上验证服务器，检查下网络'};}}
@@ -327,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v563 · 安卓桌面打开稳态';
+const APP_VER='v565 · 线下当前消息稳态';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1106,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=563';
+  const url='sw.js?v=565';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3983,12 +3984,12 @@ function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   const inp=document.getElementById('gateInp'),err=document.getElementById('gateErr'),btn=document.getElementById('gateBtn');
   const unlock=()=>{try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);};
   let _busy=false;
-  const tryIn=async()=>{if(_busy)return;const v=(inp.value||'').trim();if(!v){err.textContent='请输入邀请码';inp.focus();return;}
+  const tryIn=async()=>{if(_busy)return;const v=normalizeInviteCode(inp.value);inp.value=v;if(!v){err.textContent='请输入邀请码';inp.focus();return;}
     if(SHARE_PW&&v===SHARE_PW){unlock();return;}
     _busy=true;btn.disabled=true;btn.textContent='验证中…';err.textContent='';
     const res=await redeemInvite(v);
     _busy=false;btn.disabled=false;btn.textContent='进入';
-    if(res.ok){unlock();}else{err.textContent=res.err||'邀请码无效或已被使用；换浏览器/清缓存需要新的未使用邀请码';inp.value='';inp.focus();}};
+    if(res.ok){unlock();}else{err.textContent=res.err||'邀请码无效、已被使用，或旧缓存已经核销过；请换新的未使用邀请码';inp.value='';inp.focus();}};
   btn.onclick=tryIn;
   inp.onkeydown=e=>{if(e.key==='Enter')tryIn();};
   setTimeout(()=>inp.focus(),100);}
@@ -4593,7 +4594,9 @@ function offlineIsAssistantMsg(m){return !!(m&&(m.who==='ta'||(m.who==='旁白'&
 function offlineMsgContent(m){return m&&m.who==='旁白'?'【'+m.text+'】':String(m&&m.text||'');}
 function offlinePendingStart(rows){let first=-1;for(let i=rows.length-1;i>=0;i--){const m=rows[i];if(offlineIsAssistantMsg(m))return first;if(offlineIsUserMsg(m))first=i;}return first;}
 function offlineHistoryMessages(o,limit,opt){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),pending=(opt&&opt.deferCurrent)?offlinePendingStart(rows):-1,starts=[];rows.forEach((m,i)=>{if(offlineIsUserMsg(m))starts.push(i);});let from=starts.length?starts[Math.max(0,starts.length-Math.max(1,limit|0))]:0;if(pending>=0&&from>=pending&&pending>0)from=pending-1;const out=[];rows.slice(from,pending>=0?pending:rows.length).forEach(m=>{const role=offlineIsUserMsg(m)?'user':'assistant',content=offlineMsgContent(m);if(!content)return;const last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+content;else out.push({role,content});});return out;}
-function offlineCurrentTurnPrompt(o,note){if(note)return '[当前必须回应]\n'+S.me.name+'刚刚额外补充：'+String(note).trim()+'\n请把这条补充并入本轮现场回应。';const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),start=offlinePendingStart(rows);if(start<0)return'';const pending=rows.slice(start).filter(offlineIsUserMsg).map(offlineMsgContent).filter(Boolean);if(!pending.length)return'';return '[当前必须回应]\n上一条角色回复之后，'+S.me.name+'连续说/做了下面 '+pending.length+' 条，这是同一轮待回应内容：\n'+pending.map((x,i)=>(i+1)+'. '+x).join('\n')+'\n请一次性按顺序都接住，合成一段自然现场回应；重点落在最后一条，但前面的追问/动作也要被看见。不要回到更早轮次的问题。';}
+function offlinePendingInputs(o){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),start=offlinePendingStart(rows);return start<0?[]:rows.slice(start).filter(offlineIsUserMsg).map(offlineMsgContent).filter(Boolean);}
+function offlineCurrentTurnPrompt(o,note){if(note)return '[当前必须回应]\n'+S.me.name+'刚刚额外补充：'+String(note).trim()+'\n请把这条补充并入本轮现场回应。';const pending=offlinePendingInputs(o);if(!pending.length)return'';return '[当前必须回应｜这是请求中最新且唯一要回答的一轮]\n上一条角色回复之后，'+S.me.name+'连续说/做了下面 '+pending.length+' 条：\n'+pending.map((x,i)=>(i+1)+'. '+x).join('\n')+'\n必须一次性按顺序全部回应，重点落在最后一条。更早的用户消息都已经回答完毕，禁止继续回答或复述更早那一轮。';}
+function offlineRequestMessages(sys,hist,pin,turn){const out=[{role:'system',content:sys},...(hist||[])];if(pin)out.push(pin);if(turn)out.push({role:'user',content:turn});return out;}
 function offlineSharedContext(c,limit){const rows=msgs(c.id).map(m=>{if(!m||m._silent)return null;const raw=msgToText(m),text=String(m._call?(callToCN(raw)||raw):raw||'').replace(/\s+/g,' ').trim();if(!text)return null;const source=m._call?(m._ck==='video'?'视频通话':'语音通话'):(m.type==='sys'?'共同事件':'微信'),who=m.role==='user'?S.me.name:(m.role==='assistant'?(c.remark||c.name):'共同事件');return{time:+m.time||+m.ts||0,source,who,text:text.slice(0,500)};}).filter(Boolean).slice(-limit);
   if(!rows.length)return'\n\n# 进入本场约会前的微信/电话共同上下文\n目前没有可带入的微信或电话记录。';
   return'\n\n# 进入本场约会前最近 '+rows.length+' 条微信/电话共同上下文（设置偏好：'+limit+' 条）\n这些都是你和'+S.me.name+'真实发生过的共同经历。你必须记得并能准确回答“刚才微信聊了什么、电话里说了什么”；它们只作为见面前的记忆背景，绝不能误当成本场刚说出口的面对面台词。\n'+rows.map((x,i)=>(i+1)+'. ['+(x.time?fmtDT(x.time):'时间未知')+']['+x.source+']['+x.who+'] '+x.text).join('\n');}
@@ -4620,10 +4623,12 @@ function offGeneratedTalk(text){return offResponseParts(text).filter(x=>x.kind==
 function offRecentParts(o){return(o&&o.msgs||[]).filter(m=>m&&((m.who==='旁白'&&m.source!=='me')||m.who==='ta')).slice(-80).map(m=>({kind:m.who==='旁白'?'nar':'talk',text:String(m.text||'')})).filter(x=>x.text);}
 function offCrossRepeat(part,old,currentInput,strict){if(!part||!old||part.kind!==old.kind)return false;const n=offRepeatNorm(part.text),p=offRepeatNorm(old.text),cur=offRepeatNorm(currentInput);if(!n||!p)return false;const userRaised=part.kind==='talk'&&((n.length>=2&&cur.includes(n))||(p.length>=2&&cur.includes(p)));if(n===p)return n.length>=(part.kind==='nar'?6:4)&&!userRaised;if(strict)return part.kind==='nar'&&Math.min(n.length,p.length)>=16&&offRepeatSimilarity(n,p)>=.9;const min=Math.min(n.length,p.length);if(part.kind==='talk'&&!userRaised&&min>=4&&(n.includes(p)||p.includes(n)))return true;return min>=(part.kind==='nar'?16:8)&&offRepeatSimilarity(n,p)>=(part.kind==='nar'?.78:.82)&&!userRaised;}
 function offDedupeItems(items,o,currentInput){const list=items||[],seen=new Set(),recent=offRecentParts(o),cur=offRepeatNorm(currentInput),replayed=list.some(item=>{const kind=item&&item.who==='旁白'?'nar':'talk';return recent.some(old=>offCrossRepeat({kind,text:item&&item.text},old,currentInput,true));});return list.filter(item=>{const norm=offRepeatNorm(item&&item.text),kind=item&&item.who==='旁白'?'nar':'talk',key=kind+'|'+norm;if(norm.length>=4&&seen.has(key))return false;if(norm.length>=4)seen.add(key);if(recent.some(old=>offCrossRepeat({kind,text:item.text},old,currentInput,true)))return false;if(replayed&&norm.length>=2&&!cur.includes(norm)&&recent.some(old=>old.kind===kind&&offRepeatNorm(old.text)===norm))return false;return true;});}
-function offCurrentInput(o,note){if(note)return String(note);const m=[...(o&&o.msgs||[])].reverse().find(x=>x&&(x.who==='me'||(x.who==='旁白'&&x.source==='me')));return m?String(m.text||''):'';}
+function offCurrentInput(o,note){if(note)return String(note);return offlinePendingInputs(o).join('\n');}
+function offOldUserPhraseReplay(text,o,currentInput){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),start=offlinePendingStart(rows);if(start<=0)return'';const out=offRepeatNorm(text),cur=offRepeatNorm(currentInput);if(out.length<5)return'';const olds=rows.slice(0,start).filter(offlineIsUserMsg).slice(-10).map(m=>offRepeatNorm(offlineMsgContent(m))).filter(x=>x.length>=5);for(const old of olds){const max=Math.min(12,old.length);for(let n=max;n>=5;n--){for(let i=0;i+n<=old.length;i++){const phrase=old.slice(i,i+n);if(out.includes(phrase)&&!cur.includes(phrase))return phrase;}}}return'';}
 function offlineRepeatAudit(text,o,currentInput){const parts=offResponseParts(text),lines=parts.filter(x=>x.kind==='talk').map(x=>x.text),recent=offRecentParts(o),fails=[],sameTurn=new Set();let score=0;
   parts.forEach(part=>{const n=offRepeatNorm(part.text);if(n.length<4)return;const key=part.kind+'|'+n;if(sameTurn.has(key)){score+=3;if(!fails.includes('同一轮回答内部出现了完全重复的旁白或台词'))fails.push('同一轮回答内部出现了完全重复的旁白或台词');}else sameTurn.add(key);});
   const cross=parts.filter(part=>recent.some(old=>offCrossRepeat(part,old,currentInput,false)));if(cross.length){score+=cross.length*2;fails.push('重新说了本场前几轮已经出现过的旁白或台词');}
+  const stale=offOldUserPhraseReplay(text,o,currentInput);if(stale){score+=5;fails.push('照搬了上一轮用户原话「'+stale+'」，答错了轮次');}
   const source=new Set(offRoutineTopics(currentInput)),topics=[...new Set(lines.flatMap(offRoutineTopics))];topics.forEach(key=>{if(!source.has(key)&&recent.some(old=>offRoutineTopics(old.text).includes(key))){score+=1;fails.push('又追问了近期已经聊过的'+offRoutineLabel(key)+'话题');}});return{fails:[...new Set(fails)].slice(0,3),score};}
 function offlineRepeatFails(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).fails;}
 function offlineRepeatScore(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).score;}
@@ -4652,12 +4657,12 @@ function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   return s;}
 async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
   try{const _on=offlineContextLimit(),hist=offlineHistoryMessages(o,_on,{deferCurrent:true}),turn=offlineCurrentTurnPrompt(o,note);
-    if(turn)hist.push({role:'user',content:turn});
     const sys=offlineSystem(c),pin={role:'system',content:personaPin(c)};
-    let r=await chatAPI([{role:'system',content:sys},...hist,pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.75});
+    const req=offlineRequestMessages(sys,hist,pin,turn);
+    let r=await chatAPI(req,{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.75});
     if(!_off)return;
-    for(let _ra=0;_ra<2&&offlineRoleDrift(r);_ra++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:r},{role:'user',content:offlineRepairNote(c)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.72});if(!_off)return;if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
-    {const current=offCurrentInput(o,note),first=offlineRepeatFails(r,o,current);if(first.length){let candidate=r,best=r,bestScore=offlineRepeatScore(r,o,current),check=first;for(let i=0;i<2&&check.length;i++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:candidate},{role:'user',content:offlineRepeatRepairNote(c,check)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.78});if(!_off)return;if(!fix||offlineRoleDrift(fix))break;const next=offlineRepeatFails(fix,o,current),nextScore=offlineRepeatScore(fix,o,current);if(nextScore<bestScore){best=fix;bestScore=nextScore;}candidate=fix;check=next;if(!next.length){best=fix;break;}}r=best;}}
+    for(let _ra=0;_ra<2&&offlineRoleDrift(r);_ra++){const fix=await chatAPI([...req,{role:'assistant',content:r},{role:'user',content:offlineRepairNote(c)+(turn?'\n\n'+turn:'')}],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.72});if(!_off)return;if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
+    {const current=offCurrentInput(o,note),first=offlineRepeatFails(r,o,current);if(first.length){let candidate=r,best=r,bestScore=offlineRepeatScore(r,o,current),check=first;for(let i=0;i<2&&check.length;i++){const fix=await chatAPI([...req,{role:'assistant',content:candidate},{role:'user',content:offlineRepeatRepairNote(c,check)+(turn?'\n\n'+turn:'')}],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.78});if(!_off)return;if(!fix||offlineRoleDrift(fix))break;const next=offlineRepeatFails(fix,o,current),nextScore=offlineRepeatScore(fix,o,current);if(nextScore<bestScore){best=fix;bestScore=nextScore;}candidate=fix;check=next;if(!next.length){best=fix;break;}}r=best;}}
     r=applyGrudgeTags(r,c);
     // 先把这轮拆成一条条(旁白/台词)，再【一条一条地】发出来，不要一次性糊一大堆
     let items=[];
