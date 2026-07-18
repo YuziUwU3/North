@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v553 · 剧情字幕与微信解锁';
+const APP_VER='v554 · 一起听距离可设置';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1097,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=553';
+  const url='sw.js?v=554';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1745,8 +1745,19 @@ function _mAvHTML(src,which,size){const inner=isImg(src)?`<img src="${src}" styl
 function setMusicAvatar(which){pickFile('image/*',async f=>{const img=await compress(f,300,.8);musicInit();if(which==='me')S.music.meAvatar=img;else S.music.taAvatar=img;save();render();toast('头像换好了');});}
 function setMusicCover(){musicInit();const s=S.music.songs.find(x=>x.id===_mCur);if(!s){toast('先放一首歌');return;}pickFile('image/*',async f=>{s.cover=await compress(f,520,.72);save();render();toast('封面换好了🎵');});}
 function setMusicBg(){pickFile('image/*',async f=>{musicInit();S.music.bg=await compress(f,1000,.7);save();closeModal();render();toast('背景换好了🖼️');});}
-function editMusicDistance(){musicInit();const v=prompt('相距多少公里？',(S.music.distance==null?1400:S.music.distance));if(v==null)return;const n=parseFloat(v);if(isNaN(n)){toast('填个数字哦');return;}S.music.distance=n;save();render();toast('已更新');}
+function musicDistanceValue(value){const raw=String(value==null?'':value).trim(),n=Number(raw);if(!raw||!Number.isFinite(n)||n<0)return null;return Math.round(n*10)/10;}
+function musicDistanceText(value){const n=musicDistanceValue(value);return String(n==null?1400:n);}
+function musicSetDistance(value){musicInit();const n=musicDistanceValue(value),input=document.getElementById('musicDistanceInput');if(n==null){if(input)input.value=musicDistanceText(S.music.distance);toast('请输入不小于 0 的有效距离');return false;}S.music.distance=n;save();if(input)input.value=musicDistanceText(n);const display=document.getElementById('musicDistanceValue');if(display)display.textContent=musicDistanceText(n);toast('距离已设为 '+musicDistanceText(n)+' 公里');return true;}
+function editMusicDistance(){musicInit();const v=prompt('相距多少公里？',musicDistanceText(S.music.distance));if(v==null)return;musicSetDistance(v);}
 function musicMenu(){musicInit();const chatCount=S.music.session?(S.music.chat||[]).filter(m=>m.cid===S.music.session.cid).length:(S.music.chat||[]).length;openModal(`<h3>一起听</h3>
+  <div class="section" style="padding:12px 14px;margin-bottom:10px">
+    <div class="field" style="margin:0"><label for="musicDistanceInput">彼此距离（公里）</label>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center">
+        <input id="musicDistanceInput" type="number" min="0" step="0.1" inputmode="decimal" value="${musicDistanceText(S.music.distance)}" onkeydown="if(event.key==='Enter')musicSetDistance(this.value)">
+        <button class="minibtn" style="height:38px;padding:0 15px" onclick="musicSetDistance(document.getElementById('musicDistanceInput').value)">保存</button>
+      </div>
+    </div>
+  </div>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicAdd()">＋ 添加歌曲</button>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicListModal()">歌单（${(S.music.songs||[]).length}）</button>
   <button class="btn g" style="margin-bottom:8px" onclick="musicChatHistoryModal()">一起听聊天记录（${chatCount}条）</button>
@@ -1757,7 +1768,7 @@ function musicMenu(){musicInit();const chatCount=S.music.session?(S.music.chat||
   ${S.music.bg?`<button class="btn g" style="margin-bottom:8px" onclick="S.music.bg='';save();closeModal();render();toast('已恢复默认背景')">↩️ 恢复默认背景</button>`:''}
   ${S.music.session?`<button class="btn d" style="margin-bottom:8px" onclick="closeModal();musicEndSession()">结束一起听</button>`:`<button class="btn p" style="margin-bottom:8px" onclick="closeModal();musicInvite()">邀请一起听</button>`}
   <button class="btn g" style="margin-bottom:8px" onclick="musicClearChat()">清空一起听聊天记录（${chatCount}条）</button>
-  <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像、点「相距…」那行改距离。一起听里说过的话会同步进微信上下文，但不会刷到微信聊天界面。</div>
+  <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像。一起听里说过的话会同步进微信上下文，但不会刷到微信聊天界面。</div>
   <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
 function musicChatHistoryModal(){musicInit();const sess=S.music.session;let rows=(S.music.chat||[]).filter(m=>!sess||m.cid===sess.cid).slice(-120);const title=sess?((getC(sess.cid)||{}).remark||(getC(sess.cid)||{}).name||'ta'):'全部';
   const body=rows.length?rows.map(m=>{const c=getC(m.cid);const nm=c?(c.remark||c.name):'ta';const who=m.role==='user'?S.me.name:(m.role==='assistant'?nm:'系统');const col=m.role==='user'?'#ff9ec4':(m.role==='assistant'?'#9ec5fe':'#9a9aa2');
@@ -1765,14 +1776,14 @@ function musicChatHistoryModal(){musicInit();const sess=S.music.session;let rows
   const chatBtn=sess?`<button class="btn p" style="margin-top:8px" onclick="closeModal();openChat('${sess.cid}')">打开和ta的微信聊天</button>`:'';
   openModal(`<h3>一起听聊天记录 · ${esc(title)}</h3><div class="section" style="max-height:56vh;overflow:auto">${body}</div>${chatBtn}<button class="btn g" style="margin-top:8px" onclick="musicMenu()">返回设置</button>`);}
 async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!songs.length){toast('还没有歌单');return;}toast('正在打包歌单…');
-  try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance||1400,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
+  try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
     for(const s of songs){const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}pack.music.songs.push(x);}
     const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('歌单已导出');
   }catch(e){toast('导出失败，文件太大；请用“分首导出”');}}
 function musicSafeName(s){return String(s||'未命名').replace(/[\\/:*?"<>|]/g,'_').slice(0,40)||'未命名';}
 async function musicExportOne(id){musicInit();const s=(S.music.songs||[]).find(x=>x.id===id);if(!s){toast('没找到这首');return;}toast('正在导出…');
   try{const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}
-    const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[x],loop:false,distance:S.music.distance||1400,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:''}};
+    const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[x],loop:false,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:''}};
     const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机单曲_'+musicSafeName(s.title)+'.json';a.click();toast('已导出 '+(s.title||'这首歌'));
   }catch(e){toast('这首也太大了，建议重新上传音频版');}}
 function musicExportOneModal(){musicInit();const songs=S.music.songs||[];const list=songs.length?songs.map(s=>`<div class="it"><span style="flex:1;color:#eee">${esc(s.title||'未命名')}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><button class="minibtn" onclick="musicExportOne('${s.id}')">导出</button></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌</div>';
@@ -1834,7 +1845,7 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
       <div id="m_bub_l" style="flex:1;display:flex;justify-content:flex-end">${_mBubHTML(_mBub.l,'l')}</div>
       <div id="m_bub_r" style="flex:1;display:flex;justify-content:flex-start">${_mBubHTML(_mBub.r,'r')}</div>
     </div>
-    <div onclick="editMusicDistance()" style="text-align:center;color:#d2d2da;font-size:13px;margin-top:4px;cursor:pointer">相距 ${S.music.distance} 公里，一起听了 <span id="m_sesstime">${fmtListen(((S.music.totalSec)||0)+(sess&&sess.startTs?Math.floor((Date.now()-sess.startTs)/1000):0))}</span></div>`;
+    <div onclick="editMusicDistance()" style="text-align:center;color:#d2d2da;font-size:13px;margin-top:4px;cursor:pointer">相距 <span id="musicDistanceValue">${musicDistanceText(S.music.distance)}</span> 公里，一起听了 <span id="m_sesstime">${fmtListen(((S.music.totalSec)||0)+(sess&&sess.startTs?Math.floor((Date.now()-sess.startTs)/1000):0))}</span></div>`;
   const lyr=parseLyrics(cur.lyrics);
   // 大转盘（封面在中间·扩大）
   const cover=cur.cover;

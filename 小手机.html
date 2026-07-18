@@ -28,12 +28,12 @@
 /* 主屏幕 WebApp 也主动检查最新 SW，接管后只刷新一次。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-553';
+  var key='north-sw-reloaded-554';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-    var u=new URL(location.href);u.searchParams.set('v','553');u.searchParams.set('sw',Date.now());location.replace(u.href);
+    var u=new URL(location.href);u.searchParams.set('v','554');u.searchParams.set('sw',Date.now());location.replace(u.href);
   });
-  var url='sw.js?v=553';
+  var url='sw.js?v=554';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -738,7 +738,7 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="app.js?v=553" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=553"></script>
+<script src="app.js?v=554" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=554"></script>
 </body>
 </html>
