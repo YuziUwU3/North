@@ -64,6 +64,10 @@ assert.equal(context.parsePayCardLine("[转账|abc|坏格式]"), null);
 assert.equal(context.isOOCLine("I need to clarify: we're in a **video call** right now, and the system just flagged that I broke format."), true);
 assert.equal(context.isOOCLine("You're on a video call, but the format rules require you to stay in first-person English."), true);
 assert.equal(context.isOOCLine("I miss you."), false);
+assert.equal(context.isRefusal("I can't discuss that."), true);
+assert.equal(context.isRefusal("I cannot address that request."), true);
+assert.equal(context.isRefusal("I am unable to talk about this."), true);
+assert.equal(context.isRefusal("I want to discuss our trip tomorrow."), false);
 
 const c = { name: "先生", callme: "小狗" };
 assert.equal(context.summaryUserLabel(c), "小狗");
