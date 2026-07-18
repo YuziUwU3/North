@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v565 \u00b7 \u7ebf\u4e0b\u5f53\u524d\u6d88\u606f\u7a33\u6001/);
+assert.match(source, /v566 \u00b7 \u7ebf\u4e0b\u65e7\u8f6e\u9694\u79bb\u7a33\u6001/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -103,6 +103,31 @@ assert.match(currentTurnSandbox.focus, /\u5fc5\u987b\u4e00\u6b21\u6027\u6309\u98
 assert.equal(currentTurnSandbox.request.at(-1).role, "user");
 assert.match(currentTurnSandbox.request.at(-1).content, /\u7136\u540e\u5462/);
 assert.equal(currentTurnSandbox.request.at(-2).content, "persona");
+assert.equal(Array.from(currentTurnSandbox.request).filter((x) => x.role === "user").length, 1);
+assert.equal(Array.from(currentTurnSandbox.request).filter((x) => x.role === "assistant").length, 0);
+assert.match(currentTurnSandbox.request[0].content, /\u5df2\u7ed3\u675f\u5bf9\u8bdd\u8bb0\u5f55/);
+assert.match(currentTurnSandbox.request[0].content, /\u770b\u7740\u4f60/);
+assert.doesNotMatch(currentTurnSandbox.request[0].content, /\u597d\u770b\u5417/);
+
+const continueSandbox = { S: { me: { name: "\u5fc6\u5317" } } };
+vm.runInNewContext(
+  source.slice(historyStart, historyEnd) +
+    ";const date={msgs:[" +
+    "{who:'me',text:'\\u5f88\\u4e45\\u4ee5\\u524d\\u7684\\u95ee\\u9898'}," +
+    "{who:'ta',text:'\\u65e9\\u5c31\\u56de\\u7b54\\u8fc7\\u4e86'}," +
+    "{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u8f7b\\u8f7b\\u7275\\u4f4f\\u5979\\u7684\\u624b'}" +
+    "]};const hist=offlineHistoryMessages(date,30,{deferCurrent:true});" +
+    "const turn=offlineCurrentTurnPrompt(date);" +
+    "globalThis.turn=turn;globalThis.request=offlineRequestMessages('system',hist,{role:'system',content:'persona'},turn);",
+  continueSandbox,
+);
+assert.match(continueSandbox.turn, /\u5f53\u524d\u5fc5\u987b\u7eed\u6f14/);
+assert.match(continueSandbox.turn, /\u7ee7\u7eed\u8bf4\u3001\u7ee7\u7eed\u505a\u3001\u7ee7\u7eed\u6f14/);
+assert.match(continueSandbox.turn, /\u4e0d\u662f\u8865\u7b54\u6216\u91cd\u65b0\u56de\u7b54\u7528\u6237\u4e0a\u4e00\u53e5\u8bdd/);
+assert.match(continueSandbox.turn, /\u8f7b\u8f7b\u7275\u4f4f/);
+assert.equal(Array.from(continueSandbox.request).filter((x) => x.role === "user").length, 1);
+assert.equal(Array.from(continueSandbox.request).filter((x) => x.role === "assistant").length, 0);
+assert.match(continueSandbox.request.at(-1).content, /\u7981\u6b62\u91cd\u65b0\u56de\u7b54/);
 
 const repeatStart = source.indexOf("function offlineIsUserMsg(m)");
 const repeatEnd = source.indexOf("function offlineSystem(c)", repeatStart);
@@ -141,7 +166,9 @@ vm.runInNewContext(
     "{who:'me',text:'\\u89c1\\u9762\\u4e86\\u8981\\u505a\\u4ec0\\u4e48\\u5417\\uff1f'}," +
     "{who:'me',text:'\\u4e4b\\u524d\\u7684\\u4e8b\\u53ef\\u4ee5\\u4e00\\u7b14\\u52fe\\u9500\\u5417\\uff1f'}" +
     "]};globalThis.staleInput=offCurrentInput(staleTurn);" +
-    "globalThis.staleReply=offlineRepeatFails('\\u542c\\u5230\\u5979\\u8bf4\\u5148\\u751f\\u662f\\u7b28\\u86cb\\uff0c\\u4ed6\\u4f4e\\u5934\\u770b\\u7740\\u5979',staleTurn,staleInput);",
+    "globalThis.staleReply=offlineRepeatFails('\\u542c\\u5230\\u5979\\u8bf4\\u5148\\u751f\\u662f\\u7b28\\u86cb\\uff0c\\u4ed6\\u4f4e\\u5934\\u770b\\u7740\\u5979',staleTurn,staleInput);" +
+    "const continueOld={msgs:[{who:'me',text:'\\u4f60\\u4eca\\u5929\\u4e3a\\u4ec0\\u4e48\\u8fdf\\u5230'},{who:'ta',text:'\\u6211\\u5df2\\u7ecf\\u89e3\\u91ca\\u8fc7\\u4e86'},{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u7275\\u7740\\u5979\\u5f80\\u524d\\u8d70'}]};" +
+    "globalThis.continueOldReply=offlineRepeatFails('\\u4f60\\u4eca\\u5929\\u4e3a\\u4ec0\\u4e48\\u8fdf\\u5230\\uff1f',continueOld,'');",
   repeatSandbox,
 );
 assert.ok(Array.from(repeatSandbox.taskRepeat).some((x) => x.includes("\u4efb\u52a1")));
@@ -155,6 +182,7 @@ assert.deepEqual(Array.from(repeatSandbox.crossDeduped, (x) => x.text), ["\u597d
 assert.match(repeatSandbox.staleInput, /\u89c1\u9762\u4e86\u8981\u505a\u4ec0\u4e48/);
 assert.match(repeatSandbox.staleInput, /\u4e00\u7b14\u52fe\u9500/);
 assert.ok(Array.from(repeatSandbox.staleReply).some((x) => x.includes("\u7b54\u9519\u4e86\u8f6e\u6b21")));
+assert.ok(Array.from(repeatSandbox.continueOldReply).some((x) => x.includes("\u7b54\u9519\u4e86\u8f6e\u6b21")));
 assert.match(source, /# \u672c\u573a\u8fde\u7eed\u6027\u4e0e\u9632\u590d\u8bfb\uff08\u53ea\u7ea6\u675f\u7ebf\u4e0b\u7ea6\u4f1a\uff09/);
 assert.match(source, /const _on=offlineContextLimit\(\),hist=offlineHistoryMessages\(o,_on,\{deferCurrent:true\}\),turn=offlineCurrentTurnPrompt\(o,note\)/);
 assert.match(source, /const req=offlineRequestMessages\(sys,hist,pin,turn\)/);
@@ -294,6 +322,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=565/);
+assert.match(html, /app\.js\?v=566/);
 
 console.log("offline date tests passed");
