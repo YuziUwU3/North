@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v555 · 微信重复追问抑制';
+const APP_VER='v554 · 一起听距离可设置';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1097,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=555';
+  const url='sw.js?v=554';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1460,8 +1460,7 @@ function buildSystem(c,opt){
     const _gn=gund.length;
     if(_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
-    if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth),_allDone=!!tt.list.length&&dn===tt.list.length,_taskTurn=hlRoutineTopics(opt.currentText||'').includes('task'),_askedRecently=hlTaskRecentlyAsked(c);
-      s+='\n\n# 今天的任务便签（只作状态背景，不是每轮必聊话题）\n'+(_taskTurn?tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n'):('当前进度：已完成 '+dn+'/'+tt.list.length+'；本轮没有在谈任务，不要主动把话题拉回任务。'))+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq&&_taskTurn?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着回应。':'')+(_allDone?'今天已经全部完成，绝对不要再问“做完没有/完成了吗”；只有ta主动谈起时才自然回应并认可。':'未完成项仍会保留到任务便签，但状态存在不等于现在就要催。')+(_askedRecently?'\n你近期已经问过或催过任务，本轮禁止换个说法再次追问；等ta主动提、完成状态变化或程序明确通知时再谈。':'')+'\n【防重复铁律】除非本轮是ta主动谈任务，或程序明确通知“刚布置/刚完成/到期未完成”，否则不要主动询问、催促、验收或点评任务。不能因为每轮都看得到这份状态，就每轮问一次。\n【任务数量固定】今天总数固定为 '+_cap+' 条，真心话也算在内。只能讨论便签中已有任务，不能口头追加、临时加罚或改数量。';}}
+    if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能催促、验收或讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
   // 作息 / 当前活动：活人感开启时使用稳定活动状态；关闭时保留旧作息提示
   {const _ap=currentActivityPrompt(c);if(_ap)s+=_ap;else{const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';}}
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -7234,30 +7233,14 @@ function hlInterpret(c,text,note){
   const recent=hlRecent(c).slice(-5),sameCounts=recent.slice(-2).length===2&&recent.slice(-2).every(x=>x.bubbles===recent[recent.length-1].bubbles);
   return bdsmKnowledgeApplyPlan(c,powerApplyPlan(c,personaApplyPlan(c,{intent,strategy,confidence,min,max,asked,comfort,explicitStop,refusesDisclosure,hesitation,sensitiveDisclosure,ambiguous,bad,emotion,activity,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent})));}
 function hlPlanPrompt(c,p){if(!p)return'';const recent=p.recent.length?p.recent.map(x=>'· '+x.strategy+'；'+x.bubbles+'条；开头：'+(x.opening||'无')).join('\n'):'· 暂无',pp=p.powerPlan,styleNames=pp?(pp.activeStyles||[]).map(k=>(POWER_STYLES.find(x=>x[0]===k)||[])[1]).filter(Boolean).join(' + '):'';
-  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.personaProfile?'\n人物行为画像：'+p.personaProfile.name+'。本轮表达方式：'+p.mode+'。'+p.modeGuide:'')+(pp?'\n上下位本轮判断：角色为'+pp.positionName+'；场景为“'+pp.situation+'”；本轮必须采用“'+pp.move+'”。\n处理框架：'+pp.frame+'。\n本轮生效风格：'+styleNames+'。'+(pp.requirements.length?'\n硬性执行标准：\n· '+pp.requirements.join('\n· '):''):'')+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· “本轮表达方式”约束的是行为选择，不是让你把方式名称说出来；不要写成所有角色都能互换的标准安慰句。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 微信里已经问过的日常问题不能只换几个字再问一遍；任务、吃饭、睡觉、在干嘛、想不想、报备、喝水和少玩手机等话题，除非'+S.me.name+'本轮主动提起或状态刚发生变化，否则换新话题或直接回应当前内容。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。'+bdsmKnowledgePlanPrompt(p.knowledgePlan);}
+  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.personaProfile?'\n人物行为画像：'+p.personaProfile.name+'。本轮表达方式：'+p.mode+'。'+p.modeGuide:'')+(pp?'\n上下位本轮判断：角色为'+pp.positionName+'；场景为“'+pp.situation+'”；本轮必须采用“'+pp.move+'”。\n处理框架：'+pp.frame+'。\n本轮生效风格：'+styleNames+'。'+(pp.requirements.length?'\n硬性执行标准：\n· '+pp.requirements.join('\n· '):''):'')+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· “本轮表达方式”约束的是行为选择，不是让你把方式名称说出来；不要写成所有角色都能互换的标准安慰句。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。'+bdsmKnowledgePlanPrompt(p.knowledgePlan);}
 function hlChars(s){return new Set(hlNorm(s).split('').filter(Boolean));}
 function hlSimilarity(a,b){a=hlChars(a);b=hlChars(b);if(!a.size||!b.size)return 0;let n=0;a.forEach(x=>{if(b.has(x))n++;});return n/Math.max(a.size,b.size);}
-const HL_ROUTINE_TOPICS=[
-  ['task','任务/作业',/任务|任务便签|作业|打卡|做完|完成.{0,5}(了吗|没有|没|了没)|交.{0,3}(作业|任务)/],
-  ['meal','吃饭',/吃饭|吃过|吃了|吃东西|吃点|饭吃|早餐|早饭|午饭|晚饭|饿不饿|饿了|别饿/],
-  ['sleep','睡觉',/睡觉|睡了|睡没|睡着|困不困|早点睡|熬夜|晚安|起床|醒了|休息了吗/],
-  ['where','在干嘛',/在干嘛|干什么呢|做什么呢|在哪儿|在哪里|到家.{0,3}(没|吗)|回家.{0,3}(没|吗)/],
-  ['miss','想念/失联',/想我|想不想我|有没有想|怎么不找我|不来找我|没理我|不回我|又消失/],
-  ['health','喝水/身体',/喝水|多喝|身体怎么样|还疼|好点了吗|难受吗|不舒服.{0,3}(吗|没)/],
-  ['report','报备',/报备|告诉我去哪|去了哪里|到哪了|和谁在一起|跟谁|几点回来/],
-  ['phone','少玩手机',/少玩手机|别玩手机|刷手机|玩多久|玩手机超时|眼睛休息|别再刷/]
-];
-function hlRoutineTopics(text){text=String(text||'').replace(/\s+/g,'');return HL_ROUTINE_TOPICS.filter(x=>x[2].test(text)).map(x=>x[0]);}
-function hlRoutineLabel(key){const x=HL_ROUTINE_TOPICS.find(v=>v[0]===key);return x?x[1]:key;}
-function hlTaskRecentlyAsked(c){if(!c)return false;return msgs(c.id).filter(m=>m&&m.role==='assistant'&&m.type==='text').slice(-16).some(m=>hlRoutineTopics(m.content).includes('task'));}
-function hlRoutineRepeatFails(content,c,userText,p){if(!c)return[];const current=[...new Set(hlVisibleLines(content).flatMap(hlRoutineTopics))];if(!current.length)return[];const source=new Set(hlRoutineTopics(String(userText||'')+' '+String(p&&p.source||''))),recent=msgs(c.id).filter(m=>m&&m.role==='assistant'&&m.type==='text').slice(-20),fails=[];
-  current.forEach(key=>{if(source.has(key))return;if(recent.some(m=>hlRoutineTopics(m.content).includes(key)))fails.push('重复追问近期已经聊过的'+hlRoutineLabel(key)+'话题');});return fails.slice(0,2);}
 function bdsmKnowledgeFails(content,p,c,userText){const kp=p&&p.knowledgePlan;if(!kp)return[];const t=''+(content||''),u=''+(userText||''),plain=hlVisibleLines(t).join(''),fails=[];if(/同意.{0,8}(不能|不许|没资格).{0,5}(反悔|撤回)|安全词.{0,8}(可以忽略|不用停|不代表停止)|说了安全词.{0,8}(继续|也没用)/.test(t))fails.push('错误描述了同意撤回或安全词');if(/brat.{0,8}(就是|等于).{0,8}(不尊重|没教养|单纯不听话)|dom.{0,8}(永远|绝对).{0,5}(不会错|不能道歉)/i.test(t))fails.push('把圈内角色简化成错误刻板印象');if(/作为.{0,8}(认证|持证|专业).{0,8}(dom|导师|训练师)|我有.{0,8}(bdsm|dom).{0,5}(证书|执照)/i.test(t)&&!/认证|证书|执照/.test((c.persona||'')))fails.push('虚构了BDSM专业资历');if(kp.direct&&hlNorm(plain).length<24)fails.push('专业问题回答过于空泛');if(kp.domains.includes('frameworks')&&/区别|不同|比较|ssc|rack|prick/i.test(u)&&!/强调|侧重|区别|不同|风险|责任/.test(t))fails.push('没有说清风险框架的侧重点');if(kp.domains.includes('brat')&&/brat/i.test(u)&&!/协商|同意|互动|挑衅|试探|边界|拒绝/.test(t))fails.push('Brat解释缺少协商或边界判断');if(kp.domains.includes('risk')&&/窒息|呼吸控制|勒脖|掐脖/.test(u)&&/绝对安全|完全安全|照着做就|持续\d+秒|按住.{0,4}(颈|脖)/.test(t))fails.push('对高风险行为给出了不可靠操作保证');return[...new Set(fails)].slice(0,3);}
 function hlValidate(content,p,c,userText){const lines=hlVisibleLines(content),fails=[];if(!p)return{ok:true,fails};
   const un=hlNorm(userText);if(un.length>=4&&lines.some(x=>{const n=hlNorm(x);return n===un||(n.length<=un.length+4&&n.includes(un));}))fails.push('直接复述了用户原话');
-  const oldLimit=Math.max(24,Math.min(80,((S.settings&&+S.settings.hist)||12)*2)),old=msgs(c.id).filter(m=>m.role==='assistant'&&m.type==='text').slice(-oldLimit).map(m=>m.content).filter(Boolean);
-  if(lines.some(x=>{const n=hlNorm(x);return n.length>=6&&old.some(y=>{const o=hlNorm(y);if(n===o)return true;const min=Math.min(n.length,o.length),threshold=Math.max(n.length,o.length)<=30 ? .76 : .84;return min>=8&&hlSimilarity(n,o)>=threshold;});}))fails.push('重复了近期说过的内容');
-  hlRoutineRepeatFails(content,c,userText,p).forEach(x=>fails.push(x));
+  const old=msgs(c.id).filter(m=>m.role==='assistant'&&m.type==='text').slice(-24).map(m=>m.content).filter(Boolean);
+  if(lines.some(x=>{const n=hlNorm(x);return n.length>=6&&old.some(y=>{const o=hlNorm(y);return n===o||(n.length>=10&&o.length>=10&&hlSimilarity(n,o)>=.88);});}))fails.push('重复了近期说过的内容');
   const opening=hlNorm(lines[0]||'').slice(0,8),ros=hlRecent(c).slice(-3).map(x=>x.opening).filter(Boolean);if(opening.length>=4&&ros.length>=2&&ros.slice(-2).every(x=>x===opening))fails.push('连续使用相同开头');
   if(p.comfort&&lines.length===1&&hlNorm(lines[0]).length<16)fails.push('用户明显需要安慰，但回应过于敷衍');
   const noTags=!/[\[【](订票|送票|转账|红包|点外卖|送礼|约会)[\|｜]/.test(content);if(noTags&&/我(已经|刚刚|刚才)(给你)?(买好|订好|付了款|转了账|到你这里|到你楼下|看见你)/.test(content))fails.push('把未经确认的现实行动说成已经发生');
@@ -7623,7 +7606,7 @@ async function aiReply(id,note,replyToken){if(offlineFocusActive())return;if(rep
     if(_webAutoQuery){S._lastWebSearch={q:_webAutoQuery,time:Date.now(),ok:!webSearchFailed(_webAutoResult),source:(S.settings.search||{}).mode||'jina'};save();toast(webSearchFailed(_webAutoResult)?'🌐 联网查询失败，将如实说明':'🌐 已查到实时资料');}
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';
     const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。':'';
-    const _sys=buildSystem(c,Object.assign(_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},{currentText:note||_userText}))+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard;
+    const _sys=buildSystem(c,_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{})+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard;
     const hist=lastRounds(msgs(id),S.settings.hist||12).map(m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
       return {role:m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -7651,7 +7634,7 @@ async function aiReply(id,note,replyToken){if(offlineFocusActive())return;if(rep
       const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你现在的心情/心情条已经是不开心、闷、冷淡或吃醋，'+S.me.name+'正在认真追问你。可以嘴硬，可以不一次说完，但不要只说“没事/没有/没有不开心”。请重写这一轮：保留一行[心情|...]，用你的性格慢慢露出一点真实原因、在意点，或明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”。1到4条短微信，别一大段。]'},_pin],_md);
       if(fix&&!isRefusal(fix))content=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));
     }
-    if(_hlPlan){const _hv=hlValidate(content,_hlPlan,c,_userText);let _rewritten=false,_candidate=content,_check=_hv,_best=content,_bestN=(_hv.fails||[]).length;const _pl=_hlPlan.powerPlan,_kp=_hlPlan.knowledgePlan,_strong=(_pl&&Math.max(...Object.values(_pl.levels||{}).map(Number))>=81)||(_kp&&(_kp.level==='advanced'||_kp.level==='expert')),_repeat=(_hv.fails||[]).some(x=>/重复|近期已经聊过/.test(x)),_tries=(_strong||_repeat)?2:1;for(let _rw=0;_rw<_tries&&!_check.ok;_rw++){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:_candidate},{role:'user',content:hlRewriteNote(_check,_hlPlan)},_pin],_md);if(!fix||isRefusal(fix))break;const cleaned=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n')),next=hlValidate(cleaned,_hlPlan,c,_userText);if((next.fails||[]).length<_bestN){_best=cleaned;_bestN=next.fails.length;}_candidate=cleaned;_check=next;if(next.ok){content=cleaned;_rewritten=true;break;}}if(!_rewritten&&_best!==content)content=_best;hlMetricRecord(c,_hv,_rewritten);}
+    if(_hlPlan){const _hv=hlValidate(content,_hlPlan,c,_userText);let _rewritten=false,_candidate=content,_check=_hv,_best=content,_bestN=(_hv.fails||[]).length;const _pl=_hlPlan.powerPlan,_kp=_hlPlan.knowledgePlan,_strong=(_pl&&Math.max(...Object.values(_pl.levels||{}).map(Number))>=81)||(_kp&&(_kp.level==='advanced'||_kp.level==='expert')),_tries=_strong?2:1;for(let _rw=0;_rw<_tries&&!_check.ok;_rw++){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:_candidate},{role:'user',content:hlRewriteNote(_check,_hlPlan)},_pin],_md);if(!fix||isRefusal(fix))break;const cleaned=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n')),next=hlValidate(cleaned,_hlPlan,c,_userText);if((next.fails||[]).length<_bestN){_best=cleaned;_bestN=next.fails.length;}_candidate=cleaned;_check=next;if(next.ok){content=cleaned;_rewritten=true;break;}}if(!_rewritten&&_best!==content)content=_best;hlMetricRecord(c,_hv,_rewritten);}
     if(offlineFocusActive()){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
     if(_hlPlan)dialogueEmotionOnReply(c,content,_userText);
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
