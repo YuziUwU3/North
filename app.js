@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v560 · 未结束约会恢复';
+const APP_VER='v561 · 约会按轮回应';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -4571,7 +4571,12 @@ function offlineRoleGuard(c){const n=c.remark||c.name||'角色',p=String((c.gend
 function offlineRoleDrift(t){t=String(t||'').trim();if(!t||isRefusal(t))return true;return splitBubbles(t).some(isOOCLine)||/这(只|仅仅)?是(一场|个)?(虚构|角色扮演)|作为(助手|模型)|我不能参与.{0,12}(亲密|暧昧|成人)|我无法继续.{0,12}(情节|剧情|互动)|不能描写.{0,12}(亲密|成人)|不便描写.{0,12}(亲密|成人)|让我们保持.{0,8}(健康|安全).{0,8}(关系|互动)/i.test(t);}
 function offlineRepairNote(c){return '[系统：上一版完全作废，因为你跳出了线下约会角色或使用了拒绝模板。现在立刻重写：你就是「'+(c.remark||c.name)+'」本人，正与'+S.me.name+'面对面约会。看清ta刚才说的话和做的动作，按你的人设与当前关系自然接住。双方成年且自愿时，普通亲密靠近、牵手、拥抱、亲吻和暧昧互动不得自动拒绝；明确停止时才用角色本人的动作与台词停下确认。不要提AI、助手、模型、程序、政策、安全准则、虚构或角色扮演，不要解释和说教。若不适合直写就自然留白转场。必须输出至少一段【第三人称动作旁白】和角色台词。]';}
 function offlineContextLimit(){return Math.max(10,Math.min(80,+(S.settings&&S.settings.offHist)||30));}
-function offlineHistoryMessages(o,limit){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),starts=[];rows.forEach((m,i)=>{if(m.who==='me'||(m.who==='旁白'&&m.source==='me'))starts.push(i);});const from=starts.length?starts[Math.max(0,starts.length-Math.max(1,limit|0))]:0,out=[];rows.slice(from).forEach(m=>{const role=(m.who==='me'||(m.who==='旁白'&&m.source==='me'))?'user':'assistant',content=m.who==='旁白'?'【'+m.text+'】':String(m.text||'');if(!content)return;const last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+content;else out.push({role,content});});return out;}
+function offlineIsUserMsg(m){return !!(m&&(m.who==='me'||(m.who==='旁白'&&m.source==='me')));}
+function offlineIsAssistantMsg(m){return !!(m&&(m.who==='ta'||(m.who==='旁白'&&m.source!=='me')));}
+function offlineMsgContent(m){return m&&m.who==='旁白'?'【'+m.text+'】':String(m&&m.text||'');}
+function offlinePendingStart(rows){let first=-1;for(let i=rows.length-1;i>=0;i--){const m=rows[i];if(offlineIsAssistantMsg(m))return first;if(offlineIsUserMsg(m))first=i;}return first;}
+function offlineHistoryMessages(o,limit,opt){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),pending=(opt&&opt.deferCurrent)?offlinePendingStart(rows):-1,starts=[];rows.forEach((m,i)=>{if(offlineIsUserMsg(m))starts.push(i);});let from=starts.length?starts[Math.max(0,starts.length-Math.max(1,limit|0))]:0;if(pending>=0&&from>=pending&&pending>0)from=pending-1;const out=[];rows.slice(from,pending>=0?pending:rows.length).forEach(m=>{const role=offlineIsUserMsg(m)?'user':'assistant',content=offlineMsgContent(m);if(!content)return;const last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+content;else out.push({role,content});});return out;}
+function offlineCurrentTurnPrompt(o,note){if(note)return '[当前必须回应]\n'+S.me.name+'刚刚额外补充：'+String(note).trim()+'\n请把这条补充并入本轮现场回应。';const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),start=offlinePendingStart(rows);if(start<0)return'';const pending=rows.slice(start).filter(offlineIsUserMsg).map(offlineMsgContent).filter(Boolean);if(!pending.length)return'';return '[当前必须回应]\n上一条角色回复之后，'+S.me.name+'连续说/做了下面 '+pending.length+' 条，这是同一轮待回应内容：\n'+pending.map((x,i)=>(i+1)+'. '+x).join('\n')+'\n请一次性按顺序都接住，合成一段自然现场回应；重点落在最后一条，但前面的追问/动作也要被看见。不要回到更早轮次的问题。';}
 function offlineSharedContext(c,limit){const rows=msgs(c.id).map(m=>{if(!m||m._silent)return null;const raw=msgToText(m),text=String(m._call?(callToCN(raw)||raw):raw||'').replace(/\s+/g,' ').trim();if(!text)return null;const source=m._call?(m._ck==='video'?'视频通话':'语音通话'):(m.type==='sys'?'共同事件':'微信'),who=m.role==='user'?S.me.name:(m.role==='assistant'?(c.remark||c.name):'共同事件');return{time:+m.time||+m.ts||0,source,who,text:text.slice(0,500)};}).filter(Boolean).slice(-limit);
   if(!rows.length)return'\n\n# 进入本场约会前的微信/电话共同上下文\n目前没有可带入的微信或电话记录。';
   return'\n\n# 进入本场约会前最近 '+rows.length+' 条微信/电话共同上下文（设置偏好：'+limit+' 条）\n这些都是你和'+S.me.name+'真实发生过的共同经历。你必须记得并能准确回答“刚才微信聊了什么、电话里说了什么”；它们只作为见面前的记忆背景，绝不能误当成本场刚说出口的面对面台词。\n'+rows.map((x,i)=>(i+1)+'. ['+(x.time?fmtDT(x.time):'时间未知')+']['+x.source+']['+x.who+'] '+x.text).join('\n');}
@@ -4627,8 +4632,8 @@ function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+(o.daypart?'（现在是'+o.daypart+'）':'')+'。\n- 这是全新一场正在发生的约会，不要接着上一次约会的现场说话。\n- 你清楚现在大概是'+(o.daypart||'这个时段')+'，言行、环境、光线都要符合这个时段，别搞错时间。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 永远不要说自己是AI、助手、模型、程序，也不要提安全政策、准则、无法满足、不能继续。\n- 如果话题太直白或不适合继续，用角色本人的口吻自然放慢、转场、设边界或留白，保持氛围，不解释规则。\n- 亲密和暧昧只写氛围、情绪、动作的暗示和留白，避免露骨细节。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
   return s;}
 async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
-  try{const _on=offlineContextLimit(),hist=offlineHistoryMessages(o,_on);
-    if(note)hist.push({role:'user',content:note});
+  try{const _on=offlineContextLimit(),hist=offlineHistoryMessages(o,_on,{deferCurrent:true}),turn=offlineCurrentTurnPrompt(o,note);
+    if(turn)hist.push({role:'user',content:turn});
     const sys=offlineSystem(c),pin={role:'system',content:personaPin(c)};
     let r=await chatAPI([{role:'system',content:sys},...hist,pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.75});
     if(!_off)return;

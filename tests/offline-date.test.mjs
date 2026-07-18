@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v560 \u00b7 \u672a\u7ed3\u675f\u7ea6\u4f1a\u6062\u590d/);
+assert.match(source, /v561 \u00b7 \u7ea6\u4f1a\u6309\u8f6e\u56de\u5e94/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -17,7 +17,8 @@ assert.match(source, /who:'\u65c1\u767d',source:'me',text:v/);
 
 assert.match(source, /function offlineContextLimit\(\)/);
 assert.match(source, /S\.settings&&S\.settings\.offHist/);
-assert.match(source, /function offlineHistoryMessages\(o,limit\)/);
+assert.match(source, /function offlineCurrentTurnPrompt\(o,note\)/);
+assert.match(source, /function offlineHistoryMessages\(o,limit,opt\)/);
 assert.match(source, /function offlineSharedContext\(c,limit\)/);
 assert.match(source, /msgs\(c\.id\)\.map/);
 assert.match(source, /callToCN\(raw\)\|\|raw/);
@@ -58,7 +59,7 @@ assert.match(sandbox.contextResult, /\[微信\]/);
 assert.match(sandbox.contextResult, /\[North\]/);
 assert.match(sandbox.contextResult, /\[Role\]/);
 
-const historyStart = source.indexOf("function offlineHistoryMessages(o,limit)");
+const historyStart = source.indexOf("function offlineIsUserMsg(m)");
 const historyEnd = source.indexOf("function offlineSharedContext", historyStart);
 assert.ok(historyStart >= 0 && historyEnd > historyStart);
 const historySandbox = {};
@@ -80,6 +81,24 @@ assert.deepEqual(
     { role: "assistant", content: "\u3010n3\u3011\na3" },
   ],
 );
+const currentTurnSandbox = { S: { me: { name: "\u5fc6\u5317" } } };
+vm.runInNewContext(
+  source.slice(historyStart, historyEnd) +
+    ";const date={msgs:[" +
+    "{who:'ta',text:'\\u770b\\u7740\\u4f60'}," +
+    "{who:'me',text:'\\u597d\\u770b\\u5417\\uff1f'}," +
+    "{who:'me',text:'\\u7136\\u540e\\u5462\\uff1f\\u6ca1\\u4e86\\uff1f'}" +
+    "]};globalThis.deferred=offlineHistoryMessages(date,4,{deferCurrent:true});" +
+    "globalThis.focus=offlineCurrentTurnPrompt(date);",
+  currentTurnSandbox,
+);
+assert.deepEqual(Array.from(currentTurnSandbox.deferred, (x) => ({ role: x.role, content: x.content })), [
+  { role: "assistant", content: "\u770b\u7740\u4f60" },
+]);
+assert.match(currentTurnSandbox.focus, /\u597d\u770b\u5417/);
+assert.match(currentTurnSandbox.focus, /\u7136\u540e\u5462/);
+assert.match(currentTurnSandbox.focus, /\u540c\u4e00\u8f6e\u5f85\u56de\u5e94/);
+assert.match(currentTurnSandbox.focus, /\u4e00\u6b21\u6027\u6309\u987a\u5e8f\u90fd\u63a5\u4f4f/);
 
 const repeatStart = source.indexOf("const OFFLINE_ROUTINE_TOPICS=");
 const repeatEnd = source.indexOf("function offlineSystem(c)", repeatStart);
@@ -123,7 +142,7 @@ assert.ok(Array.from(repeatSandbox.crossTurn).some((x) => x.includes("\u524d\u51
 assert.equal(Array.from(repeatSandbox.deduped).length, 2);
 assert.deepEqual(Array.from(repeatSandbox.crossDeduped, (x) => x.text), ["\u597d\u770b"]);
 assert.match(source, /# \u672c\u573a\u8fde\u7eed\u6027\u4e0e\u9632\u590d\u8bfb\uff08\u53ea\u7ea6\u675f\u7ebf\u4e0b\u7ea6\u4f1a\uff09/);
-assert.match(source, /const _on=offlineContextLimit\(\)/);
+assert.match(source, /const _on=offlineContextLimit\(\),hist=offlineHistoryMessages\(o,_on,\{deferCurrent:true\}\),turn=offlineCurrentTurnPrompt\(o,note\)/);
 assert.match(source, /offlineRepeatRepairNote\(c,check\)/);
 
 assert.match(source, /const remembered=memoryList\(c\)/);
@@ -259,6 +278,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=560/);
+assert.match(html, /app\.js\?v=561/);
 
 console.log("offline date tests passed");
