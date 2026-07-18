@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v555 · 线下约会防复读';
+const APP_VER='v556 · 线下约会同轮去重';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1097,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=555';
+  const url='sw.js?v=556';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4585,9 +4585,13 @@ function offRepeatNorm(text){return String(text||'').toLowerCase().replace(/[\s�
 function offRoutineTopics(text){text=String(text||'').replace(/\s+/g,'');return OFFLINE_ROUTINE_TOPICS.filter(x=>x[2].test(text)).map(x=>x[0]);}
 function offRoutineLabel(key){const x=OFFLINE_ROUTINE_TOPICS.find(v=>v[0]===key);return x?x[1]:key;}
 function offRepeatSimilarity(a,b){const aa=new Set(offRepeatNorm(a).split('').filter(Boolean)),bb=new Set(offRepeatNorm(b).split('').filter(Boolean));if(!aa.size||!bb.size)return 0;let n=0;aa.forEach(x=>{if(bb.has(x))n++;});return n/Math.max(aa.size,bb.size);}
-function offGeneratedTalk(text){const out=[];splitBubbles(text).forEach(line=>{splitActions(line).forEach(part=>{part=String(part||'').trim();if(part&&!/^[（(【][\s\S]*[）)】]$/.test(part))out.push(part);});});return out;}
+function offResponseParts(text){const out=[];splitBubbles(text).forEach(line=>{splitActions(line).forEach(part=>{part=String(part||'').trim();if(!part)return;out.push({kind:/^[（(【][\s\S]*[）)】]$/.test(part)?'nar':'talk',text:part});});});return out;}
+function offGeneratedTalk(text){return offResponseParts(text).filter(x=>x.kind==='talk').map(x=>x.text);}
+function offDedupeItems(items){const seen=new Set();return(items||[]).filter(item=>{const norm=offRepeatNorm(item&&item.text);if(norm.length<4)return true;const key=(item&&item.who==='旁白'?'nar':'talk')+'|'+norm;if(seen.has(key))return false;seen.add(key);return true;});}
 function offCurrentInput(o,note){if(note)return String(note);const m=[...(o&&o.msgs||[])].reverse().find(x=>x&&(x.who==='me'||(x.who==='旁白'&&x.source==='me')));return m?String(m.text||''):'';}
-function offlineRepeatFails(text,o,currentInput){const lines=offGeneratedTalk(text),recent=(o&&o.msgs||[]).filter(m=>m&&m.who==='ta'&&m.source!=='me').slice(-32).map(m=>m.text).filter(Boolean),fails=[];if(!lines.length||!recent.length)return fails;
+function offlineRepeatFails(text,o,currentInput){const parts=offResponseParts(text),lines=parts.filter(x=>x.kind==='talk').map(x=>x.text),recent=(o&&o.msgs||[]).filter(m=>m&&m.who==='ta'&&m.source!=='me').slice(-32).map(m=>m.text).filter(Boolean),fails=[],sameTurn=new Set();
+  if(parts.some(part=>{const n=offRepeatNorm(part.text);if(n.length<4)return false;const key=part.kind+'|'+n;if(sameTurn.has(key))return true;sameTurn.add(key);return false;}))fails.push('同一轮回答内部出现了完全重复的旁白或台词');
+  if(!lines.length||!recent.length)return fails;
   if(lines.some(line=>{const n=offRepeatNorm(line);return n.length>=6&&recent.some(old=>{const p=offRepeatNorm(old);if(n===p)return true;const min=Math.min(n.length,p.length),threshold=Math.max(n.length,p.length)<=30 ? .76 : .84;return min>=8&&offRepeatSimilarity(n,p)>=threshold;});}))fails.push('重复了本场近期已经说过的台词');
   const source=new Set(offRoutineTopics(currentInput)),topics=[...new Set(lines.flatMap(offRoutineTopics))];topics.forEach(key=>{if(!source.has(key)&&recent.some(old=>offRoutineTopics(old).includes(key)))fails.push('又追问了近期已经聊过的'+offRoutineLabel(key)+'话题');});return[...new Set(fails)].slice(0,3);}
 function offlineRepeatRepairNote(c,fails){return '[系统：上一版有线下约会复读问题：'+fails.join('；')+'。请完全重写本轮，只接住'+S.me.name+'刚才在现场说的话或动作并推进当前场景。不要把长期记忆、小事簿、相处小账里的任务、吃饭、睡觉、报备等旧内容重新拿出来审问；除非ta本轮主动提起。不能只替换几个词重复同一问题或同一句台词。保持「'+(c.remark||c.name)+'」本人，至少一段【第三人称动作旁白】和自然台词，不要解释纠正过程。]';}
@@ -4621,9 +4625,10 @@ async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData
     {const current=offCurrentInput(o,note),first=offlineRepeatFails(r,o,current);if(first.length){let candidate=r,best=r,bestN=first.length,check=first;for(let i=0;i<2&&check.length;i++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:candidate},{role:'user',content:offlineRepeatRepairNote(c,check)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.78});if(!_off)return;if(!fix||offlineRoleDrift(fix))break;const next=offlineRepeatFails(fix,o,current);if(next.length<bestN){best=fix;bestN=next.length;}candidate=fix;check=next;if(!next.length){best=fix;break;}}r=best;}}
     r=applyGrudgeTags(r,c);
     // 先把这轮拆成一条条(旁白/台词)，再【一条一条地】发出来，不要一次性糊一大堆
-    const items=[];
+    let items=[];
     splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l)||isOOCLine(l)||isRefusal(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;
       splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({id:uid(),who:nar?'旁白':'ta',source:'ta',text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
+    items=offDedupeItems(items);
     if(!items.length){items.push({id:uid(),who:'旁白',source:'ta',text:'他没有跳开话题，只是留在你面前，按自己的分寸轻轻握住你的手。'});items.push({id:uid(),who:'ta',source:'ta',text:'看着我，我还在这里。'});}
     for(let i=0;i<items.length;i++){if(!_off)return;const item=items[i],timing=offRevealTiming(item);Object.defineProperties(item,{_reveal:{value:true,writable:true,configurable:true},_revealStep:{value:timing.step,writable:true,configurable:true}});o.msgs.push(item);save();offRender();
       await new Promise(res=>setTimeout(res,timing.total));item._reveal=false;}

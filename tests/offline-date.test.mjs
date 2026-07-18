@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v555 \u00b7 \u7ebf\u4e0b\u7ea6\u4f1a\u9632\u590d\u8bfb/);
+assert.match(source, /v556 \u00b7 \u7ebf\u4e0b\u7ea6\u4f1a\u540c\u8f6e\u53bb\u91cd/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -73,13 +73,21 @@ vm.runInNewContext(
     "globalThis.taskRepeat=offlineRepeatFails('\\u4eca\\u5929\\u8be5\\u505a\\u7684\\u90fd\\u5b8c\\u6210\\u6ca1\\u6709\\uff1f',date,'\\u6211\\u4eec\\u53bb\\u770b\\u7535\\u5f71\\u5427');" +
     "globalThis.mealRepeat=offlineRepeatFails('\\u4f60\\u4eca\\u5929\\u5403\\u996d\\u4e86\\u5417\\uff1f',date,'\\u4eca\\u665a\\u7684\\u706f\\u5149\\u5f88\\u597d\\u770b');" +
     "globalThis.userRaisedTask=offlineRepeatFails('\\u4efb\\u52a1\\u5df2\\u7ecf\\u505a\\u5b8c\\u4e86',date,'\\u6211\\u7684\\u4efb\\u52a1\\u505a\\u5b8c\\u4e86');" +
-    "globalThis.freshScene=offlineRepeatFails('\\u6211\\u4eec\\u5750\\u5230\\u7a97\\u8fb9\\u53bb\\u5427',date,'\\u6211\\u4eec\\u53bb\\u770b\\u7535\\u5f71\\u5427');",
+    "globalThis.freshScene=offlineRepeatFails('\\u6211\\u4eec\\u5750\\u5230\\u7a97\\u8fb9\\u53bb\\u5427',date,'\\u6211\\u4eec\\u53bb\\u770b\\u7535\\u5f71\\u5427');" +
+    "globalThis.sameTurn=offlineRepeatFails('\\u3010\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50\\u3011\\n\\u5750\\u8fd9\\u91cc\\u5427\\n\\u3010\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50\\u3011\\n\\u5750\\u8fd9\\u91cc\\u5427',{msgs:[]},'\\u6211\\u4eec\\u8fdb\\u53bb\\u5427');" +
+    "globalThis.deduped=offDedupeItems([" +
+    "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50'}," +
+    "{who:'ta',text:'\\u5750\\u8fd9\\u91cc\\u5427'}," +
+    "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50'}," +
+    "{who:'ta',text:'\\u5750\\u8fd9\\u91cc\\u5427'}]);",
   repeatSandbox,
 );
 assert.ok(Array.from(repeatSandbox.taskRepeat).some((x) => x.includes("\u4efb\u52a1")));
 assert.ok(Array.from(repeatSandbox.mealRepeat).some((x) => x.includes("\u5403\u996d")));
 assert.deepEqual(Array.from(repeatSandbox.userRaisedTask), []);
 assert.deepEqual(Array.from(repeatSandbox.freshScene), []);
+assert.ok(Array.from(repeatSandbox.sameTurn).some((x) => x.includes("\u540c\u4e00\u8f6e")));
+assert.equal(Array.from(repeatSandbox.deduped).length, 2);
 assert.match(source, /# \u672c\u573a\u8fde\u7eed\u6027\u4e0e\u9632\u590d\u8bfb\uff08\u53ea\u7ea6\u675f\u7ebf\u4e0b\u7ea6\u4f1a\uff09/);
 assert.match(source, /const _on=offlineContextLimit\(\)/);
 assert.match(source, /offlineRepeatRepairNote\(c,check\)/);
@@ -183,6 +191,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=555/);
+assert.match(html, /app\.js\?v=556/);
 
 console.log("offline date tests passed");
