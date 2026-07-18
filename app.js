@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v561 · 约会按轮回应';
+const APP_VER='v562 · 世界书分软件带入';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -847,12 +847,21 @@ function msgToText(m){
   }
 }
 function worldHits(text,cid){const out=[];text=text||'';
-  S.worldbook.forEach(w=>{if(!w.enabled)return;
-    if(w.contacts&&w.contacts.length&&cid&&w.contacts.indexOf(cid)<0)return;
+  (S.worldbook||[]).forEach(w=>{if(!w.enabled)return;
+    if(w.contacts&&w.contacts.length&&(!cid||w.contacts.indexOf(cid)<0))return;
     if(w.always){out.push(w);return;}
     const keys=(w.keys||'').split(/[,，\s]+/).filter(Boolean);
     if(keys.some(k=>text.includes(k)))out.push(w);});
   return out;}
+const WORLD_SCOPE_OPTIONS=[['wechat','微信/电话/朋友圈'],['offline','线下约会'],['roleplay','角色扮演'],['jail','小黑屋'],['games','各种游戏'],['alter','马甲聊天']];
+function worldbookScopeOn(scope){const m=S.settings&&S.settings.worldbookApps;return !scope||!m||m[scope]!==false;}
+function worldbookText(wb,label){wb=(wb||[]).filter(w=>w&&w.content);if(!wb.length)return '';
+  return '\n\n# 世界设定／世界书（最高优先级，务必严格遵守，触发了就要照做，不要无视）\n'+wb.map(w=>'· '+(w.name||'世界书')+'：'+w.content).join('\n')+(label?'\n以上世界书同样适用于'+label+'。':'');}
+function worldbookPrompt(text,cid,label,scope){if(!worldbookScopeOn(scope))return '';return worldbookText(worldHits(text,cid),label);}
+function worldbookPromptForContacts(text,ids,label,scope){if(!worldbookScopeOn(scope))return '';const seen=new Set(),out=[],list=(ids&&ids.length)?ids:[null];
+  list.forEach(id=>worldHits(text,id).forEach(w=>{const k=(w.id||'')+'|'+(w.name||'')+'|'+(w.content||'');if(!seen.has(k)){seen.add(k);out.push(w);}}));
+  return worldbookText(out,label);}
+function toggleWorldScope(k){S.settings=S.settings||{};S.settings.worldbookApps=S.settings.worldbookApps||{};S.settings.worldbookApps[k]=S.settings.worldbookApps[k]===false;save();render();}
 function getSpy(c){if(!c.spy)c.spy={granted:false,loc:false,time:'',times:2};return c.spy;}
 function curLoc(){return (S.me.place||'').trim()||(S.weather&&S.weather.place)||'';}
 function whereNow(c){const sc=c&&c.sched;if(!sc||!sc.on)return '';
@@ -1097,7 +1106,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=560';
+  const url='sw.js?v=562';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1413,8 +1422,7 @@ function buildSystem(c,opt){
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
   const _wbMem=opt.selectiveMemory?(opt.memoryItems||[]).map(x=>x.text):memoryList(c).map(memoryText);
   const recent=msgs(c.id).slice(-10).map(msgToText).filter(Boolean).join('\n')+'\n'+((_lastU&&msgToText(_lastU))||'')+' '+(c.persona||'')+' '+_wbMem.join(' ');
-  const wb=worldHits(recent,c.id);
-  if(wb.length)s+='\n\n# 世界设定／世界书（最高优先级，务必严格遵守，触发了就要照做，不要无视）\n'+wb.map(w=>'· '+w.name+'：'+w.content).join('\n');
+  s+=worldbookPrompt(recent,c.id,'',opt.worldbookScope||'wechat');
   // 记忆（仅主身份）
   if(!opt.selectiveMemory&&_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+aboutMeNoteText(m)).join('\n');
   if(_main){const _crit=memoryCriticalPrompt(c);if(_crit)s+=_crit;}
@@ -2593,7 +2601,11 @@ function renderWorldbook(){
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">世界书</span><span class="r" onclick="editWorld()">＋</span></div>
   <div class="scroll" style="padding:12px;background:#000">
     <div class="hint">世界书 = 给所有角色共享的设定/常识。"常驻"的每次都生效；否则当聊天里出现关键词时才注入。</div>
-    ${S.worldbook.length?S.worldbook.map(w=>`<div class="section"><div class="it" onclick="editWorld('${w.id}')">
+    <div class="section">
+      <div style="padding:10px 14px;color:#ffca7a;font-weight:700">允许这些软件吃世界书</div>
+      ${WORLD_SCOPE_OPTIONS.map(([k,t])=>`<div class="it"><span>${esc(t)}</span><span class="sw ${worldbookScopeOn(k)?'on':''}" onclick="toggleWorldScope('${k}')"></span></div>`).join('')}
+    </div>
+    ${(S.worldbook||[]).length?(S.worldbook||[]).map(w=>`<div class="section"><div class="it" onclick="editWorld('${w.id}')">
       <div><div style="font-weight:600">${esc(w.name)} ${w.always?'<span class=tag>常驻</span>':''}${w.contacts&&w.contacts.length?'<span class=tag>'+w.contacts.map(cid=>{const cc=getC(cid);return cc?esc(cc.remark||cc.name):'';}).filter(Boolean).join('/')+'</span>':''}</div>
       <div style="font-size:12px;color:#999;margin-top:3px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.content)}</div></div>
       <span class="sw ${w.enabled?'on':''}" onclick="event.stopPropagation();toggleWorld('${w.id}')"></span></div></div>`).join(''):'<div class="empty">还没有世界书，点右上角 ＋ 添加</div>'}
@@ -4293,7 +4305,7 @@ async function mgrBuildDrama(r){const ps=mgrPlayers(r),fallbackRoles=['误入后
 async function mgrStart(id){const r=mgrRoom(id);if(!r||!r.host||r._starting)return;if(!mgrAllReady(r)){toast('要等所有真人好友都准备好');return;}r._starting=true;render();r.status='started';r.startedAt=Date.now();r.turnOrder=mgrBuildTurnOrder(r);r.turnIndex=0;r.drama=r.game==='drama'?await mgrBuildDrama(r):{scene:'房间已开始。',goal:'按规则完成这一局。',roles:{}};delete r._starting;if(r.game!=='drama')mgrSystem(r,'房间已开始，这个游戏的多人规则后续继续补全。');save();mgrBroadcast(r,Object.assign(mgrStatePayload(r),{type:'game_room_start',eid:uid()}));mgrRoomCue('start');render();if(r.game==='drama')setTimeout(()=>mgrRoleTurn(id),500);}
 function mgrSend(id){const r=mgrRoom(id);if(!r||r.status!=='started')return;const myKey=mgrLocalTurnKey(r),ta=$('#mgr_in'),text=(ta&&ta.value||'').trim();if(!text)return;if(ta)ta.value='';const msg={id:uid(),kind:'me',pid:phoneFriendId(),name:S.me.name,text,time:Date.now(),roleName:mgrDramaRole(r,myKey)};mgrAddRoomMsg(r,msg);save();if(r.host){mgrBroadcast(r,{type:'game_room_chat',eid:msg.id,playerId:msg.pid,playerKind:'me',playerName:msg.name,roleName:msg.roleName,text:msg.text,time:msg.time});if(r.game==='drama'){mgrAdvanceTurn(r);mgrBroadcastState(r);setTimeout(()=>mgrRoleTurn(id),500);}}else mgrSendPf(r.hostId,r,{type:'game_room_chat',eid:msg.id,playerId:msg.pid,playerKind:'pf',playerName:msg.name,roleName:msg.roleName,text:msg.text,time:msg.time});render();}
 async function mgrRoleTurn(id){const r=mgrRoom(id);if(!r||!r.host||r.busy||r.status!=='started'||r.game!=='drama')return;const key=mgrCurrentTurn(r);if(!key||key.indexOf('role:')!==0)return;const cid=key.slice(5),c=getC(cid);if(!c){mgrAdvanceTurn(r);mgrBroadcastState(r);return;}r.busy=true;save();render();const roleName=mgrDramaRole(r,key),hist=(r.msgs||[]).slice(-26).map(m=>(m.kind==='sys'?'系统':((m.roleName?m.roleName+'｜':'')+m.name))+'：'+m.text).join('\n');
-  try{const sys=buildSystem(c)+'\n\n# 多人游戏房：即兴小剧场\n这是独立游戏房，不是微信日常聊天。你正在扮演系统分配给你的剧场身份：「'+roleName+'」。\n剧情开场：'+((r.drama&&r.drama.scene)||'')+'\n共同目标：'+((r.drama&&r.drama.goal)||'')+'\n真人好友是真人玩家，只能由他们自己发言；你绝对不要替真人说话、不要编他们的动作或台词。\n现在轮到你发言：只说你这个角色的一小段台词或动作，1到2句，有画面感，推动剧情，但别写旁白标题。';const out=cleanReply(await chatAPI([{role:'system',content:sys},{role:'user',content:'房间最近记录：\n'+hist+'\n接住上一句，轮到你。'}],{max:180,aux:c.model==='aux'}));if(out){const msg={id:uid(),kind:'role',pid:cid,name:c.remark||c.name,roleName,text:out,time:Date.now()};mgrAddRoomMsg(r,msg);mgrBroadcast(r,{type:'game_room_chat',eid:msg.id,playerId:cid,playerKind:'role',playerName:msg.name,roleName:msg.roleName,text:msg.text,time:msg.time});}}catch(e){mgrSystem(r,(c.remark||c.name)+'卡了一下，舞台灯光闪了闪。');}
+  try{const sys=buildSystem(c,{worldbookScope:'games'})+'\n\n# 多人游戏房：即兴小剧场\n这是独立游戏房，不是微信日常聊天。你正在扮演系统分配给你的剧场身份：「'+roleName+'」。\n剧情开场：'+((r.drama&&r.drama.scene)||'')+'\n共同目标：'+((r.drama&&r.drama.goal)||'')+'\n真人好友是真人玩家，只能由他们自己发言；你绝对不要替真人说话、不要编他们的动作或台词。\n现在轮到你发言：只说你这个角色的一小段台词或动作，1到2句，有画面感，推动剧情，但别写旁白标题。';const out=cleanReply(await chatAPI([{role:'system',content:sys},{role:'user',content:'房间最近记录：\n'+hist+'\n接住上一句，轮到你。'}],{max:180,aux:c.model==='aux'}));if(out){const msg={id:uid(),kind:'role',pid:cid,name:c.remark||c.name,roleName,text:out,time:Date.now()};mgrAddRoomMsg(r,msg);mgrBroadcast(r,{type:'game_room_chat',eid:msg.id,playerId:cid,playerKind:'role',playerName:msg.name,roleName:msg.roleName,text:msg.text,time:msg.time});}}catch(e){mgrSystem(r,(c.remark||c.name)+'卡了一下，舞台灯光闪了闪。');}
   r.busy=false;mgrAdvanceTurn(r);mgrBroadcastState(r);save();if(cur().p==='mgroom'&&cur().id===id)render();setTimeout(()=>mgrRoleTurn(id),650);}
 function mgrQuit(){const r=cur().p==='mgroom'?mgrRoom(cur().id):null;if(r&&!r.host&&r._joined){mgrSendPf(r.hostId,r,{type:'game_room_leave',eid:uid(),playerId:phoneFriendId(),playerName:S.me.name,time:Date.now()});r._joined=false;save();}back();}
 setInterval(()=>{try{const c=cur();if(c&&c.p==='mgroom')phoneFriendMaybeSync(false);}catch(_){}},5000);
@@ -4314,7 +4326,7 @@ function openGameSpace(kind,cid,intro,title){const c=getC(cid);if(!c)return;
   _gs={cid,kind,title:title||'游戏',intro,msgs:[],t:30*60,busy:false,_tm:null};
   go('gs');gsTimer();gsKick();}
 function gsSystem(){const c=getC(_gs.cid);
-  return buildSystem(c)+'\n\n# 现在你在和'+S.me.name+'玩游戏：'+_gs.title+'\n你们在一个【独立的小游戏空间】里玩，这不是日常微信聊天。\n- 用中文，轻松口语，沉浸在游戏里当好玩伴/主持人。\n- 游戏规则：'+_gs.intro+'\n- 别发[转账][红包][语音]这类卡片/标签，专心玩。\n- 当'+S.me.name+'说"游戏结束/不玩了/结束/退出"时，温柔地收个尾、道个别即可。';}
+  return buildSystem(c,{worldbookScope:'games'})+'\n\n# 现在你在和'+S.me.name+'玩游戏：'+_gs.title+'\n你们在一个【独立的小游戏空间】里玩，这不是日常微信聊天。\n- 用中文，轻松口语，沉浸在游戏里当好玩伴/主持人。\n- 游戏规则：'+_gs.intro+'\n- 别发[转账][红包][语音]这类卡片/标签，专心玩。\n- 当'+S.me.name+'说"游戏结束/不玩了/结束/退出"时，温柔地收个尾、道个别即可。';}
 function gsAbsorb(r){if(!_gs)return;splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(l)splitActions(l).forEach(p=>{if(p.trim())_gs.msgs.push({who:'ta',text:p.trim()});});});}
 async function gsKick(){if(!_gs)return;_gs.busy=true;gsRender();
   try{const r=await chatAPI([{role:'system',content:gsSystem()},{role:'user',content:'[游戏开始，请你作为主持人/玩伴先开场。]'}],{aux:true});if(!_gs)return;gsAbsorb(r);}
@@ -4620,7 +4632,9 @@ function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   if(c.summaries&&c.summaries.length)s+='\n\n# 你和ta全部对话概要（只是共同背景，不是当前约会现场）\n'+c.summaries.filter(x=>x&&x.text).map(x=>'· '+(x.time||(+x.ts?fmtDT(x.ts):'时间未知'))+' '+summaryCleanText(c,x.text)).join('\n');
   const o=offData(c.id);
   s+=offPreviousPrompt(o);
-  s+=offlineSharedContext(c,offlineContextLimit());
+  const _offShared=offlineSharedContext(c,offlineContextLimit());
+  s+=_offShared;
+  s+=worldbookPrompt([(c.persona||'')+traitDesc(c),_offShared,(o.loc||''),(o.when||''),(o.daypart||''),(o.msgs||[]).slice(-20).map(m=>m.text).join('\n'),remembered.map(memoryText).join('\n')].join('\n'),c.id,'线下约会','offline');
   if(o.memory&&o.memory.length)s+='\n\n# 你们以前全部线下见面经历（只能当回忆；本次约会必须按下面的当前地点/时间重新开始）\n'+o.memory.map(offMemText).join('\n');
   s+=offlineLifeNotesPrompt(c);
   s+=offlineBehaviorLedgerPrompt(c);
@@ -4763,7 +4777,8 @@ function rpPushInviteMsg(id,role){const c=getC(id),d=rpData(id);if(!c)return nul
 async function rpCreateInviteFromAI(id,theme){const c=getC(id);if(!c)return null;const d=rpData(id);theme=rpClip(theme||'你自由发挥',80);
   if(d.active)return rpPushInviteMsg(id,'assistant');
   const recent=msgs(id).slice(-12).map(m=>{const t=msgToText(m);return t?((m.role==='user'?S.me.name:(c.remark||c.name))+'：'+t.replace(/\n/g,' ').slice(0,70)):'';}).filter(Boolean).join('\n');
-  let spec=null;try{spec=await aiGen([{role:'system',content:'你就是「'+(c.remark||c.name)+'」本人，正在给恋人'+S.me.name+'设计一局手机「角色扮演」软件里的独立剧情房间。只输出JSON，不要解释。要求：高级、有代入感、适合两人互动；身份和剧情是本局临时设定，不改微信真实关系；暧昧可以有氛围但不要露骨。JSON格式：{"title":"剧情标题8-16字","plot":"剧情背景80-180字","scene":"开场场景60-140字","myRole":"'+S.me.name+'本局身份","hisRole":"你的本局身份","myPersona":"'+S.me.name+'临时设定40-100字","hisPersona":"你的临时设定40-120字","daypart":"清晨/上午/中午/下午/傍晚/晚上/深夜","opening":["旁白或你的第一句台词，2到4条"]}'},{role:'user',content:'恋人想玩角色扮演。主题/要求：'+theme+'\n你的人设底色：'+((c.persona||'')+traitDesc(c)).replace(/\s+/g,' ').slice(0,600)+'\n最近聊天：\n'+(recent||'（暂无）')}],{max:1300,temp:.86},parseObj,2);}catch(_){}
+  const wbInvite=worldbookPrompt(theme+'\n'+recent+'\n'+((c.persona||'')+traitDesc(c)),c.id,'角色扮演房间生成','roleplay');
+  let spec=null;try{spec=await aiGen([{role:'system',content:'你就是「'+(c.remark||c.name)+'」本人，正在给恋人'+S.me.name+'设计一局手机「角色扮演」软件里的独立剧情房间。只输出JSON，不要解释。要求：高级、有代入感、适合两人互动；身份和剧情是本局临时设定，不改微信真实关系；暧昧可以有氛围但不要露骨。JSON格式：{"title":"剧情标题8-16字","plot":"剧情背景80-180字","scene":"开场场景60-140字","myRole":"'+S.me.name+'本局身份","hisRole":"你的本局身份","myPersona":"'+S.me.name+'临时设定40-100字","hisPersona":"你的临时设定40-120字","daypart":"清晨/上午/中午/下午/傍晚/晚上/深夜","opening":["旁白或你的第一句台词，2到4条"]}'+wbInvite},{role:'user',content:'恋人想玩角色扮演。主题/要求：'+theme+'\n你的人设底色：'+((c.persona||'')+traitDesc(c)).replace(/\s+/g,' ').slice(0,600)+'\n最近聊天：\n'+(recent||'（暂无）')}],{max:1300,temp:.86},parseObj,2);}catch(_){}
   const now=new Date(),hh=('0'+now.getHours()).slice(-2),mm=('0'+now.getMinutes()).slice(-2),part=DAYPARTS.indexOf(spec&&spec.daypart)>=0?spec.daypart:dayPartNow();
   d.title=rpClip(spec&&spec.title,28)||rpClip(theme,18)||'临时剧情房间';
   d.plot=rpClip(spec&&spec.plot,420)||('由'+(c.remark||c.name)+'为'+S.me.name+'临时设计的一局角色扮演，主题是「'+theme+'」。');
@@ -4779,6 +4794,7 @@ async function rpCreateInviteFromAI(id,theme){const c=getC(id);if(!c)return null
   return rpPushInviteMsg(id,'assistant');}
 function rpSystem(c){const d=rpData(c.id);const ms=rpMembers(c.id);
   let s='【独立多人角色扮演游戏】你们正在和'+S.me.name+'玩一局单独的剧情软件。这不是微信聊天，也不会改动任何人在微信里的真实设定、真实关系、真实记忆。\n- 本局标题：'+(d.title||'本次剧情')+'\n- 本局时间：'+(rpWhenText(d)||dayPartNow())+'\n- 本局剧情背景：'+(d.plot||'由当下对话自然展开')+'\n- 本局开场场景：'+(d.scene||'从你们此刻对上的这一幕开始')+'\n- '+S.me.name+'这局扮演：'+(d.myRole||S.me.name)+'\n- '+S.me.name+'这局的临时设定：'+(d.myPersona||'未额外指定')+'\n\n# 参演角色\n'+ms.map((m,i)=>{const cc=getC(m.id);const base=cc?(((cc.persona||'')+traitDesc(cc)).replace(/\s+/g,' ').slice(0,260)):'';return (i+1)+'. '+((cc&&(cc.remark||cc.name))||'角色')+'：本局扮演「'+(m.role||((cc&&cc.name)||'角色'))+'」；本局临时设定：'+(m.persona||'沿用自己的语气底色，但以本局身份和剧情为准')+'；微信底色参考：'+(base||'自然、有代入感。');}).join('\n');
+  s+=worldbookPromptForContacts([d.title,d.plot,d.scene,d.myRole,d.myPersona,ms.map(m=>{const cc=getC(m.id);return [m.role,m.persona,cc&&((cc.persona||'')+traitDesc(cc))].filter(Boolean).join(' ');}).join('\n')].join('\n'),ms.map(m=>m.id),'角色扮演软件','roleplay');
   s+=adultRoleRule(c.remark||c.name||'角色');
   if(d.memory&&d.memory.length)s+='\n\n# 你们以前玩过的剧情存档（只知道个大概，别把旧身份串到本局）\n'+d.memory.slice(-6).map((m,i)=>(i+1)+'. '+(m.title||'本次剧情')+'：'+(m.summary||m.text||'')).join('\n');
   s+='\n\n# 本局输出规则\n- 沉浸式扮演，只说本局里的话，不要提AI、助手、模型、程序、系统、规则、政策、安全准则。\n- 如果话题太直白或不适合继续，用角色本人的口吻自然放慢、转场、设边界或留白，不解释规则，不说教，不发拒绝声明。\n- 亲密和暧昧只写氛围、情绪、动作的暗示和留白，避免露骨细节。\n- 动作、神态、环境、心理一律写成【旁白】单独成行；说出口的话单独成行。\n- 多人时不要群聊刷屏：一轮最多让1到2个角色说话，优先回应被点名的人；其他人只有剧情需要才插话。\n- 角色台词必须写成「角色名：台词」或「本局身份：台词」，旁白不加角色名。\n- 每个角色只知道自己该知道的，不要全知；不要把A的设定/记忆串到B身上。\n- 不要替'+S.me.name+'决定台词或动作；等ta说完/补完动作后再继续。\n- 一次回复写1到5行，短一点、像现场互动。\n- 不要发微信卡片、红包、语音、来电、图片标签，也不要跳回微信真实设定。';
@@ -5219,6 +5235,7 @@ function jailSystem(c){let s=c.persona||'';
   const rc=S.jail?jailRecent(S.jail.cid):'';if(rc)s+='\n\n# 你们最近的聊天（具体问题就在里头）\n'+rc;
   const _jg=(S.jail&&!S.jail.test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   if(_jg.length)s+='\n\n# 你的记仇小本本（这次要把这些旧账一笔一笔谈清）\n'+_jg.map((x,i)=>(i+1)+'. '+x.text).join('\n')+'\n【怎么谈】：按编号一笔一笔顺着往下处理，问清第①笔、确认'+S.me.name+'理解了，再谈第②笔。\n【千万别翻来覆去重复同一笔】——一笔谈清就翻篇、进行到下一笔，别绕回去重复刚问完的内容。\n等这些账都谈过、'+S.me.name+'理解影响并提出可信的改法，你再考虑结束。';
+  s+=worldbookPrompt([(c.persona||'')+traitDesc(c),(S.jail&&S.jail.reason)||'',rc,_jg.map(x=>x.text).join('\n')].join('\n'),c.id,'小黑屋/禁闭室','jail');
   s+='\n\n'+jailPersonaPin(c);
   s+='\n\n# 输出铁律\n- 全程只输出中文角色内容，不得出现英文字母、代码、政策说明、系统说明或格式解释。\n- 隐藏标签 [心情|...]、[心情值|...] 只能单独使用，绝不能混进正文；它们不会展示给用户。\n- 每轮简洁自然，几段即可。';
   return s;}
@@ -6172,6 +6189,7 @@ function dreadGen(){const gm=($('#dr_gm')&&$('#dr_gm').value)||'';const theme=((
 function buildDreadSystem(gm,theme,hp,hpMax){const c=getC(gm);
   let s='你就是「'+(c?c.name:'他')+'」本人，现在以你的【病娇·黑暗形态】主持一场恐怖抉择游戏，亲自陪'+S.me.name+'玩。'+(c&&c.persona?'\n你的人设：'+(''+c.persona).slice(0,300):'');
   s+='\n\n# 游戏主题（'+S.me.name+'指定的）\n'+theme;
+  s+=worldbookPrompt([theme,c&&((c.persona||'')+traitDesc(c))].filter(Boolean).join('\n'),gm,'惊悚抉择','games');
   s+='\n\n# 玩法（务必逐条遵守）\n- 这是【纯选项】恐怖游戏。讲一小段沉浸、可怕的剧情：【所有动作/场景/气氛描写都放进【】里】，你说的话放【】外面，动作和台词【分开、各占一行】，别把动作和台词混堆在同一句里(就像禁闭室那种格式)。然后【每一回合结尾都必须】用单独一行 [选择|此刻的处境问题|选项1/选项2/选项3] 给'+S.me.name+' 2到4个选项，让ta选。别让ta打字，只给选项。\n- 【绝不替'+S.me.name+'说话、做决定、或描写ta的动作/表情/心理】——ta自己的部分留给ta自己选，你只演你自己和环境。\n- ta选了之后，你接着演下去并判定后果：\n  · 作死/错误/危险的选择 → 单独一行 [扣血|数字|为什么]（按严重程度：轻则5-15，重则20-40）。\n  · 直接致命、或已濒死的选择 → 单独一行 [死亡|死因]。\n  · 聪明/正确的选择就别扣血（偶尔可 [回血|数字] 一点点）。\n  · 带ta一路活到逃出/圆满结局 → 单独一行 [通关]。\n- '+S.me.name+' 一共 '+hpMax+' 点血，现在还剩 '+hp+' 点。血扣到 0 就是死。\n- 你是【病娇】：占有、偏执、温柔又危险，话里裹着甜腻的恐怖，享受ta的恐惧却又舍不得真弄死ta。可随时单独一行 [突脸|一句短话] 吓ta。\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透。【每回合结尾都要给 [选择]】。';
   return s;}
 async function dreadGM(note){const d=S.dread;if(!d||!d.active||_dreadBusy)return;_dreadBusy=true;render();
@@ -6240,6 +6258,7 @@ function buildTaleSystem(){const t=S.tale;const comp=(t.companions||[]).map(id=>
   s+='\n\n# 【机密·只有你GM知道，绝不能剧透】第 '+t.fake+' 条是【假规则】：'+(t.fakeReason||'照做会出事')+'。\n玩家若【照这条假规则去做】、或【违反任何一条真规则】，就会出事甚至致命；守住真规则、识破并避开假规则才能活。';
   s+='\n\n# 同伴（和'+S.me.name+'一起被困，你扮演他们说话/行动；可让他们犯错、被吓、甚至死，用来制造恐怖和"是不是谁害的"的猜疑）\n'+(comp.length?comp.join('、'):'（没有同伴，'+S.me.name+'独自一人）')+(deadN.length?'\n已经死掉的：'+deadN.join('、')+'（别再让他们说话/行动）':'');
   s+='\n\n# 现在：第 '+t.night+' 晚（共三晚）';
+  s+=worldbookPromptForContacts([t.title,t.theme,(t.rules||[]).join('\n'),(t.companions||[]).map(id=>{const c=getC(id);return c?((c.persona||'')+traitDesc(c)):'';}).join('\n')].join('\n'),t.companions||[],'规则怪谈','games');
   s+='\n\n# 职责与输出格式\n- 【所有动作/场景/气氛描写都必须放进【】里】，台词放在【】外面；动作和台词【分开、各占一行】，绝不要把动作描写和台词混堆在同一句里。NPC/同伴说话正常写、前面带名字(如 林晓：…)。\n- 【绝不替'+S.me.name+'说话、做决定、或描写ta的动作/表情/心理】——'+S.me.name+'自己的部分留给ta，你只演你自己、环境和NPC，然后给选项/等ta说。\n- 推进当晚诡异事件，逼'+S.me.name+'用规则应对；对ta的行动严格按【真规则】判因果生死，别乱杀也别心软。\n- 循序渐进、留破绽让玩家推理哪条假；别一上来就杀，但该死就死(硬核)。\n- 控制指令各自【单独占一行】，会被系统执行、别在旁白里复述：\n  · 吓人 [突脸|一句短话]　· 抉择 [选择|问题|选项1/选项2]\n  · 同伴出事死亡 [同伴死亡|名字|怎么死的]\n  · '+S.me.name+'违反真规则/照假规则致命 → [死亡|死因]（游戏结束）\n  · '+S.me.name+'平安撑过这一晚 → [过夜]（随后一两句收束当晚）\n  · 撑过第三晚到天亮 → [通关]\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透哪条假。';
   return s;}
 async function taleGM(note){const t=S.tale;if(!t||!t.active||_taleBusy)return;_taleBusy=true;render();
@@ -6300,6 +6319,7 @@ function buildAlterSystem(y,x){const xn=(x.remark||x.name);
   if(y.signature)s+='\n你的个性签名："'+y.signature+'"';
   if(y.relation)s+='\n你的身份/关系背景：'+y.relation;
   if(isLover(y)||(S.couple&&S.couple.cid===y.id))s+='\n\n# 你的感情状态\n你有一个深爱着的恋人'+S.me.name+'，你对ta很专一、很在乎。';
+  s+=worldbookPromptForContacts([(y.persona||'')+traitDesc(y),(x.persona||'')+traitDesc(x),xn].join('\n'),[y.id,x.id],'马甲聊天','alter');
   s+='\n\n# 现在：微信文字聊天\n正在微信上跟你聊天的人是「'+xn+'」'+(x.relation?'（'+x.relation+'）':'')+(x.persona?'。关于ta：'+(''+x.persona).slice(0,180):'')+'。\n你按自己真实的人设、性格和说话风格来回应ta——热情、冷淡、警惕、调侃还是不耐烦，全看你自己和ta说的话，自然真实。\n像真人发微信：用中文、口语，一次发【1到3条】短消息（随意时一条就够、认真或激动时多发两句），别每次都正好两条，别长篇大论，别写旁白和括号动作。\n【规矩】① 只跟「'+xn+'」聊这一摊，别把ta错当成别人、别扯进无关的人。② 你可以表明态度（比如你有对象、不想被撩），但【绝不要透露'+S.me.name+'的任何私密信息或你俩的私事细节】。③ 别提"系统/AI/设定/项圈/查岗/任务"这些词。④ 如果「'+xn+'」太过分、越界、死缠烂打让你很反感，你可以明确拒绝或不再回复，但绝不要输出[拉黑]，也不能真的拉黑对方。';
   return s;}
 function renderAlter(xId,yId){const x=getC(xId),y=getC(yId);
