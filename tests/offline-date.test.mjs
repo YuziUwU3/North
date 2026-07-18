@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v557 \u00b7 \u7ebf\u4e0b\u7ea6\u4f1a\u56de\u5408\u8fde\u7eed/);
+assert.match(source, /v559 \u00b7 \u7ea6\u4f1a\u72b6\u6001\u4e0e\u5c0f\u53f7\u7a33\u6001/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -175,6 +175,10 @@ assert.match(source, /function renderOffIntro\(c,o\)/);
 assert.match(source, /function offlineFocusActive\(\)/);
 assert.match(source, /function offlineFocusStart\(id,o\)/);
 assert.match(source, /function offlineFocusStop\(id\)/);
+assert.match(source, /function offlineRepairState\(\)/);
+assert.match(source, /function offlineDeactivate\(id,o,clearMsgs\)/);
+assert.match(source, /function offlinePickTap\(ev,cid\)/);
+assert.match(source, /ontouchend="offlinePickTap\(event,'\$\{c\.id\}'\)"/);
 assert.doesNotMatch(source, /Object\.values\(S\.offline\|\|\{\}\)\.some\(o=>o&&o\.started\)/);
 assert.match(source, /function enterJail\(cid,reason,test\)[\s\S]*?offlineFocusStop\(\)/);
 assert.match(source, /function releaseJail\(backdoor\)[\s\S]*?offlineFocusStop\(\);save\(\)/);
@@ -188,13 +192,22 @@ const focusEnd = source.indexOf("const DAYPARTS", focusStart);
 assert.ok(focusStart >= 0 && focusEnd > focusStart);
 const focusSandbox = {
   S: {
-    offline: { old: { started: true, session: "legacy", startedAt: 1000 } },
+    offline: {
+      old: { started: true, session: "legacy", startedAt: 1000 },
+      stale: { started: true, session: "", startedAt: 0, msgs: [{ text: "old" }] },
+    },
     offlineFocus: null,
+  },
+  _off: null,
+  saveCount: 0,
+  save() {
+    focusSandbox.saveCount += 1;
   },
 };
 vm.runInNewContext(
   source.slice(focusStart, focusEnd) +
     ";globalThis.legacyLocked=offlineFocusActive();" +
+    "globalThis.staleStopped=S.offline.stale.started;" +
     "offlineFocusStart('old',S.offline.old);" +
     "globalThis.liveLocked=offlineFocusActive();" +
     "S.offline.old.session='changed';" +
@@ -203,9 +216,22 @@ vm.runInNewContext(
   focusSandbox,
 );
 assert.equal(focusSandbox.legacyLocked, false);
+assert.equal(focusSandbox.staleStopped, false);
 assert.equal(focusSandbox.liveLocked, true);
 assert.equal(focusSandbox.changedLocked, false);
 assert.equal(focusSandbox.markerAfterChange, null);
+assert.ok(focusSandbox.saveCount >= 1);
+
+const offEndStart = source.indexOf("async function offEnd(id)");
+const offEndEnd = source.indexOf("function offSetting", offEndStart);
+assert.ok(offEndStart >= 0 && offEndEnd > offEndStart);
+const offEndSource = source.slice(offEndStart, offEndEnd);
+assert.ok(offEndSource.indexOf("offlineDeactivate(id,o,true)") < offEndSource.indexOf("chatAPI("));
+assert.match(offEndSource, /const ended=\{session:/);
+assert.match(offEndSource, /msgs:ended\.msgs/);
+assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
+assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.cid,o,trip\.to,trip\.date,dayPartNow\(\)\)/);
+assert.match(source, /who:'\u65c1\u767d',source:'me',text:'\uff08'\+tvMD\(trip\.date\)/);
 
 assert.match(source, /const item=items\[i\],timing=offRevealTiming\(item\)/);
 assert.match(source, /d\.msgs\.some\(m=>m\._reveal\)/);
@@ -225,6 +251,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=557/);
+assert.match(html, /app\.js\?v=559/);
 
 console.log("offline date tests passed");

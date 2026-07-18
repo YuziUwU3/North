@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v557 · 线下约会回合连续';
+const APP_VER='v559 · 约会状态与小号稳态';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1097,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=557';
+  const url='sw.js?v=559';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4529,7 +4529,9 @@ let _off=null;
 function offData(id){S.offline=S.offline||{};if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false,daypart:''};return S.offline[id];}
 function offlineFocusStart(id,o){if(!id||!o||!o.started)return;S.offlineFocus={id,session:o.session||'',startedAt:o.startedAt||Date.now()};}
 function offlineFocusStop(id){const f=S.offlineFocus;if(!f||!id||f.id===id)S.offlineFocus=null;}
-function offlineFocusActive(){const f=S.offlineFocus;if(!f)return false;const o=S.offline&&S.offline[f.id];if(!o||!o.started||(f.session&&o.session!==f.session)){S.offlineFocus=null;return false;}return true;}
+function offlineRepairState(){let changed=false;Object.keys(S.offline||{}).forEach(id=>{const o=S.offline[id];if(o&&o.started&&(!o.session||!o.startedAt)){o.started=false;o.session='';o.startedAt=0;o.introSeen=false;o.endedAt=o.endedAt||Date.now();changed=true;}});const f=S.offlineFocus,o=f&&S.offline&&S.offline[f.id];if(f&&(!o||!o.started||!o.session||!o.startedAt||f.session!==o.session)){S.offlineFocus=null;changed=true;}if(changed)save();return changed;}
+function offlineFocusActive(){offlineRepairState();const f=S.offlineFocus;if(!f)return false;const o=S.offline&&S.offline[f.id];if(!o||!o.started||f.session!==o.session){S.offlineFocus=null;save();return false;}return true;}
+function offlineDeactivate(id,o,clearMsgs){if(!o)return;o.started=false;o.session='';o.startedAt=0;o.introSeen=false;o.endedAt=Date.now();if(clearMsgs)o.msgs=[];offlineFocusStop(id);if(_off&&_off.id===id)_off=null;}
 const DAYPARTS=['白天','中午','下午','傍晚','晚上','深夜'];
 function dayPartNow(){const h=new Date().getHours();return h<5?'深夜':h<9?'清晨':h<11?'上午':h<13?'中午':h<17?'下午':h<19?'傍晚':h<23?'晚上':'深夜';}
 function offDateTime(ts){if(!ts)return'';const d=new Date(ts);return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
@@ -4537,17 +4539,19 @@ function offElapsed(from,to){const ms=Math.max(0,(to||Date.now())-(from||0)),min
 function offPreviousEnd(o){const h=o&&o.history&&o.history[0];if(h&&h.ts)return +h.ts;const mem=o&&o.memory&&o.memory.length&&o.memory[o.memory.length-1];return mem&&typeof mem==='object'&&+mem.ts||0;}
 function offSessionMarker(o){const now=o.startedAt||Date.now(),cur='本场 · '+offDateTime(now)+' · '+(o.daypart||dayPartNow())+' · '+(o.loc||'未定');return o.previousEndedAt?cur+'\n上一场结束于 '+offDateTime(o.previousEndedAt)+' · 相隔 '+offElapsed(o.previousEndedAt,now):cur+'\n这是你们的第一场线下约会';}
 function offPreviousPrompt(o){if(!o.previousEndedAt)return'\n\n# 场次时间\n这是你们第一次进入线下约会，没有上一场现场可以续接。';return '\n\n# 场次时间（必须分清，不得把旧约会当成刚才）\n上一场约会结束于【'+offDateTime(o.previousEndedAt)+'】，本场开始于【'+offDateTime(o.startedAt||Date.now())+'】，两次见面已经相隔【'+offElapsed(o.previousEndedAt,o.startedAt||Date.now())+'】。以前的约会只能作为回忆；人物现在已经重新见面，不能延续上一场最后的姿势、房间、动作或未说完的现场台词。';}
-function offBeginSession(id,o,loc,when,part){const prev=offPreviousEnd(o);o.loc=loc||'老地方';o.when=when||'现在';o.daypart=part||dayPartNow();o.started=true;o.session=uid();o.startedAt=Date.now();o.previousEndedAt=prev;o.introSeen=false;o.msgs=[];o.msgs.push({id:uid(),who:'日期',source:'system',text:offSessionMarker(o)});offlineFocusStart(id,o);}
+function offBeginSession(id,o,loc,when,part){const prev=offPreviousEnd(o);o.loc=loc||'老地方';o.when=when||'现在';o.daypart=part||dayPartNow();o.started=true;o.session=uid();o.startedAt=Date.now();o.endedAt=0;o.previousEndedAt=prev;o.introSeen=false;o.msgs=[];o.msgs.push({id:uid(),who:'日期',source:'system',text:offSessionMarker(o)});offlineFocusStart(id,o);}
 function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.accepted||m.declined)return;
   m.accepted=true;const cid=(owner||'').split('#')[0];const o=offData(cid);offBeginSession(cid,o,m.loc||o.loc||'老地方',m.when||'现在',dayPartNow());
   o.msgs.push({id:uid(),who:'旁白',source:'me',text:'你答应了TA的约会邀请：'+o.when+' 在「'+o.loc+'」见面。'});save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'答应了你的约会邀请，'+o.when+'在「'+o.loc+'」见面。是你主动约的ta，你先到了——用旁白【】描写你到场的场景/动作开场，主动热情点。]');}
 function declineDate(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
-function openOfflineMenu(){S.offline=S.offline||{};const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
+function openOfflineMenu(){S.offline=S.offline||{};offlineRepairState();const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
   openModal(`<h3>线下约会</h3><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
-   ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" onclick="offlineEnter('${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
+   ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" role="button" tabindex="0" onclick="offlinePickTap(event,'${c.id}')" ontouchend="offlinePickTap(event,'${c.id}')" onpointerup="offlinePickTap(event,'${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function offlineEnter(cid){closeModal();const o=offData(cid);if(o.started){offlineFocusStart(cid,o);save();_off={id:cid,busy:false};go('off',{id:cid});return;}offlineInvite(cid);}
+let _offlinePickAt=0;
+function offlinePickTap(ev,cid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_offlinePickAt<350)return;_offlinePickAt=now;offlineEnter(cid);}
+function offlineEnter(cid){offlineRepairState();closeModal();const o=offData(cid);if(o.started){offlineFocusStart(cid,o);save();_off={id:cid,busy:false};go('off',{id:cid});return;}offlineInvite(cid);}
 function offlineInvite(cid){const c=getC(cid);
   openModal(`<h3>约 ${esc(c.remark||c.name)} 见面</h3>
    <div class="field"><label>约会地点</label><input id="of_loc" placeholder="比如：江边咖啡馆 / 你家 / 电影院"></div>
@@ -4661,23 +4665,21 @@ function offMemory(id){const o=offData(id),has=(o.memory&&o.memory.length)||(o.h
    <div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button>${has?`<button class="btn d" onclick="offClearMemory('${id}')">一键清空全部</button>`:''}</div>`);}
 async function offDelMemory(id,i){const o=offData(id),m=o.memory&&o.memory[i];if(m==null)return;if(!await uiConfirm('删除这一条约会记忆？\n微信长期记忆里的对应副本也会一起删除。'))return;const c=getC(id),mid=m&&typeof m==='object'&&m.id,txt=offMemText(m);o.memory.splice(i,1);if(o.history)o.history=o.history.filter(h=>mid?h.memoryId!==mid:offMemText(h.memory||'')!==txt);if(c&&c.summaries)c.summaries=c.summaries.filter(x=>!(mid&&x.offlineId===mid)&&!(x&&x.text&&txt&&x.text.includes(txt)));save();offMemory(id);toast('已删除这条约会记忆');}
 async function offClearMemory(id){const o=offData(id),c=getC(id);if(!await uiConfirm('一键清空和ta的全部线下约会记忆？\n\n会删除：约会记忆、历史场次、同步到微信长期记忆里的线下约会总结。\n不会删除：当前正在进行的这场约会。\n\n清空后无法恢复。',{danger:true}))return;o.memory=[];o.history=[];o.previousEndedAt=0;if(c&&c.summaries)c.summaries=c.summaries.filter(x=>!((x&&x.offlineId)||/线下约会/.test(String(x&&x.time||''))||/^【线下约会[·｜]/.test(String(x&&x.text||''))));if(o.started){o.msgs=(o.msgs||[]).filter(m=>m.who!=='日期');o.msgs.unshift({id:uid(),who:'日期',source:'system',text:offSessionMarker(o)});}save();offMemory(id);toast('全部线下约会记忆已清空');}
-async function offEnd(id){const o=offData(id);if(!o.msgs||!o.msgs.length){offQuit();return;}
+async function offEnd(id){const o=offData(id),endedMsgs=(o.msgs||[]).slice();if(!endedMsgs.length){offlineDeactivate(id,o,true);save();offQuit();toast('约会已结束');return;}
   if(!await uiConfirm('结束这次约会？会自动把这次见面总结成一条记忆(微信里的ta也会知道)。'))return;
-  toast('正在回味这次约会…');const c=getC(id);
+  const ended={session:o.session||uid(),startedAt:o.startedAt||Date.now(),loc:o.loc||'',when:o.when||'',daypart:o.daypart||'',msgs:endedMsgs};offlineDeactivate(id,o,true);save();offQuit();toast('约会已结束，正在保存记忆…');const c=getC(id);
   let savedText='见了一面';
-  try{const text=o.msgs.filter(m=>m.who!=='日期').map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':c.name)+'：'+m.text).join('\n');
+  try{const text=ended.msgs.filter(m=>m.who!=='日期').map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':c.name)+'：'+m.text).join('\n');
     let sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会【完整地】记成一段第一人称记忆：写清楚在哪、什么时段、你们一起做了什么、聊了哪些重要的话、有什么亲密或难忘的瞬间、你当时的心情感受。要具体、有细节、有情绪，像写一小段日记，120~200字、把最后一句也写完整别断，以后聊微信你能清楚回忆起这次见面。直接写正文，别写"记忆："这种前缀，绝不提AI/模型/系统/安全准则。'+perspRule(c)},{role:'user',content:text}],{max:600,temp:.45});
     for(let _ra=0;_ra<2&&isRefusal(sum);_ra++){const fix=await chatAPI([{role:'system',content:'重写这段线下约会记忆。你就是「'+c.name+'」本人，只写你和'+S.me.name+'真实见面的共同回忆，第一人称，120~200字，绝不跳出角色。'+perspRule(c)},{role:'user',content:text}],{max:600,temp:.45});if(fix)sum=fix;if(fix&&!isRefusal(fix))break;}
     const clean=trimSentence(cleanReply(sum),400)||'见了一面';savedText=clean;
-    const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:clean});
+    const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(ended),loc:ended.loc,text:clean});
     // 同时写进长期「记忆总结」，标注是线下约会，让ta长久记得
-    c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(o.loc||'外面')+'】'+clean,imp:4,offlineId:memId});
+    c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(ended.loc||'外面')+'】'+clean,imp:4,offlineId:memId});
     try{pruneSummaries(c);}catch(_){}
-  }catch(e){const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:'见了一面'});c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(o.loc||'外面')+'】我们见了一面。',imp:3,offlineId:memId});}
-  const latestMem=o.memory&&o.memory[o.memory.length-1];o.history=o.history||[];o.history.unshift({id:o.session||uid(),memoryId:latestMem&&latestMem.id||'',ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',when:o.when||'',daypart:o.daypart||'',memory:savedText,msgs:(o.msgs||[]).slice()});o.history=o.history.slice(0,20);
-  o.started=false;o.session='';o.startedAt=0;o.msgs=[];offlineFocusStop(id);save();toast('约会记忆已保存');
-  if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(o.loc||'外面')+'」的这次线下见面，要分开了。请你结合刚才见面的真实情形，主动发微信自然地道别/关心一句（路上小心、今天很开心、想你之类，符合你人设和当时情境；如果刚才是在机场送别就别说「到家说一声」那种）。用普通文字聊天，别用旁白【】格式。]');
-  offQuit();}
+  }catch(e){const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(ended),loc:ended.loc,text:'见了一面'});c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(ended.loc||'外面')+'】我们见了一面。',imp:3,offlineId:memId});}
+  const latestMem=o.memory&&o.memory[o.memory.length-1];o.history=o.history||[];o.history.unshift({id:ended.session,memoryId:latestMem&&latestMem.id||'',ts:Date.now(),label:offMemLabel(ended),loc:ended.loc,when:ended.when,daypart:ended.daypart,memory:savedText,msgs:ended.msgs});o.history=o.history.slice(0,20);save();toast('约会记忆已保存');
+  if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(ended.loc||'外面')+'」的这次线下见面，要分开了。请你结合刚才见面的真实情形，主动发微信自然地道别/关心一句（路上小心、今天很开心、想你之类，符合你人设和当时情境；如果刚才是在机场送别就别说「到家说一声」那种）。用普通文字聊天，别用旁白【】格式。]');}
 function offSetting(id){const o=offData(id);
   openModal(`<h3>约会设定</h3>
    <div class="field"><label>约会地点</label><input id="os_loc" value="${esc(o.loc||'')}"></div>
@@ -5057,8 +5059,8 @@ function tvTripsView(){const t=tvInit();const list=t.trips.slice().sort((a,b)=>(
     </div>`;}).join('')+'</div>';}
 function tvStartDate(tid){const t=tvInit();const trip=t.trips.find(x=>x.id===tid);if(!trip)return;if(trip.meet===false){toast('这是独自旅行，没有见面');return;}const c=getC(trip.cid);if(!c){toast('这个角色已删除');return;}
   const o=offData(trip.cid);if(o.started){toast('你和'+(c.remark||c.name)+'已经在一场约会里了，先把那场结束');return;}
-  o.loc=trip.to;o.when=trip.date;o.daypart=dayPartNow();o.started=true;o.msgs=o.msgs||[];
-  o.msgs.push({id:uid(),who:'旁白',text:'（'+tvMD(trip.date)+'，'+(trip.flier==='me'?S.me.name+'飞抵'+trip.to+'，两人在机场相见':(c.remark||c.name)+'飞抵'+trip.to+'，两人在机场相见')+'。）'});
+  offBeginSession(trip.cid,o,trip.to,trip.date,dayPartNow());
+  o.msgs.push({id:uid(),who:'旁白',source:'me',text:'（'+tvMD(trip.date)+'，'+(trip.flier==='me'?S.me.name+'飞抵'+trip.to+'，两人在机场相见':(c.remark||c.name)+'飞抵'+trip.to+'，两人在机场相见')+'。）'});
   trip.status='done';tvAddStamp(t,trip.to,trip.cid,trip.date);save();
   _off={id:trip.cid,busy:false};go('off',{id:trip.cid});
   offAI('[系统：'+(trip.flier==='me'?S.me.name+'坐飞机飞到'+trip.to+'来见你了':'你飞到'+trip.to+'来见'+S.me.name+'了')+'，你们期待已久的这场'+trip.to+'线下约会现在正式开始。用旁白【】描写接机/相拥/到场的场景，主动热情地开场。]');}
@@ -5935,14 +5937,16 @@ function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.callName=($('
   {const ag=$('#me_age');S.me.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#me_adult');S.me.adultConsent=!ad||ad.checked;}
   syncActiveAccount();save();try{pfEnsure(true).catch(()=>{});}catch(_){}closeModal();render();}
 function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.city=S.me.city||'';a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
-let _accountTapAt=0;
+let _accountTapAt=0,_accountCreateTapAt=0,_accountSaveTapAt=0;
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
   const now=Date.now();if(now-_accountTapAt<350)return;_accountTapAt=now;switchAccount(aid);}
+function accountCreateTap(ev){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_accountCreateTapAt<350)return;_accountCreateTapAt=now;editAccount();}
+function accountSaveTap(ev,id,isNew){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_accountSaveTapAt<350)return;_accountSaveTapAt=now;saveAccount(id,isNew);}
 function accountSwitchFromEvent(ev){if(ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-noswitch]'))return;const el=ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-switch]');if(!el)return;accountSwitchTap(ev,el.getAttribute('data-account-switch'));}
 function accountMgr(){initAccounts();const acts=S.me.accounts||[];
   openModal(`<h3>我的小号</h3><div class="hint">切换不同身份和角色聊天。每个身份有<b>独立的聊天记录</b>；角色可能拉黑某个身份，你换个身份就能重新搜微信号加回。当前：<b>${esc(S.me.name)}</b></div>
    ${acts.map(a=>`<div class="section"><div class="it" data-account-switch="${a.id}" style="cursor:pointer" role="button" tabindex="0" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div>${a.id===actId()?'<span class="v">当前</span>':`<button type="button" class="minibtn" data-account-switch="${a.id}" style="background:#07c160;color:#fff" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">切换</button>`}<span class="v" data-account-noswitch="1" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span data-account-noswitch="1" style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
-   <button class="btn p" style="margin-top:8px" onclick="editAccount()">＋ 新建小号</button>
+   <button type="button" class="btn p" style="margin-top:8px" onclick="accountCreateTap(event)" ontouchend="accountCreateTap(event)" onpointerup="accountCreateTap(event)">＋ 新建小号</button>
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function switchAccount(aid){initAccounts();if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t){toast('这个小号数据坏了，已自动整理一次');initAccounts();accountMgr();return;}
   S.me.active=aid;S.me.name=t.name;S.me.wxid=t.wxid;S.me.avatar=t.avatar;S.me.persona=t.persona||'';S.me.signature=t.signature||'';S.me.city=t.city||'';
@@ -5967,10 +5971,11 @@ function editAccount(aid){initAccounts();const a=aid?(S.me.accounts||[]).find(x=
    <div class="field"><label>年龄</label><input id="ac_age" type="number" min="0" value="${esc(a.age||18)}"></div>
    <div class="field"><label><input id="ac_adult" type="checkbox" ${a.adultConsent!==false?'checked':''}> 成年资料</label></div>
    <div class="field"><label>身份设定（角色会知道你以这个身份跟ta聊）</label><textarea id="ac_per" rows="3" placeholder="比如：陌生网友 / 新同事 / 假装是别人 / 记者…">${esc(a.persona||'')}</textarea></div>
-   <div class="btns"><button class="btn g" onclick="accountMgr()">返回</button><button class="btn p" onclick="saveAccount('${a.id}',${!!a._new})">保存</button></div>`);}
+   <div class="btns"><button type="button" class="btn g" onclick="accountMgr()">返回</button><button type="button" class="btn p" onclick="accountSaveTap(event,'${a.id}',${!!a._new})" ontouchend="accountSaveTap(event,'${a.id}',${!!a._new})" onpointerup="accountSaveTap(event,'${a.id}',${!!a._new})">保存</button></div>`);}
 function saveAccount(id,isNew){initAccounts();let a=isNew?{id,balance:188,bills:[]}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
+  const nameEl=$('#ac_name'),wxidEl=$('#ac_wxid'),avatarEl=$('#ac_av'),personaEl=$('#ac_per');if(!nameEl||!wxidEl||!avatarEl||!personaEl){toast('小号编辑页没有加载完整，请重新打开');return;}
   if(isNew){const used=new Set((S.me.accounts||[]).map(x=>x.id));while(!accountIdOK(a.id)||used.has(a.id)){a.id='acc_'+Math.random().toString(36).slice(2,7);}}
-  a.name=$('#ac_name').value.trim()||'小号';a.wxid=$('#ac_wxid').value.trim()||genWxid();a.avatar=$('#ac_av').value.trim()||'🙂';a.city=($('#ac_city')&&$('#ac_city').value.trim())||'';a.persona=$('#ac_per').value.trim();
+  a.name=nameEl.value.trim()||'小号';a.wxid=wxidEl.value.trim()||genWxid();a.avatar=avatarEl.value.trim()||'🙂';a.city=($('#ac_city')&&$('#ac_city').value.trim())||'';a.persona=personaEl.value.trim();
   {const ag=$('#ac_age');a.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#ac_adult');a.adultConsent=!ad||ad.checked;}
   a.signature=a.signature||'';if(a.balance==null)a.balance=188;if(!Array.isArray(a.bills))a.bills=[];if(isNew)S.me.accounts.push(a);
   if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.city=a.city||'';S.me.persona=a.persona;S.me.age=a.age;S.me.adultConsent=a.adultConsent!==false;}
@@ -6735,24 +6740,32 @@ function bubbleNaturalRequest(text,c){text=''+(text||'');if(!/气泡/.test(text)
   return (bg||fg||shape||icon)?bubbleRoleChange(c,bg,fg,shape,icon,true):false;}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
 function isLover(c){if(!c||!isMain())return false;if(S.couple&&S.couple.cid===c.id)return true;return /恋人|男友|女友|男朋友|女朋友|老公|老婆|对象|未婚|爱人|情侣|伴侣|相恋|订婚|夫妻/.test((c.relation||'')+(c.persona||''));}
-function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){friendMetaSet(c,'blockedAt',Date.now());adjMood(id,-30);}save();render();
+const FRIEND_REQ_DELAYS=[10000,20000,30000];
+function friendRetryState(c,create){if(!c)return null;if(!c._friendReqRetry&&create)c._friendReqRetry={attempt:0,nextAt:0};return c._friendReqRetry||null;}
+function friendRetryReset(c,now){const st=friendRetryState(c,true);st.attempt=0;st.nextAt=(now==null?Date.now():now)+FRIEND_REQ_DELAYS[0];return st;}
+function friendRetryAfterIgnore(c,attempt,now){const st=friendRetryState(c,true);st.attempt=Math.max(+st.attempt||0,+attempt||1);st.nextAt=st.attempt<3?(now==null?Date.now():now)+FRIEND_REQ_DELAYS[st.attempt]:0;return st;}
+function friendRetryClear(c){if(c)delete c._friendReqRetry;}
+function friendMainBlocked(c){return !!(c&&c._blk&&c._blk.main);}
+function friendMainUnblock(c){if(!c)return;c._blk=c._blk||{};c._blk.main=false;if(isMain())c.blocked=false;}
+function friendRequestSweep(){const now=Date.now();(S.contacts||[]).forEach(c=>{const st=friendRetryState(c,false);if(!st)return;if(!friendMainBlocked(c)){friendRetryClear(c);return;}if(st.nextAt&&now>=st.nextAt&&!S.friendRequests.some(r=>r.contactId===c.id)){st.nextAt=0;save();createFriendRequest(c.id);}});}
+setInterval(friendRequestSweep,1000);setTimeout(friendRequestSweep,1200);
+function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){friendMetaSet(c,'blockedAt',Date.now());adjMood(id,-30);}else{friendRetryClear(c);S.friendRequests=S.friendRequests.filter(r=>r.contactId!==id);}save();render();
   if(c.blocked){
-    if(isLover(c)){toast('已拉黑，过会儿看「通讯录」ta会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}
+    if(isLover(c)){friendRetryReset(c);save();toast('已拉黑，约10秒后看「通讯录」ta会申请加你');}
     else toast('已拉黑');}}
-async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
+async function createFriendRequest(id){const c=getC(id);if(!friendMainBlocked(c))return;
   if(S.friendRequests.some(r=>r.contactId===id))return;
-  let msg='是我，别拉黑我好不好…我们好好说。';
-  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：'+S.me.name+'把你拉黑了，你不死心，重新申请加回好友。只输出一句你对她说的好友验证消息，别超过20字。不要输出[心情]、[心情值]、动作描写或任何系统标签。]'}]);
-    msg=friendReqText(raw,msg);}catch(e){}
-  S.friendRequests.push({id:uid(),contactId:id,msg,time:Date.now()});save();
-  if(!c.muted)playDing();if(cur().p==='wechat'&&wxTab==='contacts')render();
-  toast('通讯录有人申请加你');}
+  const st=friendRetryState(c,true);if((+st.attempt||0)>=3)return;const attempt=(+st.attempt||0)+1;st.attempt=attempt;st.nextAt=0;
+  let msg='是我，别拉黑我好不好…我们好好说。',req={id:uid(),contactId:id,msg,time:Date.now(),attempt};S.friendRequests.push(req);save();
+  if(!c.muted)playDing();if(cur().p==='wechat'&&wxTab==='contacts')render();toast('通讯录有人申请加你');
+  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：'+S.me.name+'把你拉黑了，你不死心，这是你第'+attempt+'次申请加回好友。只输出一句你对她说的好友验证消息，别超过20字。不要输出[心情]、[心情值]、动作描写或任何系统标签。]'}]);
+    msg=friendReqText(raw,msg);const live=S.friendRequests.find(r=>r.id===req.id);if(live){live.msg=msg;save();if(cur().p==='wechat'&&wxTab==='contacts')render();}}catch(e){}}
 function friendReqText(raw,fb){let lines=splitBubbles(cleanReply(raw)).map(x=>cleanRolePunct((''+x).replace(/^[「"']+|[」"']+$/g,'').trim())).filter(x=>x&&!/^[\[【]/.test(x)&&!CTLLEAK.test(x)&&!isRefusal(x));let t=(lines[0]||fb||'是我，别拉黑我好不好…').replace(/\s+/g,' ').trim();return t.slice(0,32)||fb;}
 function openFriendRequests(){if(!S.friendRequests.length){toast('暂无新申请');return;}
   openModal(`<h3>新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);r.msg=friendReqText(r.msg,'是我，别拉黑我好不好…');return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){const ba=friendMetaGet(c,'blockedAt');setBlk(c,false);friendMetaSet(c,'readdedAt',Date.now());friendMetaSet(c,'readdKnown',false);if(ba)friendMetaSet(c,'blockDur',fmtDur(Date.now()-ba));c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
-  S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');if(c&&!c.blocked)setTimeout(()=>scheduleReply(c.id,'[系统：'+S.me.name+'刚通过了你的好友申请。你终于被加回来了，马上发一条正常微信消息给她：可以委屈、着急、松口气或追问为什么拉黑你，但不要再输出好友验证格式，也不要只写心情。]'),500);}
-function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
+function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){const ba=friendMetaGet(c,'blockedAt');friendMainUnblock(c);friendRetryClear(c);friendMetaSet(c,'readdedAt',Date.now());friendMetaSet(c,'readdKnown',false);if(ba)friendMetaSet(c,'blockDur',fmtDur(Date.now()-ba));c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
+  S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');if(c&&!friendMainBlocked(c))setTimeout(()=>scheduleReply(c.id,'[系统：'+S.me.name+'刚通过了你的好友申请。你终于被加回来了，马上发一条正常微信消息给她：可以委屈、着急、松口气或追问为什么拉黑你，但不要再输出好友验证格式，也不要只写心情。]'),500);}
+function ignoreFriend(rid){const r=S.friendRequests.find(x=>x.id===rid),c=r&&getC(r.contactId);S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);if(friendMainBlocked(c))friendRetryAfterIgnore(c,r&&r.attempt,Date.now());save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
 async function c_delete(id){const c=getC(id);
   if(!isMain()){if(!await uiConfirm('从当前小号「'+esc(S.me.name)+'」里删掉这个好友？\n（只影响这个小号，不动大号，之后还能搜微信号重新加回来）'))return;
     if(c._added)delete c._added[actId()];if(c._blk)delete c._blk[actId()];friendMetaClear(c);delete S.messages[mkey(id)];syncBlocks();save();stack.pop();render();toast('已从这个小号移除');return;}
@@ -7307,7 +7320,7 @@ function applyBlockIntent(content,c,id){
   if(/没(有)?(把你|你)?拉黑|别拉黑|不拉黑|才不.{0,4}拉黑|不(会|想|要|敢|至于|可能|能).{0,3}拉黑|怎么(会|可能).{0,3}拉黑|舍不得|拉黑我|逗你|开玩笑|吓唬|不会真(的)?拉/.test(t))return;
   if(!c.blocked&&/(把你|已经|已|给你|真|就)?拉黑(了|你)|拉黑你了|删了你|删除你(好友)?|拉进黑名单|把你删了|不想再(理|看到)你了|blocked? ?you/i.test(t))return;
   if(c.blocked&&c._blockedBy==='ta'&&isLover(c)&&/(把你)?加回(来)?|解除拉黑|不拉黑你了|原谅你了?|放你回来|重新加你|把你放出来/.test(t)){
-    setBlk(c,false);friendMetaSet(c,'readdedAt',Date.now());friendMetaSet(c,'readdKnown',true);
+    setBlk(c,false);friendRetryClear(c);S.friendRequests=S.friendRequests.filter(r=>r.contactId!==id);friendMetaSet(c,'readdedAt',Date.now());friendMetaSet(c,'readdKnown',true);
     const mg={role:'assistant',type:'sys',content:(c.remark||c.name)+'把你加回来了',time:Date.now(),id:uid()};msgs(id).push(mg);
     save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}}
 // 记仇小本本：[记仇|事] 记一笔，[消气|关键词] 划掉一笔；在聊天和线下都生效，并从文本抹掉
