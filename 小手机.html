@@ -686,7 +686,7 @@ body{background:#000;padding:0;}
 .offintro-gap{margin-top:26px;color:#777168;font-size:11px;line-height:1.8;}
 .off-enter{width:min(76%,270px);height:44px;margin-top:25px;border:1px solid #766b5b;border-radius:5px;background:#0a0a09;color:#d1c4af;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:15px;cursor:pointer;}
 .offintro-note{margin-top:13px;color:#4f4c47;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:10px;}
-@media (prefers-reduced-motion:no-preference){.offintro-main{animation:offfade .7s ease both}.offnar,.offmsg{animation:offfade .35s ease both}@keyframes offfade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}}
+@media (prefers-reduced-motion:no-preference){.offintro-main{animation:offfade .7s ease both}.offreveal{animation:offlinein .42s cubic-bezier(.22,.8,.3,1) both}.offreveal .offglyph{display:inline-block;opacity:0;filter:blur(3px);transform:translateY(2px);animation:offglyph .46s cubic-bezier(.22,.8,.3,1) forwards}@keyframes offfade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}@keyframes offlinein{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}@keyframes offglyph{0%{opacity:0;filter:blur(3px);transform:translateY(2px)}55%{opacity:.72;filter:blur(1px)}100%{opacity:1;filter:blur(0);transform:none}}}
 </style>
 </head>
 <body>
@@ -721,7 +721,7 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="app.js?v=551" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=552" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="ai-account.js?v=539"></script>
 </body>
 </html>

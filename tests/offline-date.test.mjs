@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v551 \u00b7 \u7ebf\u4e0b\u7ea6\u4f1a\u5b8c\u6574\u4e0a\u4e0b\u6587/);
+assert.match(source, /v552 \u00b7 \u7ebf\u4e0b\u5b57\u5e55\u9010\u5b57\u6e10\u663e/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -67,6 +67,35 @@ assert.match(source, /function offlineLifeNotesPrompt\(c\)/);
 assert.match(source, /function offlineBehaviorLedgerPrompt\(c\)/);
 assert.match(source, /s\+=dialogueEmotionPrompt\(c\)/);
 assert.match(source, /s\+=memoryCriticalPrompt\(c\)/);
+assert.match(source, /function offRevealTiming\(m\)/);
+assert.match(source, /function offRevealText\(m\)/);
+assert.match(source, /Object\.defineProperties\(item,\{_reveal:/);
+assert.match(source, /setTimeout\(res,timing\.total\)/);
+assert.match(source, /item\._reveal=false/);
+assert.match(source, /!o\.msgs\.some\(m=>m\._reveal\)/);
+
+const revealStart = source.indexOf("function offRevealTiming(m)");
+const revealEnd = source.indexOf("function offlineSystem(c)", revealStart);
+assert.ok(revealStart >= 0 && revealEnd > revealStart);
+const revealSandbox = {
+  matchMedia: () => ({ matches: false }),
+  esc: (text) => String(text).replaceAll("<", "&lt;"),
+};
+vm.runInNewContext(
+  source.slice(revealStart, revealEnd) +
+    ";globalThis.narrTiming=offRevealTiming({who:'旁白',text:'一'.repeat(60)});" +
+    "globalThis.talkTiming=offRevealTiming({who:'ta',text:'一'.repeat(60)});" +
+    "globalThis.revealHtml=offRevealText({_reveal:true,_revealStep:42,text:'字幕渐显'});" +
+    "globalThis.safeHtml=offRevealText({_reveal:false,text:'<b>'});",
+  revealSandbox,
+);
+assert.equal(revealSandbox.narrTiming.step, 42);
+assert.equal(revealSandbox.talkTiming.step, 30);
+assert.ok(revealSandbox.narrTiming.total > revealSandbox.talkTiming.total);
+assert.equal((revealSandbox.revealHtml.match(/class="offglyph"/g) || []).length, 4);
+assert.match(revealSandbox.revealHtml, /animation-delay:0ms/);
+assert.match(revealSandbox.revealHtml, /animation-delay:126ms/);
+assert.equal(revealSandbox.safeHtml, "&lt;b>");
 
 assert.match(source, /function offClearMemory\(id\)/);
 assert.match(source, /o\.memory=\[\];o\.history=\[\];o\.previousEndedAt=0/);
@@ -84,6 +113,9 @@ assert.match(html, /\.offstage\{/);
 assert.match(html, /\.offintro\{/);
 assert.match(html, /\.offmsg\.them \.offbubble\{/);
 assert.match(html, /\.offmsg\.me \.offbubble\{/);
-assert.match(html, /app\.js\?v=551/);
+assert.match(html, /\.offreveal \.offglyph/);
+assert.match(html, /@keyframes offglyph/);
+assert.doesNotMatch(html, /\.offnar,\.offmsg\{animation:offfade/);
+assert.match(html, /app\.js\?v=552/);
 
 console.log("offline date tests passed");

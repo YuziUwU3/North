@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v551 · 线下约会完整上下文';
+const APP_VER='v552 · 线下字幕逐字渐显';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -4555,6 +4555,8 @@ function offlineSharedContext(c,limit){const rows=msgs(c.id).map(m=>{if(!m||m._s
   return'\n\n# 进入本场约会前最近 '+rows.length+' 条微信/电话共同上下文（设置偏好：'+limit+' 条）\n这些都是你和'+S.me.name+'真实发生过的共同经历。你必须记得并能准确回答“刚才微信聊了什么、电话里说了什么”；它们只作为见面前的记忆背景，绝不能误当成本场刚说出口的面对面台词。\n'+rows.map((x,i)=>(i+1)+'. ['+(x.time?fmtDT(x.time):'时间未知')+']['+x.source+']['+x.who+'] '+x.text).join('\n');}
 function offlineLifeNotesPrompt(c){if(!isLover(c))return'';const rows=lifeNotes().filter(n=>n&&n.text&&!(n.expiresAt&&n.expiresAt<Date.now()));if(!rows.length)return'';return'\n\n# '+S.me.name+'身上的全部生活小事（隐藏记忆）\n'+rows.map((n,i)=>(i+1)+'. '+fmtDT(n.ts||Date.now())+'：'+aboutMeNoteText(n.text)).join('\n')+'\n这些都是相处中留下的真实小事。相关时自然记起、关心和接话，不要机械报清单，也不要说自己读取了小事簿。';}
 function offlineBehaviorLedgerPrompt(c){if(!(S.couple&&S.couple.cid===c.id&&behaviorOn()))return'';const b=behaviorStore(),items=(b&&b.items||[]).filter(x=>x.active!==false&&(x.promise||(x.events&&x.events.length))).sort((a,b)=>(b.lastTs||0)-(a.lastTs||0));if(!items.length)return'';return'\n\n# 你记在心里的全部相处小账（隐藏记忆）\n'+items.map((it,i)=>{const ev=(it.events||[]).map(e=>fmtDT(e.ts)+'：'+e.text).join('；');return(i+1)+'. '+it.title+(it.promise?'：'+S.me.name+'答应过「'+it.promise+'」':'')+((it.count||0)>0?'，相关记录 '+(it.count||0)+' 次':'')+(ev?'。记录：'+ev:'')+((it.oldCount||0)?'（另有更早记录 '+it.oldCount+' 条）':'');}).join('\n')+'\n这些是你们真实相处中记住的细节。ta再次提起或重犯时可以自然接上，但不要念隐藏标题、系统或账本。';}
+function offRevealTiming(m){const n=Math.max(1,Array.from(String(m&&m.text||'')).length),nar=m&&m.who==='旁白',reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches,base=nar?42:30,step=reduce?0:Math.max(16,Math.min(base,7200/Math.max(1,n-1))),reveal=reduce?120:Math.round(step*(n-1)+480),hold=Math.max(1100,Math.min(nar?4200:3200,900+n*(nar?22:18)));return{step,reveal,hold,total:reveal+hold};}
+function offRevealText(m){const text=String(m&&m.text||'');if(!m||!m._reveal)return esc(text);const step=+m._revealStep||0;return Array.from(text).map((ch,i)=>ch==='\n'?'<br>':'<span class="offglyph" style="animation-delay:'+Math.round(i*step)+'ms">'+(ch===' '?'&nbsp;':esc(ch))+'</span>').join('');}
 function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   s+=adultRoleRule(c.remark||c.name||'角色');
   s+=offlineRoleGuard(c);
@@ -4587,8 +4589,8 @@ async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData
     splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l)||isOOCLine(l)||isRefusal(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;
       splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({id:uid(),who:nar?'旁白':'ta',source:'ta',text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
     if(!items.length){items.push({id:uid(),who:'旁白',source:'ta',text:'他没有跳开话题，只是留在你面前，按自己的分寸轻轻握住你的手。'});items.push({id:uid(),who:'ta',source:'ta',text:'看着我，我还在这里。'});}
-    for(let i=0;i<items.length;i++){if(!_off)return;o.msgs.push(items[i]);save();offRender();
-      if(i<items.length-1)await new Promise(res=>setTimeout(res,Math.min(1600,550+(items[i].text||'').length*26)));}
+    for(let i=0;i<items.length;i++){if(!_off)return;const item=items[i],timing=offRevealTiming(item);Object.defineProperties(item,{_reveal:{value:true,writable:true,configurable:true},_revealStep:{value:timing.step,writable:true,configurable:true}});o.msgs.push(item);save();offRender();
+      await new Promise(res=>setTimeout(res,timing.total));item._reveal=false;}
   }catch(e){o.msgs.push({id:uid(),who:'旁白',text:'（…信号般的停顿，再继续吧）'});}
   if(_off)_off.busy=false;offRender();}
 function offRender(){if(cur().p==='off')render();}
@@ -5301,10 +5303,10 @@ function renderOffIntro(c,o){const prev=o.previousEndedAt?`上一场结束于 ${
 function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);if(o.introSeen===false)return renderOffIntro(c,o);const sel=_offSel;
   const body=o.msgs.map(m=>{const on=sel&&sel.indexOf(m.id)>=0;const cb=sel?`<span style="margin-right:6px;color:${on?'#19a463':'#888'}">${on?'☑':'⚪'}</span>`:'';const oc=sel?`offSelTog('${m.id}')`:`offMsgMenu('${id}','${m.id}')`;
     if(m.who==='日期')return `<div class="offdate">${esc(m.text).replace(/\n/g,'<br>')}</div>`;
-    if(m.who==='旁白')return `<div class="offnar ${m.source==='me'?'mine':''}" onclick="${oc}">${cb}${esc(m.text)}</div>`;
+    if(m.who==='旁白')return `<div class="offnar ${m.source==='me'?'mine':''} ${m._reveal?'offreveal':''}" onclick="${oc}">${cb}${offRevealText(m)}</div>`;
     if(m.who==='me')return `<div class="msg me offmsg" onclick="${oc}"><div class="col"><div class="bubble offbubble">${cb}${esc(m.text)}</div></div></div>`;
-    return `<div class="msg them offmsg" onclick="${oc}"><div class="col"><div class="bubble offbubble">${cb}${esc(m.text)}</div></div></div>`;}).join('')
-    +(_off&&_off.busy?`<div class="msg them offmsg"><div class="col"><div class="bubble offbubble typing"><span></span><span></span><span></span></div></div></div>`:'');
+    return `<div class="msg them offmsg ${m._reveal?'offreveal':''}" onclick="${oc}"><div class="col"><div class="bubble offbubble">${cb}${offRevealText(m)}</div></div></div>`;}).join('')
+    +(_off&&_off.busy&&!o.msgs.some(m=>m._reveal)?`<div class="msg them offmsg"><div class="col"><div class="bubble offbubble typing"><span></span><span></span><span></span></div></div></div>`:'');
   return `<div class="offstage">
    <div class="nav offnav"><span class="l" onclick="offQuit()">‹</span><span class="t">${esc(c.remark||c.name)}</span><span class="r" onclick="offEnd('${id}')">结束</span></div>
    <div class="offmeta"><span><b>${esc(o.loc||'未定')}</b> · ${esc(o.daypart||o.when||'现在')}</span><span><button onclick="offSelToggle()">${sel?'取消':'多选'}</button><button onclick="offSetting('${id}')">设定</button><button onclick="offMemory('${id}')">记忆</button></span></div>
