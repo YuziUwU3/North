@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v571 · 线下成年亲密防误拒';
+const APP_VER='v572 · 角色头像相机入口';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1107,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=571';
+  const url='sw.js?v=572';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -6118,7 +6118,7 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
       <button class="minibtn" id="ctab3" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(3)">上下位</button>
       <button class="minibtn" id="ctab4" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(4)">专业知识</button></div>
     <div id="cpage1">
-    <div class="field"><label>头像</label><div class="avline">${av(c.avatar,'sm')}<input id="c_av" value="${esc(c.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upC()"></button></div></div>
+    <div class="field"><label>头像</label><div class="avline" style="gap:10px"><div id="c_av_preview" style="display:flex;flex:0 0 auto">${av(c.avatar,'sm')}</div><input id="c_av" value="${esc(c.avatar)}" placeholder="emoji 或上传" style="flex:1;width:auto;min-width:0"><button type="button" class="minibtn" onclick="upC()" title="上传角色头像" aria-label="上传角色头像" style="height:42px;flex:0 0 auto;padding:0 12px;border:1px solid #6d8fff;background:#3a6df0;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600">${svgIc('camera',20,'#fff',1.8)}<span>上传头像</span></button></div></div>
     <div class="field"><label>名字</label><input id="c_name" value="${esc(c.name)}"></div>
     <div class="field"><label>微信号</label><input id="c_wxid" value="${esc(c.wxid||'')}" placeholder="可手动改，通讯录可搜索"></div>
     <div class="field"><label>关系（如 恋人/朋友）</label><input id="c_rel" value="${esc(c.relation)}"></div>
@@ -6172,7 +6172,7 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     </div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveContact('${c.id}',${!!c._new})">保存</button></div>`);
   window._tmpAv=c.avatar;}
-function upC(){pickFile('image/*',async f=>{const d=await compress(f,256,.8);$('#c_av').value=d;});}
+function upC(){pickFile('image/*',async f=>{const d=await compress(f,256,.8),input=$('#c_av'),preview=$('#c_av_preview');if(input)input.value=d;if(preview)preview.innerHTML=av(d,'sm');toast('头像已选择，保存后生效');});}
 function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,allowStrangerCall:true,allowStrangerSms:true,proactive:{enabled:false,start:9,end:23,times:2},chatBg:''}:getC(id);
   c.name=$('#c_name').value.trim()||'新角色';c.avatar=$('#c_av').value.trim()||'🙂';c.relation=$('#c_rel').value.trim();
   c.job=($('#c_job')&&$('#c_job').value.trim())||'';c.city=($('#c_city')&&$('#c_city').value.trim())||'';{const _w=$('#c_wallet')?$('#c_wallet').value.trim():'';c.wallet=(_w==='')?null:(+_w||0);}
