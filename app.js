@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v562 · 世界书分软件带入';
+const APP_VER='v563 · 安卓桌面打开稳态';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1106,7 +1106,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=562';
+  const url='sw.js?v=563';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1946,12 +1946,16 @@ function appLayoutInit(){let L=S.me.appLayout;
 function appCell(k){const a=APPDEFS[k];if(!a)return '';
   const badge=(k==='mail'&&(S.mail||[]).some(m=>!m.read))?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':'';
   const lk=a.lk?appLk(k):'';
-  return '<div class="app" data-k="'+k+'" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge)+'<span>'+lk+a.t+'</span></div>';}
+  return '<div class="app" data-k="'+k+'" onclick="appTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge)+'<span>'+lk+a.t+'</span></div>';}
 function homeAppsHtml(){appLayoutInit();return S.me.appLayout.map((pg,pi)=>'<div class="apppage" data-pg="'+pi+'">'+pg.map(appCell).join('')+'</div>').join('');}
-let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0;
+const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620;
+let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0,_aNoClick=0;
+function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
+  if(Date.now()<_aNoClick)return;const f=APPRUN[k];if(f)f();}
+function appLaunch(k){_aNoClick=Date.now()+900;const f=APPRUN[k];if(f)f();}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
   _aPend={k,x:e.clientX,y:e.clientY,t:Date.now()};clearTimeout(_aTimer);
-  _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},380);}
+  _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
 function appBeginDrag(){const p=_aPend;if(!p)return;const sw=$('#appswipe');if(!sw)return;
   const cell=sw.querySelector('.app[data-k="'+p.k+'"]');if(!cell)return;
   const r=cell.getBoundingClientRect();const g=cell.cloneNode(true);g.className='app appghost';
@@ -1969,12 +1973,13 @@ function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
 function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}
-  if(_aPend){if(Math.abs(e.clientX-_aPend.x)>12||Math.abs(e.clientY-_aPend.y)>12){clearTimeout(_aTimer);_aPend=null;}}}
+  if(_aPend){if(Math.abs(e.clientX-_aPend.x)>APP_TAP_MOVE||Math.abs(e.clientY-_aPend.y)>APP_TAP_MOVE){clearTimeout(_aTimer);_aPend=null;_aNoClick=Date.now()+450;}}}
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
   if(_aPend){const dx=Math.abs(e.clientX-_aPend.x),dy=Math.abs(e.clientY-_aPend.y),dt=Date.now()-_aPend.t,k=_aPend.k;_aPend=null;
-    if(dx<12&&dy<12&&dt<380){const f=APPRUN[k];if(f)f();}}}
+    if(dx<=APP_TAP_MOVE&&dy<=APP_TAP_MOVE&&dt<APP_TAP_MS)appLaunch(k);}}
 function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');const k=d.k;
+  _aNoClick=Date.now()+900;
   if(d.ghost)d.ghost.style.display='none';
   const tgt=document.elementFromPoint(x,y);
   if(d.ghost)d.ghost.remove();
