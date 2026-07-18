@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v566 \u00b7 \u7ebf\u4e0b\u65e7\u8f6e\u9694\u79bb\u7a33\u6001/);
+assert.match(source, /v567 \u00b7 \u7ebf\u4e0b\u8bb0\u5fc6\u8be6\u7565\u81ea\u9002\u5e94/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -297,9 +297,35 @@ const offEndStart = source.indexOf("async function offEnd(id)");
 const offEndEnd = source.indexOf("function offSetting", offEndStart);
 assert.ok(offEndStart >= 0 && offEndEnd > offEndStart);
 const offEndSource = source.slice(offEndStart, offEndEnd);
+const summaryStart = source.indexOf("function offSummaryPlan(msgs)");
+assert.ok(summaryStart >= 0 && summaryStart < offEndStart);
+const summarySandbox = {};
+vm.runInNewContext(
+  source.slice(summaryStart, offEndStart) +
+    ";const make=(n,size)=>Array.from({length:n},(_,i)=>({who:i%3===0?'\\u65c1\\u767d':(i%2?'me':'ta'),text:'\\u4e8b'.repeat(size)}));" +
+    "globalThis.shortPlan=offSummaryPlan(make(4,30));" +
+    "globalThis.mediumPlan=offSummaryPlan(make(20,50));" +
+    "globalThis.longPlan=offSummaryPlan(make(50,60));" +
+    "globalThis.fullPlan=offSummaryPlan(make(80,100));" +
+    "globalThis.thinLong=offSummaryTooThin('\\u592a\\u7b80\\u5355\\u4e86',longPlan);",
+  summarySandbox,
+);
+assert.equal(summarySandbox.shortPlan.level, "\u7b80\u77ed");
+assert.equal(summarySandbox.mediumPlan.level, "\u9002\u4e2d");
+assert.equal(summarySandbox.longPlan.level, "\u8be6\u7ec6");
+assert.equal(summarySandbox.fullPlan.level, "\u5b8c\u6574\u957f\u7bc7");
+assert.ok(summarySandbox.shortPlan.max < summarySandbox.mediumPlan.max);
+assert.ok(summarySandbox.mediumPlan.max < summarySandbox.longPlan.max);
+assert.ok(summarySandbox.longPlan.max < summarySandbox.fullPlan.max);
+assert.equal(summarySandbox.thinLong, true);
 assert.ok(offEndSource.indexOf("offlineDeactivate(id,o,true)") < offEndSource.indexOf("chatAPI("));
 assert.match(offEndSource, /const ended=\{session:/);
 assert.match(offEndSource, /msgs:ended\.msgs/);
+assert.match(offEndSource, /const plan=offSummaryPlan\(ended\.msgs\)/);
+assert.match(offEndSource, /max:plan\.tokens/);
+assert.match(offEndSource, /trimSentence\(cleanReply\(sum\),plan\.keep\)/);
+assert.match(source.slice(summaryStart, offEndStart), /\u5fc5\u987b\u5fe0\u4e8e\u8bb0\u5f55\u5e76\u6309\u53d1\u751f\u987a\u5e8f\u8986\u76d6/);
+assert.doesNotMatch(offEndSource, /120~200/);
 assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
 assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.cid,o,trip\.to,trip\.date,dayPartNow\(\)\)/);
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:'\uff08'\+tvMD\(trip\.date\)/);
@@ -322,6 +348,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=566/);
+assert.match(html, /app\.js\?v=567/);
 
 console.log("offline date tests passed");

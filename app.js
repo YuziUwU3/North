@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v566 · 线下旧轮隔离稳态';
+const APP_VER='v567 · 线下记忆详略自适应';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1107,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=566';
+  const url='sw.js?v=567';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4698,19 +4698,24 @@ function offMemory(id){const o=offData(id),has=(o.memory&&o.memory.length)||(o.h
    <div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button>${has?`<button class="btn d" onclick="offClearMemory('${id}')">一键清空全部</button>`:''}</div>`);}
 async function offDelMemory(id,i){const o=offData(id),m=o.memory&&o.memory[i];if(m==null)return;if(!await uiConfirm('删除这一条约会记忆？\n微信长期记忆里的对应副本也会一起删除。'))return;const c=getC(id),mid=m&&typeof m==='object'&&m.id,txt=offMemText(m);o.memory.splice(i,1);if(o.history)o.history=o.history.filter(h=>mid?h.memoryId!==mid:offMemText(h.memory||'')!==txt);if(c&&c.summaries)c.summaries=c.summaries.filter(x=>!(mid&&x.offlineId===mid)&&!(x&&x.text&&txt&&x.text.includes(txt)));save();offMemory(id);toast('已删除这条约会记忆');}
 async function offClearMemory(id){const o=offData(id),c=getC(id);if(!await uiConfirm('一键清空和ta的全部线下约会记忆？\n\n会删除：约会记忆、历史场次、同步到微信长期记忆里的线下约会总结。\n不会删除：当前正在进行的这场约会。\n\n清空后无法恢复。',{danger:true}))return;o.memory=[];o.history=[];o.previousEndedAt=0;if(c&&c.summaries)c.summaries=c.summaries.filter(x=>!((x&&x.offlineId)||/线下约会/.test(String(x&&x.time||''))||/^【线下约会[·｜]/.test(String(x&&x.text||''))));if(o.started){o.msgs=(o.msgs||[]).filter(m=>m.who!=='日期');o.msgs.unshift({id:uid(),who:'日期',source:'system',text:offSessionMarker(o)});}save();offMemory(id);toast('全部线下约会记忆已清空');}
+function offSummaryPlan(msgs){const rows=(msgs||[]).filter(m=>m&&m.who!=='日期'&&String(m.text||'').trim()),chars=rows.reduce((n,m)=>n+Array.from(String(m.text||'')).length,0),actions=rows.filter(m=>m.who==='旁白').length,n=rows.length;let level,min,max,keep,tokens;if(n<=8&&chars<=500){level='简短';min=90;max=180;keep=260;tokens=650;}else if(n<=24&&chars<=1800){level='适中';min=220;max=380;keep=540;tokens=950;}else if(n<=60&&chars<=5000){level='详细';min=400;max=700;keep=960;tokens=1500;}else{level='完整长篇';min=650;max=1100;keep=1500;tokens=2300;}return{level,min,max,keep,tokens,rows:n,chars,actions};}
+function offSummaryTranscript(ended,c){return(ended.msgs||[]).filter(m=>m&&m.who!=='日期'&&String(m.text||'').trim()).map(m=>{const who=m.who==='me'?S.me.name:(m.who==='旁白'?(m.source==='me'?S.me.name+'的动作/现场':'角色动作/现场'):(c.remark||c.name));return who+'：'+m.text;}).join('\n');}
+function offSummaryInstruction(c,ended,plan,repair){return '你就是「'+(c.remark||c.name)+'」本人。把你和'+S.me.name+'这次线下约会写成第一人称长期记忆。根据实际内容量写成【'+plan.level+'】总结，建议约'+plan.min+'~'+plan.max+'个中文字；事情少就简短，事情多必须写长写全，不能为了压缩而漏掉重点。'+(repair?'\n上一版总结明显太短或遗漏太多，现在重新完整整理，不要沿用上一版的简略写法。':'')+'\n必须忠于记录并按发生顺序覆盖：\n1. 见面的地点、日期/时段和开场状态；\n2. 这次约会实际发生的每个关键事件、场景变化和一起做的事；\n3. 双方聊到的重要话题、问题、回答、决定、约定或承诺；\n4. 亲密互动、争执误会、和好、关系变化及真正影响后续相处的细节；\n5. 最难忘的动作、话语和你当时的情绪感受；\n6. 约会最后怎样结束、分开时是什么状态，以及下次需要记住的事。\n普通寒暄可以略写，但不能把多个不同事件合并成一句空泛概括。不要编造记录里没有发生的事。可以分成数个自然段，每句话写完整。直接写正文，不写标题、序号或“记忆：”前缀，绝不提AI、模型、系统或规则。'+perspRule(c);}
+function offSummaryTooThin(text,plan){const n=Array.from(String(text||'').replace(/\s+/g,'')).length;return n<Math.max(70,Math.floor(plan.min*.72));}
+function offSummaryFallback(ended,c,plan){const rows=(ended.msgs||[]).filter(m=>m&&m.who!=='日期'&&String(m.text||'').trim()),take=Math.min(rows.length,plan.level==='完整长篇'?14:plan.level==='详细'?10:plan.level==='适中'?7:4),picks=[];for(let i=0;i<take;i++){const at=take===1?0:Math.round(i*(rows.length-1)/(take-1)),m=rows[at];if(m&&!picks.includes(m)){picks.push(m);}}const details=picks.map(m=>String(m.text||'').replace(/\s+/g,' ').slice(0,90)).filter(Boolean).join('；');return '我和'+S.me.name+'在「'+(ended.loc||'约定地点')+'」见面，那时是'+(ended.daypart||ended.when||'约定的时间')+'。'+(details?'这次约会里发生了这些值得记住的事：'+details+'。':'我们完成了这次见面。');}
 async function offEnd(id){const o=offData(id),endedMsgs=(o.msgs||[]).slice();if(!endedMsgs.length){offlineDeactivate(id,o,true);save();offQuit();toast('约会已结束');return;}
   if(!await uiConfirm('结束这次约会？会自动把这次见面总结成一条记忆(微信里的ta也会知道)。'))return;
   const ended={session:o.session||uid(),startedAt:o.startedAt||Date.now(),loc:o.loc||'',when:o.when||'',daypart:o.daypart||'',msgs:endedMsgs};offlineDeactivate(id,o,true);save();offQuit();toast('约会已结束，正在保存记忆…');const c=getC(id);
-  let savedText='见了一面';
-  try{const text=ended.msgs.filter(m=>m.who!=='日期').map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':c.name)+'：'+m.text).join('\n');
-    let sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会【完整地】记成一段第一人称记忆：写清楚在哪、什么时段、你们一起做了什么、聊了哪些重要的话、有什么亲密或难忘的瞬间、你当时的心情感受。要具体、有细节、有情绪，像写一小段日记，120~200字、把最后一句也写完整别断，以后聊微信你能清楚回忆起这次见面。直接写正文，别写"记忆："这种前缀，绝不提AI/模型/系统/安全准则。'+perspRule(c)},{role:'user',content:text}],{max:600,temp:.45});
-    for(let _ra=0;_ra<2&&isRefusal(sum);_ra++){const fix=await chatAPI([{role:'system',content:'重写这段线下约会记忆。你就是「'+c.name+'」本人，只写你和'+S.me.name+'真实见面的共同回忆，第一人称，120~200字，绝不跳出角色。'+perspRule(c)},{role:'user',content:text}],{max:600,temp:.45});if(fix)sum=fix;if(fix&&!isRefusal(fix))break;}
-    const clean=trimSentence(cleanReply(sum),400)||'见了一面';savedText=clean;
+  const plan=offSummaryPlan(ended.msgs);let savedText=offSummaryFallback(ended,c,plan);
+  try{const text=offSummaryTranscript(ended,c);
+    let sum=await chatAPI([{role:'system',content:offSummaryInstruction(c,ended,plan,false)},{role:'user',content:text}],{max:plan.tokens,temp:.4});
+    for(let _ra=0;_ra<2&&(isRefusal(sum)||offSummaryTooThin(cleanReply(sum),plan));_ra++){const fix=await chatAPI([{role:'system',content:offSummaryInstruction(c,ended,plan,true)},{role:'user',content:text}],{max:plan.tokens,temp:.38});if(fix)sum=fix;if(fix&&!isRefusal(fix)&&!offSummaryTooThin(cleanReply(fix),plan))break;}
+    const clean=trimSentence(cleanReply(sum),plan.keep)||savedText;savedText=clean;
     const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(ended),loc:ended.loc,text:clean});
     // 同时写进长期「记忆总结」，标注是线下约会，让ta长久记得
     c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(ended.loc||'外面')+'】'+clean,imp:4,offlineId:memId});
     try{pruneSummaries(c);}catch(_){}
-  }catch(e){const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(ended),loc:ended.loc,text:'见了一面'});c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(ended.loc||'外面')+'】我们见了一面。',imp:3,offlineId:memId});}
+  }catch(e){const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(ended),loc:ended.loc,text:savedText});c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(ended.loc||'外面')+'】'+savedText,imp:3,offlineId:memId});}
   const latestMem=o.memory&&o.memory[o.memory.length-1];o.history=o.history||[];o.history.unshift({id:ended.session,memoryId:latestMem&&latestMem.id||'',ts:Date.now(),label:offMemLabel(ended),loc:ended.loc,when:ended.when,daypart:ended.daypart,memory:savedText,msgs:ended.msgs});o.history=o.history.slice(0,20);save();toast('约会记忆已保存');
   if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(ended.loc||'外面')+'」的这次线下见面，要分开了。请你结合刚才见面的真实情形，主动发微信自然地道别/关心一句（路上小心、今天很开心、想你之类，符合你人设和当时情境；如果刚才是在机场送别就别说「到家说一声」那种）。用普通文字聊天，别用旁白【】格式。]');}
 function offSetting(id){const o=offData(id);
