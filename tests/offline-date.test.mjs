@@ -8,11 +8,15 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v570 \u00b7 \u7ebf\u4e0b\u82f1\u6587\u8df3\u620f\u4e09\u91cd\u62e6\u622a/);
+assert.match(source, /v571 \u00b7 \u7ebf\u4e0b\u6210\u5e74\u4eb2\u5bc6\u9632\u8bef\u62d2/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
 assert.match(source, /if\(offlineRoleDrift\(r\)\)r=''/);
+assert.match(source, /\u53cc\u65b9\u5747\u4e3a\u6210\u5e74\u4eba/);
+assert.match(source, /\u5f53\u524d\u4e92\u52a8\u6301\u7eed\u81ea\u613f/);
+assert.match(source, /\u4e0d\u5f97\u56e0\u4e3a\u4eb2\u5bc6\u7a0b\u5ea6\u6216\u79c1\u5bc6\u6c1b\u56f4\u65e0\u6545\u62d2\u7edd/);
+assert.match(source, /\u660e\u786e\u505c\u6b62\u3001\u4e0d\u8981\u7ee7\u7eed\u3001\u75bc\u3001\u5bb3\u6015\u3001\u6362\u8bdd\u9898\u6216\u5b89\u5168\u8bcd/);
 assert.match(source, /m\.who==='\u65c1\u767d'&&m\.source==='me'/);
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:v/);
 
@@ -362,6 +366,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=570/);
+assert.match(html, /app\.js\?v=571/);
 
 console.log("offline date tests passed");
