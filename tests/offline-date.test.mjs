@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v556 \u00b7 \u7ebf\u4e0b\u7ea6\u4f1a\u540c\u8f6e\u53bb\u91cd/);
+assert.match(source, /v557 \u00b7 \u7ebf\u4e0b\u7ea6\u4f1a\u56de\u5408\u8fde\u7eed/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -17,6 +17,7 @@ assert.match(source, /who:'\u65c1\u767d',source:'me',text:v/);
 
 assert.match(source, /function offlineContextLimit\(\)/);
 assert.match(source, /S\.settings&&S\.settings\.offHist/);
+assert.match(source, /function offlineHistoryMessages\(o,limit\)/);
 assert.match(source, /function offlineSharedContext\(c,limit\)/);
 assert.match(source, /msgs\(c\.id\)\.map/);
 assert.match(source, /callToCN\(raw\)\|\|raw/);
@@ -57,6 +58,29 @@ assert.match(sandbox.contextResult, /\[微信\]/);
 assert.match(sandbox.contextResult, /\[North\]/);
 assert.match(sandbox.contextResult, /\[Role\]/);
 
+const historyStart = source.indexOf("function offlineHistoryMessages(o,limit)");
+const historyEnd = source.indexOf("function offlineSharedContext", historyStart);
+assert.ok(historyStart >= 0 && historyEnd > historyStart);
+const historySandbox = {};
+vm.runInNewContext(
+  source.slice(historyStart, historyEnd) +
+    ";const date={msgs:[" +
+    "{who:'me',text:'u1'},{who:'\\u65c1\\u767d',source:'ta',text:'n1'},{who:'ta',text:'a1'}," +
+    "{who:'me',text:'u2'},{who:'\\u65c1\\u767d',source:'ta',text:'n2'},{who:'ta',text:'a2'},{who:'ta',text:'a2b'}," +
+    "{who:'me',text:'u3'},{who:'\\u65c1\\u767d',source:'ta',text:'n3'},{who:'ta',text:'a3'}" +
+    "]};globalThis.rounds=offlineHistoryMessages(date,2);",
+  historySandbox,
+);
+assert.deepEqual(
+  Array.from(historySandbox.rounds, (x) => ({ role: x.role, content: x.content })),
+  [
+    { role: "user", content: "u2" },
+    { role: "assistant", content: "\u3010n2\u3011\na2\na2b" },
+    { role: "user", content: "u3" },
+    { role: "assistant", content: "\u3010n3\u3011\na3" },
+  ],
+);
+
 const repeatStart = source.indexOf("const OFFLINE_ROUTINE_TOPICS=");
 const repeatEnd = source.indexOf("function offlineSystem(c)", repeatStart);
 assert.ok(repeatStart >= 0 && repeatEnd > repeatStart);
@@ -75,11 +99,19 @@ vm.runInNewContext(
     "globalThis.userRaisedTask=offlineRepeatFails('\\u4efb\\u52a1\\u5df2\\u7ecf\\u505a\\u5b8c\\u4e86',date,'\\u6211\\u7684\\u4efb\\u52a1\\u505a\\u5b8c\\u4e86');" +
     "globalThis.freshScene=offlineRepeatFails('\\u6211\\u4eec\\u5750\\u5230\\u7a97\\u8fb9\\u53bb\\u5427',date,'\\u6211\\u4eec\\u53bb\\u770b\\u7535\\u5f71\\u5427');" +
     "globalThis.sameTurn=offlineRepeatFails('\\u3010\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50\\u3011\\n\\u5750\\u8fd9\\u91cc\\u5427\\n\\u3010\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50\\u3011\\n\\u5750\\u8fd9\\u91cc\\u5427',{msgs:[]},'\\u6211\\u4eec\\u8fdb\\u53bb\\u5427');" +
+    "const oldTurn={msgs:[{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u653e\\u4e0b\\u884c\\u674e\\u7bb1\\uff0c\\u4f38\\u624b\\u63c9\\u4e86\\u63c9\\u5979\\u7684\\u5934\\u53d1'},{who:'ta',text:'\\u4e8c\\u5341\\u5929\\u6ca1\\u89c1'},{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u7684\\u58f0\\u97f3\\u538b\\u5f97\\u5f88\\u4f4e\\uff0c\\u62c7\\u6307\\u8f7b\\u8f7b\\u64e6\\u8fc7\\u5979\\u7684\\u8138\\u988a'},{who:'ta',text:'\\u7626\\u4e86'}]};" +
+    "globalThis.crossTurn=offlineRepeatFails('\\u3010\\u4ed6\\u653e\\u4e0b\\u884c\\u674e\\u7bb1\\uff0c\\u4f38\\u624b\\u63c9\\u4e86\\u63c9\\u5979\\u7684\\u5934\\u53d1\\u3011\\n\\u4e8c\\u5341\\u5929\\u6ca1\\u89c1',oldTurn,'\\u597d\\u770b\\u5417');" +
     "globalThis.deduped=offDedupeItems([" +
     "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50'}," +
     "{who:'ta',text:'\\u5750\\u8fd9\\u91cc\\u5427'}," +
     "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50'}," +
-    "{who:'ta',text:'\\u5750\\u8fd9\\u91cc\\u5427'}]);",
+    "{who:'ta',text:'\\u5750\\u8fd9\\u91cc\\u5427'}],{msgs:[]},'');" +
+    "globalThis.crossDeduped=offDedupeItems([" +
+    "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u653e\\u4e0b\\u884c\\u674e\\u7bb1\\uff0c\\u4f38\\u624b\\u63c9\\u4e86\\u63c9\\u5979\\u7684\\u5934\\u53d1'}," +
+    "{who:'ta',text:'\\u4e8c\\u5341\\u5929\\u6ca1\\u89c1'}," +
+    "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u7684\\u58f0\\u97f3\\u538b\\u5f97\\u5f88\\u4f4e\\uff0c\\u62c7\\u6307\\u8f7b\\u8f7b\\u64e6\\u8fc7\\u5979\\u7684\\u8138\\u988a'}," +
+    "{who:'ta',text:'\\u7626\\u4e86'}," +
+    "{who:'ta',text:'\\u597d\\u770b'}],oldTurn,'\\u597d\\u770b\\u5417');",
   repeatSandbox,
 );
 assert.ok(Array.from(repeatSandbox.taskRepeat).some((x) => x.includes("\u4efb\u52a1")));
@@ -87,7 +119,9 @@ assert.ok(Array.from(repeatSandbox.mealRepeat).some((x) => x.includes("\u5403\u9
 assert.deepEqual(Array.from(repeatSandbox.userRaisedTask), []);
 assert.deepEqual(Array.from(repeatSandbox.freshScene), []);
 assert.ok(Array.from(repeatSandbox.sameTurn).some((x) => x.includes("\u540c\u4e00\u8f6e")));
+assert.ok(Array.from(repeatSandbox.crossTurn).some((x) => x.includes("\u524d\u51e0\u8f6e")));
 assert.equal(Array.from(repeatSandbox.deduped).length, 2);
+assert.deepEqual(Array.from(repeatSandbox.crossDeduped, (x) => x.text), ["\u597d\u770b"]);
 assert.match(source, /# \u672c\u573a\u8fde\u7eed\u6027\u4e0e\u9632\u590d\u8bfb\uff08\u53ea\u7ea6\u675f\u7ebf\u4e0b\u7ea6\u4f1a\uff09/);
 assert.match(source, /const _on=offlineContextLimit\(\)/);
 assert.match(source, /offlineRepeatRepairNote\(c,check\)/);
@@ -191,6 +225,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=556/);
+assert.match(html, /app\.js\?v=557/);
 
 console.log("offline date tests passed");

@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v556 · 线下约会同轮去重';
+const APP_VER='v557 · 线下约会回合连续';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1097,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=556';
+  const url='sw.js?v=557';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4564,6 +4564,7 @@ function offlineRoleGuard(c){const n=c.remark||c.name||'角色',p=String((c.gend
 function offlineRoleDrift(t){t=String(t||'').trim();if(!t||isRefusal(t))return true;return splitBubbles(t).some(isOOCLine)||/这(只|仅仅)?是(一场|个)?(虚构|角色扮演)|作为(助手|模型)|我不能参与.{0,12}(亲密|暧昧|成人)|我无法继续.{0,12}(情节|剧情|互动)|不能描写.{0,12}(亲密|成人)|不便描写.{0,12}(亲密|成人)|让我们保持.{0,8}(健康|安全).{0,8}(关系|互动)/i.test(t);}
 function offlineRepairNote(c){return '[系统：上一版完全作废，因为你跳出了线下约会角色或使用了拒绝模板。现在立刻重写：你就是「'+(c.remark||c.name)+'」本人，正与'+S.me.name+'面对面约会。看清ta刚才说的话和做的动作，按你的人设与当前关系自然接住。双方成年且自愿时，普通亲密靠近、牵手、拥抱、亲吻和暧昧互动不得自动拒绝；明确停止时才用角色本人的动作与台词停下确认。不要提AI、助手、模型、程序、政策、安全准则、虚构或角色扮演，不要解释和说教。若不适合直写就自然留白转场。必须输出至少一段【第三人称动作旁白】和角色台词。]';}
 function offlineContextLimit(){return Math.max(10,Math.min(80,+(S.settings&&S.settings.offHist)||30));}
+function offlineHistoryMessages(o,limit){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),starts=[];rows.forEach((m,i)=>{if(m.who==='me'||(m.who==='旁白'&&m.source==='me'))starts.push(i);});const from=starts.length?starts[Math.max(0,starts.length-Math.max(1,limit|0))]:0,out=[];rows.slice(from).forEach(m=>{const role=(m.who==='me'||(m.who==='旁白'&&m.source==='me'))?'user':'assistant',content=m.who==='旁白'?'【'+m.text+'】':String(m.text||'');if(!content)return;const last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+content;else out.push({role,content});});return out;}
 function offlineSharedContext(c,limit){const rows=msgs(c.id).map(m=>{if(!m||m._silent)return null;const raw=msgToText(m),text=String(m._call?(callToCN(raw)||raw):raw||'').replace(/\s+/g,' ').trim();if(!text)return null;const source=m._call?(m._ck==='video'?'视频通话':'语音通话'):(m.type==='sys'?'共同事件':'微信'),who=m.role==='user'?S.me.name:(m.role==='assistant'?(c.remark||c.name):'共同事件');return{time:+m.time||+m.ts||0,source,who,text:text.slice(0,500)};}).filter(Boolean).slice(-limit);
   if(!rows.length)return'\n\n# 进入本场约会前的微信/电话共同上下文\n目前没有可带入的微信或电话记录。';
   return'\n\n# 进入本场约会前最近 '+rows.length+' 条微信/电话共同上下文（设置偏好：'+limit+' 条）\n这些都是你和'+S.me.name+'真实发生过的共同经历。你必须记得并能准确回答“刚才微信聊了什么、电话里说了什么”；它们只作为见面前的记忆背景，绝不能误当成本场刚说出口的面对面台词。\n'+rows.map((x,i)=>(i+1)+'. ['+(x.time?fmtDT(x.time):'时间未知')+']['+x.source+']['+x.who+'] '+x.text).join('\n');}
@@ -4587,13 +4588,16 @@ function offRoutineLabel(key){const x=OFFLINE_ROUTINE_TOPICS.find(v=>v[0]===key)
 function offRepeatSimilarity(a,b){const aa=new Set(offRepeatNorm(a).split('').filter(Boolean)),bb=new Set(offRepeatNorm(b).split('').filter(Boolean));if(!aa.size||!bb.size)return 0;let n=0;aa.forEach(x=>{if(bb.has(x))n++;});return n/Math.max(aa.size,bb.size);}
 function offResponseParts(text){const out=[];splitBubbles(text).forEach(line=>{splitActions(line).forEach(part=>{part=String(part||'').trim();if(!part)return;out.push({kind:/^[（(【][\s\S]*[）)】]$/.test(part)?'nar':'talk',text:part});});});return out;}
 function offGeneratedTalk(text){return offResponseParts(text).filter(x=>x.kind==='talk').map(x=>x.text);}
-function offDedupeItems(items){const seen=new Set();return(items||[]).filter(item=>{const norm=offRepeatNorm(item&&item.text);if(norm.length<4)return true;const key=(item&&item.who==='旁白'?'nar':'talk')+'|'+norm;if(seen.has(key))return false;seen.add(key);return true;});}
+function offRecentParts(o){return(o&&o.msgs||[]).filter(m=>m&&((m.who==='旁白'&&m.source!=='me')||m.who==='ta')).slice(-80).map(m=>({kind:m.who==='旁白'?'nar':'talk',text:String(m.text||'')})).filter(x=>x.text);}
+function offCrossRepeat(part,old,currentInput,strict){if(!part||!old||part.kind!==old.kind)return false;const n=offRepeatNorm(part.text),p=offRepeatNorm(old.text),cur=offRepeatNorm(currentInput);if(!n||!p)return false;const userRaised=part.kind==='talk'&&((n.length>=2&&cur.includes(n))||(p.length>=2&&cur.includes(p)));if(n===p)return n.length>=(part.kind==='nar'?6:4)&&!userRaised;if(strict)return part.kind==='nar'&&Math.min(n.length,p.length)>=16&&offRepeatSimilarity(n,p)>=.9;const min=Math.min(n.length,p.length);if(part.kind==='talk'&&!userRaised&&min>=4&&(n.includes(p)||p.includes(n)))return true;return min>=(part.kind==='nar'?16:8)&&offRepeatSimilarity(n,p)>=(part.kind==='nar'?.78:.82)&&!userRaised;}
+function offDedupeItems(items,o,currentInput){const list=items||[],seen=new Set(),recent=offRecentParts(o),cur=offRepeatNorm(currentInput),replayed=list.some(item=>{const kind=item&&item.who==='旁白'?'nar':'talk';return recent.some(old=>offCrossRepeat({kind,text:item&&item.text},old,currentInput,true));});return list.filter(item=>{const norm=offRepeatNorm(item&&item.text),kind=item&&item.who==='旁白'?'nar':'talk',key=kind+'|'+norm;if(norm.length>=4&&seen.has(key))return false;if(norm.length>=4)seen.add(key);if(recent.some(old=>offCrossRepeat({kind,text:item.text},old,currentInput,true)))return false;if(replayed&&norm.length>=2&&!cur.includes(norm)&&recent.some(old=>old.kind===kind&&offRepeatNorm(old.text)===norm))return false;return true;});}
 function offCurrentInput(o,note){if(note)return String(note);const m=[...(o&&o.msgs||[])].reverse().find(x=>x&&(x.who==='me'||(x.who==='旁白'&&x.source==='me')));return m?String(m.text||''):'';}
-function offlineRepeatFails(text,o,currentInput){const parts=offResponseParts(text),lines=parts.filter(x=>x.kind==='talk').map(x=>x.text),recent=(o&&o.msgs||[]).filter(m=>m&&m.who==='ta'&&m.source!=='me').slice(-32).map(m=>m.text).filter(Boolean),fails=[],sameTurn=new Set();
-  if(parts.some(part=>{const n=offRepeatNorm(part.text);if(n.length<4)return false;const key=part.kind+'|'+n;if(sameTurn.has(key))return true;sameTurn.add(key);return false;}))fails.push('同一轮回答内部出现了完全重复的旁白或台词');
-  if(!lines.length||!recent.length)return fails;
-  if(lines.some(line=>{const n=offRepeatNorm(line);return n.length>=6&&recent.some(old=>{const p=offRepeatNorm(old);if(n===p)return true;const min=Math.min(n.length,p.length),threshold=Math.max(n.length,p.length)<=30 ? .76 : .84;return min>=8&&offRepeatSimilarity(n,p)>=threshold;});}))fails.push('重复了本场近期已经说过的台词');
-  const source=new Set(offRoutineTopics(currentInput)),topics=[...new Set(lines.flatMap(offRoutineTopics))];topics.forEach(key=>{if(!source.has(key)&&recent.some(old=>offRoutineTopics(old).includes(key)))fails.push('又追问了近期已经聊过的'+offRoutineLabel(key)+'话题');});return[...new Set(fails)].slice(0,3);}
+function offlineRepeatAudit(text,o,currentInput){const parts=offResponseParts(text),lines=parts.filter(x=>x.kind==='talk').map(x=>x.text),recent=offRecentParts(o),fails=[],sameTurn=new Set();let score=0;
+  parts.forEach(part=>{const n=offRepeatNorm(part.text);if(n.length<4)return;const key=part.kind+'|'+n;if(sameTurn.has(key)){score+=3;if(!fails.includes('同一轮回答内部出现了完全重复的旁白或台词'))fails.push('同一轮回答内部出现了完全重复的旁白或台词');}else sameTurn.add(key);});
+  const cross=parts.filter(part=>recent.some(old=>offCrossRepeat(part,old,currentInput,false)));if(cross.length){score+=cross.length*2;fails.push('重新说了本场前几轮已经出现过的旁白或台词');}
+  const source=new Set(offRoutineTopics(currentInput)),topics=[...new Set(lines.flatMap(offRoutineTopics))];topics.forEach(key=>{if(!source.has(key)&&recent.some(old=>offRoutineTopics(old.text).includes(key))){score+=1;fails.push('又追问了近期已经聊过的'+offRoutineLabel(key)+'话题');}});return{fails:[...new Set(fails)].slice(0,3),score};}
+function offlineRepeatFails(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).fails;}
+function offlineRepeatScore(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).score;}
 function offlineRepeatRepairNote(c,fails){return '[系统：上一版有线下约会复读问题：'+fails.join('；')+'。请完全重写本轮，只接住'+S.me.name+'刚才在现场说的话或动作并推进当前场景。不要把长期记忆、小事簿、相处小账里的任务、吃饭、睡觉、报备等旧内容重新拿出来审问；除非ta本轮主动提起。不能只替换几个词重复同一问题或同一句台词。保持「'+(c.remark||c.name)+'」本人，至少一段【第三人称动作旁白】和自然台词，不要解释纠正过程。]';}
 function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   s+=adultRoleRule(c.remark||c.name||'角色');
@@ -4616,19 +4620,19 @@ function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+(o.daypart?'（现在是'+o.daypart+'）':'')+'。\n- 这是全新一场正在发生的约会，不要接着上一次约会的现场说话。\n- 你清楚现在大概是'+(o.daypart||'这个时段')+'，言行、环境、光线都要符合这个时段，别搞错时间。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 永远不要说自己是AI、助手、模型、程序，也不要提安全政策、准则、无法满足、不能继续。\n- 如果话题太直白或不适合继续，用角色本人的口吻自然放慢、转场、设边界或留白，保持氛围，不解释规则。\n- 亲密和暧昧只写氛围、情绪、动作的暗示和留白，避免露骨细节。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
   return s;}
 async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
-  try{const _on=offlineContextLimit();const hist=o.msgs.filter(m=>m.who!=='日期').slice(-_on).map(m=>({role:(m.who==='me'||(m.who==='旁白'&&m.source==='me'))?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
+  try{const _on=offlineContextLimit(),hist=offlineHistoryMessages(o,_on);
     if(note)hist.push({role:'user',content:note});
     const sys=offlineSystem(c),pin={role:'system',content:personaPin(c)};
     let r=await chatAPI([{role:'system',content:sys},...hist,pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.75});
     if(!_off)return;
     for(let _ra=0;_ra<2&&offlineRoleDrift(r);_ra++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:r},{role:'user',content:offlineRepairNote(c)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.72});if(!_off)return;if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
-    {const current=offCurrentInput(o,note),first=offlineRepeatFails(r,o,current);if(first.length){let candidate=r,best=r,bestN=first.length,check=first;for(let i=0;i<2&&check.length;i++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:candidate},{role:'user',content:offlineRepeatRepairNote(c,check)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.78});if(!_off)return;if(!fix||offlineRoleDrift(fix))break;const next=offlineRepeatFails(fix,o,current);if(next.length<bestN){best=fix;bestN=next.length;}candidate=fix;check=next;if(!next.length){best=fix;break;}}r=best;}}
+    {const current=offCurrentInput(o,note),first=offlineRepeatFails(r,o,current);if(first.length){let candidate=r,best=r,bestScore=offlineRepeatScore(r,o,current),check=first;for(let i=0;i<2&&check.length;i++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:candidate},{role:'user',content:offlineRepeatRepairNote(c,check)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.78});if(!_off)return;if(!fix||offlineRoleDrift(fix))break;const next=offlineRepeatFails(fix,o,current),nextScore=offlineRepeatScore(fix,o,current);if(nextScore<bestScore){best=fix;bestScore=nextScore;}candidate=fix;check=next;if(!next.length){best=fix;break;}}r=best;}}
     r=applyGrudgeTags(r,c);
     // 先把这轮拆成一条条(旁白/台词)，再【一条一条地】发出来，不要一次性糊一大堆
     let items=[];
     splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l)||isOOCLine(l)||isRefusal(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;
       splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({id:uid(),who:nar?'旁白':'ta',source:'ta',text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
-    items=offDedupeItems(items);
+    items=offDedupeItems(items,o,offCurrentInput(o,note));
     if(!items.length){items.push({id:uid(),who:'旁白',source:'ta',text:'他没有跳开话题，只是留在你面前，按自己的分寸轻轻握住你的手。'});items.push({id:uid(),who:'ta',source:'ta',text:'看着我，我还在这里。'});}
     for(let i=0;i<items.length;i++){if(!_off)return;const item=items[i],timing=offRevealTiming(item);Object.defineProperties(item,{_reveal:{value:true,writable:true,configurable:true},_revealStep:{value:timing.step,writable:true,configurable:true}});o.msgs.push(item);save();offRender();
       await new Promise(res=>setTimeout(res,timing.total));item._reveal=false;}
