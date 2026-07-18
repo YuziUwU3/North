@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v552 \u00b7 \u7ebf\u4e0b\u5b57\u5e55\u9010\u5b57\u6e10\u663e/);
+assert.match(source, /v553 \u00b7 \u5267\u60c5\u5b57\u5e55\u4e0e\u5fae\u4fe1\u89e3\u9501/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<2&&offlineRoleDrift\(r\)/);
@@ -104,10 +104,46 @@ assert.match(source, /function offPreviousPrompt\(o\)/);
 assert.match(source, /function renderOffIntro\(c,o\)/);
 
 assert.match(source, /function offlineFocusActive\(\)/);
+assert.match(source, /function offlineFocusStart\(id,o\)/);
+assert.match(source, /function offlineFocusStop\(id\)/);
+assert.doesNotMatch(source, /Object\.values\(S\.offline\|\|\{\}\)\.some\(o=>o&&o\.started\)/);
+assert.match(source, /function enterJail\(cid,reason,test\)[\s\S]*?offlineFocusStop\(\)/);
+assert.match(source, /function releaseJail\(backdoor\)[\s\S]*?offlineFocusStop\(\);save\(\)/);
 assert.match(source, /async function aiReply\(id,note,replyToken\)\{if\(offlineFocusActive\(\)\)return/);
 assert.match(source, /function scheduleReply\(id,note\)\{\s*if\(offlineFocusActive\(\)\)return/);
 assert.match(source, /function incomingCall\(id,kind\)\{if\(offlineFocusActive\(\)\)return/);
 assert.match(source, /async function aiGroupReply\(id,fromText\)\{if\(offlineFocusActive\(\)\)return/);
+
+const focusStart = source.indexOf("function offlineFocusStart(id,o)");
+const focusEnd = source.indexOf("const DAYPARTS", focusStart);
+assert.ok(focusStart >= 0 && focusEnd > focusStart);
+const focusSandbox = {
+  S: {
+    offline: { old: { started: true, session: "legacy", startedAt: 1000 } },
+    offlineFocus: null,
+  },
+};
+vm.runInNewContext(
+  source.slice(focusStart, focusEnd) +
+    ";globalThis.legacyLocked=offlineFocusActive();" +
+    "offlineFocusStart('old',S.offline.old);" +
+    "globalThis.liveLocked=offlineFocusActive();" +
+    "S.offline.old.session='changed';" +
+    "globalThis.changedLocked=offlineFocusActive();" +
+    "globalThis.markerAfterChange=S.offlineFocus;",
+  focusSandbox,
+);
+assert.equal(focusSandbox.legacyLocked, false);
+assert.equal(focusSandbox.liveLocked, true);
+assert.equal(focusSandbox.changedLocked, false);
+assert.equal(focusSandbox.markerAfterChange, null);
+
+assert.match(source, /const item=items\[i\],timing=offRevealTiming\(item\)/);
+assert.match(source, /d\.msgs\.some\(m=>m\._reveal\)/);
+assert.match(source, /who:'\u65c1\u767d',source:'me',text:v/);
+assert.match(source, /m\.who==='\u65c1\u767d'&&m\.source==='me'/);
+assert.match(source, /class="rpnar/);
+assert.match(source, /class="bubble rpbubble"/);
 
 assert.match(html, /\.offstage\{/);
 assert.match(html, /\.offintro\{/);
@@ -116,6 +152,10 @@ assert.match(html, /\.offmsg\.me \.offbubble\{/);
 assert.match(html, /\.offreveal \.offglyph/);
 assert.match(html, /@keyframes offglyph/);
 assert.doesNotMatch(html, /\.offnar,\.offmsg\{animation:offfade/);
-assert.match(html, /app\.js\?v=552/);
+assert.match(html, /\.rpstage\{/);
+assert.match(html, /\.rpnar\{/);
+assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
+assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
+assert.match(html, /app\.js\?v=553/);
 
 console.log("offline date tests passed");

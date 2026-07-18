@@ -49,8 +49,10 @@ assert.match(account,/function aiLaunchPayment\(provider,automatic\)/);
 assert.match(account,/\.\/pay-assets\/alipay-receive\.jpg/);
 assert.match(account,/\.\/pay-assets\/wechat-receive\.jpg/);
 assert.match(account,/\.\/pay-assets\/wechat-contact\.jpg/);
-assert.match(html,/ai-account\.js\?v=539/);
-assert.match(sw,/north-shell-v539/);
+const frontVersion=app.match(/APP_VER='v(\d+)\b/)?.[1];
+assert.ok(frontVersion,'frontend version should be numeric');
+assert.match(html,new RegExp(`ai-account\\.js\\?v=${frontVersion}\\b`));
+assert.match(sw,new RegExp(`north-shell-v${frontVersion}\\b`));
 
 for(const file of ['alipay-receive.jpg','wechat-receive.jpg','wechat-contact.jpg']){
   const stat=fs.statSync(path.join(root,'pay-assets',file));

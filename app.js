@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v552 · 线下字幕逐字渐显';
+const APP_VER='v553 · 剧情字幕与微信解锁';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -352,6 +352,7 @@ function defState(){return{
   weather:null,
   spy:{},
   offline:{},
+  offlineFocus:null,
   shop:{cart:[],results:[],q:'',orders:[],cs:{msgs:[]},co:{on:false,cid:null,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0}},
   food:{cart:[],results:[],q:''},
   calendar:[],
@@ -1096,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=537';
+  const url='sw.js?v=553';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4515,7 +4516,9 @@ async function clClearOld(id){const sc=_clTab==='voice'?'语音':_clTab==='video
 /* ===== 线下约会（独立空间，与微信隔离）===== */
 let _off=null;
 function offData(id){S.offline=S.offline||{};if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false,daypart:''};return S.offline[id];}
-function offlineFocusActive(){return Object.values(S.offline||{}).some(o=>o&&o.started);}
+function offlineFocusStart(id,o){if(!id||!o||!o.started)return;S.offlineFocus={id,session:o.session||'',startedAt:o.startedAt||Date.now()};}
+function offlineFocusStop(id){const f=S.offlineFocus;if(!f||!id||f.id===id)S.offlineFocus=null;}
+function offlineFocusActive(){const f=S.offlineFocus;if(!f)return false;const o=S.offline&&S.offline[f.id];if(!o||!o.started||(f.session&&o.session!==f.session)){S.offlineFocus=null;return false;}return true;}
 const DAYPARTS=['白天','中午','下午','傍晚','晚上','深夜'];
 function dayPartNow(){const h=new Date().getHours();return h<5?'深夜':h<9?'清晨':h<11?'上午':h<13?'中午':h<17?'下午':h<19?'傍晚':h<23?'晚上':'深夜';}
 function offDateTime(ts){if(!ts)return'';const d=new Date(ts);return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
@@ -4523,9 +4526,9 @@ function offElapsed(from,to){const ms=Math.max(0,(to||Date.now())-(from||0)),min
 function offPreviousEnd(o){const h=o&&o.history&&o.history[0];if(h&&h.ts)return +h.ts;const mem=o&&o.memory&&o.memory.length&&o.memory[o.memory.length-1];return mem&&typeof mem==='object'&&+mem.ts||0;}
 function offSessionMarker(o){const now=o.startedAt||Date.now(),cur='本场 · '+offDateTime(now)+' · '+(o.daypart||dayPartNow())+' · '+(o.loc||'未定');return o.previousEndedAt?cur+'\n上一场结束于 '+offDateTime(o.previousEndedAt)+' · 相隔 '+offElapsed(o.previousEndedAt,now):cur+'\n这是你们的第一场线下约会';}
 function offPreviousPrompt(o){if(!o.previousEndedAt)return'\n\n# 场次时间\n这是你们第一次进入线下约会，没有上一场现场可以续接。';return '\n\n# 场次时间（必须分清，不得把旧约会当成刚才）\n上一场约会结束于【'+offDateTime(o.previousEndedAt)+'】，本场开始于【'+offDateTime(o.startedAt||Date.now())+'】，两次见面已经相隔【'+offElapsed(o.previousEndedAt,o.startedAt||Date.now())+'】。以前的约会只能作为回忆；人物现在已经重新见面，不能延续上一场最后的姿势、房间、动作或未说完的现场台词。';}
-function offBeginSession(o,loc,when,part){const prev=offPreviousEnd(o);o.loc=loc||'老地方';o.when=when||'现在';o.daypart=part||dayPartNow();o.started=true;o.session=uid();o.startedAt=Date.now();o.previousEndedAt=prev;o.introSeen=false;o.msgs=[];o.msgs.push({id:uid(),who:'日期',source:'system',text:offSessionMarker(o)});}
+function offBeginSession(id,o,loc,when,part){const prev=offPreviousEnd(o);o.loc=loc||'老地方';o.when=when||'现在';o.daypart=part||dayPartNow();o.started=true;o.session=uid();o.startedAt=Date.now();o.previousEndedAt=prev;o.introSeen=false;o.msgs=[];o.msgs.push({id:uid(),who:'日期',source:'system',text:offSessionMarker(o)});offlineFocusStart(id,o);}
 function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.accepted||m.declined)return;
-  m.accepted=true;const cid=(owner||'').split('#')[0];const o=offData(cid);offBeginSession(o,m.loc||o.loc||'老地方',m.when||'现在',dayPartNow());
+  m.accepted=true;const cid=(owner||'').split('#')[0];const o=offData(cid);offBeginSession(cid,o,m.loc||o.loc||'老地方',m.when||'现在',dayPartNow());
   o.msgs.push({id:uid(),who:'旁白',source:'me',text:'你答应了TA的约会邀请：'+o.when+' 在「'+o.loc+'」见面。'});save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'答应了你的约会邀请，'+o.when+'在「'+o.loc+'」见面。是你主动约的ta，你先到了——用旁白【】描写你到场的场景/动作开场，主动热情点。]');}
 function declineDate(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
@@ -4533,7 +4536,7 @@ function openOfflineMenu(){S.offline=S.offline||{};const cs=S.contacts.filter(c=
   openModal(`<h3>线下约会</h3><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
    ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" onclick="offlineEnter('${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function offlineEnter(cid){closeModal();const o=offData(cid);if(o.started){_off={id:cid,busy:false};go('off',{id:cid});return;}offlineInvite(cid);}
+function offlineEnter(cid){closeModal();const o=offData(cid);if(o.started){offlineFocusStart(cid,o);save();_off={id:cid,busy:false};go('off',{id:cid});return;}offlineInvite(cid);}
 function offlineInvite(cid){const c=getC(cid);
   openModal(`<h3>约 ${esc(c.remark||c.name)} 见面</h3>
    <div class="field"><label>约会地点</label><input id="of_loc" placeholder="比如：江边咖啡馆 / 你家 / 电影院"></div>
@@ -4542,7 +4545,7 @@ function offlineInvite(cid){const c=getC(cid);
    <div class="hint">发出邀请后，ta会(以ta的人设)回应是否赴约，然后你们就开始线下约会。</div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="offlineStart('${cid}')">发出邀请</button></div>`);}
 function offlineStart(cid){const loc=$('#of_loc').value.trim()||'老地方';const date=$('#of_date').value||todayStr();const time=$('#of_time').value||'19:00';const part=($('#of_part')&&$('#of_part').value)||'晚上';closeModal();
-  const o=offData(cid);offBeginSession(o,loc,date+' '+time,part);
+  const o=offData(cid);offBeginSession(cid,o,loc,date+' '+time,part);
   o.msgs.push({id:uid(),who:'旁白',source:'me',text:'你向TA发出约会邀请：'+date+' '+time+'，在「'+loc+'」见面。'});
   save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'邀请你 '+o.when+' 在「'+loc+'」线下见面。先以你的人设回应是否赴约(基本会答应)，然后用旁白【】描写你到场的场景/动作，开启这次约会。]');}
@@ -4630,7 +4633,7 @@ async function offEnd(id){const o=offData(id);if(!o.msgs||!o.msgs.length){offQui
     try{pruneSummaries(c);}catch(_){}
   }catch(e){const memId=uid();o.memory=o.memory||[];o.memory.push({id:memId,ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:'见了一面'});c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(o.loc||'外面')+'】我们见了一面。',imp:3,offlineId:memId});}
   const latestMem=o.memory&&o.memory[o.memory.length-1];o.history=o.history||[];o.history.unshift({id:o.session||uid(),memoryId:latestMem&&latestMem.id||'',ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',when:o.when||'',daypart:o.daypart||'',memory:savedText,msgs:(o.msgs||[]).slice()});o.history=o.history.slice(0,20);
-  o.started=false;o.session='';o.startedAt=0;o.msgs=[];save();toast('约会记忆已保存');
+  o.started=false;o.session='';o.startedAt=0;o.msgs=[];offlineFocusStop(id);save();toast('约会记忆已保存');
   if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(o.loc||'外面')+'」的这次线下见面，要分开了。请你结合刚才见面的真实情形，主动发微信自然地道别/关心一句（路上小心、今天很开心、想你之类，符合你人设和当时情境；如果刚才是在机场送别就别说「到家说一声」那种）。用普通文字聊天，别用旁白【】格式。]');
   offQuit();}
 function offSetting(id){const o=offData(id);
@@ -4729,19 +4732,19 @@ function rpSystem(c){const d=rpData(c.id);const ms=rpMembers(c.id);
   s+='\n\n# 本局输出规则\n- 沉浸式扮演，只说本局里的话，不要提AI、助手、模型、程序、系统、规则、政策、安全准则。\n- 如果话题太直白或不适合继续，用角色本人的口吻自然放慢、转场、设边界或留白，不解释规则，不说教，不发拒绝声明。\n- 亲密和暧昧只写氛围、情绪、动作的暗示和留白，避免露骨细节。\n- 动作、神态、环境、心理一律写成【旁白】单独成行；说出口的话单独成行。\n- 多人时不要群聊刷屏：一轮最多让1到2个角色说话，优先回应被点名的人；其他人只有剧情需要才插话。\n- 角色台词必须写成「角色名：台词」或「本局身份：台词」，旁白不加角色名。\n- 每个角色只知道自己该知道的，不要全知；不要把A的设定/记忆串到B身上。\n- 不要替'+S.me.name+'决定台词或动作；等ta说完/补完动作后再继续。\n- 一次回复写1到5行，短一点、像现场互动。\n- 不要发微信卡片、红包、语音、来电、图片标签，也不要跳回微信真实设定。';
   return s;}
 async function rpAI(note){if(!_rp)return;const c=getC(_rp.id);const d=rpData(_rp.id);_rp.busy=true;rpRender();
-  try{const ms=rpMembers(_rp.id);const hist=d.msgs.slice(-Math.max(10,Math.min(80,+(S.settings&&S.settings.offHist)||30))).map(m=>({role:m.who==='me'?'user':'assistant',content:m.who==='旁白'?('【'+m.text+'】'):(m.cid?(rpMemberTitle({id:m.cid,role:''})+'：'+m.text):m.text)}));if(note)hist.push({role:'user',content:note});
+  try{const ms=rpMembers(_rp.id);const hist=d.msgs.slice(-Math.max(10,Math.min(80,+(S.settings&&S.settings.offHist)||30))).map(m=>({role:(m.who==='me'||(m.who==='旁白'&&m.source==='me'))?'user':'assistant',content:m.who==='旁白'?('【'+m.text+'】'):(m.cid?(rpMemberTitle({id:m.cid,role:''})+'：'+m.text):m.text)}));if(note)hist.push({role:'user',content:note});
     let r=await chatAPI([{role:'system',content:rpSystem(c)},...hist,{role:'system',content:personaPin(c)}],{aux:!!(S.settings&&S.settings.offAux)});
     if(!_rp)return;
     for(let _ra=0;_ra<1&&isRefusal(r);_ra++){const fix=await chatAPI([{role:'system',content:rpSystem(c)},...hist,{role:'assistant',content:r},{role:'user',content:'[系统：刚才的回复跳出了本局角色。重来：只在当前剧情里沉浸扮演；若当前话题不适合直白展开，就用角色口吻自然放慢、转场、留白或设边界。不要解释规则，不要提AI/助手/模型/程序/政策/安全。动作旁白和角色台词分开。]'},{role:'system',content:personaPin(c)}],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.75});if(!_rp)return;if(fix)r=fix;if(fix&&!isRefusal(fix))break;}
     const items=[];splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l)||isOOCLine(l)||isRefusal(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);if(nar){items.push({id:uid(),who:'旁白',text:p.replace(/^[（(【]+|[）)】]+$/g,'').trim()});return;}let cid=ms[0]&&ms[0].id,txt=p;const sm=p.match(/^([^：:]{1,24})[：:]\s*([\s\S]+)$/);if(sm){const name=sm[1].trim(),hit=ms.find(m=>{const cc=getC(m.id),dn=((cc&&(cc.remark||cc.name))||''),cn=(cc&&cc.name)||'',rr=m.role||'';return (dn&&name===dn)||(cn&&name===cn)||(rr&&name===rr)||(dn&&name.length>=2&&dn.includes(name))||(dn&&name.includes(dn));});if(hit){cid=hit.id;txt=sm[2].trim();}}items.push({id:uid(),who:'ta',cid:cid,text:txt});});});
     if(!items.length)items.push({id:uid(),who:'旁白',text:'场景短暂安静了一下，剧情重新接回当下。'});
-    for(let i=0;i<items.length;i++){if(!_rp)return;d.msgs.push(items[i]);save();playDing();rpRender();if(i<items.length-1)await new Promise(res=>setTimeout(res,Math.min(1600,520+(items[i].text||'').length*24)));}
+    for(let i=0;i<items.length;i++){if(!_rp)return;const item=items[i],timing=offRevealTiming(item);Object.defineProperties(item,{_reveal:{value:true,writable:true,configurable:true},_revealStep:{value:timing.step,writable:true,configurable:true}});d.msgs.push(item);save();playDing();rpRender();await new Promise(res=>setTimeout(res,timing.total));item._reveal=false;}
   }catch(e){d.msgs.push({id:uid(),who:'旁白',text:'（场景停顿了一下，剧情还可以继续。）'});save();playDing();}
   if(_rp)_rp.busy=false;rpRender();}
 function rpRender(){if(cur().p==='rp')render();}
 function rpSay(){if(!_rp||_rp.busy)return;const ta=$('#rp_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';rpData(_rp.id).msgs.push({id:uid(),who:'me',text:v});save();playDing();rpRender();}
 function rpNarrate(){if(!_rp||_rp.busy)return;openModal(`<h3>动作描写</h3><div class="hint">写动作、环境、神态或剧情推进。先写完整，再决定是否让角色继续。</div><div class="field"><textarea id="rp_act" rows="4" placeholder="比如：他合上病历，指节停在桌面，房间里安静到只剩窗外的雨声。"></textarea></div><div class="btns"><button class="btn g" onclick="rpSaveNarrate(0)">只记下</button><button class="btn p" style="background:#243447" onclick="rpSaveNarrate(1)">记下并继续</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-function rpSaveNarrate(goOn){if(!_rp||_rp.busy)return;const ta=$('#rp_act');const v=(ta&&ta.value||'').trim();if(!v)return;const d=rpData(_rp.id);d.msgs.push({id:uid(),who:'旁白',text:v});save();closeModal();playDing();rpRender();if(goOn)rpAI('[系统：'+S.me.name+'刚补充了一段动作/场景描写。请等ta这段动作成立后，再让最该回应的1到2个角色自然接着演，不要替'+S.me.name+'说话。]');}
+function rpSaveNarrate(goOn){if(!_rp||_rp.busy)return;const ta=$('#rp_act');const v=(ta&&ta.value||'').trim();if(!v)return;const d=rpData(_rp.id);d.msgs.push({id:uid(),who:'旁白',source:'me',text:v});save();closeModal();playDing();rpRender();if(goOn)rpAI('[系统：'+S.me.name+'刚补充了一段动作/场景描写。请等ta这段动作成立后，再让最该回应的1到2个角色自然接着演，不要替'+S.me.name+'说话。]');}
 function rpReply(){if(!_rp||_rp.busy)return;rpAI();}
 function rpReKeep(){const b=$('#rpbg');const st=b?b.scrollTop:null;render();const g=$('#rpbg');if(g&&st!=null)g.scrollTop=st;}
 function rpSelToggle(){_rpSel=_rpSel?null:[];rpReKeep();}
@@ -4759,11 +4762,11 @@ async function rpEnd(id){const d=rpData(id);if(!d.msgs.length){d.active=false;sa
   const mids=d.inviteMids||{};Object.keys(mids).forEach(cid=>{const m=msgs(cid).find(x=>x.id===mids[cid]);if(m){m.active=false;m.finished=true;m.summary=sum;}});
   if(d.inviteMid){const m=msgs(id).find(x=>x.id===d.inviteMid);if(m){m.active=false;m.finished=true;m.summary=sum;}}
   save();_rp=null;_rpSel=null;toast('剧情存档已保存');go('rphub');}
-function renderRP(id){const c=getC(id);if(!c)return '';const d=rpData(id);const mems=rpMembers(id);const multi=mems.length>1;const sel=_rpSel;const body=d.msgs.map(m=>{const on=sel&&sel.indexOf(m.id)>=0;const cb=sel?`<span style="margin-right:6px;color:${on?'#19a463':'#888'}">${on?'▣':'□'}</span>`:'';const oc=sel?`rpSelTog('${m.id}')`:`rpMsgMenu('${id}','${m.id}')`;if(m.who==='旁白')return `<div onclick="${oc}" style="text-align:center;color:#9db0c6;font-size:15px;padding:11px 20px;line-height:1.75">${cb}${esc(m.text)}</div>`;if(m.who==='me')return `<div class="msg me" onclick="${oc}"><div class="col"><div class="bubble">${cb}${esc(m.text)}</div></div></div>`;const cc=m.cid?getC(m.cid):c;const label=multi?`<div style="font-size:11px;color:#7f91a7;margin:0 0 3px 3px">${esc((cc&&(cc.remark||cc.name))||'角色')}</div>`:'';return `<div class="msg them" onclick="${oc}" style="padding-left:14px"><div class="col">${label}<div class="bubble">${cb}${esc(m.text)}</div></div></div>`;}).join('')+(_rp&&_rp.busy?`<div class="msg them" style="padding-left:14px"><div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
-  return `<div class="nav"><span class="l" onclick="go('rphub')">‹</span><span class="t">${esc(d.title||'角色扮演')}</span><span class="r" onclick="rpEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
-   <div style="padding:8px 12px;background:#151c25;color:#c6d0da;font-size:12px;border-bottom:1px solid #253344;display:flex;justify-content:space-between;gap:8px"><span>${esc(rpMemberSummary(id)+(d.myRole?(' / '+d.myRole):''))}<br><small style="color:#7f91a7">${esc(rpWhenText(d)||'')}</small></span><span style="white-space:nowrap;text-align:right"><span onclick="go('rpset',{id:'${id}'})" style="cursor:pointer;margin-right:12px">${svgIc('gear',14,'#cfd8e3')} 设定</span><span onclick="rpMemory('${id}')" style="cursor:pointer;margin-right:12px">${svgIc('book',14,'#cfd8e3')} 存档</span><span onclick="rpSelToggle()" style="cursor:pointer;margin-right:12px">${sel?'取消':'多选'}</span><span onclick="rpClearMsgs('${id}')" style="cursor:pointer">清空</span></span></div>
-   <div class="scroll" id="rpbg" style="background:#0f141b">${body||'<div class="empty" style="padding:34px;line-height:1.9">先记下一句台词或一段动作，再让对方进入剧情。</div>'}</div>
-   ${sel?`<div class="inputbar" style="justify-content:space-between"><button class="btn g" style="flex:1" onclick="rpSelToggle()">取消</button><button class="btn d" style="flex:1;margin-left:8px" onclick="rpDelSel('${id}')">删除选中(${sel.length})</button></div>`:`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%;background:#243447" ${_rp&&_rp.busy?'disabled':''} onclick="rpReply()">${_rp&&_rp.busy?'回应中…':(multi?'让他们继续':'让TA回应')}</button></div><div class="inputbar"><button class="send" style="background:#3a4756;margin-right:6px" onclick="rpNarrate()" title="添加动作">${svgIc('thought',16,'#fff')}</button><textarea id="rp_in" rows="1" placeholder="写台词；动作和环境请用左侧按钮分开写" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();rpSay();}"></textarea><button class="send" onclick="rpSay()">记下</button></div>`}`;}
+function renderRP(id){const c=getC(id);if(!c)return '';const d=rpData(id);const mems=rpMembers(id);const multi=mems.length>1;const sel=_rpSel;const body=d.msgs.map(m=>{const on=sel&&sel.indexOf(m.id)>=0;const cb=sel?`<span style="margin-right:6px;color:${on?'#91a9c0':'#777'}">${on?'▣':'□'}</span>`:'';const oc=sel?`rpSelTog('${m.id}')`:`rpMsgMenu('${id}','${m.id}')`;if(m.who==='旁白')return `<div class="rpnar ${m.source==='me'?'mine':''} ${m._reveal?'offreveal':''}" onclick="${oc}">${cb}${offRevealText(m)}</div>`;if(m.who==='me')return `<div class="msg me rpmsg" onclick="${oc}"><div class="col"><div class="bubble rpbubble">${cb}${esc(m.text)}</div></div></div>`;const cc=m.cid?getC(m.cid):c;const label=multi?`<div class="rplabel">${esc((cc&&(cc.remark||cc.name))||'角色')}</div>`:'';return `<div class="msg them rpmsg ${m._reveal?'offreveal':''}" onclick="${oc}"><div class="col">${label}<div class="bubble rpbubble">${cb}${offRevealText(m)}</div></div></div>`;}).join('')+(_rp&&_rp.busy&&!d.msgs.some(m=>m._reveal)?`<div class="msg them rpmsg"><div class="col"><div class="bubble rpbubble typing"><span></span><span></span><span></span></div></div></div>`:'');
+  return `<div class="rpstage"><div class="nav rpnav"><span class="l" onclick="go('rphub')">‹</span><span class="t">${esc(d.title||'角色扮演')}</span><span class="r" onclick="rpEnd('${id}')">结束</span></div>
+   <div class="rpmeta"><span>${esc(rpMemberSummary(id)+(d.myRole?(' / '+d.myRole):''))}<small>${esc(rpWhenText(d)||'')}</small></span><span><button onclick="go('rpset',{id:'${id}'})">${svgIc('gear',14,'#aebdca')} 设定</button><button onclick="rpMemory('${id}')">${svgIc('book',14,'#aebdca')} 存档</button><button onclick="rpSelToggle()">${sel?'取消':'多选'}</button><button onclick="rpClearMsgs('${id}')">清空</button></span></div>
+   <div class="scroll rpscroll" id="rpbg">${body||'<div class="empty" style="padding:34px;line-height:1.9;color:#646d76">先记下一句台词或一段动作，再让对方进入剧情。</div>'}</div>
+   ${sel?`<div class="rpselect"><button onclick="rpSelToggle()">取消</button><button class="danger" onclick="rpDelSel('${id}')">删除选中 (${sel.length})</button></div>`:`<div class="rpactions"><button class="rpcontinue" ${_rp&&_rp.busy?'disabled':''} onclick="rpReply()">${_rp&&_rp.busy?'剧情展开中':(multi?'让他们继续':'让TA回应')}</button></div><div class="inputbar rpinput"><button class="send rp-narrate" onclick="rpNarrate()" title="添加动作">${svgIc('thought',16,'#aebdca')}</button><textarea id="rp_in" rows="1" placeholder="写下本局台词…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();rpSay();}"></textarea><button class="send rp-note" onclick="rpSay()">记下</button></div>`}</div>`;}
 
 /* ===== 云程 · 出行（机票 / 行程待约会 / 护照 / 回忆）—— 无emoji·高级简约 ===== */
 const TV_CITIES=[
@@ -5141,6 +5144,7 @@ function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
     _call=null;_callBusy=false;_callPend=null;callClearPersist();
     try{renderCall();}catch(e){}
   }
+  offlineFocusStop();
   const _gd=(!test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   const _gtxt=_gd.length?('\n你记仇小本本上还没清的旧账（这次正好借机一笔一笔跟对方谈清楚，一条都别漏）：\n'+_gd.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n')):'';
   S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,optRounds:0,since:Date.now()};save();go('jail');jailIntro();
@@ -5230,7 +5234,7 @@ function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;
 function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;jailBump();S.jail.choice=null;save();jailRender();
   const freeRound=(S.jail.optRounds||0)>=2;/* 已经连出两轮选项了→这一轮让她自己打字 */
   jailAI('[系统：（'+S.me.name+'刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是点选结果，别当成打字内容复述。）根据这个答案是否真正理解问题继续教育：'+(freeRound?'这一轮绝对不要再出选择题，改为请'+S.me.name+'用自己的话说明理由和以后怎么做，等回应。':'答案合适就推进下一点；答案不合适就简明指出问题，也可以再用 [选择|新问题|选项1/选项2] 帮助重新理解。需要强调时可用 [突脸|一句重要提醒]，但不能恐吓、羞辱或威胁。')+']');}
-function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;const _jmsgs=(S.jail.msgs||[]).slice();S.jail.active=false;S.jail.choice=null;S.jail.releasedAt=Date.now();S.jail.endMode=backdoor?'backdoor':(test?'test':'released');save();
+function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;const _jmsgs=(S.jail.msgs||[]).slice();S.jail.active=false;S.jail.choice=null;S.jail.releasedAt=Date.now();S.jail.endMode=backdoor?'backdoor':(test?'test':'released');offlineFocusStop();save();
   let _cleared=0;
   if(!test&&c){_cleared=(c.grudges||[]).filter(x=>!x.done).length;
     // 关进小黑屋清算完，旧账都算已处理→自动清空省空间，只留这次关押记录
@@ -5286,7 +5290,7 @@ function renderJail(){if(!S.jail||!S.jail.active)return renderJailHistory();cons
     <div style="position:relative;z-index:482">${foot}
     <div style="text-align:center;padding:8px"><span onclick="jailBackdoor()" style="color:#3a3a3a;font-size:11px;cursor:pointer">······墙角好像有个狗洞🕳️，钻出去</span></div></div></div>`;}
 
-function offEnterScene(id){const o=offData(id);o.introSeen=true;save();render();}
+function offEnterScene(id){const o=offData(id);o.introSeen=true;offlineFocusStart(id,o);save();render();}
 function renderOffIntro(c,o){const prev=o.previousEndedAt?`上一场结束于 ${offDateTime(o.previousEndedAt)}<br>已经过去 ${offElapsed(o.previousEndedAt,o.startedAt||Date.now())}`:'这是你们的第一场线下约会';return `<div class="offstage offintro">
   <div class="offintro-top"><span onclick="offQuit()">退出</span><span>RENDEZVOUS</span></div>
   <div class="offintro-main">
