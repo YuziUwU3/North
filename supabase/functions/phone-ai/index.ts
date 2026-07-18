@@ -710,6 +710,30 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "admin_delete_orders") {
+      requireAdmin(req, body);
+      const scope = String(body.scope || "pending");
+      let query = supabase
+        .from("phone_ai_purchases")
+        .select("id,proof_path")
+        .limit(300);
+      if (scope === "pending") query = query.eq("status", "pending").eq("review_status", "submitted");
+      const { data: rows, error: findError } = await query;
+      if (findError) throw findError;
+      const ids = (rows || []).map((row: any) => row.id).filter(Boolean);
+      const proofPaths = (rows || []).map((row: any) => row.proof_path).filter(Boolean);
+      if (!ids.length) return json({ ok: true, deleted: 0 });
+      const { error: deleteError } = await supabase
+        .from("phone_ai_purchases")
+        .delete()
+        .in("id", ids);
+      if (deleteError) throw deleteError;
+      if (proofPaths.length) {
+        await supabase.storage.from(PROOF_BUCKET).remove(proofPaths).catch(() => null);
+      }
+      return json({ ok: true, deleted: ids.length });
+    }
+
     const userId = getUser(req, body);
     if (!userId) return json({ ok: false, error: "missing-user" }, 400);
     const clientSecret = getSecret(req, body);
@@ -801,15 +825,22 @@ Deno.serve(async (req) => {
       if (Date.now() - new Date(purchase.created_at).getTime() > 24 * 60 * 60 * 1000) {
         return json({ ok: false, error: "purchase-expired" }, 410);
       }
+      const rawClaimedPaidAt = String(body.claimed_paid_at || "").trim();
+      const claimed = new Date(rawClaimedPaidAt);
+      const payerHint = String(body.payer_hint || "").trim().slice(0, 80);
+      if (payerHint.length < 2) {
+        return json({ ok: false, error: "payer-hint-required" }, 400);
+      }
+      if (!rawClaimedPaidAt || !Number.isFinite(claimed.getTime())) {
+        return json({ ok: false, error: "claimed-paid-time-required" }, 400);
+      }
       const image = proofBytes(body.proof_image);
       const path = `${userId}/${purchaseId}/${Date.now()}.${image.ext}`;
       const { error: uploadError } = await supabase.storage
         .from(PROOF_BUCKET)
         .upload(path, image.bytes, { contentType: image.mime, upsert: false });
       if (uploadError) throw uploadError;
-      const claimed = new Date(String(body.claimed_paid_at || ""));
-      const claimedPaidAt = Number.isFinite(claimed.getTime()) ? claimed.toISOString() : new Date().toISOString();
-      const payerHint = String(body.payer_hint || "").trim().slice(0, 80);
+      const claimedPaidAt = claimed.toISOString();
       const { data: submitted, error: updateError } = await supabase
         .from("phone_ai_purchases")
         .update({

@@ -26,6 +26,7 @@
     .status{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;padding:0 2px 10px}.orders{display:grid;gap:10px}
     .order{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}.order.pending{border-color:#725064}
     .order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.order-title{font-size:17px;font-weight:700}.order-state{font-size:12px;color:var(--muted);white-space:nowrap}.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin:12px 0;color:#c9cbd0;font-size:13px}.meta b{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-bottom:3px}.proof{width:100%;max-height:360px;object-fit:contain;background:#09090a;border:1px solid var(--line);border-radius:8px;display:block}.actions{display:flex;gap:8px;margin-top:12px}.actions .btn{flex:1}
+    .fold-head{display:flex;align-items:center;gap:9px;min-width:0;flex:1;border:0;background:transparent;color:var(--text);padding:0;text-align:left}.fold-icon{display:grid;place-items:center;flex:0 0 26px;width:26px;height:26px;border:1px solid var(--line);border-radius:50%;color:#d7d9df;font-size:19px}.fold-main{display:grid;gap:2px;min-width:0}.fold-main .sub,.fold-main .order-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.order-body{padding-top:2px}.proof-btn{border:0;background:transparent;padding:0;width:100%;display:block}.wide-hit{min-height:48px}
     .empty{padding:18vh 16px;text-align:center;color:var(--muted)}.spinner{width:20px;height:20px;border:2px solid #3b3d44;border-top-color:var(--pink);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}@keyframes spin{to{transform:rotate(360deg)}}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:end center;padding:18px;z-index:20}.sheet{width:min(100%,520px);background:#191a1e;border:1px solid var(--line);border-radius:8px;padding:16px;max-height:88vh;overflow:auto}.sheet h2{font-size:19px;margin:0 0 8px}.sheet p{color:var(--muted);font-size:13px;line-height:1.6}.sheet-actions{display:flex;gap:8px;margin-top:14px}.sheet-actions .btn{flex:1}
     .viewer{position:fixed;inset:0;background:#000;z-index:30;display:grid;place-items:center;padding:16px}.viewer img{max-width:100%;max-height:92vh;object-fit:contain}.viewer button{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:12px}
@@ -56,13 +57,13 @@
         <button class="tab on" data-scope="pending">待核对 <span class="count" id="pendingCount">0</span></button>
         <button class="tab" data-scope="all">全部订单</button>
       </nav>
-      <div class="status"><span id="statusText">准备加载</span><button class="tab" id="logoutBtn">退出授权</button></div>
+      <div class="status"><span id="statusText">准备加载</span><span style="display:flex;gap:8px;align-items:center"><button class="tab" id="deleteAllBtn">清空订单</button><button class="tab" id="logoutBtn">退出授权</button></span></div>
       <section id="orders" class="orders"></section>
     </section>
   </main>
 
   <div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
   <div id="viewer" class="viewer hidden"><button class="icon" id="closeViewer" aria-label="关闭">×</button><img id="viewerImg" alt="付款截图大图"></div>
-  <script src="./app.js?v=545"></script>
+  <script src="./app.js?v=546"></script>
 </body>
 </html>
