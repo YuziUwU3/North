@@ -327,7 +327,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v554 · 一起听距离可设置';
+const APP_VER='v555 · 线下约会防复读';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1097,7 +1097,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=554';
+  const url='sw.js?v=555';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4571,6 +4571,26 @@ function offlineLifeNotesPrompt(c){if(!isLover(c))return'';const rows=lifeNotes(
 function offlineBehaviorLedgerPrompt(c){if(!(S.couple&&S.couple.cid===c.id&&behaviorOn()))return'';const b=behaviorStore(),items=(b&&b.items||[]).filter(x=>x.active!==false&&(x.promise||(x.events&&x.events.length))).sort((a,b)=>(b.lastTs||0)-(a.lastTs||0));if(!items.length)return'';return'\n\n# 你记在心里的全部相处小账（隐藏记忆）\n'+items.map((it,i)=>{const ev=(it.events||[]).map(e=>fmtDT(e.ts)+'：'+e.text).join('；');return(i+1)+'. '+it.title+(it.promise?'：'+S.me.name+'答应过「'+it.promise+'」':'')+((it.count||0)>0?'，相关记录 '+(it.count||0)+' 次':'')+(ev?'。记录：'+ev:'')+((it.oldCount||0)?'（另有更早记录 '+it.oldCount+' 条）':'');}).join('\n')+'\n这些是你们真实相处中记住的细节。ta再次提起或重犯时可以自然接上，但不要念隐藏标题、系统或账本。';}
 function offRevealTiming(m){const n=Math.max(1,Array.from(String(m&&m.text||'')).length),nar=m&&m.who==='旁白',reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches,base=nar?42:30,step=reduce?0:Math.max(16,Math.min(base,7200/Math.max(1,n-1))),reveal=reduce?120:Math.round(step*(n-1)+480),hold=Math.max(1100,Math.min(nar?4200:3200,900+n*(nar?22:18)));return{step,reveal,hold,total:reveal+hold};}
 function offRevealText(m){const text=String(m&&m.text||'');if(!m||!m._reveal)return esc(text);const step=+m._revealStep||0;return Array.from(text).map((ch,i)=>ch==='\n'?'<br>':'<span class="offglyph" style="animation-delay:'+Math.round(i*step)+'ms">'+(ch===' '?'&nbsp;':esc(ch))+'</span>').join('');}
+const OFFLINE_ROUTINE_TOPICS=[
+  ['task','任务/作业',/任务|任务便签|作业|打卡|做完|完成.{0,5}(了吗|没有|没|了没)|交.{0,3}(作业|任务)|该做的.{0,5}(做|完成)/],
+  ['meal','吃饭',/吃饭|吃过|吃了|吃东西|吃点|饭吃|早餐|早饭|午饭|晚饭|饿不饿|饿了|别饿/],
+  ['sleep','睡觉',/睡觉|睡了|睡没|睡着|困不困|早点睡|熬夜|晚安|起床|醒了|休息了吗/],
+  ['where','在干嘛',/在干嘛|干什么呢|做什么呢|在哪儿|在哪里|到家.{0,3}(没|吗)|回家.{0,3}(没|吗)/],
+  ['miss','想念/失联',/想我|想不想我|有没有想|怎么不找我|不来找我|没理我|不回我|又消失/],
+  ['health','喝水/身体',/喝水|多喝|身体怎么样|还疼|好点了吗|难受吗|不舒服.{0,3}(吗|没)/],
+  ['report','报备',/报备|告诉我去哪|去了哪里|到哪了|和谁在一起|跟谁|几点回来/],
+  ['phone','少玩手机',/少玩手机|别玩手机|刷手机|玩多久|玩手机超时|眼睛休息|别再刷/]
+];
+function offRepeatNorm(text){return String(text||'').toLowerCase().replace(/[\s，。、！？!?,.~～…：:；;（）()「」『』“”'"\-—]/g,'');}
+function offRoutineTopics(text){text=String(text||'').replace(/\s+/g,'');return OFFLINE_ROUTINE_TOPICS.filter(x=>x[2].test(text)).map(x=>x[0]);}
+function offRoutineLabel(key){const x=OFFLINE_ROUTINE_TOPICS.find(v=>v[0]===key);return x?x[1]:key;}
+function offRepeatSimilarity(a,b){const aa=new Set(offRepeatNorm(a).split('').filter(Boolean)),bb=new Set(offRepeatNorm(b).split('').filter(Boolean));if(!aa.size||!bb.size)return 0;let n=0;aa.forEach(x=>{if(bb.has(x))n++;});return n/Math.max(aa.size,bb.size);}
+function offGeneratedTalk(text){const out=[];splitBubbles(text).forEach(line=>{splitActions(line).forEach(part=>{part=String(part||'').trim();if(part&&!/^[（(【][\s\S]*[）)】]$/.test(part))out.push(part);});});return out;}
+function offCurrentInput(o,note){if(note)return String(note);const m=[...(o&&o.msgs||[])].reverse().find(x=>x&&(x.who==='me'||(x.who==='旁白'&&x.source==='me')));return m?String(m.text||''):'';}
+function offlineRepeatFails(text,o,currentInput){const lines=offGeneratedTalk(text),recent=(o&&o.msgs||[]).filter(m=>m&&m.who==='ta'&&m.source!=='me').slice(-32).map(m=>m.text).filter(Boolean),fails=[];if(!lines.length||!recent.length)return fails;
+  if(lines.some(line=>{const n=offRepeatNorm(line);return n.length>=6&&recent.some(old=>{const p=offRepeatNorm(old);if(n===p)return true;const min=Math.min(n.length,p.length),threshold=Math.max(n.length,p.length)<=30 ? .76 : .84;return min>=8&&offRepeatSimilarity(n,p)>=threshold;});}))fails.push('重复了本场近期已经说过的台词');
+  const source=new Set(offRoutineTopics(currentInput)),topics=[...new Set(lines.flatMap(offRoutineTopics))];topics.forEach(key=>{if(!source.has(key)&&recent.some(old=>offRoutineTopics(old).includes(key)))fails.push('又追问了近期已经聊过的'+offRoutineLabel(key)+'话题');});return[...new Set(fails)].slice(0,3);}
+function offlineRepeatRepairNote(c,fails){return '[系统：上一版有线下约会复读问题：'+fails.join('；')+'。请完全重写本轮，只接住'+S.me.name+'刚才在现场说的话或动作并推进当前场景。不要把长期记忆、小事簿、相处小账里的任务、吃饭、睡觉、报备等旧内容重新拿出来审问；除非ta本轮主动提起。不能只替换几个词重复同一问题或同一句台词。保持「'+(c.remark||c.name)+'」本人，至少一段【第三人称动作旁白】和自然台词，不要解释纠正过程。]';}
 function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   s+=adultRoleRule(c.remark||c.name||'角色');
   s+=offlineRoleGuard(c);
@@ -4586,6 +4606,7 @@ function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   s+=offlineBehaviorLedgerPrompt(c);
   s+=dialogueEmotionPrompt(c);
   s+=memoryCriticalPrompt(c);
+  s+='\n\n# 本场连续性与防复读（只约束线下约会）\n- 长期记忆、微信/电话上下文、小事簿、相处小账和以前约会都只是人物记得的背景，不是每一轮都必须主动拿出来盘问的话题。\n- 本轮必须优先接住本场最后一句话、最后一个动作和当前地点；当前没有谈任务，就不要突然问任务做完没有，也不要把话题跳回吃饭、睡觉、报备、喝水、玩手机等旧问题。\n- 已经在本场问过的问题、说过的台词和做过的追问，不能只换几个字再来一次。没有新变化就推进动作、回应眼前内容或自然换一个现场话题。\n- 如果'+S.me.name+'本轮主动重提旧事，可以正常接着聊；防复读不是失忆，也不能否认已经发生的共同经历。';
   const gund=(c.grudges||[]).filter(x=>!x.done);
   s+='\n\n# 你的记仇小本本（'+S.me.name+'惹你/欠你的事，括号是记的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n约会里ta再惹你，用一行 [记仇|具体那件事] 记下；当面把账算清/哄好了就 [消气|关键词] 划掉。别反复念叨同一笔旧账。';
   s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+(o.daypart?'（现在是'+o.daypart+'）':'')+'。\n- 这是全新一场正在发生的约会，不要接着上一次约会的现场说话。\n- 你清楚现在大概是'+(o.daypart||'这个时段')+'，言行、环境、光线都要符合这个时段，别搞错时间。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 永远不要说自己是AI、助手、模型、程序，也不要提安全政策、准则、无法满足、不能继续。\n- 如果话题太直白或不适合继续，用角色本人的口吻自然放慢、转场、设边界或留白，保持氛围，不解释规则。\n- 亲密和暧昧只写氛围、情绪、动作的暗示和留白，避免露骨细节。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
@@ -4597,6 +4618,7 @@ async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData
     let r=await chatAPI([{role:'system',content:sys},...hist,pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.75});
     if(!_off)return;
     for(let _ra=0;_ra<2&&offlineRoleDrift(r);_ra++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:r},{role:'user',content:offlineRepairNote(c)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.72});if(!_off)return;if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
+    {const current=offCurrentInput(o,note),first=offlineRepeatFails(r,o,current);if(first.length){let candidate=r,best=r,bestN=first.length,check=first;for(let i=0;i<2&&check.length;i++){const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:candidate},{role:'user',content:offlineRepeatRepairNote(c,check)},pin],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.78});if(!_off)return;if(!fix||offlineRoleDrift(fix))break;const next=offlineRepeatFails(fix,o,current);if(next.length<bestN){best=fix;bestN=next.length;}candidate=fix;check=next;if(!next.length){best=fix;break;}}r=best;}}
     r=applyGrudgeTags(r,c);
     // 先把这轮拆成一条条(旁白/台词)，再【一条一条地】发出来，不要一次性糊一大堆
     const items=[];
