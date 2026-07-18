@@ -643,6 +643,50 @@ body{background:#000;padding:0;}
 .bootcard{width:100%;max-width:310px;background:#1c1c1e;border:1px solid #303036;border-radius:18px;padding:22px 18px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
 .bootlogo{font-size:38px;margin-bottom:10px}.boottitle{font-size:18px;font-weight:700;margin-bottom:8px}.bootmsg{font-size:13px;line-height:1.75;color:#bbb;word-break:break-word}
 .bootbtn{width:100%;border:0;border-radius:11px;padding:11px;margin-top:10px;background:#ff8fab;color:#fff;font-size:14px;font-weight:600}.bootbtn.secondary{background:#303036;color:#ddd}
+/* 线下约会：黑色沉浸场次 */
+.offstage{position:absolute;inset:0;display:flex;flex-direction:column;background:#050505;color:#ddd8cf;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:0;overflow:hidden;}
+.offstage .offnav{background:#050505;border-bottom:1px solid #1c1b19;}
+.offstage .offnav .t{font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:17px;font-weight:500;color:#eee8de;}
+.offstage .offnav .l{color:#a9a197;font-size:29px;}
+.offstage .offnav .r{color:#9d756f;font-size:12px;font-weight:500;}
+.offmeta{flex:0 0 auto;min-height:38px;padding:0 13px;border-bottom:1px solid #181715;background:#080808;color:#827c73;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.offmeta b{color:#b8a78d;font-weight:500;}
+.offmeta button{border:0;background:transparent;color:#a29b91;font:inherit;padding:8px 5px;cursor:pointer;}
+.offscroll{background:#050505!important;padding:14px 13px 20px;}
+.offdate{width:min(88%,360px);margin:8px auto 18px;padding:9px 10px;border-top:1px solid #28251f;border-bottom:1px solid #28251f;color:#777168;text-align:center;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:11px;line-height:1.7;}
+.offnar{max-width:88%;margin:9px auto;padding:8px 9px;color:#aaa399;text-align:center;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:14px;line-height:1.85;font-style:normal;cursor:pointer;}
+.offnar.mine{color:#c1b49f;}
+.offmsg{margin:11px 0;gap:0;}
+.offmsg .col{max-width:78%;}
+.offmsg .offbubble{border-radius:5px;padding:10px 12px;font-size:14.5px;line-height:1.65;border:1px solid #292724;box-shadow:none;}
+.offmsg.them .offbubble{background:#151515;color:#e3ded5;}
+.offmsg.me .offbubble{background:#d2c9ba;color:#181614;border-color:#d2c9ba;}
+.offactions{flex:0 0 auto;padding:8px 12px 6px;background:#050505;border-top:1px solid #171614;}
+.offcontinue{width:100%;height:38px;border:1px solid #5e5548;border-radius:5px;background:#0d0d0c;color:#c7b79e;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:14px;cursor:pointer;}
+.offcontinue:disabled{opacity:.45;}
+.offinput{background:#080808!important;border-top:1px solid #1d1c19!important;padding:8px 9px 10px;}
+.offinput textarea{background:#111!important;border:1px solid #292724!important;border-radius:5px!important;color:#e1ddd5!important;font-family:"Songti SC","STSong","Noto Serif SC",serif!important;font-size:14px!important;}
+.offinput textarea::placeholder{color:#625f59;}
+.offinput .send{border-radius:5px!important;box-shadow:none!important;font-weight:500!important;}
+.offinput .off-narrate{background:#111!important;border:1px solid #3b3730!important;color:#b8a78d!important;}
+.offinput .off-note{background:#c8beaf!important;border:1px solid #c8beaf!important;color:#171513!important;}
+.offselect{display:flex;gap:8px;padding:9px 12px;background:#080808;border-top:1px solid #1d1c19;}
+.offselect button{flex:1;height:38px;border:1px solid #33302b;border-radius:5px;background:#111;color:#b7b0a6;}
+.offselect .danger{border-color:#633f3f;color:#bd8580;}
+.offintro{background:#030303;}
+.offintro-top{height:48px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;color:#6f6a62;font-size:10px;border-bottom:1px solid #121212;}
+.offintro-top span:first-child{cursor:pointer;font-size:12px;color:#8e887f;}
+.offintro-main{flex:1;min-height:0;padding:28px 24px 34px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.offintro-rule{width:1px;height:40px;background:#746a5c;margin-bottom:22px;}
+.offintro-kicker{color:#8f867a;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:11px;margin-bottom:18px;}
+.offintro-avatar{width:74px;height:74px;margin-bottom:16px;}
+.offintro-avatar .avatar{width:74px!important;height:74px!important;border-radius:50%!important;border:1px solid #4c463d;box-shadow:0 10px 28px rgba(0,0,0,.7);}
+.offintro-name{color:#eee8de;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:25px;font-weight:500;line-height:1.3;}
+.offintro-place{color:#b4a48b;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:14px;margin-top:9px;}
+.offintro-gap{margin-top:26px;color:#777168;font-size:11px;line-height:1.8;}
+.off-enter{width:min(76%,270px);height:44px;margin-top:25px;border:1px solid #766b5b;border-radius:5px;background:#0a0a09;color:#d1c4af;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:15px;cursor:pointer;}
+.offintro-note{margin-top:13px;color:#4f4c47;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:10px;}
+@media (prefers-reduced-motion:no-preference){.offintro-main{animation:offfade .7s ease both}.offnar,.offmsg{animation:offfade .35s ease both}@keyframes offfade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}}
 </style>
 </head>
 <body>
@@ -677,7 +721,7 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="app.js?v=549" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=550" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="ai-account.js?v=539"></script>
 </body>
 </html>
