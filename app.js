@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v572 · 角色头像相机入口';
+const APP_VER='v573 · 一起听质感与小号稳态';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -376,7 +376,7 @@ let _saveTimer=null,_savePending=false,_saveLast=0,_saveOkLast=0;
 function isQuotaError(e){const n=(e&&e.name||'')+' '+(e&&e.message||'');return /quota|storage|exceeded|full/i.test(n);}
 function saveNow(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}
   if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;
-  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();_saveOkLast=_saveLast;}catch(e){toast(isQuotaError(e)?'核心存档写不进去了，先导出备份再清理旧聊天/图片':'保存失败，先别退出，建议导出备份');try{storageFullAlert(e);}catch(_){}}}
+  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();_saveOkLast=_saveLast;return true;}catch(e){toast(isQuotaError(e)?'核心存档写不进去了，先导出备份再清理旧聊天/图片':'保存失败，先别退出，建议导出备份');try{storageFullAlert(e);}catch(_){}return false;}}
 function save(delay){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
 let _imgCache={},_imgRev=new Map(),_imgReady=new Set(),_imgSeq=0,_heavy={},_heavyReady=new Set();
@@ -1107,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=572';
+  const url='sw.js?v=573';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1840,10 +1840,10 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
   const meAv=S.music.meAvatar||S.me.avatar;const taAv=S.music.taAvatar||(sc&&sc.avatar)||'🙂';
   const taBlock=sess?_mAvHTML(taAv,'ta',66):`<div onclick="musicInvite()" style="width:66px;height:66px;border-radius:50%;border:2px dashed rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-size:11px;color:#cfcfd6;cursor:pointer;text-align:center;line-height:1.25">+ 邀请<br>一起听</div>`;
   const avatars=`<div style="position:relative;width:230px;height:98px;margin:2px auto 0">
-      <svg width="230" height="98" viewBox="0 0 230 98" style="position:absolute;left:0;top:0;pointer-events:none">
-        <path d="M48 86 C 26 2, 204 2, 182 86" fill="none" stroke="rgba(235,235,240,.6)" stroke-width="2.3"/>
-        <path d="M48 86 q-9 7 -5 16" fill="none" stroke="rgba(235,235,240,.6)" stroke-width="2.3"/>
-        <path d="M182 86 q9 7 5 16" fill="none" stroke="rgba(235,235,240,.6)" stroke-width="2.3"/>
+      <svg width="230" height="98" viewBox="0 0 230 98" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">
+        <path d="M48 86 C42 58 43 28 58 13 C64 7 70 4 78 2" fill="none" stroke="rgba(236,238,244,.58)" stroke-width="1.05" stroke-linecap="round"/>
+        <path d="M78 2 C98 -3 132 -3 152 2" fill="none" stroke="rgba(245,246,250,.68)" stroke-width="1.65" stroke-linecap="round"/>
+        <path d="M152 2 C160 4 166 7 172 13 C187 28 188 58 182 86" fill="none" stroke="rgba(236,238,244,.58)" stroke-width="1.05" stroke-linecap="round"/>
       </svg>
       <div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center">
         <div style="position:relative;z-index:1">${_mAvHTML(meAv,'me',66)}</div>
@@ -1859,7 +1859,7 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
   // 大转盘（封面在中间·扩大）
   const cover=cur.cover;
   const disk=`<div style="position:relative;width:248px;height:248px">
-      <div id="m_disk" style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#262626 0,#0b0b0b 27%,#1c1c1c 28%,#0b0b0b 30%,#1c1c1c 31%,#0b0b0b 33%,#090909 70%);box-shadow:0 16px 44px rgba(0,0,0,.6),inset 0 0 34px rgba(0,0,0,.92);animation:dyspin 14s linear infinite;animation-play-state:${_mPlaying?'running':'paused'}">
+      <div id="m_disk" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(225,232,255,.16);background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.12) 0,rgba(255,255,255,.035) 15%,transparent 31%),repeating-radial-gradient(circle at center,rgba(255,255,255,.035) 0 1px,rgba(0,0,0,.22) 1.5px 2.4px,rgba(255,255,255,.018) 2.8px 3.5px),conic-gradient(from 218deg,#050506,#17181b 9%,#070708 18%,#202125 27%,#080809 38%,#15161a 49%,#050506 62%,#1b1c20 74%,#070708 87%,#15161a);box-shadow:0 0 0 1px rgba(255,255,255,.045),0 0 18px rgba(190,205,255,.2),0 18px 46px rgba(0,0,0,.68),inset 0 0 30px rgba(0,0,0,.78),inset 0 0 0 12px rgba(255,255,255,.018);animation:dyspin 14s linear infinite;animation-play-state:${_mPlaying?'running':'paused'}">
         <div onclick="setMusicCover()" style="position:absolute;inset:34px;border-radius:50%;overflow:hidden;cursor:pointer;${cover?`background:url(${cover}) center/cover`:'background:linear-gradient(135deg,#33415e,#1f2a40)'};box-shadow:inset 0 0 14px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center">${cover?'':'<span style="color:rgba(255,255,255,.65);font-size:13px;text-align:center;line-height:1.5">点这里<br>上传封面</span>'}</div>
         <div style="position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);z-index:2;box-shadow:0 0 0 3px rgba(0,0,0,.45)"></div>
       </div></div>`;
@@ -5984,16 +5984,16 @@ function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.callName=($('
   {const ag=$('#me_age');S.me.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#me_adult');S.me.adultConsent=!ad||ad.checked;}
   syncActiveAccount();save();try{pfEnsure(true).catch(()=>{});}catch(_){}closeModal();render();}
 function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.city=S.me.city||'';a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
-let _accountTapAt=0,_accountCreateTapAt=0,_accountSaveTapAt=0;
+let _accountTapAt=0,_accountCreateBusy=false,_accountSaveBusy=false;
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
   const now=Date.now();if(now-_accountTapAt<350)return;_accountTapAt=now;switchAccount(aid);}
-function accountCreateTap(ev){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_accountCreateTapAt<350)return;_accountCreateTapAt=now;editAccount();}
-function accountSaveTap(ev,id,isNew){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_accountSaveTapAt<350)return;_accountSaveTapAt=now;saveAccount(id,isNew);}
+function accountCreateTap(ev){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}if(_accountCreateBusy)return false;_accountCreateBusy=true;setTimeout(()=>{try{editAccount();}catch(e){toast('小号页面打开失败，请重新点一次');}finally{_accountCreateBusy=false;}},0);return false;}
+function accountSaveTap(ev,id,isNew){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}if(_accountSaveBusy)return false;_accountSaveBusy=true;setTimeout(()=>{try{saveAccount(id,isNew);}catch(e){toast('小号保存失败，请重新打开后再试');}finally{_accountSaveBusy=false;}},0);return false;}
 function accountSwitchFromEvent(ev){if(ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-noswitch]'))return;const el=ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-switch]');if(!el)return;accountSwitchTap(ev,el.getAttribute('data-account-switch'));}
 function accountMgr(){initAccounts();const acts=S.me.accounts||[];
   openModal(`<h3>我的小号</h3><div class="hint">切换不同身份和角色聊天。每个身份有<b>独立的聊天记录</b>；角色可能拉黑某个身份，你换个身份就能重新搜微信号加回。当前：<b>${esc(S.me.name)}</b></div>
    ${acts.map(a=>`<div class="section"><div class="it" data-account-switch="${a.id}" style="cursor:pointer" role="button" tabindex="0" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div>${a.id===actId()?'<span class="v">当前</span>':`<button type="button" class="minibtn" data-account-switch="${a.id}" style="background:#07c160;color:#fff" onclick="accountSwitchTap(event,'${a.id}')" ontouchend="accountSwitchTap(event,'${a.id}')" onpointerup="accountSwitchTap(event,'${a.id}')">切换</button>`}<span class="v" data-account-noswitch="1" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span data-account-noswitch="1" style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
-   <button type="button" class="btn p" style="margin-top:8px" onclick="accountCreateTap(event)" ontouchend="accountCreateTap(event)" onpointerup="accountCreateTap(event)">＋ 新建小号</button>
+   <button type="button" class="btn p" style="margin-top:8px;touch-action:manipulation" onclick="accountCreateTap(event)">＋ 新建小号</button>
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function switchAccount(aid){initAccounts();if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t){toast('这个小号数据坏了，已自动整理一次');initAccounts();accountMgr();return;}
   S.me.active=aid;S.me.name=t.name;S.me.wxid=t.wxid;S.me.avatar=t.avatar;S.me.persona=t.persona||'';S.me.signature=t.signature||'';S.me.city=t.city||'';
@@ -6018,7 +6018,7 @@ function editAccount(aid){initAccounts();const a=aid?(S.me.accounts||[]).find(x=
    <div class="field"><label>年龄</label><input id="ac_age" type="number" min="0" value="${esc(a.age||18)}"></div>
    <div class="field"><label><input id="ac_adult" type="checkbox" ${a.adultConsent!==false?'checked':''}> 成年资料</label></div>
    <div class="field"><label>身份设定（角色会知道你以这个身份跟ta聊）</label><textarea id="ac_per" rows="3" placeholder="比如：陌生网友 / 新同事 / 假装是别人 / 记者…">${esc(a.persona||'')}</textarea></div>
-   <div class="btns"><button type="button" class="btn g" onclick="accountMgr()">返回</button><button type="button" class="btn p" onclick="accountSaveTap(event,'${a.id}',${!!a._new})" ontouchend="accountSaveTap(event,'${a.id}',${!!a._new})" onpointerup="accountSaveTap(event,'${a.id}',${!!a._new})">保存</button></div>`);}
+   <div class="btns"><button type="button" class="btn g" onclick="accountMgr()">返回</button><button type="button" class="btn p" style="touch-action:manipulation" onclick="accountSaveTap(event,'${a.id}',${!!a._new})">保存</button></div>`);}
 function saveAccount(id,isNew){initAccounts();let a=isNew?{id,balance:188,bills:[]}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
   const nameEl=$('#ac_name'),wxidEl=$('#ac_wxid'),avatarEl=$('#ac_av'),personaEl=$('#ac_per');if(!nameEl||!wxidEl||!avatarEl||!personaEl){toast('小号编辑页没有加载完整，请重新打开');return;}
   if(isNew){const used=new Set((S.me.accounts||[]).map(x=>x.id));while(!accountIdOK(a.id)||used.has(a.id)){a.id='acc_'+Math.random().toString(36).slice(2,7);}}
@@ -6026,7 +6026,8 @@ function saveAccount(id,isNew){initAccounts();let a=isNew?{id,balance:188,bills:
   {const ag=$('#ac_age');a.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#ac_adult');a.adultConsent=!ad||ad.checked;}
   a.signature=a.signature||'';if(a.balance==null)a.balance=188;if(!Array.isArray(a.bills))a.bills=[];if(isNew)S.me.accounts.push(a);
   if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.city=a.city||'';S.me.persona=a.persona;S.me.age=a.age;S.me.adultConsent=a.adultConsent!==false;}
-  save();accountMgr();}
+  if(saveNow()===false){if(isNew)S.me.accounts=S.me.accounts.filter(x=>x!==a);toast('小号没有写入存档，请先清理存储空间后再试');accountMgr();return false;}
+  accountMgr();toast(isNew?'小号已创建':'小号资料已保存');return true;}
 async function delAccount(id){if(id==='main')return;if(!await uiConfirm('删除这个小号？它的聊天记录也会清掉'))return;
   if(actId()===id)switchAccount('main');
   S.me.accounts=(S.me.accounts||[]).filter(a=>a.id!==id);
