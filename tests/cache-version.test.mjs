@@ -15,8 +15,14 @@ assert.match(html, new RegExp(`ai-account\\.js\\?v=${version}\\b`));
 assert.match(html, new RegExp(`sw\\.js\\?v=${version}\\b`));
 assert.match(html, new RegExp(`searchParams\\.set\\('v','${version}'\\)`));
 assert.match(html, new RegExp(`north-sw-reloaded-${version}\\b`));
+assert.match(html, new RegExp(`window\\.__NORTH_SHELL_BUILD__='${version}'`));
+assert.match(app, new RegExp(`window\\.__NORTH_SHELL_BUILD__!=='${version}'`));
 assert.match(app, new RegExp(`sw\\.js\\?v=${version}\\b`));
 assert.match(sw, new RegExp(`north-shell-v${version}\\b`));
+assert.match(sw, new RegExp(`const BUILD='${version}'`));
+assert.match(sw, /validShellText/);
+assert.match(sw, /incomplete/);
+assert.match(sw, /cache:'no-store'/);
 assert.match(index, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(repair, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 

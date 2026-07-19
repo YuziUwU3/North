@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v584 \u00b7 \u7fa4\u804a\u7a33\u5b9a\u4e0e\u4f53\u9a8c\u4f18\u5316/);
+assert.match(source, /v585 \u00b7 \u5f31\u7f51\u7f13\u5b58\u5b8c\u6574\u6027\u4fee\u590d/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -366,6 +366,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=584/);
+assert.match(html, /app\.js\?v=585/);
 
 console.log("offline date tests passed");
