@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v580 \u00b7 \u4f7f\u7528\u8bf4\u660e\u4e0eAI\u8d26\u6237\u6307\u5357/);
+assert.match(source, /v581 \u00b7 \u5c0f\u53f7\u4eba\u8bbe\u4e0e\u6d88\u606f\u9694\u79bb\u4fee\u590d/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -252,7 +252,7 @@ assert.match(source, /ontouchend="offlinePickTap\(event,'\$\{c\.id\}'\)"/);
 assert.doesNotMatch(source, /Object\.values\(S\.offline\|\|\{\}\)\.some\(o=>o&&o\.started\)/);
 assert.match(source, /function enterJail\(cid,reason,test\)[\s\S]*?offlineFocusStop\(\)/);
 assert.match(source, /function releaseJail\(backdoor\)[\s\S]*?offlineFocusStop\(\);save\(\)/);
-assert.match(source, /async function aiReply\(id,note,replyToken\)\{if\(offlineFocusActive\(\)\)return/);
+assert.match(source, /async function aiReply\(id,note,replyToken,replyAccount\)\{replyAccount=replyAccount\|\|actId\(\);if\(offlineFocusActive\(\)\)return/);
 assert.match(source, /function scheduleReply\(id,note\)\{\s*if\(offlineFocusActive\(\)\)return/);
 assert.match(source, /function incomingCall\(id,kind\)\{if\(offlineFocusActive\(\)\)return/);
 assert.match(source, /async function aiGroupReply\(id,fromText\)\{if\(offlineFocusActive\(\)\)return/);
@@ -366,6 +366,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=580/);
+assert.match(html, /app\.js\?v=581/);
 
 console.log("offline date tests passed");

@@ -10,7 +10,7 @@ const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 assert.match(source, /const esc=s=>String\(s==null\?'':s\)/);
 assert.match(source, /function accountCreateTap\(ev\)/);
 assert.match(source, /function accountSaveTap\(ev,id,isNew\)/);
-assert.match(source, /_accountCreateBusy=false,_accountSaveBusy=false/);
+assert.match(source, /_accountCreateBusy=false,_accountSaveBusy=false,_accountDeleteBusy=false/);
 assert.match(source, /if\(_accountCreateBusy\)return false/);
 assert.match(source, /if\(_accountSaveBusy\)return false/);
 assert.doesNotMatch(source, /ontouchend="accountCreateTap\(event\)"/);
