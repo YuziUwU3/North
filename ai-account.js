@@ -74,6 +74,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div style="font-size:38px;font-weight:700;margin:6px 0">${bal}</div>
       <div style="font-size:12px;color:#cbd5e1;word-break:break-all">用户ID：${esc(id)} <button class="minibtn" onclick="aiCopyId()" style="margin-left:6px">复制</button></div>
     </div>
+    <button onclick="showManual('ai')" style="width:100%;margin:0 0 12px;padding:11px 12px;border:1px solid rgba(165,180,252,.3);background:#171a24;color:#cdd5ff;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between"><span>AI账户使用说明与常见问题</span><b style="font-size:16px">›</b></button>
     <div class="section">
       <div class="it"><span>点数不足提醒<br><small style="color:#888">余额低于设定值时在小手机屏幕弹窗提醒</small></span><span class="sw ${low.lowBalanceAlertOn?'on':''}" onclick="aiToggleLowBalance()"></span></div>
       <div class="it"><span>提醒额度</span><span class="v"><input type="number" min="1" max="99999" inputmode="numeric" value="${low.lowBalanceThreshold}" onchange="aiSetLowBalance(this.value)" style="width:82px;text-align:right"> 点</span></div>
