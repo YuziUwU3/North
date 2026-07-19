@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v574 · 一起听双侧耳机线';
+const APP_VER='v575 · 黑胶折痕清除';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1107,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=574';
+  const url='sw.js?v=575';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1860,7 +1860,7 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
   // 大转盘（封面在中间·扩大）
   const cover=cur.cover;
   const disk=`<div style="position:relative;width:248px;height:248px">
-      <div id="m_disk" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(225,232,255,.16);background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.12) 0,rgba(255,255,255,.035) 15%,transparent 31%),repeating-radial-gradient(circle at center,rgba(255,255,255,.035) 0 1px,rgba(0,0,0,.22) 1.5px 2.4px,rgba(255,255,255,.018) 2.8px 3.5px),conic-gradient(from 218deg,#050506,#17181b 9%,#070708 18%,#202125 27%,#080809 38%,#15161a 49%,#050506 62%,#1b1c20 74%,#070708 87%,#15161a);box-shadow:0 0 0 1px rgba(255,255,255,.045),0 0 18px rgba(190,205,255,.2),0 18px 46px rgba(0,0,0,.68),inset 0 0 30px rgba(0,0,0,.78),inset 0 0 0 12px rgba(255,255,255,.018);animation:dyspin 14s linear infinite;animation-play-state:${_mPlaying?'running':'paused'}">
+      <div id="m_disk" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(225,232,255,.16);background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.12) 0,rgba(255,255,255,.035) 15%,transparent 31%),repeating-radial-gradient(circle at center,rgba(255,255,255,.035) 0 1px,rgba(0,0,0,.22) 1.5px 2.4px,rgba(255,255,255,.018) 2.8px 3.5px),radial-gradient(circle at center,#1a1b1f 0,#0c0d0f 42%,#070708 72%,#030304 100%);box-shadow:0 0 0 1px rgba(255,255,255,.045),0 0 18px rgba(190,205,255,.2),0 18px 46px rgba(0,0,0,.68),inset 0 0 30px rgba(0,0,0,.78),inset 0 0 0 12px rgba(255,255,255,.018);animation:dyspin 14s linear infinite;animation-play-state:${_mPlaying?'running':'paused'}">
         <div onclick="setMusicCover()" style="position:absolute;inset:34px;border-radius:50%;overflow:hidden;cursor:pointer;${cover?`background:url(${cover}) center/cover`:'background:linear-gradient(135deg,#33415e,#1f2a40)'};box-shadow:inset 0 0 14px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center">${cover?'':'<span style="color:rgba(255,255,255,.65);font-size:13px;text-align:center;line-height:1.5">点这里<br>上传封面</span>'}</div>
         <div style="position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);z-index:2;box-shadow:0 0 0 3px rgba(0,0,0,.45)"></div>
       </div></div>`;

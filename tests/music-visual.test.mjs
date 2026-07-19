@@ -12,7 +12,8 @@ assert.match(source, /stroke-width="1\.4"/);
 assert.match(source, /stroke-width="\.85"/);
 assert.match(source, /stroke-linecap="round"/);
 assert.match(source, /repeating-radial-gradient\(circle at center/);
-assert.match(source, /conic-gradient\(from 218deg/);
+assert.doesNotMatch(source, /conic-gradient\(from 218deg/);
+assert.match(source, /radial-gradient\(circle at center,#1a1b1f 0,#0c0d0f 42%,#070708 72%,#030304 100%\)/);
 assert.match(source, /0 0 18px rgba\(190,205,255,\.2\)/);
 
 console.log("music visual tests passed");
