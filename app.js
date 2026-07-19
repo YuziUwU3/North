@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v577 · 一起听耳机线连贯';
+const APP_VER='v578 · 抖音电话图标美化补全';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1107,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=577';
+  const url='sw.js?v=578';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2248,7 +2248,7 @@ const ICONS={
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
-const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','','信箱'],['offline','🌹','线下约会'],['music','🎵','音乐'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['phoneapp','☎','电话'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['douyin','🎵','抖音'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','','信箱'],['offline','🌹','线下约会'],['music','🎵','音乐'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
