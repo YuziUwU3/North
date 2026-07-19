@@ -6,6 +6,7 @@ const account = fs.readFileSync(new URL("../ai-account.js", import.meta.url), "u
 
 assert.match(app, /function showManual\(section\)/);
 assert.match(app, /AI账户不是聊天模型接口/);
+assert.match(app, /路线一至路线四/);
 assert.match(app, /不需要另外注册密码/);
 assert.match(app, /不会自动搬走AI用户ID和余额/);
 assert.match(app, /上传付款截图/);
