@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v581 · 小号人设与消息隔离修复';
+const APP_VER='v582 · 稳定性与双端兼容修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1021,7 +1021,7 @@ function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=
 async function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;}catch(e){}}
 function voiceAudioKey(m){const x=m&&String(m.audio||'').match(/^idb-audio:(.+)$/i);return x?x[1]:'';}
 function voiceAudioExpired(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&m.audio&&Date.now()-Number(m.audioTs||m.time||0)>VOICE_AUDIO_TTL_MS);}
-function clearVoiceAudio(m){try{const k=voiceAudioKey(m);if(k)imgDel('__audio_'+k);}catch(_){}if(m){delete m.audio;delete m.audioTs;delete m._aurl;delete m._ttsFailAt;}}
+function clearVoiceAudio(m){try{const k=voiceAudioKey(m);if(k)imgDel('__audio_'+k);}catch(_){}if(m){try{if(/^blob:/i.test(String(m._aurl||'')))URL.revokeObjectURL(m._aurl);}catch(_){}delete m.audio;delete m.audioTs;delete m._aurl;delete m._ttsFailAt;}}
 function voiceAudioGC(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(voiceAudioExpired(m)){clearVoiceAudio(m);changed=true;}});}}catch(_){}return changed;}
 async function audioDataToBuf(audio){if(!audio)return null;
   if(audio instanceof ArrayBuffer)return audio;
@@ -1109,7 +1109,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=581';
+  const url='sw.js?v=582';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1789,13 +1789,13 @@ function musicChatHistoryModal(){musicInit();const sess=S.music.session;let rows
 async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!songs.length){toast('还没有歌单');return;}toast('正在打包歌单…');
   try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
     for(const s of songs){const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}pack.music.songs.push(x);}
-    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('歌单已导出');
+    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});downloadBlob(blob,'小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json');toast('歌单已导出');
   }catch(e){toast('导出失败，文件太大；请用“分首导出”');}}
 function musicSafeName(s){return String(s||'未命名').replace(/[\\/:*?"<>|]/g,'_').slice(0,40)||'未命名';}
 async function musicExportOne(id){musicInit();const s=(S.music.songs||[]).find(x=>x.id===id);if(!s){toast('没找到这首');return;}toast('正在导出…');
   try{const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}
     const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[x],loop:false,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:''}};
-    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机单曲_'+musicSafeName(s.title)+'.json';a.click();toast('已导出 '+(s.title||'这首歌'));
+    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});downloadBlob(blob,'小手机单曲_'+musicSafeName(s.title)+'.json');toast('已导出 '+(s.title||'这首歌'));
   }catch(e){toast('这首也太大了，建议重新上传音频版');}}
 function musicExportOneModal(){musicInit();const songs=S.music.songs||[];const list=songs.length?songs.map(s=>`<div class="it"><span style="flex:1;color:#eee">${esc(s.title||'未命名')}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><button class="minibtn" onclick="musicExportOne('${s.id}')">导出</button></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌</div>';
   openModal(`<h3>分首导出</h3><div class="hint">录屏/大文件不要一次性导出全部，点每首右边的“导出”，到主屏幕版再逐个导入。</div><div class="section" style="max-height:54vh;overflow:auto">${list}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
@@ -8769,11 +8769,12 @@ async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.b
 function openModal(html){$('#modalSheet').innerHTML=html;$('#modal').classList.add('show');}
 function closeModal(){$('#modal').classList.remove('show');}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */
-function uiConfirm(msg,opt){opt=opt||{};return new Promise(res=>{let el=document.getElementById('cfm');
+let _uiConfirmDone=null;
+function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);return new Promise(res=>{let el=document.getElementById('cfm');
   if(!el){el=document.createElement('div');el.id='cfm';el.className='cfm';document.body.appendChild(el);}
   el.innerHTML='<div class="cfmbox"><div class="cfmmsg">'+esc(msg||'确定吗？').replace(/\n/g,'<br>')+'</div><div class="cfmbtns"><button class="cfmb g" id="cfmNo">'+esc(opt.no||'取消')+'</button><button class="cfmb '+(opt.danger?'d':'p')+'" id="cfmYes">'+esc(opt.yes||'确定')+'</button></div></div>';
   el.classList.add('show');
-  const done=v=>{el.classList.remove('show');res(v);};
+  let settled=false;const done=v=>{if(settled)return;settled=true;if(_uiConfirmDone===done)_uiConfirmDone=null;el.classList.remove('show');res(v);};_uiConfirmDone=done;
   el.onclick=e=>{if(e.target.id==='cfm')done(false);};
   document.getElementById('cfmNo').onclick=()=>done(false);
   document.getElementById('cfmYes').onclick=()=>done(true);});}
@@ -8782,8 +8783,10 @@ $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();}
 function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}if(lockClearTarget({type:'chat',id},true))save(500);stack=stack.filter(s=>s.p!=='chat');_scrollBottomOnce['chat:'+id]=Date.now();go('chat',{id});}
 
 /* ---------- 备份 ---------- */
+function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'North导出文件';a.style.display='none';document.body.appendChild(a);
+  try{a.click();}finally{setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}try{if(a.parentNode)a.parentNode.removeChild(a);}catch(_){}},3000);}}
 async function exportData(){const data=await fullBackupState();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='North备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出');}
+  downloadBlob(blob,'North备份_'+new Date().toISOString().slice(0,10)+'.json');toast('已导出');}
 function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=mergeStateData(d,{keepPhoneFriend:true});phoneFriendState();save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
@@ -8796,7 +8799,7 @@ function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFrien
     groups:(data.groups||[]).map(g=>pickObj(g,['id','name','avatar','chatBg','bubbleStyle','memberBubbleStyles'])),
     beautyArchive:data.beautyArchive||null};}
 async function exportBeautyData(){const data=await fullBackupState(),pack=beautyPackFrom(data),blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='North美化包_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出美化包');}
+  downloadBlob(blob,'North美化包_'+new Date().toISOString().slice(0,10)+'.json');toast('已导出美化包');}
 function cacheMediaSize(v){v=''+(v||'');if(!v)return 0;if(/^idb-audio:/i.test(v)){try{return ((_imgCache&&_imgCache['__audio_'+v.slice(10)])||'').length||0;}catch(_){return 0;}}return /^(data:image\/|data:audio\/|idb:)/i.test(v)?v.length:0;}
 function mergeCacheStat(a,b){a.n+=(b&&b.n)||0;a.bytes+=(b&&b.bytes)||0;return a;}
 function cleanChatMediaMsg(m){const r={n:0,bytes:0};if(!m||typeof m!=='object')return r;
