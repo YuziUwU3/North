@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v575 · 黑胶折痕清除';
+const APP_VER='v576 · 小号数字年龄崩溃修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -526,7 +526,7 @@ function purgeRemovedHomeAppData(){let changed=false;const oldKey='co'+'zy';if(S
 
 /* =================== 工具 =================== */
 const $=s=>document.querySelector(s);
-const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function isImg(v){return v&&/^(https?:|data:)/.test(v);}
 function _avIc(n){const p=ICONS[n]||ICONS.user;return '<svg viewBox="0 0 24 24" width="58%" height="58%" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block;opacity:.92">'+p+'</svg>';}
 function av(v,extra){const cls='avatar '+(extra||'');
@@ -1107,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=575';
+  const url='sw.js?v=576';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -5988,7 +5988,7 @@ function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId())
 let _accountTapAt=0,_accountCreateBusy=false,_accountSaveBusy=false;
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
   const now=Date.now();if(now-_accountTapAt<350)return;_accountTapAt=now;switchAccount(aid);}
-function accountCreateTap(ev){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}if(_accountCreateBusy)return false;_accountCreateBusy=true;setTimeout(()=>{try{editAccount();}catch(e){toast('小号页面打开失败，请重新点一次');}finally{_accountCreateBusy=false;}},0);return false;}
+function accountCreateTap(ev){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}if(_accountCreateBusy)return false;_accountCreateBusy=true;setTimeout(()=>{try{editAccount();}catch(e){toast('小号页面打开失败：'+String((e&&e.message)||'未知错误').slice(0,46));}finally{_accountCreateBusy=false;}},0);return false;}
 function accountSaveTap(ev,id,isNew){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}if(_accountSaveBusy)return false;_accountSaveBusy=true;setTimeout(()=>{try{saveAccount(id,isNew);}catch(e){toast('小号保存失败，请重新打开后再试');}finally{_accountSaveBusy=false;}},0);return false;}
 function accountSwitchFromEvent(ev){if(ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-noswitch]'))return;const el=ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-account-switch]');if(!el)return;accountSwitchTap(ev,el.getAttribute('data-account-switch'));}
 function accountMgr(){initAccounts();const acts=S.me.accounts||[];

@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
+assert.match(source, /const esc=s=>String\(s==null\?'':s\)/);
 assert.match(source, /function accountCreateTap\(ev\)/);
 assert.match(source, /function accountSaveTap\(ev,id,isNew\)/);
 assert.match(source, /_accountCreateBusy=false,_accountSaveBusy=false/);
@@ -20,6 +21,31 @@ assert.match(source, /if\(saveNow\(\)===false\)/);
 assert.match(source, /\u5c0f\u53f7\u5df2\u521b\u5efa/);
 assert.match(source, /const nameEl=\$\('#ac_name'\),wxidEl=\$\('#ac_wxid'\),avatarEl=\$\('#ac_av'\),personaEl=\$\('#ac_per'\)/);
 assert.match(source, /\u5c0f\u53f7\u7f16\u8f91\u9875\u6ca1\u6709\u52a0\u8f7d\u5b8c\u6574/);
+
+const escStart = source.indexOf("const esc=");
+const escEnd = source.indexOf("function isImg", escStart);
+const editStart = source.indexOf("function editAccount(aid)");
+const editEnd = source.indexOf("function saveAccount", editStart);
+assert.ok(escStart >= 0 && escEnd > escStart && editStart >= 0 && editEnd > editStart);
+let accountSheet = "";
+const openSandbox = {
+  S: { me: { accounts: [{ id: "main", name: "主号" }] } },
+  initAccounts() {},
+  genWxid: () => "wx_first",
+  av: () => '<div class="avatar sm"></div>',
+  openModal(html) {
+    accountSheet = html;
+  },
+};
+vm.runInNewContext(
+  source.slice(escStart, escEnd) +
+    source.slice(editStart, editEnd) +
+    ";globalThis.escapedAge=esc(18);editAccount();",
+  openSandbox,
+);
+assert.equal(openSandbox.escapedAge, "18");
+assert.match(accountSheet, /<h3>新建小号<\/h3>/);
+assert.match(accountSheet, /id="ac_age"[^>]*value="18"/);
 
 const actionStart = source.indexOf("let _accountTapAt=");
 const actionEnd = source.indexOf("function accountSwitchFromEvent", actionStart);
