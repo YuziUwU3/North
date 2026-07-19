@@ -14,7 +14,7 @@ const AI_RECHARGE_FALLBACK=[
 ];
 const AI_PAYMENT_CHANNELS=[
   {id:'alipay',name:'支付宝',qr:'./pay-assets/alipay-receive.jpg',url:'https://qr.alipay.com/fkx10690k51wzfzjiusi25e'},
-  {id:'wechat',name:'微信支付',qr:'./pay-assets/wechat-receive.jpg',url:'wxp://f2f0lVGTDekFcpCiykQIBN6eIi4U3AgLK_6P-So5V0ZLA4szqzbZp3beFjBR0SFV_GL1'}
+  {id:'wechat',name:'微信支付',qr:'./pay-assets/wechat-receive.jpg',url:''}
 ];
 const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
 const AI_PURCHASE_NOTICE='生图API原生成功率约50%，单次扣费0.3元，算上失败重试和平台手续费，一张合格成品实际成本0.62-0.79元（已经尽力压低成本，原先每张成本在1元以上），定价统一按1元/张收取。定价不含人工辛苦费，全程自愿消费，没有强制消费。即便用户生成依旧失败，在接口已经扣费的情况下，你（用户）这边，会返还点数。本服务优势是出图稳定、出图速度较快；如果觉得不合适，大家可以自行去API站点购买接口。本系统只适合自己用的接口不稳定、花费更高的人使用。点数请按需购买，少量多次。购买点数之后不要更换浏览器，更换浏览器会导致点数消失！！！请将点数用完之后再换浏览器，如因换浏览器或手机而导致点数消失概不负责。';
@@ -135,6 +135,7 @@ function aiShowPayment(purchase,plan,note,channel){if(!purchase||!plan||!channel
   openModal(`<h3>${esc(channel.name)}收款码</h3>
     <div style="text-align:center;color:#999;font-size:13px;margin-bottom:8px">支付 ¥${Number(plan.amount_cny||0).toFixed(1)} · ${plan.kind==='service'?'快速音色克隆 1 个':'到账 '+Number(plan.points||0).toLocaleString()+'点'}</div>
     <img src="${esc(channel.qr)}" alt="${esc(channel.name)}收款码" onclick="viewImg('${esc(channel.qr)}')" style="display:block;width:min(72vw,280px);max-height:44vh;object-fit:contain;margin:0 auto;border-radius:8px;background:#fff">
+    <div style="margin:12px 0 0;border:1px solid rgba(255,91,111,.55);background:#2a151b;color:#ff9aa8;border-radius:8px;padding:9px 11px;font-size:13px;line-height:1.6">付款完成后一定要回到这里上传付款截图，并填写付款昵称/尾号和付款时间。没有截图不会进入后台核对，也不会自动加点。</div>
     <div style="margin:12px 0;background:#202126;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;color:#ddd;font-size:13px;line-height:1.7">
       订单号：<b>${esc(oid.slice(0,8).toUpperCase())}</b><br>付款备注：<b>${esc(note||'')}</b><br>
       <small style="color:#888">${plan.kind==='service'?'付款后上传付款截图，再添加微信发送订单号和音频。':'付款后上传付款截图，等待管理员核对真实账单。'}</small>
@@ -168,7 +169,7 @@ function aiShowCloneContact(note){openModal(`<h3>添加微信办理音色克隆<
   <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 
 function aiCopyPayment(text){try{navigator.clipboard&&navigator.clipboard.writeText(text);}catch(_){}toast('已复制付款备注');}
-function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);if(!c||!c.url)return;if(!automatic)toast('正在打开'+c.name+'…');try{location.href=c.url;}catch(_){if(!automatic)toast('没有自动打开，请长按保存收款码后扫码');}}
+function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);if(!c)return;if(!c.url){if(!automatic)toast('请长按保存收款码，付款后上传截图核对');return;}if(!automatic)toast('正在打开'+c.name+'…');try{window.open(c.url,'_blank','noopener');}catch(_){try{location.href=c.url;}catch(__){if(!automatic)toast('没有自动打开，请长按保存收款码后扫码');}}}
 
 function aiToggleCore(){const ac=aiCoreInit();ac.enabled=false;save();aiRenderStable();toast('内置 AI 主通道已固定关闭');}
 function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();aiRenderStable();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}

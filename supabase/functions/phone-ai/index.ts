@@ -617,6 +617,7 @@ Deno.serve(async (req) => {
       let query = supabase
         .from("phone_ai_purchases")
         .select("id,user_id,plan_id,provider,amount_cny,points,status,review_status,payer_hint,claimed_paid_at,proof_path,review_submitted_at,reviewed_at,review_note,external_order_id,created_at,paid_at")
+        .neq("review_status", "unsubmitted")
         .order("review_submitted_at", { ascending: false, nullsFirst: false })
         .limit(100);
       if (scope === "pending") query = query.eq("status", "pending").eq("review_status", "submitted");
@@ -716,6 +717,7 @@ Deno.serve(async (req) => {
       let query = supabase
         .from("phone_ai_purchases")
         .select("id,proof_path")
+        .neq("review_status", "unsubmitted")
         .limit(300);
       if (scope === "pending") query = query.eq("status", "pending").eq("review_status", "submitted");
       const { data: rows, error: findError } = await query;
@@ -774,13 +776,59 @@ Deno.serve(async (req) => {
       if (provider !== "alipay" && provider !== "wechat") {
         return json({ ok: false, error: "invalid-payment-provider" }, 400);
       }
-      const { count: pendingCount } = await supabase
+
+      const staleCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      await supabase
+        .from("phone_ai_purchases")
+        .update({
+          status: "cancelled",
+          review_note: "auto-cancelled: unpaid order expired before proof upload",
+        })
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .eq("review_status", "unsubmitted")
+        .lt("created_at", staleCutoff);
+
+      const { data: reusablePurchase, error: reusableError } = await supabase
+        .from("phone_ai_purchases")
+        .select("id,plan_id,provider,amount_cny,points,status,review_status,created_at")
+        .eq("user_id", userId)
+        .eq("plan_id", plan.id)
+        .eq("provider", provider)
+        .eq("status", "pending")
+        .eq("review_status", "unsubmitted")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (reusableError) throw reusableError;
+      if (reusablePurchase) {
+        return json({
+          ok: true,
+          purchase: reusablePurchase,
+          plan,
+          reused: true,
+          payment_note: `${plan.kind === "service" ? "CLONE" : "AI"}-${String(reusablePurchase.id).replace(/-/g, "").slice(0, 10).toUpperCase()}`,
+        });
+      }
+
+      await supabase
+        .from("phone_ai_purchases")
+        .update({
+          status: "cancelled",
+          review_note: "auto-cancelled: replaced by a newer unpaid order",
+        })
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .eq("review_status", "unsubmitted");
+
+      const { count: submittedPendingCount } = await supabase
         .from("phone_ai_purchases")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
-        .eq("status", "pending");
-      if ((pendingCount || 0) >= 3) {
-        return json({ ok: false, error: "too-many-pending-orders" }, 429);
+        .eq("status", "pending")
+        .eq("review_status", "submitted");
+      if ((submittedPendingCount || 0) >= 8) {
+        return json({ ok: false, error: "too-many-submitted-orders" }, 429);
       }
       const { data: purchase, error } = await supabase
         .from("phone_ai_purchases")

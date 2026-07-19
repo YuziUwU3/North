@@ -33,6 +33,7 @@ assert.match(backend, /\.from\(PROOF_BUCKET\)[\s\S]*\.upload\(path/);
 assert.match(backend, /review_status: "submitted"/);
 assert.match(backend, /sendAdminPush\(/);
 assert.match(backend, /action === "admin_orders"/);
+assert.match(backend, /\.neq\("review_status", "unsubmitted"\)/);
 assert.match(backend, /createSignedUrl\(row\.proof_path, 600\)/);
 assert.match(backend, /action === "admin_review"/);
 assert.match(backend, /supabase\.rpc\("phone_ai_confirm_purchase"/);
