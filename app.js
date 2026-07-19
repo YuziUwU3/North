@@ -328,7 +328,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v573 · 一起听质感与小号稳态';
+const APP_VER='v574 · 一起听双侧耳机线';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1107,7 +1107,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=573';
+  const url='sw.js?v=574';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1841,9 +1841,10 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
   const taBlock=sess?_mAvHTML(taAv,'ta',66):`<div onclick="musicInvite()" style="width:66px;height:66px;border-radius:50%;border:2px dashed rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-size:11px;color:#cfcfd6;cursor:pointer;text-align:center;line-height:1.25">+ 邀请<br>一起听</div>`;
   const avatars=`<div style="position:relative;width:230px;height:98px;margin:2px auto 0">
       <svg width="230" height="98" viewBox="0 0 230 98" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">
-        <path d="M48 86 C42 58 43 28 58 13 C64 7 70 4 78 2" fill="none" stroke="rgba(236,238,244,.58)" stroke-width="1.05" stroke-linecap="round"/>
-        <path d="M78 2 C98 -3 132 -3 152 2" fill="none" stroke="rgba(245,246,250,.68)" stroke-width="1.65" stroke-linecap="round"/>
-        <path d="M152 2 C160 4 166 7 172 13 C187 28 188 58 182 86" fill="none" stroke="rgba(236,238,244,.58)" stroke-width="1.05" stroke-linecap="round"/>
+        <path d="M56 22 C49 34 45 46 44.5 58" fill="none" stroke="rgba(240,242,248,.62)" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M44.5 58 C44 69 46 79 48 86" fill="none" stroke="rgba(232,235,242,.5)" stroke-width=".85" stroke-linecap="round"/>
+        <path d="M174 22 C181 34 185 46 185.5 58" fill="none" stroke="rgba(240,242,248,.62)" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M185.5 58 C186 69 184 79 182 86" fill="none" stroke="rgba(232,235,242,.5)" stroke-width=".85" stroke-linecap="round"/>
       </svg>
       <div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center">
         <div style="position:relative;z-index:1">${_mAvHTML(meAv,'me',66)}</div>
