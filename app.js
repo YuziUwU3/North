@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='585'){
+if(window.__NORTH_SHELL_BUILD__!=='586'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v585 · 弱网缓存完整性修复';
+const APP_VER='v586 · 微信白色主题完整适配';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1137,7 +1137,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=585';
+  const url='sw.js?v=586';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1644,7 +1644,7 @@ function render(){
   else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
-  const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'))?' wxlight':'';
+  const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'||c.p==='contactInfo'))?' wxlight':'';
   app.innerHTML='<div class="page'+_wxL+'">'+html+'</div>';
   renderLockScreen();renderLockPull();
   if(c.p==='chat'){afterChat(c.id);}
@@ -6219,7 +6219,7 @@ function powerConfig(c){const p=c&&c.power||{},levels=p.levels||{},self=((c&&c.s
 function bdsmKnowledgeConfig(c){const k=c&&c.power&&c.power.knowledge||{};return{enabled:!!k.enabled,level:k.level||'skilled',domains:Array.isArray(k.domains)?k.domains.slice():['consent','frameworks','roles','brat','protocol','negotiation','aftercare','remote','psychology','communication','risk','glossary'],style:k.style||'natural',quiet:k.quiet!==false,focus:k.focus||''};}
 function powerBand(v){v=+v||0;return v>=81?'极强':v>=61?'明显':v>=41?'中等':v>=21?'轻度':'关闭';}
 function powerChip(el){const on=el.getAttribute('aria-pressed')!=='true';el.setAttribute('aria-pressed',on?'true':'false');el.style.background=on?'#8c5270':'#2c2c2e';el.style.color=on?'#fff':'#bbb';}
-function cEditTab(n){for(let i=1;i<=4;i++){const p=$('#cpage'+i),t=$('#ctab'+i);if(p)p.style.display=n===i?'block':'none';if(t){t.style.background=n===i?'#3a6df0':'#2c2c2e';t.style.color=n===i?'#fff':'#ccc';}}}
+function cEditTab(n){for(let i=1;i<=4;i++){const p=$('#cpage'+i),t=$('#ctab'+i);if(p)p.style.display=n===i?'block':'none';if(t){t.classList.toggle('on',n===i);t.style.background=n===i?'#3a6df0':'#2c2c2e';t.style.color=n===i?'#fff':'#ccc';}}}
 function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:'',signature:'',persona:'',greeting:'',relation:'',wxid:genWxid(),pinned:false,blocked:false,allowStrangerCall:true,allowStrangerSms:true,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',_new:true};
   const t=c.traits||{};
   const pw=powerConfig(c),pk=bdsmKnowledgeConfig(c),powerStyles=POWER_STYLES.map(([k,n])=>`<button type="button" class="minibtn" data-power-style="${k}" aria-pressed="${pw.styles.includes(k)}" onclick="powerChip(this)" style="margin:0 6px 7px 0;background:${pw.styles.includes(k)?'#8c5270':'#2c2c2e'};color:${pw.styles.includes(k)?'#fff':'#bbb'}">${n}</button>`).join('');
@@ -6229,7 +6229,7 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
   const sliders=C_TRAITS.map(([k,nm])=>{const val=t[k]==null?50:t[k];return `<div class="field"><label>${nm} <b id="tv_${k}" style="color:#ff8fab">${val}</b><small style="color:#888">/100</small></label><input type="range" min="0" max="100" step="5" value="${val}" id="ts_${k}" oninput="var b=document.getElementById('tv_${k}');if(b)b.textContent=this.value" style="width:100%"></div>`;}).join('');
   openModal(`<h3>${id?'编辑角色':'新建角色'}</h3>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button class="minibtn" id="ctab1" style="flex:1;background:#3a6df0;color:#fff" onclick="cEditTab(1)">基础资料</button>
+      <button class="minibtn on" id="ctab1" style="flex:1;background:#3a6df0;color:#fff" onclick="cEditTab(1)">基础资料</button>
       <button class="minibtn" id="ctab2" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(2)">性格·进阶</button>
       <button class="minibtn" id="ctab3" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(3)">上下位</button>
       <button class="minibtn" id="ctab4" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(4)">专业知识</button></div>
@@ -6726,7 +6726,7 @@ async function hisReset(cid){if(!await uiConfirm('清空「他的微信」全部
 setInterval(()=>{if(_hisLogin&&Date.now()>=_hisLogin.until)hisKicked();},3000);
 function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(c);
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">资料</span><span class="r" onclick="editContact('${id}')">编辑</span></div>
-  <div class="scroll" style="background:#000">
+  <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">
     <div class="list"><div class="row" style="padding:18px 14px">${av(c.avatar,'lg')}
       <div class="meta"><div class="n" style="font-size:19px">${esc(c.name)}</div><div class="s">${esc(c.relation||'')}</div><div class="s">${esc(c.signature||'')}</div>${(c.city||charHomeCity(c))?`<div class="s">所在地：${esc(c.city||charHomeCity(c))}</div>`:''}</div></div></div>
     <div class="section" style="margin:12px">
@@ -8811,8 +8811,8 @@ async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.b
     save();if(cur().p==='wechat'&&wxTab==='moments')render();}catch(e){toast('生成失败：'+e.message);}}}
 
 /* ---------- 通用弹窗 ---------- */
-function openModal(html){$('#modalSheet').innerHTML=html;$('#modal').classList.add('show');}
-function closeModal(){$('#modal').classList.remove('show');}
+function openModal(html){const m=$('#modal'),p=cur().p;m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&(p==='wechat'||p==='chat'||p==='contactInfo'));$('#modalSheet').innerHTML=html;m.classList.add('show');}
+function closeModal(){const m=$('#modal');m.classList.remove('show');m.classList.remove('wxmodal-light');}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */
 let _uiConfirmDone=null;
 function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);return new Promise(res=>{let el=document.getElementById('cfm');

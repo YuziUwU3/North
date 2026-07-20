@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
+
+assert.match(
+  source,
+  /c\.p==='wechat'\|\|c\.p==='chat'\|\|c\.p==='contactInfo'/,
+  "white WeChat theme must include the contact profile page",
+);
+assert.match(
+  source,
+  /m\.classList\.toggle\('wxmodal-light',S\.me\.wxTheme==='white'/,
+  "contact edit modal must follow the WeChat theme",
+);
+assert.match(
+  source,
+  /background:\$\{S\.me\.wxTheme==='white'\?'#ededed':'#000'\}/,
+  "contact profile background must switch with the theme",
+);
+assert.match(html, /\.wxlight \.manual-reply-chip\{background:#fff/);
+assert.match(html, /\.wxlight \.inputbar\{background:#fff/);
+assert.match(html, /\.wxlight \.inputbar \.plus\{background:#fff!important/);
+assert.match(html, /\.modal\.wxmodal-light \.sheet\{background:#fff/);
+
+console.log("wechat light theme tests passed");

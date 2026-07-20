@@ -1,5 +1,5 @@
-const BUILD='585';
-const SHELL_CACHE='north-shell-v585';
+const BUILD='586';
+const SHELL_CACHE='north-shell-v586';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./app.js?v='+BUILD,kind:'app'},

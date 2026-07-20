@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='585';</script>
+<script>window.__NORTH_SHELL_BUILD__='586';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,12 +29,12 @@
 /* 主屏幕 WebApp 也主动检查最新 SW，接管后只刷新一次。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-585';
+  var key='north-sw-reloaded-586';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-    var u=new URL(location.href);u.searchParams.set('v','585');u.searchParams.set('sw',Date.now());location.replace(u.href);
+    var u=new URL(location.href);u.searchParams.set('v','586');u.searchParams.set('sw',Date.now());location.replace(u.href);
   });
-  var url='sw.js?v=585';
+  var url='sw.js?v=586';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -295,16 +295,35 @@ body{background:#000;padding:0;}
 .wxlight .pfcollect{background:#f1f1f3;color:#777;}
 .wxlight .msgt{color:#aaa;}
 .wxlight .moodbar{background:#f7f7f8;color:#8d8e92;border-bottom:.5px solid #e5e5e7;}
-.wxlight .inputbar{background:#f7f7f7;border-top:.5px solid #dcdcdc;}
+.wxlight .manual-reply-row{background:#f7f7f7;border-top:.5px solid #e5e5e5;}
+.wxlight .manual-reply-chip{background:#fff;color:#555;border-color:#d8d8dc;box-shadow:0 2px 8px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.9);}
+.wxlight .inputbar{background:#fff;border-top:.5px solid #dcdcdc;}
 .wxlight .inputbar textarea{background:#fff;color:#111;}
+.wxlight .inputbar .plus{background:#fff!important;color:#555!important;border-color:#d8d8dc!important;box-shadow:0 2px 8px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.95)!important;}
+.wxlight .inputbar .plus svg{stroke:#555!important;}
+.wxlight .inputbar .send{background:#fff;color:#222;border-color:#d8d8dc;box-shadow:0 2px 8px rgba(0,0,0,.1);}
 .wxlight .panel{background:#f7f7f7;border-top:.5px solid #dcdcdc;}
 .wxlight .panel .it span{color:#666;}
 .wxlight .panel .it .b{background:linear-gradient(145deg,#ffffff,#eee);box-shadow:0 4px 10px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.05);}
 .wxlight .section{background:#fff;}
 .wxlight .section .it{color:#111;border-bottom:.5px solid #ececec;}.wxlight .section .it .v{color:#999;}
+.wxlight .section input,.wxlight .section textarea,.wxlight .section select{background:#fff!important;color:#111!important;border-color:#ddd!important;}
+.wxlight .section .minibtn{background:#f1f1f3;color:#555;}
 .wxlight .mpost{background:#fff;border-bottom:.5px solid #eee;}.wxlight .mpost .tx{color:#222;}
 .wxlight .mpost .likes,.wxlight .mpost .cmts{background:#f2f2f2;}.wxlight .mpost .cmt{color:#333;}.wxlight .mpost .tm{color:#bbb;}
 .wxlight .empty{color:#999;}.wxlight .scroll{background:#ededed;}
+.modal.wxmodal-light .sheet{background:#fff;color:#222;}
+.modal.wxmodal-light .sheet h3{color:#222;}
+.modal.wxmodal-light .field label{color:#555;}
+.modal.wxmodal-light .field input,.modal.wxmodal-light .field textarea,.modal.wxmodal-light .field select{background:#fff!important;color:#111!important;border-color:#ddd!important;}
+.modal.wxmodal-light .section{background:#f7f7f8;}
+.modal.wxmodal-light .section .it{color:#222;border-bottom-color:#e8e8ea;}
+.modal.wxmodal-light .section .it .v{color:#888;}
+.modal.wxmodal-light .btn.g{background:#f0f0f2;color:#555;}
+.modal.wxmodal-light .minibtn{background:#f1f1f3;color:#555;border-color:#ddd;}
+.modal.wxmodal-light [data-power-style][aria-pressed="false"],.modal.wxmodal-light [data-power-pref][aria-pressed="false"],.modal.wxmodal-light [data-bdsm-domain][aria-pressed="false"]{background:#f1f1f3!important;color:#555!important;}
+.modal.wxmodal-light #ctab1,.modal.wxmodal-light #ctab2,.modal.wxmodal-light #ctab3,.modal.wxmodal-light #ctab4{background:#f1f1f3!important;color:#555!important;border:1px solid #e1e1e4;}
+.modal.wxmodal-light #ctab1.on,.modal.wxmodal-light #ctab2.on,.modal.wxmodal-light #ctab3.on,.modal.wxmodal-light #ctab4.on{background:#3a6df0!important;color:#fff!important;border-color:#3a6df0;}
 .cfm{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);}
 .cfm.show{display:flex;}
 .cfmbox{width:78%;max-width:300px;background:#232327;border-radius:16px;padding:22px 18px 14px;box-shadow:0 18px 50px rgba(0,0,0,.5);text-align:center;}
@@ -739,7 +758,7 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="app.js?v=585" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=585"></script>
+<script src="app.js?v=586" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=586"></script>
 </body>
 </html>
