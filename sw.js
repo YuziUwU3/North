@@ -1,5 +1,5 @@
-const BUILD='594';
-const SHELL_CACHE='north-shell-v594';
+const BUILD='595';
+const SHELL_CACHE='north-shell-v595';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -101,12 +101,14 @@ self.addEventListener('fetch',event=>{
   if(request.mode==='navigate'){
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
+      const cached=await currentCore(cache,'html');
+      if(cached)return cached;
       try{
         const response=await checkedResponse(request,'html',1);
         await cache.put(CORE_FILES[0].url,response.clone());
         return response;
       }catch(_){
-        return (await currentCore(cache,'html'))||new Response(
+        return new Response(
           '<meta charset="utf-8"><body style="background:#111;color:#eee;font-family:sans-serif;padding:30px;text-align:center">页面文件没有完整下载，请连接可访问 GitHub Pages 的网络后重新打开。聊天和角色数据不会丢失。</body>',
           {headers:{'Content-Type':'text/html;charset=utf-8'}}
         );

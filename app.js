@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='594'){
+if(window.__NORTH_SHELL_BUILD__!=='595'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v594 · 浏览器授权数量实时同步';
+const APP_VER='v595 · 安卓稳态与授权安全';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1141,7 +1141,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=594';
+  const url='sw.js?v=595';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4138,7 +4138,10 @@ async function licenseBindCurrent(){if(!window.NorthLicense){toast('授权组件
 }catch(e){toast((e&&e.message)||'绑定失败');if(cur().p==='settings')render();}}
 async function licenseSyncAiIdentity(force){if(!window.NorthLicense||!NorthLicense.isManaged()||!NorthLicense.session())return null;const s=NorthLicense.session(),markKey='north_license_ai_sync_v1';let oldMark='';try{oldMark=localStorage.getItem(markKey)||'';}catch(_){}const expected=(s.sessionId||s.licenseId);if(!force&&oldMark===expected)return null;
   const result=await NorthLicense.syncAIIdentity(aiUserId(),aiUserSecret());if(!result||!result.userId||!result.clientSecret)throw new Error('AI账户同步失败');try{localStorage.setItem('yibei_ai_uid',result.userId);localStorage.setItem('yibei_ai_secret',result.clientSecret);localStorage.setItem(markKey,expected);}catch(_){}if(typeof _aiAcct!=='undefined')_aiAcct=null;if(typeof _aiAutoTried!=='undefined')_aiAutoTried=false;return result;}
-async function licenseTransferModal(){try{const r=await NorthLicense.createTransfer();openModal('<h3>一次性迁移码</h3><div class="hint">在新浏览器或主屏幕入口点“使用迁移码”，输入下面的号码。<b>5分钟有效，只能使用一次</b>。</div><div style="font-size:28px;letter-spacing:4px;text-align:center;color:#f0d7aa;font-weight:700;padding:18px 0">'+esc(r.code)+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'生成迁移码失败');}}
+async function licenseTransferModal(){try{const r=await NorthLicense.createTransfer();openModal('<h3>一次性迁移码</h3><div class="hint">在新浏览器或主屏幕入口点“使用迁移码”，输入下面的号码。<b>5分钟有效，只能使用一次；生成新码会立即作废旧码。</b><br>为防止误刷，30秒内不能重复生成，每小时最多10次。</div><div style="font-size:28px;letter-spacing:4px;text-align:center;color:#f0d7aa;font-weight:700;padding:18px 0">'+esc(r.code)+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'生成迁移码失败');}}
+function licenseRelinkModal(){openModal('<h3>合并到已有手机授权</h3><div class="hint" style="line-height:1.8">用于 Safari、Edge 各自显示 1/3 的情况。合并后两个浏览器会进入同一组授权，并共用同一个AI账户。<b>本机聊天、角色和设置不会删除。</b><br><br>优先点扫脸/指纹并选择原来 Safari 的 North 通行密钥；如果不好分辨，就先在 Safari 生成迁移码，再回这个浏览器输入。</div><button class="btn p" onclick="licenseRelinkPasskey()">扫脸 / 指纹合并</button><div class="field" style="margin-top:12px"><label>或输入原浏览器生成的迁移码</label><input id="license_relink_code" maxlength="9" inputmode="text" placeholder="例如 ABCD-EFGH"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="licenseRelinkTransfer()">用迁移码合并</button></div>');}
+async function licenseRelinkPasskey(){if(!await uiConfirm('当前浏览器会改绑到你接下来选择的已有手机授权，并退出这里原来的独立授权。AI账户也会切换为目标授权绑定的账户，继续吗？'))return;try{toast('请验证原来那张手机授权…');const r=await NorthLicense.relinkPasskey();await licenseSyncAiIdentity(true);closeModal();toast('已合并，现在共有 '+((r.session&&r.session.activeCount)||1)+'/3 个浏览器');if(cur().p==='settings')render();}catch(e){toast((e&&e.message)||'合并失败');}}
+async function licenseRelinkTransfer(){const el=document.getElementById('license_relink_code'),code=String(el&&el.value||'').trim();if(!code){toast('请输入迁移码');return;}if(!await uiConfirm('确认把当前浏览器合并到迁移码对应的手机授权？本机聊天和角色不会删除。'))return;try{const r=await NorthLicense.relinkTransfer(code);await licenseSyncAiIdentity(true);closeModal();toast('已合并，现在共有 '+((r.session&&r.session.activeCount)||1)+'/3 个浏览器');if(cur().p==='settings')render();}catch(e){toast((e&&e.message)||'合并失败');}}
 function licenseTimeText(value){const t=new Date(value||0).getTime();return t?fmtDur(Math.max(0,Date.now()-t))+'前':'未知';}
 let _licenseStatusRefreshBusy=false;
 function licenseUpdateCount(count){const btn=document.getElementById('license_devices_btn');if(btn)btn.textContent='已授权浏览器 '+Math.max(0,+count||0)+'/3';}
@@ -4147,7 +4150,7 @@ async function licenseDevicesModal(){openModal('<h3>已授权浏览器</h3><div 
 async function licenseRevokeDevice(id,current){if(!await uiConfirm(current?'退出当前浏览器授权？不会删除任何数据。':'移除这个浏览器授权？'))return;try{await NorthLicense.revokeSession(id);if(current){try{localStorage.removeItem('yibei_unlocked');}catch(_){}closeModal();showGate();}else{toast('已移除');licenseDevicesModal();}}catch(e){toast((e&&e.message)||'移除失败');}}
 function licenseStatusSection(){if(!window.NorthLicense)return '';const managed=NorthLicense.isManaged()&&!!NorthLicense.session(),m=NorthLicense.meta(),count=Math.max(0,+m.sessionCount||0),passkeys=Math.max(0,+m.passkeyCount||0);
   if(managed)setTimeout(licenseRefreshStatus,0);
-  return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">手机授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹。换浏览器或添加到主屏幕后，点“恢复授权”即可。':'当前浏览器已授权，建议继续绑定扫脸/指纹，防止换浏览器后进不来。'):'当前还是旧版浏览器授权。绑定后，邀请码仍永久失效，之后用手机验证恢复。')+'<br><b>大刷新会让旧授权在云端一起失效，不能靠恢复绕过。</b></div><div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'重新绑定手机验证':'绑定扫脸 / 指纹恢复')+'</button></div>'+(managed?'<div class="btns" style="padding:0 14px 8px"><button class="btn g" id="license_devices_btn" onclick="licenseDevicesModal()">已授权浏览器 '+count+'/3</button><button class="btn g" onclick="licenseTransferModal()">生成迁移码</button></div>':'')+'</div>';}
+  return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">手机授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹。换浏览器或添加到主屏幕后，点“恢复授权”即可。':'当前浏览器已授权，建议继续绑定扫脸/指纹，防止换浏览器后进不来。'):'当前还是旧版浏览器授权。绑定后，邀请码仍永久失效，之后用手机验证恢复。')+'<br><b>大刷新会让旧授权在云端一起失效，不能靠恢复绕过。</b></div><div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'重新绑定手机验证':'绑定扫脸 / 指纹恢复')+'</button></div>'+(managed?'<div class="btns" style="padding:0 14px 8px"><button class="btn g" id="license_devices_btn" onclick="licenseDevicesModal()">已授权浏览器 '+count+'/3</button><button class="btn g" onclick="licenseTransferModal()">生成迁移码</button></div><div class="btns" style="padding:0 14px 10px"><button class="btn g" onclick="licenseRelinkModal()">Safari / Edge 授权合并</button></div>':'')+'</div>';}
 function chatAddMenu(){openModal(`<h3>＋</h3>
   <button class="btn p" style="margin-bottom:8px" onclick="closeModal();editContact()">新建角色</button>
   <button class="btn g" onclick="closeModal();createGroup()">发起群聊</button>
@@ -8987,12 +8990,13 @@ function storageFullAlert(e){const quota=isQuotaError(e);openModal(`<h3>${quota?
 /* ---------- 时钟 & 启动 ---------- */
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
-function androidResumeRepair(){try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
+let _androidResumeRepairAt=0;
+function androidResumeRepair(force){const host=document.getElementById('app');if(!force&&host&&host.firstElementChild){window.__northBootReady=true;return;}const now=Date.now();if(now-_androidResumeRepairAt<800)return;_androidResumeRepairAt=now;try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
 initBattery();
 window.addEventListener('pagehide',()=>{sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{sleepMarkAway();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
-window.addEventListener('pageshow',()=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(androidResumeRepair,260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(androidResumeRepair,280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pageshow',e=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});
 try{sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}/* 先立刻渲染；失败时由安卓启动保护显示中文自救页 */

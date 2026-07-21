@@ -251,6 +251,29 @@
     return result;
   }
 
+  async function retirePreviousSession(previous, result) {
+    if (!previous || !previous.token || !previous.sessionId || !result || !result.session) return result;
+    if (previous.sessionId !== result.session.sessionId) {
+      try {
+        await api('session_revoke', {
+          sessionToken: previous.token,
+          targetSessionId: previous.sessionId,
+        });
+      } catch (_) {}
+    }
+    try {
+      const status = await check();
+      result.session.activeCount = status.sessionCount || 1;
+    } catch (_) {}
+    return result;
+  }
+
+  async function relinkPasskey() {
+    const previous = session();
+    const result = await restorePasskey();
+    return retirePreviousSession(previous, result);
+  }
+
   async function check() {
     const current = session();
     if (!current) throw new Error('本浏览器还没有授权');
@@ -273,6 +296,12 @@
       evicted: result.session.evicted || [],
     });
     return result;
+  }
+
+  async function relinkTransfer(transferCode) {
+    const previous = session();
+    const result = await redeemTransfer(transferCode);
+    return retirePreviousSession(previous, result);
   }
 
   async function listSessions() {
@@ -325,9 +354,11 @@
     legacyActivate,
     bindPasskey,
     restorePasskey,
+    relinkPasskey,
     check,
     createTransfer,
     redeemTransfer,
+    relinkTransfer,
     listSessions,
     revokeSession,
     syncAIIdentity,

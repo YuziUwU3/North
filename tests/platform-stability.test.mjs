@@ -6,10 +6,15 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
+const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
 assert.match(html, /min-height:100vh;min-height:100dvh/);
 assert.match(html, /\.phone\{width:100vw;height:100vh;height:100dvh/);
 assert.match(html, /\.livemap\{height:calc\(100vh - 44px\);height:calc\(100dvh - 44px\)/);
+assert.match(html, /controllerchange[\s\S]*?if\(window\.__northBootReady\)return;[\s\S]*?location\.replace/);
+assert.match(sw, /if\(request\.mode==='navigate'\)[\s\S]*?const cached=await currentCore\(cache,'html'\);[\s\S]*?if\(cached\)return cached;/);
+assert.match(app, /function androidResumeRepair\(force\)[\s\S]*?if\(!force&&host&&host\.firstElementChild\)/);
+assert.match(app, /pageshow',e=>[\s\S]*?androidResumeRepair\(!!e\.persisted\)/);
 
 assert.match(app, /function clearVoiceAudio\(m\)[\s\S]*?URL\.revokeObjectURL\(m\._aurl\)/);
 assert.match(app, /function downloadBlob\(blob,name\)[\s\S]*?URL\.revokeObjectURL\(url\)/);

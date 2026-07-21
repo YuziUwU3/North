@@ -11,6 +11,11 @@ const SERVICE_KEY = Deno.env.get('PHONE_SERVICE_ROLE_KEY') || Deno.env.get('SUPA
 const RP_ID = Deno.env.get('LICENSE_RP_ID') || 'fenglina35-dotcom.github.io';
 const RP_NAME = 'North 小手机';
 const MAX_SESSIONS = 3;
+const TRANSFER_CREATE_COOLDOWN_MS = 30 * 1000;
+const TRANSFER_CREATE_HOURLY_LIMIT = 10;
+const TRANSFER_REDEEM_WINDOW_MS = 10 * 60 * 1000;
+const TRANSFER_REDEEM_FAILURE_LIMIT = 8;
+const TRANSFER_ATTEMPT_RETENTION_MS = 24 * 60 * 60 * 1000;
 // 大刷新时与 app.js 的 SHARE_EPOCH 一起递增并重新部署，旧通行密钥将无法恢复。
 const LICENSE_EPOCH = Number(Deno.env.get('LICENSE_EPOCH') || 3);
 const ALLOWED_ORIGINS = new Set([
@@ -75,6 +80,13 @@ async function sha256Hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
   return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function transferRequesterHash(req: Request): Promise<string> {
+  const forwarded = cleanText(req.headers.get('x-forwarded-for'), 180).split(',')[0].trim();
+  const ip = forwarded || cleanText(req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip'), 80) || 'unknown';
+  const ua = cleanText(req.headers.get('user-agent'), 300);
+  return sha256Hex(`${ip}|${ua}`);
 }
 
 function bytesToBase64URL(bytes: Uint8Array): string {
@@ -458,8 +470,28 @@ async function revokeSession(body: JsonMap) {
   return { ok: true, revokedCurrent: targetId === session.id };
 }
 
-async function createTransfer(body: JsonMap) {
+async function createTransfer(req: Request, body: JsonMap) {
   const session = await sessionAuth(body.sessionToken);
+  const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const [{ count: recentCount, error: countError }, { data: latest, error: latestError }] = await Promise.all([
+    supabase
+      .from('phone_license_transfers')
+      .select('*', { count: 'exact', head: true })
+      .eq('license_id', session.license_id)
+      .gte('created_at', hourAgo),
+    supabase
+      .from('phone_license_transfers')
+      .select('created_at')
+      .eq('license_id', session.license_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (countError || latestError) throw new Error('检查迁移码生成频率失败');
+  if ((recentCount || 0) >= TRANSFER_CREATE_HOURLY_LIMIT) throw new Error('迁移码生成过于频繁，请一小时后再试');
+  if (latest && Date.now() - new Date(latest.created_at).getTime() < TRANSFER_CREATE_COOLDOWN_MS) {
+    throw new Error('请30秒后再生成新的迁移码');
+  }
   await supabase
     .from('phone_license_transfers')
     .update({ used_at: new Date().toISOString() })
@@ -479,8 +511,24 @@ async function createTransfer(body: JsonMap) {
 }
 
 async function redeemTransfer(req: Request, body: JsonMap) {
+  const requesterHash = await transferRequesterHash(req);
+  await supabase
+    .from('phone_license_transfer_attempts')
+    .delete()
+    .lt('created_at', new Date(Date.now() - TRANSFER_ATTEMPT_RETENTION_MS).toISOString());
+  const attemptCutoff = new Date(Date.now() - TRANSFER_REDEEM_WINDOW_MS).toISOString();
+  const { count: failedCount, error: attemptError } = await supabase
+    .from('phone_license_transfer_attempts')
+    .select('*', { count: 'exact', head: true })
+    .eq('requester_hash', requesterHash)
+    .gte('created_at', attemptCutoff);
+  if (attemptError) throw new Error('检查迁移码安全限制失败');
+  if ((failedCount || 0) >= TRANSFER_REDEEM_FAILURE_LIMIT) throw new Error('迁移码尝试过多，请10分钟后再试');
   const code = cleanTransferCode(body.transferCode);
-  if (code.length !== 8) throw new Error('请输入8位迁移码');
+  if (code.length !== 8) {
+    await supabase.from('phone_license_transfer_attempts').insert({ requester_hash: requesterHash });
+    throw new Error('请输入8位迁移码');
+  }
   const codeHash = await sha256Hex(code);
   const { data: transfer, error } = await supabase
     .from('phone_license_transfers')
@@ -488,6 +536,7 @@ async function redeemTransfer(req: Request, body: JsonMap) {
     .eq('code_hash', codeHash)
     .maybeSingle();
   if (error || !transfer || transfer.used_at || new Date(transfer.expires_at).getTime() < Date.now()) {
+    await supabase.from('phone_license_transfer_attempts').insert({ requester_hash: requesterHash });
     throw new Error('迁移码无效、已使用或已过期');
   }
   const { data: claimed, error: claimError } = await supabase
@@ -499,6 +548,7 @@ async function redeemTransfer(req: Request, body: JsonMap) {
     .maybeSingle();
   if (claimError || !claimed) throw new Error('迁移码已经被使用');
   const session = await createSession(transfer.license_id, req, body.deviceLabel);
+  await supabase.from('phone_license_transfer_attempts').delete().eq('requester_hash', requesterHash);
   return { ok: true, session };
 }
 
@@ -573,7 +623,7 @@ Deno.serve(async (req) => {
     else if (action === 'session_check') result = await checkSession(body);
     else if (action === 'session_list') result = await listSessions(body);
     else if (action === 'session_revoke') result = await revokeSession(body);
-    else if (action === 'transfer_create') result = await createTransfer(body);
+    else if (action === 'transfer_create') result = await createTransfer(req, body);
     else if (action === 'transfer_redeem') result = await redeemTransfer(req, body);
     else if (action === 'ai_identity_sync') result = await syncAIIdentity(body);
     else throw new Error('未知的授权操作');
@@ -581,7 +631,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : '授权操作失败';
     console.error('phone-license', message);
-    const status = /无效|失效|过期|没有|缺少|校验|已经/.test(message) ? 400 : 500;
+    const status = /频繁|尝试过多|稍后再试/.test(message) ? 429 : /无效|失效|过期|没有|缺少|校验|已经|请输入/.test(message) ? 400 : 500;
     return reply(req, { ok: false, error: message }, status);
   }
 });
