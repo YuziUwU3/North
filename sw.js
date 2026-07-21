@@ -1,7 +1,8 @@
-const BUILD='590';
-const SHELL_CACHE='north-shell-v590';
+const BUILD='591';
+const SHELL_CACHE='north-shell-v591';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
+  {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD,kind:'app'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'}
 ];
@@ -38,6 +39,10 @@ function validShellText(kind,text){
     &&text.includes("const APP_VER='v"+BUILD+' ')
     &&text.includes("window.__NORTH_SHELL_BUILD__!=='"+BUILD+"'")
     &&text.includes('showGate();');
+  if(kind==='license')return text.length>10000
+    &&text.includes('window.NorthLicense')
+    &&text.includes('restorePasskey')
+    &&text.includes('redeemTransfer');
   if(kind==='ai')return text.length>30000
     &&text.includes('function renderAIAccount()')
     &&text.includes('function aiAccountApplyResult(');
@@ -114,6 +119,13 @@ self.addEventListener('fetch',event=>{
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       return (await currentCore(cache,'app'))||checkedResponse(request,'app',2);
+    })());
+    return;
+  }
+  if(/\/license-gate\.js$/.test(url.pathname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(SHELL_CACHE);
+      return (await currentCore(cache,'license'))||checkedResponse(request,'license',2);
     })());
     return;
   }

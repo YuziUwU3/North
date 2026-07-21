@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='590'){
+if(window.__NORTH_SHELL_BUILD__!=='591'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -18,12 +18,9 @@ const SHARE_GATE=true, SHARE_PW='';
    你自己用云端"主码"(可反复用)进，代码里不留后门。 */
 const GATE_URL='https://lkhlyfpssmrjkkzhuzag.supabase.co';
 const GATE_KEY='sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
+/* 大刷新时同时更新 phone-license 云函数的 LICENSE_EPOCH；旧通行密钥会在云端一起失效。 */
+const SHARE_EPOCH=3;
 function normalizeInviteCode(code){return String(code||'').trim().replace(/\s+/g,'').toUpperCase();}
-async function redeemInvite(code){try{
-  const r=await fetch(GATE_URL+'/rest/v1/rpc/redeem_invite',{method:'POST',headers:{'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'},body:JSON.stringify({p_code:normalizeInviteCode(code)})});
-  if(!r.ok)return {ok:false,err:'验证服务出错('+r.status+')，稍后再试'};
-  const v=await r.json();return {ok:v===true};
-}catch(e){return {ok:false,err:'连不上验证服务器，检查下网络'};}}
 /* 小手机好友：公开ID + 本机密钥。ID可以给别人搜，密钥只存在本机，用来防冒充。 */
 function pfRand(n){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';try{const b=new Uint8Array(n);crypto.getRandomValues(b);for(let i=0;i<n;i++)s+=a[b[i]%a.length];return s;}catch(_){for(let i=0;i<n;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}}
 function pfMsgList(store,key){const a=store&&store[key];return Array.isArray(a)?a:[];}
@@ -345,10 +342,13 @@ function pfAtEnd(){clearTimeout(_pfAtTimer);_pfAtTimer=null;}
 let _pfTapLast=null;
 function pfGroupAvatarTap(ev,gid,id){try{ev.preventDefault();ev.stopPropagation();}catch(_){}const now=Date.now(),key=gid+'|'+((''+id).toUpperCase());if(_pfTapLast&&_pfTapLast.key===key&&now-_pfTapLast.t<340){_pfTapLast=null;pfAtEnd();phoneFriendGroupPat(gid,id);return;}_pfTapLast={key,t:now};pfAtEnd();}
 function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagation();}catch(_){}pfAtEnd();_pfTapLast=null;phoneFriendGroupPat(gid,id);}
-/* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
-const SHARE_EPOCH=3;
-function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v590 · 英语口音选择';
+/* 一键踢人：SHARE_EPOCH 与 phone-license 云函数一起加 1，旧浏览器和旧通行密钥都会失效。 */
+if(window.NorthLicense)window.NorthLicense.init({baseUrl:GATE_URL,apiKey:GATE_KEY,epoch:SHARE_EPOCH});
+function gateOK(){if(!SHARE_GATE)return true;try{
+  if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
+  return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
+}catch(e){return false;}}
+const APP_VER='v591 · 手机授权与点数同步';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -693,6 +693,7 @@ function ttsUseRelay(){const t=ttsCfg();return !!(ttsEnabled(t)&&ttsRelayOn(t)&&
 function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}catch(_){}if(!id){id='ph_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('yibei_ai_uid',id);}catch(_){}}return id;}
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
+  await licenseSyncAiIdentity();
   const uid=aiUserId(),sec=aiUserSecret();
   let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},action==='image'?360000:190000);}catch(e){throw new Error(apiCaughtCN(e));}
   const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(msg)?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
@@ -1140,7 +1141,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=590';
+  const url='sw.js?v=591';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2399,7 +2400,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="minibtn" id="settab1" style="flex:1;${_setTab===2?'background:#2c2c2e;color:#ccc':'background:#07c160;color:#fff'}" onclick="setTab(1)">接口·模型</button>
       <button class="minibtn" id="settab2" style="flex:1;${_setTab===2?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(2)">偏好·工具</button></div>
-    ${quickJumpBar([['聊天',"settingsJump(1,'set_chat')"],['辅助',"settingsJump(1,'set_aux')"],['联网',"settingsJump(1,'set_search')"],['识图',"settingsJump(1,'set_vision')"],['语音',"settingsJump(1,'set_tts')"],['偏好',"settingsJump(2,'set_prefs')"],['外观',"settingsJump(2,'set_look')"],['表情/语音',"settingsJump(2,'set_media')"],['AI真图',"settingsJump(2,'set_image')"],['桌面布局',"settingsJump(2,'set_layout')"],['备份',"settingsJump(2,'set_backup')"],['存储',"settingsJump(2,'set_storage')"]])}
+    ${quickJumpBar([['聊天',"settingsJump(1,'set_chat')"],['辅助',"settingsJump(1,'set_aux')"],['联网',"settingsJump(1,'set_search')"],['识图',"settingsJump(1,'set_vision')"],['语音',"settingsJump(1,'set_tts')"],['偏好',"settingsJump(2,'set_prefs')"],['外观',"settingsJump(2,'set_look')"],['表情/语音',"settingsJump(2,'set_media')"],['AI真图',"settingsJump(2,'set_image')"],['手机授权',"settingsJump(2,'set_license')"],['桌面布局',"settingsJump(2,'set_layout')"],['备份',"settingsJump(2,'set_backup')"],['存储',"settingsJump(2,'set_storage')"]])}
     <div id="setpage1" style="display:${_setTab===2?'none':'block'}">
     <div class="hint">聊天和识图可以用不同模型。地址已经预填好了，填上 Key 就能用。</div>
     <div class="section" id="set_chat"><div style="padding:12px 14px;font-weight:600;color:#07c160">聊天模型</div>
@@ -2508,6 +2509,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     </div>
     <div id="testOut" style="display:none"></div>
     <button class="btn p" onclick="saveSettings()">保存设置</button>
+    ${licenseStatusSection()}
     ${storageMeter()}
     <div class="btns" id="set_layout" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
     <div id="set_backup">
@@ -4097,21 +4099,51 @@ function maybeFirstRun(){try{if(!gateOK())return;if(localStorage.getItem('yibei_
     const noContacts=!(S.contacts||[]).filter(c=>!c.deleted).length;
     const noKey=!(S.settings&&S.settings.chat&&S.settings.chat.key);
     if(noContacts&&noKey){localStorage.setItem('yibei_manual_seen','1');showManual();}}catch(e){}}
+function licenseMarkUnlocked(){try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}}
+function licenseFinishGate(){licenseMarkUnlocked();const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);}
+function licenseEvictedNotice(result){const a=result&&result.session&&result.session.evicted;if(a&&a.length)toast('已恢复，并退出最早的浏览器：'+a.join('、'));}
 function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   if(!el){el=document.createElement('div');el.id='gate';el.className='gate';document.body.appendChild(el);}
-  el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>North</h2><p>请输入邀请码开始<br>（找邀请你的人要，一个码只能用一次）</p><input id="gateInp" inputmode="text" placeholder="邀请码" autocomplete="off"><button id="gateBtn">进入</button><div class="gerr" id="gateErr"></div>';
-  const inp=document.getElementById('gateInp'),err=document.getElementById('gateErr'),btn=document.getElementById('gateBtn');
-  const unlock=()=>{try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);};
-  let _busy=false;
-  const tryIn=async()=>{if(_busy)return;const v=normalizeInviteCode(inp.value);inp.value=v;if(!v){err.textContent='请输入邀请码';inp.focus();return;}
-    if(SHARE_PW&&v===SHARE_PW){unlock();return;}
-    _busy=true;btn.disabled=true;btn.textContent='验证中…';err.textContent='';
-    const res=await redeemInvite(v);
-    _busy=false;btn.disabled=false;btn.textContent='进入';
-    if(res.ok){unlock();}else{err.textContent=res.err||'邀请码无效、已被使用，或旧缓存已经核销过；请换新的未使用邀请码';inp.value='';inp.focus();}};
-  btn.onclick=tryIn;
-  inp.onkeydown=e=>{if(e.key==='Enter')tryIn();};
+  el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>North</h2><p>第一次使用请输入邀请码<br>邀请码成功后永久失效</p><input id="gateInp" inputmode="text" placeholder="邀请码" autocomplete="one-time-code"><button id="gateBtn">使用邀请码进入</button><div class="gerr" id="gateErr"></div><div class="gline"><span>已经在这部手机使用过</span></div><button id="gateRestore" class="gsecondary">扫脸 / 指纹恢复授权</button><button id="gateTransferToggle" class="glink">当前浏览器不支持？使用迁移码</button><div id="gateTransferBox" class="gtransfer" style="display:none"><input id="gateTransferInp" inputmode="text" maxlength="9" placeholder="8位迁移码" autocomplete="one-time-code"><button id="gateTransferBtn" class="gsecondary">使用迁移码恢复</button></div>';
+  const inp=document.getElementById('gateInp'),err=document.getElementById('gateErr'),btn=document.getElementById('gateBtn'),restore=document.getElementById('gateRestore'),toggle=document.getElementById('gateTransferToggle'),transferBox=document.getElementById('gateTransferBox'),transferInp=document.getElementById('gateTransferInp'),transferBtn=document.getElementById('gateTransferBtn');
+  let busy=false;
+  const setBusy=(on,label)=>{busy=on;[btn,restore,transferBtn].forEach(x=>{if(x)x.disabled=on;});if(label)err.textContent=label;};
+  const tryIn=async()=>{if(busy)return;const v=normalizeInviteCode(inp.value);inp.value=v;if(!v){err.textContent='请输入邀请码';inp.focus();return;}
+    if(SHARE_PW&&v===SHARE_PW){licenseFinishGate();return;}
+    if(!window.NorthLicense){err.textContent='授权组件没有加载，请刷新页面';return;}
+    setBusy(true,'正在核销邀请码…');btn.textContent='验证中…';
+    try{
+      await NorthLicense.activate(v);licenseMarkUnlocked();await licenseSyncAiIdentity(true);err.textContent='邀请码已通过，正在绑定这部手机…';btn.textContent='绑定手机…';
+      try{await NorthLicense.bindPasskey();toast('已绑定手机，以后换浏览器可直接恢复');}catch(bindErr){const m=(bindErr&&bindErr.message)||'';if(!/取消/.test(m))toast(m+'；可稍后在设置里重试');}
+      licenseFinishGate();
+    }catch(e){err.textContent=(e&&e.message)||'邀请码验证失败';inp.value='';inp.focus();}
+    finally{setBusy(false,'');btn.textContent='使用邀请码进入';}};
+  const tryRestore=async()=>{if(busy)return;if(!window.NorthLicense){err.textContent='授权组件没有加载，请刷新页面';return;}setBusy(true,'请按手机提示完成验证…');restore.textContent='等待手机验证…';
+    try{const result=await NorthLicense.restorePasskey();await licenseSyncAiIdentity(true);licenseFinishGate();licenseEvictedNotice(result);}catch(e){err.textContent=(e&&e.message)||'恢复授权失败';}
+    finally{setBusy(false,'');restore.textContent='扫脸 / 指纹恢复授权';}};
+  const tryTransfer=async()=>{if(busy)return;const code=String(transferInp.value||'').trim();if(!code){err.textContent='请输入迁移码';transferInp.focus();return;}setBusy(true,'正在恢复授权…');
+    try{const result=await NorthLicense.redeemTransfer(code);await licenseSyncAiIdentity(true);licenseFinishGate();licenseEvictedNotice(result);}catch(e){err.textContent=(e&&e.message)||'迁移码恢复失败';}
+    finally{setBusy(false,'');}};
+  btn.onclick=tryIn;restore.onclick=tryRestore;transferBtn.onclick=tryTransfer;
+  toggle.onclick=()=>{const show=transferBox.style.display==='none';transferBox.style.display=show?'block':'none';if(show)setTimeout(()=>transferInp.focus(),60);};
+  inp.onkeydown=e=>{if(e.key==='Enter')tryIn();};transferInp.onkeydown=e=>{if(e.key==='Enter')tryTransfer();};
   setTimeout(()=>inp.focus(),100);}
+let _licenseCheckBusy=false;
+async function licenseCheckSession(){if(_licenseCheckBusy||!window.NorthLicense||!NorthLicense.isManaged()||!NorthLicense.session())return;_licenseCheckBusy=true;
+  try{await NorthLicense.check();await licenseSyncAiIdentity();}
+  catch(e){if(e&&e.server&&e.status===400){NorthLicense.clearSession();try{localStorage.removeItem('yibei_unlocked');}catch(_){}showGate();toast('这个浏览器授权已退出，请重新恢复');}}
+  finally{_licenseCheckBusy=false;}}
+async function licenseBindCurrent(){if(!window.NorthLicense){toast('授权组件没有加载，请刷新页面');return;}try{
+  toast('正在准备手机授权…');if(!NorthLicense.isManaged()||!NorthLicense.session())await NorthLicense.legacyActivate();licenseMarkUnlocked();await licenseSyncAiIdentity(true);await NorthLicense.bindPasskey();toast('绑定成功，以后换浏览器或添加到主屏幕可直接恢复');if(cur().p==='settings')render();
+}catch(e){toast((e&&e.message)||'绑定失败');if(cur().p==='settings')render();}}
+async function licenseSyncAiIdentity(force){if(!window.NorthLicense||!NorthLicense.isManaged()||!NorthLicense.session())return null;const s=NorthLicense.session(),markKey='north_license_ai_sync_v1';let oldMark='';try{oldMark=localStorage.getItem(markKey)||'';}catch(_){}const expected=(s.sessionId||s.licenseId);if(!force&&oldMark===expected)return null;
+  const result=await NorthLicense.syncAIIdentity(aiUserId(),aiUserSecret());if(!result||!result.userId||!result.clientSecret)throw new Error('AI账户同步失败');try{localStorage.setItem('yibei_ai_uid',result.userId);localStorage.setItem('yibei_ai_secret',result.clientSecret);localStorage.setItem(markKey,expected);}catch(_){}if(typeof _aiAcct!=='undefined')_aiAcct=null;if(typeof _aiAutoTried!=='undefined')_aiAutoTried=false;return result;}
+async function licenseTransferModal(){try{const r=await NorthLicense.createTransfer();openModal('<h3>一次性迁移码</h3><div class="hint">在新浏览器或主屏幕入口点“使用迁移码”，输入下面的号码。<b>5分钟有效，只能使用一次</b>。</div><div style="font-size:28px;letter-spacing:4px;text-align:center;color:#f0d7aa;font-weight:700;padding:18px 0">'+esc(r.code)+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'生成迁移码失败');}}
+function licenseTimeText(value){const t=new Date(value||0).getTime();return t?fmtDur(Math.max(0,Date.now()-t))+'前':'未知';}
+async function licenseDevicesModal(){openModal('<h3>已授权浏览器</h3><div class="hint">正在读取…</div>');try{const r=await NorthLicense.listSessions();openModal('<h3>已授权浏览器 '+r.sessions.length+'/3</h3><div class="hint">第4个浏览器恢复时会自动退出最早的一个。移除只会退出该入口，不会删除聊天和设置。</div><div class="section">'+r.sessions.map(s=>'<div class="it"><span>'+esc(s.label)+(s.current?' <small style="color:#07c160">当前</small>':'')+'<br><small style="color:#777">最近使用：'+esc(licenseTimeText(s.last_seen_at))+'</small></span><button class="minibtn" onclick="licenseRevokeDevice(\''+s.id+'\','+!!s.current+')">移除</button></div>').join('')+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'读取失败');closeModal();}}
+async function licenseRevokeDevice(id,current){if(!await uiConfirm(current?'退出当前浏览器授权？不会删除任何数据。':'移除这个浏览器授权？'))return;try{await NorthLicense.revokeSession(id);if(current){try{localStorage.removeItem('yibei_unlocked');}catch(_){}closeModal();showGate();}else{toast('已移除');licenseDevicesModal();}}catch(e){toast((e&&e.message)||'移除失败');}}
+function licenseStatusSection(){if(!window.NorthLicense)return '';const managed=NorthLicense.isManaged()&&!!NorthLicense.session(),m=NorthLicense.meta(),count=Math.max(0,+m.sessionCount||0),passkeys=Math.max(0,+m.passkeyCount||0);
+  return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">手机授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹。换浏览器或添加到主屏幕后，点“恢复授权”即可。':'当前浏览器已授权，建议继续绑定扫脸/指纹，防止换浏览器后进不来。'):'当前还是旧版浏览器授权。绑定后，邀请码仍永久失效，之后用手机验证恢复。')+'<br><b>大刷新会让旧授权在云端一起失效，不能靠恢复绕过。</b></div><div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'重新绑定手机验证':'绑定扫脸 / 指纹恢复')+'</button></div>'+(managed?'<div class="btns" style="padding:0 14px 8px"><button class="btn g" onclick="licenseDevicesModal()">已授权浏览器 '+(count||'')+'/3</button><button class="btn g" onclick="licenseTransferModal()">生成迁移码</button></div>':'')+'</div>';}
 function chatAddMenu(){openModal(`<h3>＋</h3>
   <button class="btn p" style="margin-bottom:8px" onclick="closeModal();editContact()">新建角色</button>
   <button class="btn g" onclick="closeModal();createGroup()">发起群聊</button>
@@ -8968,4 +9000,8 @@ setInterval(()=>phoneFriendMaybeSync(false),30000);
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
 showGate();
+setTimeout(licenseCheckSession,2200);
+setInterval(licenseCheckSession,300000);
+window.addEventListener('pageshow',()=>setTimeout(licenseCheckSession,900));
+window.addEventListener('focus',()=>setTimeout(licenseCheckSession,900));
 setTimeout(maybeFirstRun,600);
