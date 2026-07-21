@@ -22,7 +22,9 @@ for(const [id,amount,points] of [
 assert.match(backend,/id: "svc_clone_1990".*amount_cny: 19\.9, points: 0, kind: "service"/);
 assert.match(account,/id:'svc_clone_1990'.*amount_cny:19\.9,points:0,kind:'service'/);
 
-assert.match(backend,/Deno\.env\.get\("FREE_POINTS"\) \?\? 20/);
+assert.doesNotMatch(backend,/FREE_POINTS|first_open/);
+assert.match(backend,/\.insert\(\{ user_id: userId, client_secret: clientSecret, points: 0, free_granted: false \}\)/);
+assert.doesNotMatch(account,/新用户赠送|首次赠送/);
 assert.match(backend,/action === "purchase_create"/);
 assert.match(backend,/PLANS\.find\(\(item\) => item\.id === planId\)/);
 assert.match(backend,/provider !== "alipay" && provider !== "wechat"/);

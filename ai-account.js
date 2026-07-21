@@ -80,7 +80,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div class="it"><span>提醒额度</span><span class="v"><input type="number" min="1" max="99999" inputmode="numeric" value="${low.lowBalanceThreshold}" onchange="aiSetLowBalance(this.value)" style="width:82px;text-align:right"> 点</span></div>
     </div>
     <div style="display:flex;align-items:end;justify-content:space-between;padding:5px 2px 9px">
-      <div><b style="font-size:17px">充值点数</b><small style="display:block;color:#777;margin-top:3px">新用户赠送20点，付款后按订单核对到账</small></div>
+      <div><b style="font-size:17px">充值点数</b><small style="display:block;color:#777;margin-top:3px">付款后按订单核对到账</small></div>
       <button class="minibtn" onclick="aiAccountRefresh()">刷新到账</button>
     </div>
     <button onclick="aiShowPurchaseNotice()" style="width:100%;margin:0 0 10px;padding:11px 12px;border:1px solid rgba(255,91,111,.36);background:#23151a;color:#ff8fa0;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="display:flex;align-items:center;gap:8px">${typeof svgIc==='function'?svgIc('book',18,'#ff8fa0',1.6):''}购买与生图扣费说明</span><b style="font-size:16px">›</b></button>

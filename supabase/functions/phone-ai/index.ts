@@ -3,7 +3,7 @@
 // PHONE_SUPABASE_URL, PHONE_SERVICE_ROLE_KEY
 // OPENAI_API_KEY（现有聊天/识图/图片生成中转站）
 // 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL, IMAGE_MODEL=gpt-image-2
-// 可选：FREE_POINTS=20（新账户首次体验赠送，设置为 0 可关闭）
+// 新账户不赠送点数；点数只允许通过已核对的充值订单或后台手动加点获得。
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
@@ -160,7 +160,6 @@ function getSecret(req: Request, body: any) {
 }
 
 async function ensureAccount(userId: string, clientSecret: string) {
-  const free = Math.max(0, Number(Deno.env.get("FREE_POINTS") ?? 20) || 0);
   const { data: old, error: selErr } = await supabase
     .from("phone_ai_accounts")
     .select("user_id,points,disabled,free_granted,client_secret")
@@ -182,20 +181,10 @@ async function ensureAccount(userId: string, clientSecret: string) {
 
   const { data, error } = await supabase
     .from("phone_ai_accounts")
-    .insert({ user_id: userId, client_secret: clientSecret, points: free, free_granted: free > 0 })
+    .insert({ user_id: userId, client_secret: clientSecret, points: 0, free_granted: false })
     .select("user_id,points,disabled,free_granted,client_secret")
     .single();
   if (error) throw error;
-  if (free > 0) {
-    await supabase.from("phone_ai_ledger").insert({
-      user_id: userId,
-      kind: "grant",
-      feature: "free",
-      points: free,
-      balance_after: free,
-      meta: { reason: "first_open" },
-    });
-  }
   return data;
 }
 

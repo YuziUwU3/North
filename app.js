@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='592'){
+if(window.__NORTH_SHELL_BUILD__!=='593'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v592 · 邀请码百张批量生成';
+const APP_VER='v593 · 停止新账户赠送点数';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1141,7 +1141,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=592';
+  const url='sw.js?v=593';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4015,7 +4015,7 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
     <div id="manual_ai" style="padding:13px 0;border-top:1px solid rgba(255,143,171,.5)">
       <b style="font-size:16px;color:#ffabc8">三、AI账户使用方法（重点）</b><br>
       <b>1. AI账户是什么</b><br>
-      AI账户不需要另外注册密码。第一次打开时，小手机会自动生成一个<b>本机用户ID</b>并连接账户，新用户按页面显示获得赠送点数。点数可供当前已开放的内置语音、图片等功能使用，实际扣点以AI账户页面价格和“最近流水”为准。<br>
+      AI账户不需要另外注册密码。第一次打开时，小手机会自动生成一个<b>本机用户ID</b>并连接账户。新账户不赠送点数，充值经核对到账后，点数可用于当前已开放的内置语音、图片等功能；实际扣点以AI账户页面价格和“最近流水”为准。<br>
       <b>AI账户不是聊天模型接口。</b>当前内置AI主聊天通道固定关闭，角色日常聊天仍需在“设置 → 聊天模型”填写可用的外置接口。<br><br>
 
       <b>2. 用户ID和点数</b><br>
