@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='589'){
+if(window.__NORTH_SHELL_BUILD__!=='590'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagati
 /* 一键踢人：想清场时把 SHARE_EPOCH 加 1（2→3→4…），所有老设备下次打开都要重新输邀请码。 */
 const SHARE_EPOCH=3;
 function gateOK(){ if(!SHARE_GATE)return true; try{return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);}catch(e){return false;} }
-const APP_VER='v589 · 线下总结分段稳态修复';
+const APP_VER='v590 · 英语口音选择';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -951,7 +951,7 @@ async function resumeSteps(){if(_stepOn||!S.me.stepOn)return;
     ensureDailySteps();_stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;if(cur().p==='wechat'&&wxTab==='me')render();}catch(e){}}
 document.addEventListener('click',()=>{if(S.me.stepOn&&!_stepOn)resumeSteps();},{once:true});
 /* ===== 语音 ===== */
-function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh'};return o.voice;}
+function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh',accent:'auto'};if(!o.voice.accent)o.voice.accent='auto';return o.voice;}
 function stripSpoken(t){return (t||'').replace(/[（(【][^）)】]*[）)】]/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();}
 function ttsCleanBase(text){return stripSpoken(text).replace(/[\u{1f300}-\u{1faff}\u2600-\u27bf]/gu,'').replace(/\s+/g,' ').replace(/([。！？!?]){3,}/g,'$1$1').trim();}
 function ttsStyleKind(tts){const base=String((tts&&tts.base)||'').toLowerCase(),model=String(ttsUseRelay()?'speech-02-turbo':((tts&&tts.model)||'')).toLowerCase();if(ttsUseRelay())return '';if(/minimax/.test(base)&&/speech-2\.8/.test(model))return 'minimax';if(/elevenlabs/.test(base)&&/(^|[_-])v?3|eleven.*3/.test(model))return 'eleven';if(/fish\.?audio/.test(base)&&/(?:s2(?:\.|[_-])?1|s2|speech.*2|fish.*2)/.test(model))return 'fish';if(/hume\.ai/.test(base)&&/octave/.test(model))return 'hume';return '';}
@@ -992,6 +992,9 @@ function ttsVoiceProfile(text,opt,tts){const p={speed:1,vol:1,pitch:0};if(ttsSty
 const CJK_RE=/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g;
 const CN_PUNCT_RE=/[（）()「」『』【】《》〈〉、，。．！？；：…—～·“”‘’]/g;
 function normVoiceLang(lang){const s=String(lang||'').trim().toLowerCase();if(!s||s==='zh'||s==='cn'||s==='中文'||s==='chinese')return 'zh';if(s==='英'||s==='英语'||s==='英文'||s==='en'||s==='eng'||s==='english')return '英';if(s==='日'||s==='日语'||s==='日文'||s==='jp'||s==='ja'||s==='japanese')return '日';if(s==='韩'||s==='韩语'||s==='韩文'||s==='kr'||s==='ko'||s==='korean')return '韩';return lang||'zh';}
+function normVoiceAccent(o){const v=o&&o.voice?o.voice:(o||{}),a=String(v.accent||'auto').trim().toLowerCase();if(a==='en-gb'||a==='gb'||a==='uk'||a==='british'||a==='英式')return'en-GB';if(a==='en-us'||a==='us'||a==='american'||a==='美式')return'en-US';return'auto';}
+function voiceEnglishPrompt(o){const v=o&&o.voice?o.voice:(o||{});if(normVoiceLang(v.lang)!=='英')return'';const a=normVoiceAccent(v);if(a==='en-GB')return'\n- 英语口音：使用自然地道的英式英语（British English）措辞、拼写和语气，例如 colour、favourite、holiday、flat；不要混用明显的美式说法，也不要刻意堆砌俚语。';if(a==='en-US')return'\n- 英语口音：使用自然地道的美式英语（American English）措辞、拼写和语气，例如 color、favorite、vacation、apartment；不要混用明显的英式说法，也不要刻意堆砌俚语。';return'';}
+function applySystemVoice(u,v){if(!u||!v)return;const accent=normVoiceAccent(v);if(accent!=='auto')u.lang=accent;let vs=v.voiceURI?_voices.find(x=>x.voiceURI===v.voiceURI):null;if(!vs&&accent!=='auto')vs=_voices.find(x=>String(x.lang||'').toLowerCase()===accent.toLowerCase())||_voices.find(x=>String(x.lang||'').toLowerCase().startsWith(accent.slice(0,2).toLowerCase()));if(vs)u.voice=vs;}
 function hasForeign(text,lang){lang=normVoiceLang(lang);if(!lang||lang==='zh')return true;const re=lang==='韩'?/[가-힣]/:lang==='日'?/[぀-ヿ]/:/[A-Za-z]/;return re.test(text||'');}
 function pickSpoken(text,lang){
   lang=normVoiceLang(lang);
@@ -1108,7 +1111,7 @@ async function decodeBuf(ab){if(!ab)return null;try{initAudio();if(!_audio)retur
 async function speak(text,o){const v=o?getVoice(o):null;
   if(ttsApiOn()){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);}else if(ab){await ttsRefundAudio(ab,'tts-decode-failed');}return;}
   const t=ttsSafeProsody(ttsCleanBase(text),o);if(!t||!('speechSynthesis'in window))return;
-  try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+  try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;applySystemVoice(u,v);}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(voiceAudioExpired(m))clearVoiceAudio(m);
@@ -1137,7 +1140,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=589';
+  const url='sw.js?v=590';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1566,6 +1569,7 @@ function buildSystem(c,opt){
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人”，你就不要入镜。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不要露清晰正脸，只能低头、背影、侧影、遮挡或局部。想发就发，别一次发一堆。';
+  s+=voiceEnglishPrompt(c);
   return s;
 }
 
@@ -5692,7 +5696,7 @@ function phCallDur(c){const st=c&&c.answeredAt;if(!st)return '00:00';const d=Mat
 function phCallLangPrompt(c){const lang=(getVoice(c).lang||'zh'),name=lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[lang]||lang)+'语';if(!name)return '\n# 电话语言\n使用中文口语短句。';const eg=lang==='韩'?'누구세요?\n（你是谁？）':lang==='日'?'どなたですか？\n（你是谁？）':'Who is this?\n（你是谁？）';return '\n# 电话语言（必须和微信电话一致）\n- 角色当前电话语言是'+name+'，你全程只能先说'+name+'原文，不能把整句中文当成会被读出的原文。\n- 每一句都严格按两行：第一行'+name+'原文，下一行用（）写中文翻译。一句原文配一句翻译，不要混在同一行。\n- 外语原文行不能夹中文称谓；英文里叫宝贝写 baby/babe/darling，中文翻译行必须写宝贝/亲爱的，不能照抄 baby。英文里自称不要写“先生/哥哥/主人”等中文，直接用 I/me 或自然英文。\n- 只输出电话里说的话和必要隐藏指令，不要解释格式。\n例：\n'+eg;}
 function phCallFallback(c){const lang=(getVoice(c).lang||'zh');if(lang==='英')return 'Who is this?\n（你是谁？）';if(lang==='日')return 'どなたですか？\n（你是谁？）';if(lang==='韩')return '누구세요?\n（你是谁？）';return '喂？哪位？';}
 function phSelectedVoiceRole(){const p=phState(),sc=p.simCall;if(sc&&sc.meta&&sc.meta.roleId){const c=getC(sc.meta.roleId);if(c)return c;}try{const r=cur&&cur();if(r&&r.id){const c=getC(r.id);if(c)return c;}}catch(_){}return (S.contacts||[]).find(c=>!c.deleted&&!c.blocked&&getVoice(c).lang&&getVoice(c).lang!=='zh')||null;}
-function phStrangerVoiceRef(){const p=phState(),role=phSelectedVoiceRole(),lv=role&&getVoice(role).lang,lang=(lv&&lv!=='zh'?lv:(p.stranger&&p.stranger.lang)||lv||'zh');return{voice:{lang:lang||'zh'}};}
+function phStrangerVoiceRef(){const p=phState(),role=phSelectedVoiceRole(),rv=role&&getVoice(role),lv=rv&&rv.lang,lang=(lv&&lv!=='zh'?lv:(p.stranger&&p.stranger.lang)||lv||'zh');return{voice:{lang:lang||'zh',accent:(rv&&rv.accent)||'auto'}};}
 function phStrangerLangPrompt(){const ref=phStrangerVoiceRef();return phCallLangPrompt(ref).replace('角色当前电话语言','当前陌生来电语言');}
 function phStrangerInitialLine(pf,sp,num){const cn=pf&&pf.spoof?phSpoofOpening(pf,num):((sp&&sp.reply)||(pf&&pf.kind==='营销号码'?'您好，这里有一通给您的回访电话，方便说两句吗？':pf&&pf.kind==='快递外卖'?'您好，有一个配送信息需要和您确认一下。':'电话接通了，请问你是哪位？')),lang=getVoice(phStrangerVoiceRef()).lang||'zh';if(lang==='zh')return cn;const key=sp?phNorm(num):(pf&&pf.spoof?'spoof':pf&&pf.kind==='营销号码'?'marketing':pf&&pf.kind==='快递外卖'?'delivery':'default'),map={英:{spoof:phSpoofOpening(pf,num),marketing:'Hello, this is a quick follow-up call. Is now a good time?\n（您好，这里有一通回访电话，方便说两句吗？）',delivery:'Hello, I need to confirm a delivery detail with you.\n（您好，有一个配送信息需要和您确认一下。）',110:'110 emergency service. Please tell me your location and what help you need.\n（110报警服务台，请说明你的位置和需要帮助的情况。）',119:'119 fire and rescue. Stay calm and tell me the address of the fire.\n（119消防救援中心，请保持冷静，说清楚火情地址。）',120:'120 emergency medical center. Please describe the patient and your location.\n（120急救中心，请说明病人情况和所在位置。）',122:'122 traffic police. Please describe the accident location and the vehicles involved.\n（122交通报警，请说明事故地点和车辆情况。）',10086:'Hello, this is China Mobile customer service. How can I help you?\n（您好，这里是中国移动客服，请问有什么可以帮您？）',default:'Hello, who is this?\n（你好，哪位？）'},日:{spoof:phSpoofOpening(pf,num),marketing:'もしもし、少し確認のお電話です。今よろしいですか？\n（您好，这里有一通回访电话，方便说两句吗？）',delivery:'配送情報を確認したいのですが。\n（您好，有一个配送信息需要和您确认一下。）',default:'もしもし、どちら様ですか？\n（喂，请问哪位？）'},韩:{spoof:phSpoofOpening(pf,num),marketing:'안녕하세요, 간단한 확인 전화입니다. 지금 통화 괜찮으세요?\n（您好，这里有一通回访电话，方便说两句吗？）',delivery:'배송 정보를 확인하려고 전화드렸습니다.\n（您好，有一个配送信息需要和您确认一下。）',default:'여보세요, 누구세요?\n（喂，请问哪位？）'}};return (map[lang]&&(map[lang][key]||map[lang].default))||cn;}
 function phCallAdmits(text){const s=String(text||'').trim();if(/^(?:嗯[，,、\s]*)?(?:不是(?:我|本人)?|不对|猜错|不认识|not me|is not me|isn't me|wrong guess)/i.test(s))return false;return /(是我|我是|我啊|认出来|看出来|猜到|别装|it'?s me|this is me|you got me|わたし|私だ|나야|저야)/i.test(s);}
@@ -8126,10 +8130,11 @@ function editVoice(id){const c=getC(id);const v=getVoice(c);openModal(`<h3>${esc
   <div class="field"><label>语速 ${(+v.rate||1).toFixed(1)}</label><input id="v_rate" type="range" min="0.5" max="1.8" step="0.1" value="${v.rate||1}" style="width:100%"></div>
   <div class="field"><label>音调 ${(+v.pitch||1).toFixed(1)}</label><input id="v_pitch" type="range" min="0.5" max="1.6" step="0.1" value="${v.pitch||1}" style="width:100%"></div>
   <div class="field"><label>语言（外语会带中文翻译）</label><select id="v_lang"><option value="zh" ${v.lang==='zh'?'selected':''}>中文</option><option value="英" ${v.lang==='英'?'selected':''}>英语</option><option value="日" ${v.lang==='日'?'selected':''}>日语</option><option value="韩" ${v.lang==='韩'?'selected':''}>韩语</option></select></div>
+  <div class="field"><label>英语口音（仅英语有效）<small style="display:block;color:#888">API克隆音色仍以原始录音口音为主</small></label><select id="v_accent"><option value="auto" ${normVoiceAccent(v)==='auto'?'selected':''}>自动 · 跟随音色</option><option value="en-GB" ${normVoiceAccent(v)==='en-GB'?'selected':''}>英式英语 · British</option><option value="en-US" ${normVoiceAccent(v)==='en-US'?'selected':''}>美式英语 · American</option></select></div>
   <div class="field"><label>API音色名(用API时填，如克隆ID/alloy)</label><input id="v_tv" value="${esc(v.ttsVoice||'')}" placeholder="不用API可留空"></div>
   <div class="btns" style="margin-bottom:8px"><button class="btn g" onclick="previewVoice('${id}')">试听</button><button class="btn g" onclick="cloneVoiceModal('${id}')">克隆声音(国内·硅基流动)</button></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveVoice('${id}')">保存</button></div>`);}
-function readVoiceForm(){return {engine:$('#v_eng').value,voiceURI:$('#v_uri').value,rate:+$('#v_rate').value||1,pitch:+$('#v_pitch').value||1,lang:$('#v_lang').value,ttsVoice:$('#v_tv').value.trim()};}
+function readVoiceForm(){return {engine:$('#v_eng').value,voiceURI:$('#v_uri').value,rate:+$('#v_rate').value||1,pitch:+$('#v_pitch').value||1,lang:$('#v_lang').value,accent:$('#v_accent').value,ttsVoice:$('#v_tv').value.trim()};}
 function previewVoice(id){const c=getC(id);const nv=readVoiceForm();const samp={zh:'你好呀，我是'+(c.remark||c.name)+'，这是我的声音。','英':'Hi, this is my voice. Nice to talk with you.','日':'こんにちは、これが私の声です。よろしくね。','韩':'안녕하세요, 제 목소리예요. 잘 부탁해요.'}[nv.lang||'zh'];
   const tmp=c.voice;c.voice=nv;speak(samp,c);c.voice=tmp;}
 function saveVoice(id){const c=getC(id);c.voice=readVoiceForm();phState().stranger.lang=c.voice.lang||'zh';save();closeModal();render();toast('音色已保存');}
@@ -8375,7 +8380,7 @@ async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;cons
   if(!t)return new Promise(r=>setTimeout(r,1100));
   let started=false;const start=()=>{if(started)return;started=true;if(opt.onAudioStart)try{opt.onAudioStart();}catch(_){}};
   if(ttsApiOn()){const ab=await ttsArr(text,c,opt);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf,start);}else if(ab){await ttsRefundAudio(ab,'tts-decode-failed');}return;}
-  return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);u.rate=1;if(v){u.rate=(+v.rate||1)*vp.speed;u.pitch=(+v.pitch||1)+vp.pitch*.08;u.volume=Math.max(0,Math.min(1,vp.vol));if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();start();speechSynthesis.speak(u);setTimeout(res,Math.max(2200,t.length*185));}catch(e){res();}});}
+  return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);u.rate=1;if(v){u.rate=(+v.rate||1)*vp.speed;u.pitch=(+v.pitch||1)+vp.pitch*.08;u.volume=Math.max(0,Math.min(1,vp.vol));applySystemVoice(u,v);}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();start();speechSynthesis.speak(u);setTimeout(res,Math.max(2200,t.length*185));}catch(e){res();}});}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   const um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);behaviorOnUserMsg(_call.id,um);lifeNoteOnUserMsg(_call.id,um);emotionOnUserMsg(_call.id,um);save();_call.sub={who:'me',text:t};updateCallSub();
   if(callOnUserSay(t))return;callAI();}

@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false, DEFAULT_TTS_VOICE: "male-qn-qingse" });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
@@ -68,6 +68,17 @@ assert.deepEqual(JSON.parse(JSON.stringify(context.parseVoiceTagLine("[语音|Te
 });
 assert.equal(context.voiceTagNeedsLangFix("[我发语音说：哦？ 是吗。|语气:低沉]", { voice: { lang: "英" } }), true);
 assert.equal(context.voiceTagNeedsLangFix("[语音|Tell me why.|为什么这样？|语气:质问]", { voice: { lang: "英" } }), false);
+assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "british" }), "en-GB");
+assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "en-US" }), "en-US");
+assert.equal(context.normVoiceAccent({ lang: "\u82f1" }), "auto");
+assert.match(context.voiceEnglishPrompt({ voice: { lang: "\u82f1", accent: "en-GB" } }), /British English/);
+assert.equal(context.voiceEnglishPrompt({ voice: { lang: "zh", accent: "en-GB" } }), "");
+context._voices = [{ voiceURI: "gb-voice", lang: "en-GB" }, { voiceURI: "us-voice", lang: "en-US" }];
+const utterance = {};
+context.applySystemVoice(utterance, { lang: "\u82f1", accent: "en-GB", voiceURI: "" });
+assert.equal(utterance.lang, "en-GB");
+assert.equal(utterance.voice.voiceURI, "gb-voice");
+
 const minimax02 = { base: "https://api.minimax.io", model: "speech-02-turbo" };
 const eleven3 = { base: "https://api.elevenlabs.io", model: "eleven_v3" };
 const fish21 = { base: "https://api.fish.audio", model: "s2.1-pro-free" };
@@ -143,6 +154,9 @@ assert.equal(routeContext.ttsUseRelay(), true, "relay should be used only withou
 
 assert.match(source, /model:tts\.model\|\|'speech-02-turbo'/);
 assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);
+assert.match(source, /id="v_accent"/);
+assert.match(source, /accent:\$\('#v_accent'\)\.value/);
+assert.match(source, /applySystemVoice\(u,v\)/);
 assert.match(source, /'https:\/\/api\.fish\.audio','s2\.1-pro-free'/);
 assert.match(source, /'https:\/\/api\.hume\.ai','octave-2'/);
 assert.match(source, /'X-Hume-Api-Key':tts\.key/);
