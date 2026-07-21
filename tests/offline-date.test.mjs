@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v588 \u00b7 \u5fae\u4fe1\u767d\u8272\u4e3b\u9898\u7070\u9636\u4f18\u5316/);
+assert.match(source, /v589 \u00b7 \u7ebf\u4e0b\u603b\u7ed3\u5206\u6bb5\u7a33\u6001\u4fee\u590d/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -309,10 +309,12 @@ vm.runInNewContext(
   source.slice(summaryStart, offEndStart) +
     ";const make=(n,size)=>Array.from({length:n},(_,i)=>({who:i%3===0?'\\u65c1\\u767d':(i%2?'me':'ta'),text:'\\u4e8b'.repeat(size)}));" +
     "globalThis.shortPlan=offSummaryPlan(make(4,30));" +
-    "globalThis.mediumPlan=offSummaryPlan(make(20,50));" +
-    "globalThis.longPlan=offSummaryPlan(make(50,60));" +
-    "globalThis.fullPlan=offSummaryPlan(make(80,100));" +
-    "globalThis.thinLong=offSummaryTooThin('\\u592a\\u7b80\\u5355\\u4e86',longPlan);",
+     "globalThis.mediumPlan=offSummaryPlan(make(20,50));" +
+     "globalThis.longPlan=offSummaryPlan(make(50,60));" +
+     "globalThis.fullPlan=offSummaryPlan(make(80,100));" +
+     "globalThis.thinLong=offSummaryTooThin('\\u592a\\u7b80\\u5355\\u4e86',longPlan);" +
+     "globalThis.acceptedFull=!offSummaryTooThin('\\u8bb0'.repeat(300),fullPlan);" +
+     "globalThis.chunkSizes=offSummaryChunks('\\u7ea6'.repeat(13000),6000).map(x=>x.length);",
   summarySandbox,
 );
 assert.equal(summarySandbox.shortPlan.level, "\u7b80\u77ed");
@@ -323,6 +325,8 @@ assert.ok(summarySandbox.shortPlan.max < summarySandbox.mediumPlan.max);
 assert.ok(summarySandbox.mediumPlan.max < summarySandbox.longPlan.max);
 assert.ok(summarySandbox.longPlan.max < summarySandbox.fullPlan.max);
 assert.equal(summarySandbox.thinLong, true);
+assert.equal(summarySandbox.acceptedFull, true);
+assert.deepEqual([...summarySandbox.chunkSizes], [6000, 6000, 1000]);
 assert.match(source, /function offSummaryNeedsRetry\(h\)/);
 assert.match(source, /async function offSummarizeHistory\(id,hid,retry\)/);
 assert.match(source, /async function offRetrySummary\(id,hid\)/);
@@ -331,7 +335,11 @@ assert.match(source, /h\.memoryId===m\.id&&h\.msgs&&h\.msgs\.length/);
 assert.match(source, /onclick="offRetrySummary\('\$\{id\}','\$\{hist\.id\}'\)" title="\u91cd\u65b0\u603b\u7ed3"/);
 assert.match(source, /h\.summaryStatus='failed'/);
 assert.match(source, /h\.summaryError=/);
-assert.match(source, /h\.memoryId=memId;h\.memory=clean;h\.summaryStatus='done'/);
+assert.match(source, /function offSummaryChunks\(text,limit\)/);
+assert.match(source, /async function offSummaryPreparedText\(c,ended,text,useAux\)/);
+assert.match(source, /function offSummarySave\(o,h,c,ended,clean,status,error\)/);
+assert.match(source, /offSummarySave\(o,h,c,ended,clean,'done',''\)/);
+assert.match(source, /offSummarySave\(o,h,c,ended,fallback,'fallback'/);
 const draftPersistAt = offEndSource.indexOf("o.history.unshift(draft)");
 const draftSaveAt = offEndSource.indexOf("save();offQuit()", draftPersistAt);
 const summarizeAt = offEndSource.indexOf("await offSummarizeHistory(id,draft.id,false)");
@@ -340,11 +348,56 @@ assert.match(offEndSource, /const ended=\{session:/);
 assert.match(offEndSource, /draft=\{id:ended\.session/);
 assert.match(offEndSource, /msgs:ended\.msgs,summaryStatus:'pending'/);
 assert.match(source, /const ended=\{session:h\.id[\s\S]*?msgs:h\.msgs\},plan=offSummaryPlan\(ended\.msgs\)/);
-assert.match(source, /max:plan\.tokens/);
+assert.match(source, /max:Math\.min\(plan\.tokens,1400\)/);
 assert.match(source, /trimSentence\(cleanReply\(sum\),plan\.keep\)/);
 assert.match(source.slice(summaryStart, offEndStart), /\u5fc5\u987b\u5fe0\u4e8e\u8bb0\u5f55\u5e76\u6309\u53d1\u751f\u987a\u5e8f\u8986\u76d6/);
 assert.doesNotMatch(offEndSource, /120~200/);
 assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
+
+const fallbackHistory = {
+  id: "h1",
+  ts: 1000,
+  loc: "咖啡店",
+  msgs: [
+    { who: "me", text: "我到了。" },
+    { who: "ta", text: "我在门口等你。" },
+  ],
+};
+const fallbackOffline = { history: [fallbackHistory], memory: [] };
+const fallbackContact = { id: "c1", name: "角色", summaries: [] };
+const fallbackSandbox = {
+  S: { me: { name: "用户" }, settings: { offSummaryModel: "main" } },
+  offData: () => fallbackOffline,
+  getC: () => fallbackContact,
+  save() {},
+  uid: () => "memory-1",
+  offMemLabel: () => "本次约会",
+  sumStamp: () => "现在",
+  pruneSummaries() {},
+  trimSentence: (text, max) => String(text || "").slice(0, max),
+  perspRule: () => "",
+  chatAPI: async () => {
+    throw new Error("forced-summary-error");
+  },
+  cleanReply: (text) => String(text || ""),
+  isRefusal: () => false,
+  closeModal() {},
+  toast() {},
+  offMemory() {},
+};
+vm.runInNewContext(
+  "const _offSummaryBusy=new Set();" +
+    source.slice(summaryStart, offEndStart) +
+    ";globalThis.fallbackRun=offSummarizeHistory('c1','h1',false);",
+  fallbackSandbox,
+);
+assert.equal(await fallbackSandbox.fallbackRun, "fallback");
+assert.equal(fallbackHistory.summaryStatus, "fallback");
+assert.equal(fallbackHistory.memoryId, "memory-1");
+assert.equal(fallbackOffline.memory.length, 1);
+assert.equal(fallbackContact.summaries.length, 1);
+assert.match(fallbackHistory.summaryError, /forced-summary-error/);
+
 assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.cid,o,trip\.to,trip\.date,dayPartNow\(\)\)/);
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:'\uff08'\+tvMD\(trip\.date\)/);
 
@@ -366,6 +419,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=588/);
+assert.match(html, /app\.js\?v=589/);
 
 console.log("offline date tests passed");
