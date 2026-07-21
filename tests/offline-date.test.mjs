@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v595 \u00b7 \u5b89\u5353\u7a33\u6001\u4e0e\u6388\u6743\u5b89\u5168/);
+assert.match(source, /v596 \u00b7 \u7ebf\u4e0b\u7ea6\u4f1a\u7701\u94b1\u5206\u6d41/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -80,8 +80,6 @@ vm.runInNewContext(
 assert.deepEqual(
   Array.from(historySandbox.rounds, (x) => ({ role: x.role, content: x.content })),
   [
-    { role: "user", content: "u2" },
-    { role: "assistant", content: "\u3010n2\u3011\na2\na2b" },
     { role: "user", content: "u3" },
     { role: "assistant", content: "\u3010n3\u3011\na3" },
   ],
@@ -135,7 +133,7 @@ assert.equal(Array.from(continueSandbox.request).filter((x) => x.role === "assis
 assert.match(continueSandbox.request.at(-1).content, /\u7981\u6b62\u91cd\u65b0\u56de\u7b54/);
 
 const repeatStart = source.indexOf("function offlineIsUserMsg(m)");
-const repeatEnd = source.indexOf("function offlineSystem(c)", repeatStart);
+const repeatEnd = source.indexOf("function offlineSystem(c,query)", repeatStart);
 assert.ok(repeatStart >= 0 && repeatEnd > repeatStart);
 const repeatSandbox = {
   splitBubbles: (text) => String(text).split(/\n+/).filter(Boolean),
@@ -192,15 +190,13 @@ assert.match(source, /# \u672c\u573a\u8fde\u7eed\u6027\u4e0e\u9632\u590d\u8bfb\u
 assert.match(source, /const _on=offlineContextLimit\(\),hist=offlineHistoryMessages\(o,_on,\{deferCurrent:true\}\),turn=offlineCurrentTurnPrompt\(o,note\)/);
 assert.match(source, /const req=offlineRequestMessages\(sys,hist,pin,turn\)/);
 assert.match(source, /function offOldUserPhraseReplay\(text,o,currentInput\)/);
-assert.match(source, /offlineRepeatRepairNote\(c,check\)/);
+assert.match(source, /offlineRepeatRepairNote\(c,first\)/);
 
-assert.match(source, /const remembered=memoryList\(c\)/);
-assert.match(source, /remembered\.map/);
-assert.match(source, /c\.summaries\.filter\(x=>x&&x\.text\)\.map/);
-assert.doesNotMatch(source, /c\.summaries\.slice\(-10\)/);
-assert.match(source, /o\.memory\.map\(offMemText\)/);
-assert.doesNotMatch(source, /o\.memory\.slice\(-6\)/);
-assert.match(source, /function offlineLifeNotesPrompt\(c\)/);
+assert.match(source, /const allRemembered=memoryList\(c\),remembered=offlinePickRelevant\(allRemembered,query,8,12,memoryText\)/);
+assert.match(source, /remembered\.map\(memoryText\)/);
+assert.match(source, /filter\(x=>x&&x\.text&&!x\.offlineId\)/);
+assert.match(source, /offlinePickRelevant\(o\.memory\|\|\[\],query,3,6,offMemText\)/);
+assert.match(source, /function offlineLifeNotesPrompt\(c,query\)/);
 assert.match(source, /function offlineBehaviorLedgerPrompt\(c\)/);
 assert.match(source, /s\+=dialogueEmotionPrompt\(c\)/);
 assert.match(source, /s\+=memoryCriticalPrompt\(c\)/);
@@ -212,7 +208,7 @@ assert.match(source, /item\._reveal=false/);
 assert.match(source, /!o\.msgs\.some\(m=>m\._reveal\)/);
 
 const revealStart = source.indexOf("function offRevealTiming(m)");
-const revealEnd = source.indexOf("function offlineSystem(c)", revealStart);
+const revealEnd = source.indexOf("function offlineSystem(c,query)", revealStart);
 assert.ok(revealStart >= 0 && revealEnd > revealStart);
 const revealSandbox = {
   matchMedia: () => ({ matches: false }),
@@ -419,6 +415,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=595/);
+assert.match(html, /app\.js\?v=596/);
 
 console.log("offline date tests passed");

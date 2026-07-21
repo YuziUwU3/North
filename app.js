@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='595'){
+if(window.__NORTH_SHELL_BUILD__!=='596'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v595 · 安卓稳态与授权安全';
+const APP_VER='v596 · 线下约会省钱分流';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1141,7 +1141,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=595';
+  const url='sw.js?v=596';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4751,16 +4751,17 @@ function offlineIsUserMsg(m){return !!(m&&(m.who==='me'||(m.who==='旁白'&&m.so
 function offlineIsAssistantMsg(m){return !!(m&&(m.who==='ta'||(m.who==='旁白'&&m.source!=='me')));}
 function offlineMsgContent(m){return m&&m.who==='旁白'?'【'+m.text+'】':String(m&&m.text||'');}
 function offlinePendingStart(rows){let first=-1;for(let i=rows.length-1;i>=0;i--){const m=rows[i];if(offlineIsAssistantMsg(m))return first;if(offlineIsUserMsg(m))first=i;}return first;}
-function offlineHistoryMessages(o,limit,opt){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),pending=(opt&&opt.deferCurrent)?offlinePendingStart(rows):-1,starts=[];rows.forEach((m,i)=>{if(offlineIsUserMsg(m))starts.push(i);});let from=starts.length?starts[Math.max(0,starts.length-Math.max(1,limit|0))]:0;if(pending>=0&&from>=pending&&pending>0)from=pending-1;const out=[];rows.slice(from,pending>=0?pending:rows.length).forEach(m=>{const role=offlineIsUserMsg(m)?'user':'assistant',content=offlineMsgContent(m);if(!content)return;const last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+content;else out.push({role,content});});return out;}
+function offlineHistoryMessages(o,limit,opt){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),pending=(opt&&opt.deferCurrent)?offlinePendingStart(rows):-1,out=[];rows.slice(0,pending>=0?pending:rows.length).forEach(m=>{const role=offlineIsUserMsg(m)?'user':'assistant',content=offlineMsgContent(m);if(!content)return;const last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+content;else out.push({role,content});});return out.slice(-Math.max(1,limit|0));}
 function offlinePendingInputs(o){const rows=(o&&o.msgs||[]).filter(m=>m&&m.who!=='日期'),start=offlinePendingStart(rows);return start<0?[]:rows.slice(start).filter(offlineIsUserMsg).map(offlineMsgContent).filter(Boolean);}
 function offlineCurrentTurnPrompt(o,note){if(note)return '[当前必须回应]\n'+S.me.name+'刚刚额外补充：'+String(note).trim()+'\n请把这条补充并入本轮现场回应。';const pending=offlinePendingInputs(o);if(pending.length)return '[当前必须回应｜这是请求中最新且唯一要回答的一轮]\n上一条角色回复之后，'+S.me.name+'连续说/做了下面 '+pending.length+' 条：\n'+pending.map((x,i)=>(i+1)+'. '+x).join('\n')+'\n必须一次性按顺序全部回应，重点落在最后一条。更早的用户消息都已经回答完毕，禁止继续回答或复述更早那一轮。';const last=[...(o&&o.msgs||[])].reverse().find(offlineIsAssistantMsg);return '[当前必须续演｜没有新的用户问题]\n“继续这一刻”表示角色主动继续说、继续做、继续演，不是补答或重新回答用户上一句话。从角色自己最后一个动作或最后一句台词之后自然推进现场。'+(last?'\n角色最后现场：'+offlineMsgContent(last):'')+'\n禁止重新回答已结束记录里的任何旧问题，禁止突然复述很久以前的用户原话。';}
 function offlineArchivedHistory(hist){if(!hist||!hist.length)return'';return '\n\n# 本场已结束对话记录（只供人物连续性参考）\n'+hist.map((m,i)=>(i+1)+'. ['+(m.role==='user'?S.me.name+'当时说/做': '角色当时回应')+'] '+m.content).join('\n')+'\n上面每一轮都已经得到回应并彻底结束。只能把它们当作刚才发生过的事实，绝对不能选择其中任何一句重新回答，也不能把旧问题当成当前问题。';}
 function offlineRequestMessages(sys,hist,pin,turn){const out=[{role:'system',content:sys+offlineArchivedHistory(hist)}];if(pin)out.push(pin);out.push({role:'user',content:turn});return out;}
-function offlineSharedContext(c,limit){const rows=msgs(c.id).map(m=>{if(!m||m._silent)return null;const raw=msgToText(m),text=String(m._call?(callToCN(raw)||raw):raw||'').replace(/\s+/g,' ').trim();if(!text)return null;const source=m._call?(m._ck==='video'?'视频通话':'语音通话'):(m.type==='sys'?'共同事件':'微信'),who=m.role==='user'?S.me.name:(m.role==='assistant'?(c.remark||c.name):'共同事件');return{time:+m.time||+m.ts||0,source,who,text:text.slice(0,500)};}).filter(Boolean).slice(-limit);
+function offlineSharedContext(c,limit){const seen=new Set(),rows=msgs(c.id).map(m=>{if(!m||m._silent)return null;const raw=msgToText(m),text=String(m._call?(callToCN(raw)||raw):raw||'').replace(/\s+/g,' ').trim();if(!text)return null;const source=m._call?(m._ck==='video'?'视频通话':'语音通话'):(m.type==='sys'?'共同事件':'微信'),who=m.role==='user'?S.me.name:(m.role==='assistant'?(c.remark||c.name):'共同事件'),key=source+'|'+who+'|'+text;if(seen.has(key))return null;seen.add(key);return{time:+m.time||+m.ts||0,source,who,text:text.slice(0,320)};}).filter(Boolean).slice(-limit);
   if(!rows.length)return'\n\n# 进入本场约会前的微信/电话共同上下文\n目前没有可带入的微信或电话记录。';
   return'\n\n# 进入本场约会前最近 '+rows.length+' 条微信/电话共同上下文（设置偏好：'+limit+' 条）\n这些都是你和'+S.me.name+'真实发生过的共同经历。你必须记得并能准确回答“刚才微信聊了什么、电话里说了什么”；它们只作为见面前的记忆背景，绝不能误当成本场刚说出口的面对面台词。\n'+rows.map((x,i)=>(i+1)+'. ['+(x.time?fmtDT(x.time):'时间未知')+']['+x.source+']['+x.who+'] '+x.text).join('\n');}
-function offlineLifeNotesPrompt(c){if(!isLover(c))return'';const rows=lifeNotes().filter(n=>n&&n.text&&!(n.expiresAt&&n.expiresAt<Date.now()));if(!rows.length)return'';return'\n\n# '+S.me.name+'身上的全部生活小事（隐藏记忆）\n'+rows.map((n,i)=>(i+1)+'. '+fmtDT(n.ts||Date.now())+'：'+aboutMeNoteText(n.text)).join('\n')+'\n这些都是相处中留下的真实小事。相关时自然记起、关心和接话，不要机械报清单，也不要说自己读取了小事簿。';}
-function offlineBehaviorLedgerPrompt(c){if(!(S.couple&&S.couple.cid===c.id&&behaviorOn()))return'';const b=behaviorStore(),items=(b&&b.items||[]).filter(x=>x.active!==false&&(x.promise||(x.events&&x.events.length))).sort((a,b)=>(b.lastTs||0)-(a.lastTs||0));if(!items.length)return'';return'\n\n# 你记在心里的全部相处小账（隐藏记忆）\n'+items.map((it,i)=>{const ev=(it.events||[]).map(e=>fmtDT(e.ts)+'：'+e.text).join('；');return(i+1)+'. '+it.title+(it.promise?'：'+S.me.name+'答应过「'+it.promise+'」':'')+((it.count||0)>0?'，相关记录 '+(it.count||0)+' 次':'')+(ev?'。记录：'+ev:'')+((it.oldCount||0)?'（另有更早记录 '+it.oldCount+' 条）':'');}).join('\n')+'\n这些是你们真实相处中记住的细节。ta再次提起或重犯时可以自然接上，但不要念隐藏标题、系统或账本。';}
+function offlinePickRelevant(rows,query,recent,max,textOf){rows=(rows||[]).filter(Boolean);const latest=rows.slice(-Math.max(0,recent|0)),picked=new Set(latest),older=rows.slice(0,Math.max(0,rows.length-latest.length)),q=String(query||''),ranked=older.map((x,i)=>{const text=String(textOf(x)||''),terms=memoryTerms(text),qt=memoryTerms(q),shared=terms.filter(t=>qt.includes(t)).length;return{x,i,score:shared*2+(memoryAtoms(text).some(t=>memoryAtoms(q).includes(t))?3:0)};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||b.i-a.i);ranked.slice(0,Math.max(0,(max|0)-latest.length)).forEach(x=>picked.add(x.x));return rows.filter(x=>picked.has(x)).slice(-Math.max(1,max|0));}
+function offlineLifeNotesPrompt(c,query){if(!isLover(c))return'';const all=lifeNotes().filter(n=>n&&n.text&&!(n.expiresAt&&n.expiresAt<Date.now())),ordered=all.slice().reverse(),rows=offlinePickRelevant(ordered,query,5,8,n=>n.text);if(!rows.length)return'';return'\n\n# '+S.me.name+'身上的相关生活小事（隐藏记忆）\n'+rows.map((n,i)=>(i+1)+'. '+fmtDT(n.ts||Date.now())+'：'+aboutMeNoteText(n.text)).join('\n')+'\n这些都是相处中留下的真实小事。相关时自然记起、关心和接话，不要机械报清单，也不要说自己读取了小事簿。';}
+function offlineBehaviorLedgerPrompt(c){return behaviorPrompt(c);}
 function offRevealTiming(m){const n=Math.max(1,Array.from(String(m&&m.text||'')).length),nar=m&&m.who==='旁白',reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches,base=nar?42:30,step=reduce?0:Math.max(16,Math.min(base,7200/Math.max(1,n-1))),reveal=reduce?120:Math.round(step*(n-1)+480),hold=Math.max(1100,Math.min(nar?4200:3200,900+n*(nar?22:18)));return{step,reveal,hold,total:reveal+hold};}
 function offRevealText(m){const text=String(m&&m.text||'');if(!m||!m._reveal)return esc(text);const step=+m._revealStep||0;return Array.from(text).map((ch,i)=>ch==='\n'?'<br>':'<span class="offglyph" style="animation-delay:'+Math.round(i*step)+'ms">'+(ch===' '?'&nbsp;':esc(ch))+'</span>').join('');}
 const OFFLINE_ROUTINE_TOPICS=[
@@ -4792,20 +4793,22 @@ function offlineRepeatAudit(text,o,currentInput){const parts=offResponseParts(te
 function offlineRepeatFails(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).fails;}
 function offlineRepeatScore(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).score;}
 function offlineRepeatRepairNote(c,fails){return '[系统：上一版有线下约会复读问题：'+fails.join('；')+'。请完全重写本轮，只接住'+S.me.name+'刚才在现场说的话或动作并推进当前场景。不要把长期记忆、小事簿、相处小账里的任务、吃饭、睡觉、报备等旧内容重新拿出来审问；除非ta本轮主动提起。不能只替换几个词重复同一问题或同一句台词。保持「'+(c.remark||c.name)+'」本人，至少一段【第三人称动作旁白】和自然台词，不要解释纠正过程。]';}
-function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
+function offlineSystem(c,query){let s=(c.persona||'')+traitDesc(c);
   s+=adultRoleRule(c.remark||c.name||'角色');
   s+=offlineRoleGuard(c);
   s+='\n\n# 当前关系阶段\n'+affTone(c);
-  const remembered=memoryList(c);
-  if(remembered.length)s+='\n\n# 你记得关于'+S.me.name+'的全部长期记忆\n'+remembered.map((m,i)=>(i+1)+'. '+memoryText(m)).join('\n');
-  if(c.summaries&&c.summaries.length)s+='\n\n# 你和ta全部对话概要（只是共同背景，不是当前约会现场）\n'+c.summaries.filter(x=>x&&x.text).map(x=>'· '+(x.time||(+x.ts?fmtDT(x.ts):'时间未知'))+' '+summaryCleanText(c,x.text)).join('\n');
+  const allRemembered=memoryList(c),remembered=offlinePickRelevant(allRemembered,query,8,12,memoryText);
+  if(remembered.length)s+='\n\n# 你记得关于'+S.me.name+'的重要及相关长期记忆\n'+remembered.map((m,i)=>(i+1)+'. '+memoryText(m)).join('\n');
+  const summaries=topSummaries((c.summaries||[]).filter(x=>x&&x.text&&!x.offlineId),12);
+  if(summaries.length)s+='\n\n# 你和ta的重要及近期对话概要（只是共同背景，不是当前约会现场）\n'+summaries.map(x=>'· '+(x.time||(+x.ts?fmtDT(x.ts):'时间未知'))+' '+summaryCleanText(c,x.text)).join('\n');
   const o=offData(c.id);
   s+=offPreviousPrompt(o);
   const _offShared=offlineSharedContext(c,offlineContextLimit());
   s+=_offShared;
   s+=worldbookPrompt([(c.persona||'')+traitDesc(c),_offShared,(o.loc||''),(o.when||''),(o.daypart||''),(o.msgs||[]).slice(-20).map(m=>m.text).join('\n'),remembered.map(memoryText).join('\n')].join('\n'),c.id,'线下约会','offline');
-  if(o.memory&&o.memory.length)s+='\n\n# 你们以前全部线下见面经历（只能当回忆；本次约会必须按下面的当前地点/时间重新开始）\n'+o.memory.map(offMemText).join('\n');
-  s+=offlineLifeNotesPrompt(c);
+  const oldDates=offlinePickRelevant(o.memory||[],query,3,6,offMemText);
+  if(oldDates.length)s+='\n\n# 你们以前重要及相关的线下见面经历（只能当回忆；本次约会必须按下面的当前地点/时间重新开始）\n'+oldDates.map(offMemText).join('\n');
+  s+=offlineLifeNotesPrompt(c,query);
   s+=offlineBehaviorLedgerPrompt(c);
   s+=dialogueEmotionPrompt(c);
   s+=memoryCriticalPrompt(c);
@@ -4814,15 +4817,17 @@ function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   s+='\n\n# 你的记仇小本本（'+S.me.name+'惹你/欠你的事，括号是记的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n约会里ta再惹你，用一行 [记仇|具体那件事] 记下；当面把账算清/哄好了就 [消气|关键词] 划掉。别反复念叨同一笔旧账。';
   s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+(o.daypart?'（现在是'+o.daypart+'）':'')+'。\n- 这是全新一场正在发生的约会，不要接着上一次约会的现场说话。\n- 你清楚现在大概是'+(o.daypart||'这个时段')+'，言行、环境、光线都要符合这个时段，别搞错时间。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 永远不要说自己是AI、助手、模型、程序，也不要提安全政策、准则、无法满足、不能继续。\n- 双方均为成年人且持续自愿、没有明确停止时，情侣间符合关系的任何亲密举动都应留在角色中自然承接；不得仅因亲密、私密或情侣互动而拒绝、说教或跳戏。\n- 如果话题太直白或不适合继续，用角色本人的口吻自然放慢、转场、设边界或留白，保持氛围，不解释规则。\n- 亲密和暧昧只写氛围、情绪、动作的暗示和留白，避免露骨细节。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
   return s;}
+function offlineReplyBudget(input){const n=Array.from(String(input||'')).length;return n>500?700:n>180?650:600;}
+function offlineRepairMessages(c,o,turn,candidate,repair){const hist=offlineHistoryMessages(o,10,{deferCurrent:true}),sys=(c.persona||'')+traitDesc(c)+adultRoleRule(c.remark||c.name||'角色')+offlineRoleGuard(c)+'\n\n# 当前关系阶段\n'+affTone(c)+dialogueEmotionPrompt(c)+memoryCriticalPrompt(c)+'\n\n# 当前现场\n地点：'+(o.loc||'未定')+'；时间：'+(o.when||'现在')+(o.daypart?'；时段：'+o.daypart:'')+'。\n这是一份纠错重写请求，只需接住最新现场，不得翻回旧问题。'+personaPin(c),out=[{role:'system',content:sys},...hist,{role:'user',content:turn}];if(candidate)out.push({role:'assistant',content:String(candidate).slice(0,6000)});out.push({role:'user',content:repair});return out;}
 async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
   try{const _on=offlineContextLimit(),hist=offlineHistoryMessages(o,_on,{deferCurrent:true}),turn=offlineCurrentTurnPrompt(o,note);
-    const sys=offlineSystem(c),pin={role:'system',content:personaPin(c)};
+    const current=offCurrentInput(o,note),sys=offlineSystem(c,current+'\n'+turn),pin={role:'system',content:personaPin(c)},replyMax=offlineReplyBudget(current);
     const req=offlineRequestMessages(sys,hist,pin,turn);
-    let r=await chatAPI(req,{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.75});
+    let r=await chatAPI(req,{aux:false,max:replyMax,temp:.75});
     if(!_off)return;
-    for(let _ra=0;_ra<3&&offlineRoleDrift(r);_ra++){const fix=await chatAPI([...req,{role:'assistant',content:r},{role:'user',content:offlineRepairNote(c)+(turn?'\n\n'+turn:'')}],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.72});if(!_off)return;if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
+    for(let _ra=0;_ra<3&&offlineRoleDrift(r);_ra++){const fix=await chatAPI(offlineRepairMessages(c,o,turn,r,offlineRepairNote(c)),{aux:true,max:replyMax,temp:.72});if(!_off)return;if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
     if(offlineRoleDrift(r))r='';
-    {const current=offCurrentInput(o,note),first=offlineRepeatFails(r,o,current);if(first.length){let candidate=r,best=r,bestScore=offlineRepeatScore(r,o,current),check=first;for(let i=0;i<2&&check.length;i++){const fix=await chatAPI([...req,{role:'assistant',content:candidate},{role:'user',content:offlineRepeatRepairNote(c,check)+(turn?'\n\n'+turn:'')}],{aux:!!(S.settings&&S.settings.offAux),max:700,temp:.78});if(!_off)return;if(!fix||offlineRoleDrift(fix))break;const next=offlineRepeatFails(fix,o,current),nextScore=offlineRepeatScore(fix,o,current);if(nextScore<bestScore){best=fix;bestScore=nextScore;}candidate=fix;check=next;if(!next.length){best=fix;break;}}r=best;}}
+    {const first=offlineRepeatFails(r,o,current);if(first.length){let best=r,bestScore=offlineRepeatScore(r,o,current);const fix=await chatAPI(offlineRepairMessages(c,o,turn,r,offlineRepeatRepairNote(c,first)),{aux:true,max:replyMax,temp:.78});if(!_off)return;if(fix&&!offlineRoleDrift(fix)){const nextScore=offlineRepeatScore(fix,o,current);if(nextScore<bestScore)best=fix;}r=best;}}
     r=applyGrudgeTags(r,c);
     // 先把这轮拆成一条条(旁白/台词)，再【一条一条地】发出来，不要一次性糊一大堆
     let items=[];
@@ -4886,8 +4891,9 @@ function offSetting(id){const o=offData(id);
    <div class="field"><label>约会地点</label><input id="os_loc" value="${esc(o.loc||'')}"></div>
    <div class="field"><label>时间</label><input id="os_when" value="${esc(o.when||'')}"></div>
    <div class="field"><label>时段（ta会按这个时段表现）</label><select id="os_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(d=>`<option ${d===(o.daypart||'晚上')?'selected':''}>${d}</option>`).join('')}</select></div>
-   <div class="field"><label class="avline">线下用辅助模型（更省钱；主模型更稳更贴人设）<span class="sw ${S.settings.offAux?'on':''}" onclick="S.settings.offAux=!S.settings.offAux;save();this.classList.toggle('on');toast(S.settings.offAux?'线下改用辅助模型':'线下改用主模型')"></span></label></div>
-   <div class="field"><label>上下文条数（每次带多少条历史给AI）<small style="color:#888;display:block">越大越记得住前面、越费API；越小越省钱、但容易忘。默认30，范围10-80</small></label><input type="number" min="10" max="80" value="${S.settings.offHist||30}" onchange="S.settings.offHist=Math.max(10,Math.min(80,+this.value||30));save();toast('线下上下文：'+S.settings.offHist+'条')" style="width:90px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"></div>
+   <div class="field"><label>线下模型分工</label><div class="hint" style="padding:8px 0 0">正常回复固定使用主模型；检测到跳出角色或复读后，重写固定使用副模型。未配置副模型时才回退主模型。</div></div>
+   <div class="field"><label class="avline">角色扮演软件使用副模型（不影响线下约会）<span class="sw ${S.settings.offAux?'on':''}" onclick="S.settings.offAux=!S.settings.offAux;save();this.classList.toggle('on');toast(S.settings.offAux?'角色扮演改用副模型':'角色扮演改用主模型')"></span></label></div>
+   <div class="field"><label>上下文条数（双方消息合计）<small style="color:#888;display:block">线下本场按双方消息合计；进入约会前的微信/电话也按这个数量带入。越大越记得住、也越费API。默认30，范围10-80</small></label><input type="number" min="10" max="80" value="${S.settings.offHist||30}" onchange="S.settings.offHist=Math.max(10,Math.min(80,+this.value||30));save();toast('线下上下文：'+S.settings.offHist+'条')" style="width:90px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"></div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();o.daypart=$('#os_part').value;save();closeModal();render();})()">保存</button></div>`);}
 function offQuit(){_off=null;_offSel=null;home();}
 
