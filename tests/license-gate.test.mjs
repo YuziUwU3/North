@@ -93,6 +93,8 @@ context.fetch = async (_url, options) => {
     register_verify: { ok: true, session: { token: 'token-1', licenseId: 'license-1', sessionId: 'session-1' }, passkeyCount: 1 },
     restore_options: { ok: true, challengeId: 'challenge-auth', options: { challenge: 'AQID', rpId: 'example.com', allowCredentials: [] } },
     restore_verify: { ok: true, session: { token: 'token-2', licenseId: 'license-1', sessionId: 'session-2', activeCount: 2, evicted: [] } },
+    session_check: { ok: true, valid: true, licenseId: 'license-1', sessionId: 'session-2', sessionCount: 2, passkeyCount: 1 },
+    session_list: { ok: true, currentSessionId: 'session-2', sessions: [{ id: 'session-2', label: 'iPhone · Edge', current: true }, { id: 'session-1', label: 'iPhone · Safari', current: false }] },
     ai_identity_sync: { ok: true, userId: 'ph_shared', clientSecret: 'sec_shared_1234567890', existing: true },
     transfer_create: { ok: true, code: 'ABCD-EFGH' },
     transfer_redeem: { ok: true, session: { token: 'token-3', licenseId: 'license-1', sessionId: 'session-3', activeCount: 3, evicted: [] } },
@@ -110,6 +112,9 @@ const license = context.NorthLicense;
 license.init({ baseUrl: 'https://example.supabase.co', apiKey: 'public-key', epoch: 3 });
 
 assert.equal(license.deviceLabel(), 'iPhone · Safari');
+context.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36 EdgA/130.0';
+assert.equal(license.deviceLabel(), '安卓手机 · Edge');
+context.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1';
 assert.equal(license.supportsPasskey(), true);
 const source = new Uint8Array([0, 1, 2, 253, 254, 255]);
 const encoded = license._test.bufferToB64url(source);
@@ -127,6 +132,11 @@ assert.equal(registerVerify.credential.response.publicKeyAlgorithm, -7);
 
 await license.restorePasskey();
 assert.equal(license.session().token, 'token-2');
+await license.check();
+assert.equal(license.meta().sessionCount, 2);
+const sessionList = await license.listSessions();
+assert.equal(sessionList.sessions.length, 2);
+assert.equal(license.meta().sessionCount, 2);
 const restoredIdentity = await license.syncAIIdentity('ph_new', 'sec_new_1234567890');
 assert.equal(restoredIdentity.userId, 'ph_shared');
 

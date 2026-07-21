@@ -62,7 +62,7 @@
     const ua = navigator.userAgent || '';
     const standalone = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || !!navigator.standalone;
     let device = /iPhone/i.test(ua) ? 'iPhone' : /iPad/i.test(ua) ? 'iPad' : /Android/i.test(ua) ? '安卓手机' : '手机';
-    let browser = /MicroMessenger/i.test(ua) ? '微信浏览器' : /CriOS|Chrome/i.test(ua) ? 'Chrome' : /EdgiOS|EdgA/i.test(ua) ? 'Edge' : /Safari/i.test(ua) ? 'Safari' : '浏览器';
+    let browser = /MicroMessenger/i.test(ua) ? '微信浏览器' : /EdgiOS|EdgA|Edg\//i.test(ua) ? 'Edge' : /CriOS|Chrome/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : '浏览器';
     if (standalone) browser = '主屏幕';
     return device + ' · ' + browser;
   }
@@ -278,7 +278,12 @@
   async function listSessions() {
     const current = session();
     if (!current) throw new Error('本浏览器还没有授权');
-    return api('session_list', { sessionToken: current.token });
+    const result = await api('session_list', { sessionToken: current.token });
+    writeJSON(META_KEY, Object.assign({}, meta(), {
+      sessionCount: Array.isArray(result.sessions) ? result.sessions.length : 0,
+      checkedAt: Date.now(),
+    }));
+    return result;
   }
 
   async function revokeSession(targetSessionId) {

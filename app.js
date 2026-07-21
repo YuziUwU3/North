@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='593'){
+if(window.__NORTH_SHELL_BUILD__!=='594'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v593 · 停止新账户赠送点数';
+const APP_VER='v594 · 浏览器授权数量实时同步';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1141,7 +1141,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=593';
+  const url='sw.js?v=594';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4140,10 +4140,14 @@ async function licenseSyncAiIdentity(force){if(!window.NorthLicense||!NorthLicen
   const result=await NorthLicense.syncAIIdentity(aiUserId(),aiUserSecret());if(!result||!result.userId||!result.clientSecret)throw new Error('AI账户同步失败');try{localStorage.setItem('yibei_ai_uid',result.userId);localStorage.setItem('yibei_ai_secret',result.clientSecret);localStorage.setItem(markKey,expected);}catch(_){}if(typeof _aiAcct!=='undefined')_aiAcct=null;if(typeof _aiAutoTried!=='undefined')_aiAutoTried=false;return result;}
 async function licenseTransferModal(){try{const r=await NorthLicense.createTransfer();openModal('<h3>一次性迁移码</h3><div class="hint">在新浏览器或主屏幕入口点“使用迁移码”，输入下面的号码。<b>5分钟有效，只能使用一次</b>。</div><div style="font-size:28px;letter-spacing:4px;text-align:center;color:#f0d7aa;font-weight:700;padding:18px 0">'+esc(r.code)+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'生成迁移码失败');}}
 function licenseTimeText(value){const t=new Date(value||0).getTime();return t?fmtDur(Math.max(0,Date.now()-t))+'前':'未知';}
-async function licenseDevicesModal(){openModal('<h3>已授权浏览器</h3><div class="hint">正在读取…</div>');try{const r=await NorthLicense.listSessions();openModal('<h3>已授权浏览器 '+r.sessions.length+'/3</h3><div class="hint">第4个浏览器恢复时会自动退出最早的一个。移除只会退出该入口，不会删除聊天和设置。</div><div class="section">'+r.sessions.map(s=>'<div class="it"><span>'+esc(s.label)+(s.current?' <small style="color:#07c160">当前</small>':'')+'<br><small style="color:#777">最近使用：'+esc(licenseTimeText(s.last_seen_at))+'</small></span><button class="minibtn" onclick="licenseRevokeDevice(\''+s.id+'\','+!!s.current+')">移除</button></div>').join('')+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'读取失败');closeModal();}}
+let _licenseStatusRefreshBusy=false;
+function licenseUpdateCount(count){const btn=document.getElementById('license_devices_btn');if(btn)btn.textContent='已授权浏览器 '+Math.max(0,+count||0)+'/3';}
+async function licenseRefreshStatus(){if(_licenseStatusRefreshBusy||!window.NorthLicense||!NorthLicense.isManaged()||!NorthLicense.session())return;_licenseStatusRefreshBusy=true;try{const r=await NorthLicense.check();licenseUpdateCount(r.sessionCount);}catch(e){}finally{_licenseStatusRefreshBusy=false;}}
+async function licenseDevicesModal(){openModal('<h3>已授权浏览器</h3><div class="hint">正在读取…</div>');try{const r=await NorthLicense.listSessions(),count=r.sessions.length;licenseUpdateCount(count);openModal('<h3>已授权浏览器 '+count+'/3</h3><div class="hint">第4个浏览器恢复时会自动退出最早的一个。移除只会退出该入口，不会删除聊天和设置。</div><div class="section">'+r.sessions.map(s=>'<div class="it"><span>'+esc(s.label)+(s.current?' <small style="color:#07c160">当前</small>':'')+'<br><small style="color:#777">最近使用：'+esc(licenseTimeText(s.last_seen_at))+'</small></span><button class="minibtn" onclick="licenseRevokeDevice(\''+s.id+'\','+!!s.current+')">移除</button></div>').join('')+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'读取失败');closeModal();}}
 async function licenseRevokeDevice(id,current){if(!await uiConfirm(current?'退出当前浏览器授权？不会删除任何数据。':'移除这个浏览器授权？'))return;try{await NorthLicense.revokeSession(id);if(current){try{localStorage.removeItem('yibei_unlocked');}catch(_){}closeModal();showGate();}else{toast('已移除');licenseDevicesModal();}}catch(e){toast((e&&e.message)||'移除失败');}}
 function licenseStatusSection(){if(!window.NorthLicense)return '';const managed=NorthLicense.isManaged()&&!!NorthLicense.session(),m=NorthLicense.meta(),count=Math.max(0,+m.sessionCount||0),passkeys=Math.max(0,+m.passkeyCount||0);
-  return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">手机授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹。换浏览器或添加到主屏幕后，点“恢复授权”即可。':'当前浏览器已授权，建议继续绑定扫脸/指纹，防止换浏览器后进不来。'):'当前还是旧版浏览器授权。绑定后，邀请码仍永久失效，之后用手机验证恢复。')+'<br><b>大刷新会让旧授权在云端一起失效，不能靠恢复绕过。</b></div><div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'重新绑定手机验证':'绑定扫脸 / 指纹恢复')+'</button></div>'+(managed?'<div class="btns" style="padding:0 14px 8px"><button class="btn g" onclick="licenseDevicesModal()">已授权浏览器 '+(count||'')+'/3</button><button class="btn g" onclick="licenseTransferModal()">生成迁移码</button></div>':'')+'</div>';}
+  if(managed)setTimeout(licenseRefreshStatus,0);
+  return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">手机授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹。换浏览器或添加到主屏幕后，点“恢复授权”即可。':'当前浏览器已授权，建议继续绑定扫脸/指纹，防止换浏览器后进不来。'):'当前还是旧版浏览器授权。绑定后，邀请码仍永久失效，之后用手机验证恢复。')+'<br><b>大刷新会让旧授权在云端一起失效，不能靠恢复绕过。</b></div><div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'重新绑定手机验证':'绑定扫脸 / 指纹恢复')+'</button></div>'+(managed?'<div class="btns" style="padding:0 14px 8px"><button class="btn g" id="license_devices_btn" onclick="licenseDevicesModal()">已授权浏览器 '+count+'/3</button><button class="btn g" onclick="licenseTransferModal()">生成迁移码</button></div>':'')+'</div>';}
 function chatAddMenu(){openModal(`<h3>＋</h3>
   <button class="btn p" style="margin-bottom:8px" onclick="closeModal();editContact()">新建角色</button>
   <button class="btn g" onclick="closeModal();createGroup()">发起群聊</button>
