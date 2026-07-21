@@ -26,5 +26,8 @@ assert.match(html, /\.wxlight \.manual-reply-chip\{background:#fff/);
 assert.match(html, /\.wxlight \.inputbar\{background:#fff/);
 assert.match(html, /\.wxlight \.inputbar \.plus\{background:#fff!important/);
 assert.match(html, /\.modal\.wxmodal-light \.sheet\{background:#fff/);
+assert.match(html, /\.modal\.wxmodal-light \.hint\{color:#6f7075!important/);
+assert.match(html, /\.wxlight \.panel \.it \.b svg\{stroke:#8b8c92!important/);
+assert.match(html, /\.wxlight \.ptabs>span\.on\{color:#55565b/);
 
 console.log("wechat light theme tests passed");

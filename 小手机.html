@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='587';</script>
+<script>window.__NORTH_SHELL_BUILD__='588';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,12 +29,12 @@
 /* 主屏幕 WebApp 也主动检查最新 SW，接管后只刷新一次。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-587';
+  var key='north-sw-reloaded-588';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-    var u=new URL(location.href);u.searchParams.set('v','587');u.searchParams.set('sw',Date.now());location.replace(u.href);
+    var u=new URL(location.href);u.searchParams.set('v','588');u.searchParams.set('sw',Date.now());location.replace(u.href);
   });
-  var url='sw.js?v=587';
+  var url='sw.js?v=588';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -302,9 +302,13 @@ body{background:#000;padding:0;}
 .wxlight .inputbar .plus{background:#fff!important;color:#555!important;border-color:#d8d8dc!important;box-shadow:0 2px 8px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.95)!important;}
 .wxlight .inputbar .plus svg{stroke:#555!important;}
 .wxlight .inputbar .send{background:#fff;color:#222;border-color:#d8d8dc;box-shadow:0 2px 8px rgba(0,0,0,.1);}
-.wxlight .panel{background:#f7f7f7;border-top:.5px solid #dcdcdc;}
-.wxlight .panel .it span{color:#666;}
-.wxlight .panel .it .b{background:linear-gradient(145deg,#ffffff,#eee);box-shadow:0 4px 10px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.05);}
+.wxlight .panel{background:#f4f4f5;border-top:.5px solid #d7d7da;}
+.wxlight .ptabs span{color:#76777c;}
+.wxlight .ptabs>span.on{color:#55565b;}
+.wxlight .ptabs svg{stroke:#85868c!important;}
+.wxlight .panel .it span{color:#65666b;}
+.wxlight .panel .it .b{background:linear-gradient(145deg,#f5f5f7,#e9e9ec);box-shadow:0 4px 10px rgba(0,0,0,.08);border:1px solid #dedee2;}
+.wxlight .panel .it .b svg{stroke:#8b8c92!important;}
 .wxlight .section{background:#fff;}
 .wxlight .section .it{color:#111;border-bottom:.5px solid #ececec;}.wxlight .section .it .v{color:#999;}
 .wxlight .section input,.wxlight .section textarea,.wxlight .section select{background:#fff!important;color:#111!important;border-color:#ddd!important;}
@@ -314,6 +318,7 @@ body{background:#000;padding:0;}
 .wxlight .empty{color:#999;}.wxlight .scroll{background:#ededed;}
 .modal.wxmodal-light .sheet{background:#fff;color:#222;}
 .modal.wxmodal-light .sheet h3{color:#222;}
+.modal.wxmodal-light .hint{color:#6f7075!important;}
 .modal.wxmodal-light .field label{color:#555;}
 .modal.wxmodal-light .field input,.modal.wxmodal-light .field textarea,.modal.wxmodal-light .field select{background:#fff!important;color:#111!important;border-color:#ddd!important;}
 .modal.wxmodal-light .section{background:#f7f7f8;}
@@ -758,7 +763,7 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="app.js?v=587" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=587"></script>
+<script src="app.js?v=588" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=588"></script>
 </body>
 </html>
