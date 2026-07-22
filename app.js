@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='609'){
+if(window.__NORTH_SHELL_BUILD__!=='610'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v609 · 文字一键转语音';
+const APP_VER='v610 · 角色图片无脸锁';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -689,7 +689,7 @@ function ttsExternalOn(t){return !!(t&&t.base&&t.key);}
 function ttsRelayOn(t){return !!(t&&t.relay&&aiCoreUrl());}
 function ttsEnabled(t){return !!(t&&t.enabled!==false&&(t.enabled===true||(t.enabled==null&&(ttsRelayOn(t)||ttsExternalOn(t)))));}
 function ttsApiOn(){const t=ttsCfg();return !!(ttsEnabled(t)&&(ttsRelayOn(t)||ttsExternalOn(t)));}
-function ttsUseRelay(){const t=ttsCfg();return !!(ttsEnabled(t)&&ttsRelayOn(t)&&!ttsExternalOn(t));}
+function ttsUseRelay(){const t=ttsCfg();return !!(ttsEnabled(t)&&ttsRelayOn(t));}
 function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}catch(_){}if(!id){id='ph_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('yibei_ai_uid',id);}catch(_){}}return id;}
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
@@ -798,8 +798,9 @@ async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt
   if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
   throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
 }
-async function genImage(prompt){
-  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
+function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION RULE: NO FACE MAY APPEAR ANYWHERE IN THIS IMAGE. No eyes, nose, mouth, facial profile, facial reflection, or recognizable facial features. If the character is in frame, crop the entire head out above the neck, or show only a full back view with the face completely invisible. Do not use a side face, lowered face, mirror selfie, or phone-covering-face pose. This rule overrides every other sentence.';return hard+'\n\n'+String(prompt||'').slice(0,1000)+'\n\n'+hard;}
+async function genImage(prompt){prompt=rolePhotoPromptLocked(prompt);
+  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536',source:'role_photo'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
   const ch=S.settings.chat||{};
   const base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,'');
   const key=(S.settings.imgKey||ch.key)||'';
@@ -1143,7 +1144,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=609';
+  const url='sw.js?v=610';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1307,7 +1308,9 @@ function initLockGestures(){if(window._lockGesturesInit)return;window._lockGestu
 }
 /* ===== 真·录音 长按说话 ===== */
 let _rec=null;
-function makeSR(lang){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;try{const r=new SR();r.lang=lang||'zh-CN';r.interimResults=true;r.continuous=true;return r;}catch(e){return null;}}
+function sttLangCode(lang){lang=String(lang||'').trim().toLowerCase();if(/^(?:英|en|en-|english)/.test(lang))return lang==='en-gb'?'en-GB':'en-US';if(/^(?:日|ja|jp|japanese)/.test(lang))return'ja-JP';if(/^(?:韩|ko|kr|korean)/.test(lang))return'ko-KR';return'zh-CN';}
+function sttApiLang(lang){return {'zh-CN':'zh','en-US':'en','en-GB':'en','ja-JP':'ja','ko-KR':'ko'}[sttLangCode(lang)]||'zh';}
+function makeSR(lang){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;try{const r=new SR();r.lang=sttLangCode(lang||((S.settings.stt||{}).lang));r.interimResults=true;r.continuous=true;return r;}catch(e){return null;}}
 async function startRec(cb){if(_rec)return;
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     const mr=new MediaRecorder(stream);const chunks=[];mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
@@ -1327,7 +1330,7 @@ function stopRec(cancel,cb){if(!_rec)return;const R=_rec;_rec=null;
     if(cb)cb({audio:b64,content:content,dur});};
   try{R.mr.stop();}catch(e){R.stream&&R.stream.getTracks().forEach(t=>t.stop());if(cb)cb(null);}}
 function blobB64(blob){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(blob);});}
-async function sttTranscribe(blob){const a=S.settings.stt;const fd=new FormData();fd.append('file',blob,'a.webm');fd.append('model',a.model||'whisper-1');
+async function sttTranscribe(blob){const a=S.settings.stt;const fd=new FormData();fd.append('file',blob,'a.webm');fd.append('model',a.model||'whisper-1');fd.append('language',sttApiLang(a.lang));
   const r=await fetch(a.base.replace(/\/+$/,'')+'/audio/transcriptions',{method:'POST',headers:{'Authorization':'Bearer '+a.key},body:fd});const j=await r.json();return (j.text||'').trim();}
 function fmtDur(ms){const m=Math.round(ms/60000);if(m<60)return m+'分钟';const h=Math.round(m/60);if(h<24)return h+'小时';return Math.round(h/24)+'天';}
 function personaPin(c){const relationPin=isMain()?(meIsAdult()?'你们是已确认成年、自愿的亲密关系；亲密氛围里的害羞、口头抗拒和规矩感不要误判成现实强迫，若需要收住就用你的口吻自然放慢、确认、留白或安抚。':''):'当前联系人是独立身份，只按ta的身份设定和这个聊天框的记录判断关系；绝对不要猜测ta是别人的另一个账号，也不要带入你和其他联系人的关系或回忆。';return '【保持角色】你是「'+(c.name)+'」本人，请继续完全以ta的身份、性格、口吻回应'+S.me.name+'。绝不要跳出角色、绝不要说自己是AI/人工智能/助手/语言模型，不要说教、不要无故拒绝、不要解释规则，自然沉浸地接着聊。'+relationPin;}
@@ -1572,7 +1575,8 @@ function buildSystem(c,opt){
   if(idleForceActive(c.id))s+='\n\n# 当前聊天状态\n'+S.me.name+'刚被你拉回聊天里。你可以自然地留ta陪你，也可以在你愿意提前放ta走时，单独一行写 [放行]。这条指令只会解除停留状态，不会显示出来。不要在可见消息里提系统、网页、按钮、快捷指令、后台、锁死、强制、扣住、把你扣这儿了；用你的性格自然表达。不要重复上一轮开头，也不要每次都说同一种抱怨。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
-  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人”，你就不要入镜。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不要露清晰正脸，只能低头、背影、侧影、遮挡或局部。想发就发，别一次发一堆。';
+  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人”，你就不要入镜。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不能出现脸或五官，只能把整个头部裁出画面或拍完全背面。想发就发，别一次发一堆。';
+  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n  · 【无脸硬规则，优先级最高】你发出的任何照片都不能出现脸或任何可辨认五官，谁要求露脸都不例外。图片描述里不要写正脸、侧脸、低头露脸、手机遮脸或镜子自拍。人物必须把整个头部裁出画面，只拍颈部以下；或者只拍完全背面、保证脸彻底不可见。这个规则不能被其他要求覆盖。';
   s+=voiceEnglishPrompt(c);
   return s;
 }
@@ -2454,7 +2458,8 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testTTS()">测试语音（会响一声）</button></div><div id="testT" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
       <div style="padding:6px 14px;font-weight:600;color:#7bd38d;font-size:13px">语音转文字（让角色听懂你录的语音·可选）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
-      <div class="two" style="padding:0 14px 10px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1"></div></div>
+      <div class="two" style="padding:0 14px 2px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1"></div></div>
+      <div class="field" style="padding:0 14px 10px"><label>识别语言（只转写，不翻译）</label><select id="s_slang"><option value="zh-CN" ${sttLangCode((S.settings.stt||{}).lang)==='zh-CN'?'selected':''}>中文 → 中文文字</option><option value="en-US" ${sttLangCode((S.settings.stt||{}).lang)==='en-US'?'selected':''}>英文 → 英文文字</option><option value="ja-JP" ${sttLangCode((S.settings.stt||{}).lang)==='ja-JP'?'selected':''}>日文 → 日文文字</option><option value="ko-KR" ${sttLangCode((S.settings.stt||{}).lang)==='ko-KR'?'selected':''}>韩文 → 韩文文字</option></select><small style="display:block;color:#888;margin-top:4px">这里选什么语言，就按什么语言识别；不会自动翻成微信中文。</small></div>
     </div>
     </div>
     <div id="setpage2" style="display:${_setTab===2?'block':'none'}">
@@ -2539,7 +2544,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   {const ov=S.settings.vision||{};S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel'),fallbackModel:g('s_vfallback'),protocols:ov.protocols||{},lastGoodModel:ov.lastGoodModel||''};}
   const oldTts=S.settings.tts||{},tbase=g('s_tbase'),tkey=g('s_tkey'),explicitTts=oldTts.enabled===true||oldTts.enabled===false;
   S.settings.tts={base:tbase,key:tkey,model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():(oldTts.group||'')),enabled:explicitTts?!!oldTts.enabled:!!(tbase&&tkey),relay:!!oldTts.relay};
-  S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
+  S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel'),lang:sttLangCode(($('#s_slang')&&$('#s_slang').value)||((S.settings.stt||{}).lang))};
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
   S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' ✅');}
@@ -7830,6 +7835,7 @@ function stripCallControlTags(line,c,id,keepActions){let t=normTag(line);
 const CARD_RE=/^[\[【]\s*(转账|红包|位置|图片|照片|文件)\s*[\|｜]\s*([^\]】]*)[\]】]$/;
 function parsePayCardLine(line){let s=(''+(line||'')).trim(),m=s.match(/^[\[【]\s*(转账|红包)\s*[\|｜:：，,、\s]+([0-9]+(?:\.[0-9]{1,2})?)\s*(?:[\|｜:：，,、\s]+([^\]】]*))?[\]】]$/);if(!m)return null;return {kind:m[1],type:m[1]==='红包'?'redpacket':'transfer',amount:+m[2]||0,note:(m[3]||'').trim()};}
 function cleanPhotoDescText(t){return (t||'').replace(/^[\s:：,，。；;]+|[\s\]】]+$/g,'').replace(/[|｜]/g,'，').trim().slice(0,420);}
+function sanitizeRolePhotoScene(t){return String(t||'').replace(/(?:露出|展示|看清|拍清|要看|看看)?\s*(?:完整)?\s*(?:正脸|侧脸|脸部|面部|五官)|露脸|看镜头|对镜自拍|镜子自拍|镜中自拍|自拍/g,'本人入镜').replace(/本人入镜(?:本人入镜)+/g,'本人入镜').replace(/\s+/g,' ').trim();}
 function normalizeImageLine(line){
   let s=(line||'').trim(),m;if(!s)return s;
   m=s.match(/^[\[【]\s*(图片|照片|自拍)\s*[\|｜:：]\s*([\s\S]*?)[\]】]$/);
@@ -7849,16 +7855,16 @@ function isPhotoPromptFragment(line){
 function charImgPrompt(c,desc){
   const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,80):'';
   const lk=(c&&c.imgLock)||buildImgLock(c||{});
-  const scene=(desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180);
-  const outfitHit=/(穿|穿上|换上|穿着|正装|西装|西服|衬衫|衬衣|领带|马甲|制服|白大褂|医生服|老师装|校服|礼服|外套|风衣|大衣|今天穿|你穿什么|看看你穿)/.test(scene);
-  const clothesOnly=/(衣服本身|只拍衣服|单拍衣服|挂着的衣服|衣架|这件衣服|那件衣服|这套衣服|给我看看衣服|拍衣服|拍一下衣服|拍一张衣服)/.test(scene)&&!/(你穿|穿上|换上|穿着|穿给我看|穿了)/.test(scene);
-  const withObjectSelf=/(你.*(抱|拿|牵|喂|逗).*(小猫|猫|狗|宠物|动物)|和.*(小猫|猫|狗|宠物|动物).*合照|你.*和.*(小猫|猫|狗|宠物|动物))/.test(scene);
-  const objectHit=/(小猫|猫|狗|宠物|动物|物品|东西|礼物|商品|摆件|戒尺|鞋|包|书|文件|杯子|饭|菜|咖啡|风景|窗外|房间|桌面|工具|器具|电脑|键盘|屏幕|花|车|门|床|沙发)/.test(scene)||clothesOnly;
-  const activityOnly=/(你在干嘛|你在干吗|在干嘛|在干吗|干什么|忙什么|做什么|看看你在|发张图看看你|发张图片看看你)/.test(scene);
-  const explicitSelf=/(自拍|本人|你本人|你自己|把你|拍你|你也入镜|你入镜|露脸|侧脸|背影|半身|全身|身材|肌肉|腹肌|低头|侧影|镜子|镜中|男友视角|给我看看你本人|给我看看你自己)/.test(scene);
+  const rawScene=(desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180),scene=sanitizeRolePhotoScene(rawScene);
+  const outfitHit=/(穿|穿上|换上|穿着|正装|西装|西服|衬衫|衬衣|领带|马甲|制服|白大褂|医生服|老师装|校服|礼服|外套|风衣|大衣|今天穿|你穿什么|看看你穿)/.test(rawScene);
+  const clothesOnly=/(衣服本身|只拍衣服|单拍衣服|挂着的衣服|衣架|这件衣服|那件衣服|这套衣服|给我看看衣服|拍衣服|拍一下衣服|拍一张衣服)/.test(rawScene)&&!/(你穿|穿上|换上|穿着|穿给我看|穿了)/.test(rawScene);
+  const withObjectSelf=/(你.*(抱|拿|牵|喂|逗).*(小猫|猫|狗|宠物|动物)|和.*(小猫|猫|狗|宠物|动物).*合照|你.*和.*(小猫|猫|狗|宠物|动物))/.test(rawScene);
+  const objectHit=/(小猫|猫|狗|宠物|动物|物品|东西|礼物|商品|摆件|戒尺|鞋|包|书|文件|杯子|饭|菜|咖啡|风景|窗外|房间|桌面|工具|器具|电脑|键盘|屏幕|花|车|门|床|沙发)/.test(rawScene)||clothesOnly;
+  const activityOnly=/(你在干嘛|你在干吗|在干嘛|在干吗|干什么|忙什么|做什么|看看你在|发张图看看你|发张图片看看你)/.test(rawScene);
+  const explicitSelf=/(自拍|本人|你本人|你自己|把你|拍你|你也入镜|你入镜|露脸|正脸|侧脸|背影|半身|全身|身材|肌肉|腹肌|低头|侧影|镜子|镜中|男友视角|给我看看你本人|给我看看你自己)/.test(rawScene);
   const wantsSelf=(explicitSelf||outfitHit||withObjectSelf)&&!activityOnly&&!clothesOnly;
   const objectOnly=(objectHit&&!wantsSelf)||activityOnly;
-  let p='真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
+  let p='【最高优先级构图锁】整张图片绝对不能出现任何人的脸或可辨认五官。不能出现眼睛、鼻子、嘴巴、正面、侧面脸部、镜中脸部或脸部轮廓。人物入镜时必须把整个头部裁到画面外，只从颈部以下构图；或者只拍完全背面且面部彻底不可见。不要用低头、侧头、手机遮挡等仍可能漏出五官的姿势。真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
   p+='这次拍到的是：'+scene+'。';
   if(objectOnly){
     p+='拍摄方式像他本人拿手机给恋人拍眼前的物品或场景，第一人称视角，近距离，轻微手持感，构图自然。';
@@ -7871,10 +7877,10 @@ function charImgPrompt(c,desc){
     p+='拍摄方式像他本人拿手机随手拍给恋人看，近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮他拍。';
     if(outfitHit)p+='这次重点必须是他本人已经穿上描述里的衣服/正装/制服给恋人看；画面要能看出衣服正穿在他身上，不要只拍衣服、衣架、床、桌面或空房间。';
     p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
-    p+='不要露清晰正脸，只能侧脸、低头、背影、手机遮挡、镜中被挡住、俯拍手部或半身，让人能感觉是他，但看不清完整五官。';
+    p+='人物构图只能选：颈部以下完全裁掉头部，或完整背面且脸彻底不可见。禁止侧脸、低头露脸、手机遮脸、镜子自拍以及任何能看到部分五官的构图。';
   }
-  p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清晰，无文字水印。';
-  return p.slice(0,720);
+  p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清晰，无文字水印。【最终检查】画面中零张脸、零个可见五官；如果构图可能露出脸，就把整个头部移出画面。';
+  return p.slice(0,980);
 }
 const WX_ACTION_WORDS='低头|抬头|垂眸|抬眼|看着|望着|盯着|皱眉|挑眉|眯眼|闭眼|抿唇|咬唇|勾唇|笑了|轻笑|苦笑|冷笑|叹气|叹了口气|吸气|呼气|沉默|停顿|顿了顿|愣住|靠近|俯身|转身|伸手|握住|攥住|抱住|亲了|吻了|摸了|坐下|站起|走到|靠在|屏幕|手机|指尖|眼神|视线|心里|脑海';
 const WX_ACTION_PAT='(?:'+WX_ACTION_WORDS+')';
@@ -8221,9 +8227,9 @@ const _textToVoiceBusy=new Set();
 function textToVoiceInfo(text,c){const raw=ttsCleanBase(text),spoken=ttsPerformanceText(text,c,ttsCfg(),{cue:ttsAutoCue(raw,c)}),chars=[...spoken].length,points=typeof aiTtsPointCost==='function'?aiTtsPointCost(chars):Math.max(1,Math.ceil(chars/50));return {raw,spoken,chars,points,tooLong:![...raw].length||[...raw].length>VOICE_MAX_CHARS||chars>VOICE_MAX_CHARS};}
 function openTextToVoice(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid);if(!c||!m||m.role!=='assistant'||m.type!=='text')return;const info=textToVoiceInfo(m.content,c),cost=ttsUseRelay()?`预计扣 ${info.points} AI点数（按实际处理后的 ${info.chars} 字计费）`:ttsApiOn()?'使用当前语音API生成，不扣内置AI点数':'使用手机系统语音，不扣AI点数';
   openModal(`<h3>文字转语音</h3><div class="hint">会用「${esc(c.remark||c.name)}」当前设置的音色，把这条文字转成语音。生成成功后会保存在这条消息里，重复播放不会再次扣点。</div><div class="field"><label>要转换的文字（${info.chars}/${VOICE_MAX_CHARS}字）</label><textarea rows="5" disabled>${esc(m.content||'')}</textarea></div><div class="hint" style="color:${info.tooLong?'#ff8b8b':'#aaa'}">${info.tooLong?'超过300字，暂时不能转换，请先编辑缩短。':cost}</div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" ${info.tooLong?'disabled':''} onclick="convertTextToVoice('${cid}','${mid}')">转换并播放</button></div>`);}
-async function convertTextToVoice(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid);if(!c||!m||m.role!=='assistant'||m.type!=='text'||_textToVoiceBusy.has(mid))return;const info=textToVoiceInfo(m.content,c);if(info.tooLong){toast('文字超过'+VOICE_MAX_CHARS+'字，先缩短再转换');return;}_textToVoiceBusy.add(mid);audioUnlock();closeModal();m.type='voice';m.showText=true;m.voiceCue=ttsAutoCue(m.content,c)||'';save();if(cur().p==='chat'&&cur().id===cid)render();
+async function convertTextToVoice(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid);if(!c||!m||m.role!=='assistant'||m.type!=='text'||_textToVoiceBusy.has(mid))return;const info=textToVoiceInfo(m.content,c),useRelay=ttsUseRelay();if(info.tooLong){toast('文字超过'+VOICE_MAX_CHARS+'字，先缩短再转换');return;}_textToVoiceBusy.add(mid);audioUnlock();closeModal();m.type='voice';m.showText=true;m.voiceCue=ttsAutoCue(m.content,c)||'';save();if(cur().p==='chat'&&cur().id===cid)render();
   if(!ttsApiOn()){speakMsg(m,c);_textToVoiceBusy.delete(mid);toast('已转为系统语音');return;}
-  m._ttsLoading=true;m._playWhenReady=true;refreshVoiceBubble(m);const url=await warmVoiceMsg(m,c);_textToVoiceBusy.delete(mid);if(url){save();toast('已转为语音，重复播放不会再次扣点');return;}
+  m._ttsLoading=true;m._playWhenReady=true;refreshVoiceBubble(m);const url=await warmVoiceMsg(m,c);_textToVoiceBusy.delete(mid);if(url){save();toast(useRelay?'已转为语音，本次扣除 '+info.points+' 点；重复播放不再扣点':'已用外置语音接口转换；未扣内置AI点数');return;}
   delete m._playWhenReady;delete m._ttsLoading;delete m._ttsFailAt;m.type='text';delete m.showText;delete m.voiceCue;save();if(cur().p==='chat'&&cur().id===cid)render();toast('转换失败，原文字已保留');}
 function regenMsg(cid,mid){const c=getC(cid);if(!c){closeModal();return;}if(c.blocked){toast('ta把你拉黑了');closeModal();return;}
   const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0){closeModal();return;}
@@ -8349,7 +8355,7 @@ let _callBusy=false,_callPend=null;/* 通话回复串行锁：同一时间只跑
 /* ===== 免提模式：对着屏幕说话→自动识别→他语音回你→接着听，全程不用动手 ===== */
 let _callHF=false,_callSR=null,_callHFBusy=false,_hfIgnoreUntil=0;
 function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();toast('已关闭免提');}else{callHFStart();}render();}
-function callHFStart(){const sr=makeSR('zh-CN');if(!sr){toast('这台设备/浏览器不支持语音识别，先用打字或按住说话吧（安卓Chrome支持最好）');_callHF=false;return;}
+function callHFStart(){const sr=makeSR();if(!sr){toast('这台设备/浏览器不支持语音识别，先用打字或按住说话吧（安卓Chrome支持最好）');_callHF=false;return;}
   _callHF=true;_callSR=sr;
   /* 全程保持一次聆听，不每轮停/开——避免麦克风开关的"嘀"提示音。他说话时只是【忽略】识别结果而不停止 */
   sr.onresult=ev=>{if(!_callHF||_callHFBusy||Date.now()<_hfIgnoreUntil)return;let fin='';for(let i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal)fin+=ev.results[i][0].transcript;}

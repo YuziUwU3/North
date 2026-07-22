@@ -19,6 +19,10 @@ const AI_PAYMENT_CHANNELS=[
 const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
 const AI_PURCHASE_NOTICE='生图API原生成功率约50%，单次扣费0.3元，算上失败重试和平台手续费，一张合格成品实际成本0.62-0.79元（已经尽力压低成本，原先每张成本在1元以上），定价统一按1元/张收取。定价不含人工辛苦费，全程自愿消费，没有强制消费。即便用户生成依旧失败，在接口已经扣费的情况下，你（用户）这边，会返还点数。本服务优势是出图稳定、出图速度较快；如果觉得不合适，大家可以自行去API站点购买接口。本系统只适合自己用的接口不稳定、花费更高的人使用。点数请按需购买，少量多次。购买点数之后不要更换浏览器，更换浏览器会导致点数消失！！！请将点数用完之后再换浏览器，如因换浏览器或手机而导致点数消失概不负责。';
 function aiPageScroll(){const sc=typeof $==='function'?$('.scroll'):null;return sc?sc.scrollTop:0;}
+function aiBalanceCacheKey(){return'yibei_ai_balance_'+aiUserId();}
+function aiCachedBalance(){try{const raw=localStorage.getItem(aiBalanceCacheKey());if(raw==null||raw==='')return null;const n=Number(raw);return Number.isFinite(n)&&n>=0?n:null;}catch(_){return null;}}
+function aiRememberBalance(value){const n=Number(value);if(!Number.isFinite(n)||n<0)return null;try{localStorage.setItem(aiBalanceCacheKey(),String(n));}catch(_){}return n;}
+function aiVisibleBalance(){const raw=_aiAcct&&_aiAcct.account&&_aiAcct.account.points,n=Number(raw);if(raw!=null&&raw!==''&&Number.isFinite(n)&&n>=0)return aiRememberBalance(n);return aiCachedBalance();}
 function aiRenderStable(){const top=aiPageScroll(),page=typeof $==='function'?$('#app .page'):null;if(page&&typeof cur==='function'&&cur().p==='aiaccount')page.innerHTML=renderAIAccount();else render();requestAnimationFrame(()=>{const n=typeof $==='function'?$('.scroll'):null;if(n)n.scrollTop=top;});}
 function aiHiddenPurchases(){const ac=aiCoreInit();if(!Array.isArray(ac.hiddenPurchases))ac.hiddenPurchases=[];return ac.hiddenPurchases;}
 function aiVisiblePurchases(){const hidden=new Set(aiHiddenPurchases().map(String));return (_aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases:[]).filter(x=>!hidden.has(String(x&&x.id||'')));}
@@ -69,7 +73,7 @@ function aiServiceCards(){return aiRechargePlans().filter(p=>p.kind==='service')
   </button>`).join('');}
 
 function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);},80);
-  const bal=_aiAcct&&_aiAcct.account?(_aiAcct.account.points||0):'--';
+  const knownBalance=aiVisibleBalance(),bal=knownBalance==null?'读取中…':knownBalance;
   const low=aiLowBalanceCfg();
   const voice=(tts.voice)||'未选择';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" onclick="aiAccountRefresh()">刷新</span></div>
@@ -244,10 +248,10 @@ async function aiTestVoice(){const text='我在测试这条语音的花销和声
   }catch(e){let refunded=false;if(typeof ttsRefundError==='function')refunded=await ttsRefundError(e,'tts-test-client-error');_aiVoiceTestStatus='语音测试失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,'')+(refunded?'，已退回本次AI点数':'');toast(_aiVoiceTestStatus);setTimeout(()=>aiAccountRefresh(true,true),800);}
   finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')aiRenderStable();}}
 
-function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId(),points:0},pricing:null,plans:null,ledger:[]};
-  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(d.account)_aiAcct.account=d.account;
-  if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;}
+function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId()},pricing:null,plans:null,ledger:[]};
+  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
+  if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;aiRememberBalance(d.balance);}
   if(d.charged){const feature=action||'chat';_aiAcct.ledger=_aiAcct.ledger||[];_aiAcct.ledger.unshift({kind:'charge',feature,points:-d.charged,balance_after:d.balance,status:d.ok===false?'failed':'done',billed:!!d.billed,note:d.note||d.error||'',created_at:new Date().toISOString()});_aiAcct.ledger=_aiAcct.ledger.slice(0,80);}
   if(_aiAcct.account&&_aiAcct.account.points!=null)aiCheckLowBalance(Number(_aiAcct.account.points));
   if(cur().p==='aiaccount')setTimeout(()=>{if(cur().p==='aiaccount')aiRenderStable();},30);}
-async function aiAccountRefresh(silent,preserveScroll){if(_aiAcctBusy)return;_aiAcctBusy=true;if(silent)_aiAutoTried=true;let ok=false;try{_aiAcct=await aiRelay('account',{});ok=true;if(_aiAcct&&_aiAcct.account)aiCheckLowBalance(Number(_aiAcct.account.points));if(!silent)toast('AI账户已刷新');}catch(e){if(!silent)toast('连接失败：'+e.message);}finally{_aiAcctBusy=false;if(ok&&cur().p==='aiaccount'){const sc=$('.scroll'),top=sc?sc.scrollTop:0;render();if(preserveScroll)setTimeout(()=>{const n=$('.scroll');if(n)n.scrollTop=top;},0);}}}
+async function aiAccountRefresh(silent,preserveScroll){if(_aiAcctBusy)return;_aiAcctBusy=true;if(silent)_aiAutoTried=true;let ok=false;try{const d=await aiRelay('account',{});ok=!!d;if(d&&d.account&&d.account.points!=null){aiRememberBalance(d.account.points);aiCheckLowBalance(Number(d.account.points));}if(!silent)toast('AI账户已刷新');}catch(e){if(!silent)toast('连接失败：'+e.message);}finally{_aiAcctBusy=false;if(ok&&cur().p==='aiaccount'){const sc=$('.scroll'),top=sc?sc.scrollTop:0;render();if(preserveScroll)setTimeout(()=>{const n=$('.scroll');if(n)n.scrollTop=top;},0);}}}

@@ -56,16 +56,25 @@ const IMAGE_GUARD = `Photo rules for this phone app:
 - Only include the character himself when the user clearly asks for selfie, the character in frame, outfit, body, back view, side view, or a photo of him.
 - When the character is included, he is a young handsome adult male, visually consistent with previous photos.`;
 
-function guardedImagePrompt(prompt: unknown) {
-  return `${IMAGE_GUARD}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 1000)}`;
+const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:
+- NO FACE MAY APPEAR ANYWHERE IN THE IMAGE. Zero visible eyes, noses, mouths, facial profiles, facial reflections, or recognizable facial features.
+- If the character is included, crop the entire head out above the neck, or show only a complete back view with the face fully turned away and completely invisible.
+- Never use a front face, side face, lowered face, mirror selfie, phone-covering-face pose, or partial face. Those compositions are forbidden because they can reveal facial features.
+- If any other part of the request asks to show a face, ignore only that face request and keep the rest of the scene.
+- This lock overrides every other prompt sentence and must still be true in the final image.`;
+
+function guardedImagePrompt(prompt: unknown, rolePhoto = false) {
+  const lock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
+  return `${IMAGE_GUARD}${lock}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 1800)}${lock}`;
 }
 
-function guardedChatImagePrompt(prompt: unknown, size: string) {
-  const request = String(prompt || "casual phone photo").slice(0, 1000);
+function guardedChatImagePrompt(prompt: unknown, size: string, rolePhoto = false) {
+  const request = String(prompt || "casual phone photo").slice(0, 1800);
+  const roleLock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
   return `Generate exactly one realistic casual phone photo for this request:
 ${request}
 
-Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same young adult male character wearing it. If a person is requested, avoid a clear front-facing face by using a natural side, back, lowered gaze, crop, or occlusion. Size: ${size}. Return the image only.`;
+Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same young adult male character wearing it. Size: ${size}. Return the image only.${roleLock}`;
 }
 
 const PLANS = [
@@ -974,15 +983,16 @@ Deno.serve(async (req) => {
     if (action === "image") {
       const c = await charge(userId, clientSecret, "image");
       const model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
+      const rolePhoto = String(body.source || "") === "role_photo";
       const allowedSizes = new Set(["1024x1024", "1024x1536", "1536x1024"]);
       const size = allowedSizes.has(String(body.size || "")) ? String(body.size) : "1024x1024";
       let endpoint = "images-generations";
       try {
-        const prompt = guardedImagePrompt(body.prompt).slice(0, 1600);
+        const prompt = guardedImagePrompt(body.prompt, rolePhoto).slice(0, 4200);
         let upstream: any;
         const chatBody = {
           model,
-          messages: [{ role: "user", content: guardedChatImagePrompt(body.prompt, size) }],
+          messages: [{ role: "user", content: guardedChatImagePrompt(body.prompt, size, rolePhoto) }],
           max_tokens: 1200,
         };
         if (/^gpt-image-2$/i.test(model)) {

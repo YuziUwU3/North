@@ -124,7 +124,8 @@ assert.doesNotMatch(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("bad-role-voice", { voice: "account-default" }))), ["bad-role-voice", "account-default", "male-qn-qingse"]);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("account-default", { voice: "account-default" }))), ["account-default", "male-qn-qingse"]);
 assert.equal(context.ttsVoiceAccessErrorText("you don't have access to this voice_id"), true);
-assert.match(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
+assert.doesNotMatch(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
+assert.match(source, /function ttsUseRelay\(\)\{const t=ttsCfg\(\);return !!\(ttsEnabled\(t\)&&ttsRelayOn\(t\)\);\}/);
 assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
 assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSetting\(setting\) \}/);
@@ -147,10 +148,10 @@ for (const name of ["ttsExternalOn", "ttsRelayOn", "ttsEnabled", "ttsUseRelay"])
 }
 assert.equal(routeContext.ttsUseRelay(), false, "external MiniMax must stay external");
 route.relay = true;
-assert.equal(routeContext.ttsUseRelay(), false, "external credentials must not be shadowed by relay");
+assert.equal(routeContext.ttsUseRelay(), true, "the explicit built-in voice switch must take priority over saved external credentials");
 route.base = "";
 route.key = "";
-assert.equal(routeContext.ttsUseRelay(), true, "relay should be used only without external credentials");
+assert.equal(routeContext.ttsUseRelay(), true, "relay must remain active after external credentials are cleared");
 
 assert.match(source, /model:tts\.model\|\|'speech-02-turbo'/);
 assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);
