@@ -14,7 +14,8 @@ assert.match(source, /\u7ebf\u4e0b\u7ea6\u4f1a\u603b\u7ed3\u6a21\u578b/);
 assert.match(source, /\{aux:S\.settings\.summaryModel==='aux',max:320,temp:\.35\}/);
 assert.match(source, /const useAux=S\.settings\.offSummaryModel==='aux'/);
 assert.match(source, /\{aux:useAux,max:700,temp:\.1\}/);
-assert.match(source, /\{aux:useAux,max:700,temp:\.05\}/);
+assert.match(source, /input=offSummaryCandidateTranscript\(ended,c,plan\)/);
+assert.doesNotMatch(source, /\{aux:useAux,max:700,temp:\.05\}/);
 assert.match(source, /S\.settings\.offSummaryModel=this\.value;save\(\);offMemory/);
 assert.match(source, /S\.settings\.summaryModel=this\.value;save\(\);editSummary/);
 
