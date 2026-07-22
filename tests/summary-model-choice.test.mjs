@@ -13,8 +13,8 @@ assert.match(source, /\u5fae\u4fe1\u81ea\u52a8\u603b\u7ed3\u6a21\u578b/);
 assert.match(source, /\u7ebf\u4e0b\u7ea6\u4f1a\u603b\u7ed3\u6a21\u578b/);
 assert.match(source, /\{aux:S\.settings\.summaryModel==='aux',max:320,temp:\.35\}/);
 assert.match(source, /const useAux=S\.settings\.offSummaryModel==='aux'/);
-assert.match(source, /\{aux:useAux,max:Math\.min\(plan\.tokens,1400\),temp:\.4\}/);
-assert.match(source, /\{aux:useAux,max:Math\.min\(plan\.tokens,1400\),temp:\.38\}/);
+assert.match(source, /\{aux:useAux,max:Math\.min\(plan\.tokens,2200\),temp:\.35\}/);
+assert.match(source, /\{aux:useAux,max:Math\.min\(plan\.tokens,2200\),temp:\.32\}/);
 assert.match(source, /S\.settings\.offSummaryModel=this\.value;save\(\);offMemory/);
 assert.match(source, /S\.settings\.summaryModel=this\.value;save\(\);editSummary/);
 

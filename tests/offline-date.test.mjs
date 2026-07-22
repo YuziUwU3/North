@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v598 \u00b7 \u7f8e\u5316\u5bfc\u5165\u5bfc\u51fa\u4fee\u590d/);
+assert.match(source, /v599 \u00b7 \u7ea6\u4f1a\u91cd\u70b9\u8bb0\u5fc6/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -324,29 +324,42 @@ assert.equal(summarySandbox.thinLong, true);
 assert.equal(summarySandbox.acceptedFull, true);
 assert.deepEqual([...summarySandbox.chunkSizes], [6000, 6000, 1000]);
 assert.match(source, /function offSummaryNeedsRetry\(h\)/);
+assert.match(source, /function offSummaryNoticeStart\(c,hid\)/);
+assert.match(source, /function offSummaryNoticeFinish\(hid,result\)/);
 assert.match(source, /async function offSummarizeHistory\(id,hid,retry\)/);
 assert.match(source, /async function offRetrySummary\(id,hid\)/);
 assert.match(source, /onclick="offRetrySummary\('\$\{id\}','\$\{h\.id\}'\)"/);
-assert.match(source, /h\.memoryId===m\.id&&h\.msgs&&h\.msgs\.length/);
-assert.match(source, /onclick="offRetrySummary\('\$\{id\}','\$\{hist\.id\}'\)" title="\u91cd\u65b0\u603b\u7ed3"/);
+assert.match(source, /function offHistoryMemoryIds\(h\)/);
+assert.match(source, /offHistoryHasMemory\(h,m\.id\)&&h\.msgs&&h\.msgs\.length/);
+assert.match(source, /<button class="minibtn"[\s\S]{0,240}onclick="offRetrySummary\('\$\{id\}','\$\{hist\.id\}'\)"/);
+assert.match(source, /function offRetryLatestSummary\(id\)/);
+assert.match(source, /offRetryLatestSummary\('\$\{c\.id\}'\)[^<]*">重新总结最近一场约会<\/button>/);
+assert.match(source, /<details[^>]*>[\s\S]{0,220}<summary[^>]*>查看这条约会重点（\$\{chars\}字）<\/summary>/);
+assert.match(source, /offSummaryNoticeStart\(c,hid\)/);
+assert.match(source, /finally\{_offSummaryBusy\.delete\(hid\);offSummaryNoticeFinish\(hid,outcome\);\}/);
 assert.match(source, /h\.summaryStatus='failed'/);
 assert.match(source, /h\.summaryError=/);
 assert.match(source, /function offSummaryChunks\(text,limit\)/);
 assert.match(source, /async function offSummaryPreparedText\(c,ended,text,useAux\)/);
-assert.match(source, /function offSummarySave\(o,h,c,ended,clean,status,error\)/);
-assert.match(source, /offSummarySave\(o,h,c,ended,clean,'done',''\)/);
-assert.match(source, /offSummarySave\(o,h,c,ended,fallback,'fallback'/);
+assert.match(source, /function offSummaryParsePoints\(raw,plan\)/);
+assert.match(source, /function offSummarySavePoints\(o,h,c,ended,points,status,error\)/);
+assert.match(source, /h\.memoryIds=mems\.map\(m=>m\.id\)/);
+assert.match(source, /offSummarySavePoints\(o,h,c,ended,points,'done',''\)/);
+assert.match(source, /offSummarySavePoints\(o,h,c,ended,fallback,'fallback'/);
 const draftPersistAt = offEndSource.indexOf("o.history.unshift(draft)");
+const localSummaryAt = offEndSource.indexOf("offSummarySavePoints(o,draft,c,ended,local,'fallback'");
 const draftSaveAt = offEndSource.indexOf("save();offQuit()", draftPersistAt);
+const followupAt = offEndSource.indexOf("scheduleReply(id", draftSaveAt);
 const summarizeAt = offEndSource.indexOf("await offSummarizeHistory(id,draft.id,false)");
-assert.ok(draftPersistAt >= 0 && draftSaveAt > draftPersistAt && summarizeAt > draftSaveAt);
+assert.ok(draftPersistAt >= 0 && localSummaryAt > draftPersistAt && draftSaveAt > localSummaryAt);
+assert.ok(followupAt > draftSaveAt && summarizeAt > followupAt);
 assert.match(offEndSource, /const ended=\{session:/);
 assert.match(offEndSource, /draft=\{id:ended\.session/);
 assert.match(offEndSource, /msgs:ended\.msgs,summaryStatus:'pending'/);
 assert.match(source, /const ended=\{session:h\.id[\s\S]*?msgs:h\.msgs\},plan=offSummaryPlan\(ended\.msgs\)/);
-assert.match(source, /max:Math\.min\(plan\.tokens,1400\)/);
-assert.match(source, /trimSentence\(cleanReply\(sum\),plan\.keep\)/);
-assert.match(source.slice(summaryStart, offEndStart), /\u5fc5\u987b\u5fe0\u4e8e\u8bb0\u5f55\u5e76\u6309\u53d1\u751f\u987a\u5e8f\u8986\u76d6/);
+assert.match(source, /max:Math\.min\(plan\.tokens,2200\)/);
+assert.match(source, /offSummaryParsePoints\(sum,plan\)/);
+assert.match(source.slice(summaryStart, offEndStart), /只输出JSON数组/);
 assert.doesNotMatch(offEndSource, /120~200/);
 assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
 
@@ -366,7 +379,7 @@ const fallbackSandbox = {
   offData: () => fallbackOffline,
   getC: () => fallbackContact,
   save() {},
-  uid: () => "memory-1",
+  uid: (() => { let n = 0; return () => `memory-${++n}`; })(),
   offMemLabel: () => "本次约会",
   sumStamp: () => "现在",
   pruneSummaries() {},
@@ -376,10 +389,14 @@ const fallbackSandbox = {
     throw new Error("forced-summary-error");
   },
   cleanReply: (text) => String(text || ""),
+  summaryNorm: (text) => String(text || "").replace(/\s+/g, ""),
+  offHistoryMemoryIds: (h) => [...(h.memoryIds || []), ...(h.memoryId ? [h.memoryId] : [])].filter((x, i, a) => x && a.indexOf(x) === i),
   isRefusal: () => false,
   closeModal() {},
   toast() {},
   offMemory() {},
+  offSummaryNoticeStart() {},
+  offSummaryNoticeFinish() {},
 };
 vm.runInNewContext(
   "const _offSummaryBusy=new Set();" +
@@ -390,8 +407,11 @@ vm.runInNewContext(
 assert.equal(await fallbackSandbox.fallbackRun, "fallback");
 assert.equal(fallbackHistory.summaryStatus, "fallback");
 assert.equal(fallbackHistory.memoryId, "memory-1");
-assert.equal(fallbackOffline.memory.length, 1);
-assert.equal(fallbackContact.summaries.length, 1);
+assert.deepEqual([...fallbackHistory.memoryIds], ["memory-1", "memory-2"]);
+assert.equal(fallbackOffline.memory.length, 2);
+assert.equal(fallbackContact.summaries.length, 2);
+assert.ok(fallbackOffline.memory.every((m) => /^\d{4}年\d{1,2}月\d{1,2}日$/.test(m.date)));
+assert.ok(fallbackOffline.memory.every((m) => m.imp >= 1 && m.imp <= 5));
 assert.match(fallbackHistory.summaryError, /forced-summary-error/);
 
 assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.cid,o,trip\.to,trip\.date,dayPartNow\(\)\)/);
@@ -415,6 +435,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=598/);
+assert.match(html, /app\.js\?v=599/);
 
 console.log("offline date tests passed");
