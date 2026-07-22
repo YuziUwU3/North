@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v604 \u00b7 \u5b8c\u6574\u6838\u5bf9\u7ea6\u4f1a\u8bb0\u5fc6/);
+assert.match(source, /v605 \u00b7 \u7ea6\u4f1a\u672b\u6bb5\u5fae\u4fe1\u627f\u63a5/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -346,10 +346,11 @@ assert.match(source, /function offSummaryParseDraftPoints\(raw,plan,ended\)/);
 assert.match(source, /async function offSummaryVerifyDrafts\(drafts,ended,c,useAux\)/);
 assert.match(source, /function offSummaryDraftAnchorSafe\(p,ended,c\)/);
 assert.match(source, /function offSummaryPointFromIndexes\(ended,c,indexes,importance\)/);
-assert.match(source, /sourceIndexes:\(p\.indexes\|\|\[\]\)\.slice\(0,3\)/);
+assert.match(source, /sourceIndexes:\(p\.indexes\|\|\[\]\)\.slice\(0,8\)/);
 assert.match(source, /function offSummaryCandidateIndexes\(ended,plan\)/);
 assert.match(source, /function offSummaryCandidateTranscript\(ended,c,plan\)/);
 assert.match(source, /function offSummaryRequiredPoints\(ended,c,plan\)/);
+assert.match(source, /function offSummaryBoundaryPoints\(ended,c\)/);
 assert.match(source, /function offSummaryMergeRequired\(points,required,plan\)/);
 assert.match(source, /function offSummarySavePoints\(o,h,c,ended,points,status,error\)/);
 assert.match(source, /h\.memoryIds=mems\.map\(m=>m\.id\)/);
@@ -371,7 +372,14 @@ assert.match(source, /\{aux:useAux,max,temp:\.12\}/);
 assert.match(source, /\{aux:useAux,max,temp:\.06\}/);
 assert.match(source, /offSummaryParseDraftPoints\(sum,cp,ended\)/);
 assert.match(source.slice(summaryStart, offEndStart), /每个事实都必须能被sourceIndexes里的原文直接证明/);
+assert.match(source.slice(summaryStart, offEndStart), /每条text必须写成【100~260个中文字】/);
 assert.match(source.slice(summaryStart, offEndStart), /逐条核对候选记忆是否完全被它标注的原文编号直接支持/);
+assert.match(source, /function offCreateWechatHandoff\(c,ended\)/);
+assert.match(source, /function offWechatHandoffPrompt\(c\)/);
+assert.match(source, /if\(c\)c\._offlineHandoff=offCreateWechatHandoff\(c,ended\)/);
+assert.match(source, /offRetryLatestSummary[\s\S]{0,900}c\._offlineHandoff=offCreateWechatHandoff\(c,ended\)/);
+assert.match(source, /if\(got\)offWechatHandoffConsume\(c\)/);
+assert.match(source, /# 刚结束的线下约会末段（微信隐藏承接上下文·优先级很高）/);
 assert.doesNotMatch(offEndSource, /120~200/);
 assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
 
@@ -425,6 +433,7 @@ assert.equal(fallbackContact.summaries.length, 2);
 assert.ok(fallbackOffline.memory.every((m) => /^\d{4}年\d{1,2}月\d{1,2}日$/.test(m.date)));
 assert.ok(fallbackOffline.memory.every((m) => m.imp >= 1 && m.imp <= 5));
 assert.ok(fallbackOffline.memory.every((m) => m.text.includes("我到了") || m.text.includes("我在门口等你")));
+assert.ok(fallbackOffline.memory.every((m) => Array.from(m.text).length >= 100));
 assert.match(fallbackHistory.summaryError, /forced-summary-error/);
 
 const grounded = fallbackSandbox.offSummaryParsePoints(
@@ -443,8 +452,14 @@ const perspective = fallbackSandbox.offSummaryParsePoints(
   { msgs: [{ who: "旁白", source: "ta", text: "他把外套披到她肩上。" }, { who: "旁白", source: "me", text: "她握住了他的手。" }] },
   fallbackContact,
 );
-assert.match(perspective[0].text, /^我记得我当时：「他把外套披到她肩上。」；我记得宝宝当时：「她握住了他的手。」$/);
+assert.match(perspective[0].text, /我记得我当时：「他把外套披到她肩上。」；我记得宝宝当时：「她握住了他的手。」/);
 assert.doesNotMatch(perspective[0].text, /旁白|角色动作|现场原文/);
+
+const handoff = fallbackSandbox.offCreateWechatHandoff(fallbackContact, { session: "h1", loc: "咖啡店", when: "今晚", daypart: "晚上", msgs: fallbackHistory.msgs });
+fallbackContact._offlineHandoff = handoff;
+assert.equal(handoff.count, 2);
+assert.match(fallbackSandbox.offWechatHandoffPrompt(fallbackContact), /我到了/);
+assert.match(fallbackSandbox.offWechatHandoffPrompt(fallbackContact), /我在门口等你/);
 
 fallbackSandbox.chatAPI = async () => '{"supported":[1]}';
 const rejectedInventedDraft = await fallbackSandbox.offSummaryVerifyDrafts(
@@ -463,7 +478,7 @@ const longHistory = {
   loc: "长约会地点",
   msgs: Array.from({ length: 80 }, (_, i) => ({
     who: i % 2 ? "ta" : "me",
-    text: i === 9 ? "我答应以后遇到问题会直接告诉你。" : i === 39 ? "我告诉你一件关于家人的重要往事。" : i === 69 ? "争执后我向你道歉，我们说好不再冷战。" : i === 78 ? "最后我们决定以后不管多忙都要好好说晚安，我保证不会忘记。" : `普通原文-${i + 1}`,
+    text: i === 9 ? "我答应以后遇到问题会直接告诉你。" : i === 39 ? "我告诉你一件关于家人的重要往事。" : i === 69 ? "争执后我向你道歉，我们说好不再冷战。" : i === 78 ? "最后我们决定以后不管多忙都要好好说晚安，我保证不会忘记。" : i === 79 ? "真正结束时，宝宝坐上车后回头挥了挥手，我站在原地看着车离开。" : `普通原文-${i + 1}`,
   })),
 };
 fallbackOffline.history.unshift(longHistory);
@@ -472,7 +487,8 @@ fallbackSandbox.chatAPI = async (messages) => {
   fallbackSandbox.chatCalls += 1;
   fallbackSandbox.candidateInput = messages[1].content;
   if (messages[0].content.includes("逐条核对候选记忆")) return '{"supported":[1,2,3,4,5,6,7,8]}';
-  return '[{"text":"我答应以后遇到问题会直接告诉宝宝。","sourceIndexes":[10],"importance":5},{"text":"我记得普通原文-20。","sourceIndexes":[20],"importance":2},{"text":"我记得普通原文-30。","sourceIndexes":[30],"importance":2},{"text":"宝宝告诉我一件关于家人的重要往事。","sourceIndexes":[40],"importance":4},{"text":"我记得普通原文-50。","sourceIndexes":[50],"importance":2},{"text":"我记得普通原文-60。","sourceIndexes":[60],"importance":2},{"text":"争执后我向宝宝道歉，我们说好不再冷战。","sourceIndexes":[70],"importance":5},{"text":"最后我们决定以后不管多忙都要好好说晚安，我保证不会忘记。","sourceIndexes":[79],"importance":5}]';
+  const pad = "我把当时发生的前因后果、双方说过的话以及最后的结果都按照原记录记了下来，不会省略这件事的开头和结尾。".repeat(2);
+  return JSON.stringify([{text:"我答应以后遇到问题会直接告诉宝宝。"+pad,sourceIndexes:[10],importance:5},{text:"我记得普通原文-20。"+pad,sourceIndexes:[20],importance:2},{text:"我记得普通原文-30。"+pad,sourceIndexes:[30],importance:2},{text:"宝宝告诉我一件关于家人的重要往事。"+pad,sourceIndexes:[40],importance:4},{text:"我记得普通原文-50。"+pad,sourceIndexes:[50],importance:2},{text:"我记得普通原文-60。"+pad,sourceIndexes:[60],importance:2},{text:"争执后我向宝宝道歉，我们说好不再冷战。"+pad,sourceIndexes:[70],importance:5},{text:"最后我们决定以后不管多忙都要好好说晚安，我保证不会忘记。"+pad,sourceIndexes:[79],importance:5}]);
 };
 assert.equal(await fallbackSandbox.offSummarizeHistory("c1", "h-long", false), "done");
 assert.equal(fallbackSandbox.chatCalls, 2);
@@ -483,10 +499,12 @@ assert.match(fallbackSandbox.candidateInput, /说好不再冷战/);
 const longMemories = fallbackOffline.memory.filter((m) => m.historyId === "h-long");
 assert.equal(longMemories.length, 12);
 assert.ok(longMemories.every((m) => m.sourceIndexes.length >= 1));
+assert.ok(longMemories.every((m) => Array.from(m.text).length >= 100));
 assert.ok(longMemories.some((m) => m.text.includes("答应以后遇到问题")));
 assert.ok(longMemories.some((m) => m.text.includes("关于家人的重要往事")));
 assert.ok(longMemories.some((m) => m.text.includes("说好不再冷战")));
 assert.ok(longMemories.some((m) => m.text.includes("好好说晚安") && m.text.includes("保证不会忘记")));
+assert.ok(longMemories.some((m) => m.text.includes("坐上车") && m.text.includes("看着车离开")));
 
 assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.cid,o,trip\.to,trip\.date,dayPartNow\(\)\)/);
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:'\uff08'\+tvMD\(trip\.date\)/);
@@ -509,6 +527,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=604/);
+assert.match(html, /app\.js\?v=605/);
 
 console.log("offline date tests passed");

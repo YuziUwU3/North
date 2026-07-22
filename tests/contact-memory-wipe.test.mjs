@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v604 · 完整核对约会记忆'/);
+assert.match(source, /APP_VER='v605 · 约会末段微信承接'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 
@@ -35,7 +35,7 @@ const role = {
   tasks: { date: "today" }, taskHist: ["old task"], _accountMemory: { alt: ["alt memory"] },
   _memoryMeta: { main: { old: {} } }, _memoryConflicts: { main: { oldText: "a" } },
   _memoryLastPick: { main: { picked: ["old"] } }, _dialogueEmotion: { main: { cause: "fight" } },
-  _jailHandoff: { text: "jail" }, gamesPlayed: ["dice"], wxLoginHistory: [{ actions: ["old"] }],
+  _jailHandoff: { text: "jail" }, _offlineHandoff: { text: "date ending" }, gamesPlayed: ["dice"], wxLoginHistory: [{ actions: ["old"] }],
   _spyKnowledge: { contacts: { old: {} } }, _loginCode: { code: "1234" }, _lastCallEnded: { ts: 1 },
   phoneSpoofHistory: [{ num: "199" }],
   phoneAliasHistory: [{ num: "188" }], mood: "angry", moodVal: 10, coldUntil: 999,
@@ -93,6 +93,7 @@ assert.equal(role._accountMemory, undefined);
 assert.equal(role._memoryMeta, undefined);
 assert.equal(role._dialogueEmotion, undefined);
 assert.equal(role._jailHandoff, undefined);
+assert.equal(role._offlineHandoff, undefined);
 assert.equal(role.gamesPlayed, undefined);
 assert.equal(role.taskHist, undefined);
 assert.equal(role.wxLoginHistory, undefined);
