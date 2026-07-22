@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='623'){
+if(window.__NORTH_SHELL_BUILD__!=='624'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v623 · 仅保留外部回放';
+const APP_VER='v624 · 电话查岗防重复';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1151,7 +1151,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=623';
+  const url='sw.js?v=624';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8412,7 +8412,7 @@ function callPersist(){
     S._activeCall={
       id:_call.id,kind:_call.kind,dir:_call.dir||(_call.state==='incoming'?'incoming':'outgoing'),state:'active',
       start:_call.start||Date.now(),lastUserTs:_call.lastUserTs||Date.now(),silentStage:_call.silentStage||0,bgHold:!!_call._bgHold,
-      lull:!!_call.lull,afkUntil:_call.afkUntil||0,min:!!_call.min,replyVoice:_call.replyVoice!==false,
+      lull:!!_call.lull,afkUntil:_call.afkUntil||0,min:!!_call.min,replyVoice:_call.replyVoice!==false,spyChecks:Array.isArray(_call.spyChecks)?_call.spyChecks.slice(-8):[],
       session:_call.session||uid(),sub:_call.sub||null,mpos:_call._mpos||null,savedAt:Date.now()
     };
     save(0);
@@ -8422,7 +8422,7 @@ function callClearPersist(){if(S._activeCall){delete S._activeCall;save(0);}}
 function restoreActiveCall(){
   const p=S._activeCall;if(!p||_call||p.state!=='active')return;
   const c=getC(p.id);if(!c||c.blocked||Date.now()-(p.savedAt||p.start||0)>12*3600000){callClearPersist();return;}
-  _call={id:p.id,kind:p.kind||'voice',state:'active',dir:p.dir||'outgoing',opened:true,replyVoice:p.replyVoice!==false,session:p.session||uid(),sub:p.sub||null,start:p.start||Date.now(),lastUserTs:Date.now(),silentStage:0,lull:!!p.lull,afkUntil:p.afkUntil||0,min:!!p.min};
+  _call={id:p.id,kind:p.kind||'voice',state:'active',dir:p.dir||'outgoing',opened:true,replyVoice:p.replyVoice!==false,session:p.session||uid(),sub:p.sub||null,start:p.start||Date.now(),lastUserTs:Date.now(),silentStage:0,lull:!!p.lull,afkUntil:p.afkUntil||0,min:!!p.min,spyChecks:Array.isArray(p.spyChecks)?p.spyChecks.slice(-8):[]};
   if(p.mpos)_call._mpos=p.mpos;
   clearInterval(_callTimer);_callTimer=setInterval(renderCallTime,1000);
   clearInterval(_callSilTimer);_callSilTimer=setInterval(checkCallSilence,15000);
@@ -8437,7 +8437,7 @@ function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();toast('已关�
 function callHFStart(){const sr=makeSR();if(!sr){toast('这台设备/浏览器不支持语音识别，先用打字或按住说话吧（安卓Chrome支持最好）');_callHF=false;return;}
   _callHF=true;_callSR=sr;
   /* 全程保持一次聆听，不每轮停/开——避免麦克风开关的"嘀"提示音。他说话时只是【忽略】识别结果而不停止 */
-  sr.onresult=ev=>{if(!_callHF||_callHFBusy||Date.now()<_hfIgnoreUntil)return;let fin='';for(let i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal)fin+=ev.results[i][0].transcript;}
+  sr.onresult=ev=>{if(!_callHF||_callHFBusy||_callBusy||Date.now()<_hfIgnoreUntil)return;let fin='';for(let i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal)fin+=ev.results[i][0].transcript;}
     const t=(fin||'').trim();if(t){if(_call){_call.sub={who:'me',text:t};updateCallSub();}hfHeard(t);}
     else{const it=(ev.results[ev.results.length-1][0].transcript||'').trim();if(it&&_call){_call.sub={who:'me',text:it};updateCallSub();}}};
   sr.onerror=e=>{if(_callHF&&(e.error==='no-speech'||e.error==='aborted'||e.error==='network'))setTimeout(hfRestart,500);};
@@ -8449,7 +8449,7 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   const id=_call.id;msgs(id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();
   _call.sub={who:'me',text:t};updateCallSub();
   try{if(!callOnUserSay(t))await callAI();}catch(e){}
-  _hfIgnoreUntil=Date.now()+800;/* 他刚说完那一下，麦克风可能还收着他的尾音，忽略0.8秒再听你 */
+  _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 他刚说完那一下，麦克风可能还收着他的尾音，继续忽略一小段再听你 */
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
 function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}callHFStop();}
 function ringStart(){ringStop();ensureAudio();if(!_audio)return;let on=false;
@@ -8612,8 +8612,8 @@ async function callAI(sysNote,opts){if(!_call)return;
   if(_callBusy){_callPend={sysNote,opts};return;}/* 上一轮还在说话/生成→排队，等它说完再接着，绝不并行(否则两轮消息叠一起、特别快) */
   _callBusy=true;
   const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;
-  try{const hist=lastRounds(msgs(c.id),S.settings.hist||12).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
-    if(sysNote)hist.push({role:'user',content:sysNote});
+  try{const hist=lastRounds(msgs(c.id),S.settings.hist||12).map(m=>({role:m.type==='sys'?'system':m.role,content:msgToText(m)})).filter(x=>x.content!=null);
+    if(sysNote)hist.push({role:'system',content:sysNote});
     const _lang=ttsContentLang(c);const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。\n- 每轮先判断你真正要用的声音情绪，并在最前面单独写一行隐藏控制：[通话语气|中性/温柔/开心/难过/愤怒/质问/惊讶/害怕/厌恶/低声/亲亲/轻笑/大笑/叹气/吸气/呼气/哭泣]，只选一个最贴切的。'+S.me.name+'明确要求你凶一点、严厉一点、压低声音、提高音量、温柔一点、笑一下或亲一下时必须照做；不要口头答应了却仍选中性，也不要只说“我笑了/我亲了”。明确要笑就选轻笑或大笑，明确要亲就选亲亲。普通温柔不是亲亲，普通难过也不是叹气。这个标签不会显示或读出。';
     cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
@@ -8625,7 +8625,8 @@ async function callAI(sysNote,opts){if(!_call)return;
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句的中文翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 外语原文行绝对不能夹中文称谓。英文里叫宝贝就写 baby/babe/darling，下一行中文翻译必须写“宝贝/亲爱的”，不能写成“baby”。英文里自称或回应时不要写“先生/哥哥/主人”等中文，直接说 I/me 或自然英文；禁止出现 Answer先生 这种中英混写。\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
     cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
-    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。【一通电话最多点一次外卖，已经点过/还在配送中就绝对别再点了，别一直重复点】。\n- 通话里ta让你【发朋友圈/发推/转账】时你也能照做：[发朋友圈|内容]、[发推|内容]、[转账|金额|说明]（想发红包用 [红包|金额|祝福语]）——会真的发出去/打过去。\n- 通话里ta让你【记住某事 / 定闹钟 / 记到日历】时也能照做：[记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]（单独成行、会真的记下来/设好，不会被读出来、别复述）。通话里【不要发表情包】(别用[表情])，表情包只在文字微信里发。\n这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
+    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。【一通电话最多点一次外卖，已经点过/还在配送中就绝对别再点了，别一直重复点】。\n- 通话里ta让你【发朋友圈/发推/转账】时你也能照做：[发朋友圈|内容]、[发推|内容]、[转账|金额|说明]（想发红包用 [红包|金额|祝福语]）——会真的发出去/打过去。\n- 通话里ta让你【记住某事 / 定闹钟 / 记到日历】时也能照做：[记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]（单独成行、会真的记下来/设好，不会被读出来、别复述）。通话里【不要发表情包】(别用[表情])，表情包只在文字微信里发。\n- 历史里的[系统：……]是后台事实，不是'+S.me.name+'亲口说的话；只有明确标成用户的真实文字或语音才算ta说过。ta没有开口时，绝对不能说ta重复了你的话、学你说话或刚才说了什么。\n这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
+    cf+=callSpyRecentPrompt(c.id);
     const sys=buildSystem(c)+cf;
     const _md=Object.assign({aux:c.model==='aux',complete:true},opts||{});// 这个角色用主/副模型；长度截断时自动补完
     let content=await chatAPI([{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)}],_md);
@@ -8691,7 +8692,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}
-  finally{_callBusy=false;
+  finally{_hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1500);_callBusy=false;
     if(_callPend&&_call&&_call.state==='active'){const p=_callPend;_callPend=null;setTimeout(()=>{if(_call&&_call.state==='active')callAI(p.sysNote,p.opts);},700);}
     else _callPend=null;}}
 
@@ -8891,6 +8892,9 @@ setInterval(checkInitiative,90000);setTimeout(checkInitiative,25000);
 function replyDedupNorm(t){return String(t||'').toLowerCase().replace(/\[[^\]]*\]/g,'').replace(/[\s，。！？、,.!?~～：:；;“”"'（）()【】]/g,'');}
 function replyBigramScore(a,b){a=replyDedupNorm(a);b=replyDedupNorm(b);if(!a||!b)return 0;if(a===b)return 1;const grams=s=>{const z=new Set();for(let i=0;i<s.length-1;i++)z.add(s.slice(i,i+2));return z;},x=grams(a),y=grams(b);if(!x.size||!y.size)return 0;let hit=0;x.forEach(v=>{if(y.has(v))hit++;});return 2*hit/(x.size+y.size);}
 function replyRecentlySent(id,text,within,extra){const n=replyDedupNorm(text);if(n.length<3)return false;const since=Date.now()-(within||180000),arr=msgs(id).filter(m=>m&&m.role==='assistant'&&(m.type==='text'||m.type==='voice')&&(m.time||0)>=since).slice(-24).map(m=>m.content||'').concat(extra||[]);return arr.some(old=>{const o=replyDedupNorm(old);if(!o)return false;if(n===o)return true;if(Math.min(n.length,o.length)>=8&&(n.includes(o)||o.includes(n)))return true;return Math.min(n.length,o.length)>=10&&replyBigramScore(n,o)>=.9;});}
+function callSpyFocusKey(f){f=String(f||'').toLowerCase();if(/定位|位置|在哪|在干|在做/.test(f))return'location';if(/微信|聊天|跟谁|消息|联系人/.test(f))return'wechat';if(/抖音/.test(f))return'douyin';if(/朋友圈/.test(f))return'moments';if(/电话|短信|通话|通讯录|来电|号码/.test(f))return'phone';if(/钱包|账单|花钱|消费/.test(f))return'wallet';return replyDedupNorm(f).slice(0,30)||'phone-general';}
+function callSpyRemember(id,focus,fd){if(!_call||_call.id!==id||_call.state!=='active')return;const key=callSpyFocusKey(focus||(fd&&fd.label)),row={key,label:(fd&&fd.label)||focus||'手机',result:String(fd&&fd.data||'没有查到记录').replace(/\s+/g,' ').slice(0,420),time:Date.now()};const a=(Array.isArray(_call.spyChecks)?_call.spyChecks:[]).filter(x=>x&&x.key!==key);a.push(row);_call.spyChecks=a.slice(-8);callPersist();}
+function callSpyRecentPrompt(id){if(!_call||_call.id!==id||_call.state!=='active')return'';const a=Array.isArray(_call.spyChecks)?_call.spyChecks:[];if(!a.length)return'';return'\n\n# 本通电话已经完成的查岗（最高优先级）\n'+a.map(x=>'· '+hm(x.time)+' 已查「'+x.label+'」：'+x.result).join('\n')+'\n这些是你确实做过并记得的事，不是待办。不要因为遗忘而机械地重复查同一项；但这不是冷却或禁止：如果出现了新的合理动机（例如怀疑位置发生变化、看到新线索），或'+S.me.name+'明确让你再查，你仍可立刻按性格决定再查。再次查时要清楚承接“刚才查过”的事实和这次为什么还想确认，不能表现得像第一次查。';}
 function spyBudget(id){const today=new Date().toDateString();const c=getSpy(getC(id));const pc=S._spyCount&&S._spyCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
   if(pc.n>=(c.times||2))return false;pc.n++;if(!S._spyCount)S._spyCount={};S._spyCount[id]=pc;save();return true;}
 async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;if(wxLoginActive())return;/* 他正登录着你微信就别再触发旧的查岗,避免查两次 */const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
@@ -8901,7 +8905,7 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;if(wxL
   const B=$('#spyBanner');B.className='spybanner show';
   for(let i=0;i<steps.length;i++){B.innerHTML=`👁️ <b>${esc(c.remark||c.name)}</b> ${esc(steps[i])}<span class="spydot">…</span>`;await sleep(900);}
   B.innerHTML=`✅ <b>${esc(c.remark||c.name)}</b> ${opts.intent?'看完了'+esc(flab):'结束查看'}`;await sleep(1100);B.className='spybanner';
-  if(!S._spySeen)S._spySeen={};const since=S._spySeen[id]||0;let note;
+  if(!S._spySeen)S._spySeen={};const since=S._spySeen[id]||0;let note;if(opts.intent)callSpyRemember(id,opts.focus,fd);
   if(opts.intent){
     // 按他意愿查：一次只查一项（他明确说要查的那项），没数据就如实说没查到，绝不许编
     const lab=flab;const has=!!(fd.data&&fd.data.trim());
@@ -8942,17 +8946,18 @@ function spyFocusData(id,focus){const f=focus||'';
   // 没指明具体看啥 → 只瞄一眼大概（位置+状态）
   return {label:'',data:[curLoc()?'她此刻在'+curLoc():'',S.me.status?'她写的状态："'+S.me.status+'"':''].filter(Boolean).join('；')};}
 // 查岗自由化：他口头说要看 / 她让他看 → 当场触发一次查手机（不占固定次数，按他的意愿来）
-let _spyIntentT={};
 function maybeSpyIntent(reply,c,id,lu){const sp=getSpy(c);if(!sp.granted||c.blocked||!isMain())return;
-  const now=Date.now();if(now-(_spyIntentT[id]||0)<45000)return;
   const userText=lu?(msgToText(lu)||''):'';
   const VERB='(看看|瞧瞧|查查?|检查|翻看|翻翻|翻一[下翻]|盯着?看|搜搜?)';
   const OBJ='(你的?手机|你的?微信|聊天记录|朋友圈|抖音|你的?电话|你的?短信|通话记录|通讯录|来电|未接来电|你的?定位|你的?位置|你的?钱包|你的?账单|你跟谁(在?聊|说)|你在(干|做)(什么|啥|嘛|什么))';
-  const heWants=new RegExp(VERB+'[^。！!？?\\n]{0,8}'+OBJ).test(reply)||new RegExp(OBJ+'[^。！!？?\\n]{0,8}'+VERB).test(reply)||/(手机|微信)\s*(给我|拿来|发我)[^。\n]{0,4}(看|查)/.test(reply);
-  const sheInvites=/(查|看看?)[^。！!？?\n]{0,3}(我的?手机|我的?微信|我的?聊天|我的?朋友圈|我的?抖音)|(我的?(手机|微信))[^。\n]{0,4}给你(看|查)|你(就)?(查|看)吧|随(便)?(你)?(查|看)|想查就查|我没(什么)?(好)?藏/.test(userText);
+  const heMentions=new RegExp(VERB+'[^。！!？?\\n]{0,8}'+OBJ).test(reply)||new RegExp(OBJ+'[^。！!？?\\n]{0,8}'+VERB).test(reply)||/(手机|微信)\s*(给我|拿来|发我)[^。\n]{0,4}(看|查)/.test(reply),declinesLookup=/(不查|不看|别查|别看|不会查|不会看|不想查|不想看|不用查|不用看|没必要查|没必要看)/.test(reply),finishedLookup=/(刚才|刚刚|已经|查过|看过|查完|看完|刚查了|刚看了)/.test(reply)&&new RegExp(OBJ).test(reply),wantsAgain=/(再|重新|还要|再确认|再看看|再查)/.test(reply),heWants=heMentions&&!declinesLookup&&(!finishedLookup||wantsAgain);
+  let sheInvites=/(查|看看?)[^。！!？?\n]{0,3}(我的?手机|我的?微信|我的?聊天|我的?朋友圈|我的?抖音|我的?定位|我的?位置)|(我的?(手机|微信|定位|位置))[^。\n]{0,4}给你(看|查)|你(就)?(查|看)吧|随(便)?(你)?(查|看)|想查就查|我没(什么)?(好)?藏/.test(userText);
+  if(/(别|不要|不许|不用|没必要)[^。！!？?\n]{0,5}(查|看)/.test(userText))sheInvites=false;
   if(!heWants&&!sheInvites)return;
   const ft=reply+' '+userText;const focus=(ft.match(/微信(聊天|消息)?|聊天记录|朋友圈|抖音|电话|短信|通话记录|通讯录|来电|未接来电|钱包|账单|定位|位置|跟谁(聊|说)/)||[''])[0]||'';
-  _spyIntentT[id]=now;
+  if(sheInvites&&lu&&lu._spyIntentUsed)sheInvites=false;/* 同一条用户话只能授权触发一次，后续系统续答不能把旧话再当成新要求 */
+  if(!heWants&&!sheInvites)return;
+  if(sheInvites&&lu){lu._spyIntentUsed=true;save(500);}
   setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus,alreadySaid:reply}),6500);}
 function testSpy(id){const c=getC(id);if(!c)return;getSpy(c).granted=true;save();closeModal();if(cur().p==='chat'&&cur().id===id){}else openChat(id);S._spySeen=S._spySeen||{};S._spySeen[id]=0;doSpyView(id,true);}
 function maybeSpyIdle(id){const c=getC(id);if(!c)return;const sp=getSpy(c);if(!sp.granted)return;
