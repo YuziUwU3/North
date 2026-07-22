@@ -65,7 +65,7 @@ const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:
 
 function guardedImagePrompt(prompt: unknown, rolePhoto = false) {
   const lock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
-  return `${IMAGE_GUARD}${lock}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 1800)}${lock}`;
+  return `${IMAGE_GUARD}${lock}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 1800)}`;
 }
 
 function guardedChatImagePrompt(prompt: unknown, size: string, rolePhoto = false) {

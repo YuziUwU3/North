@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='611'){
+if(window.__NORTH_SHELL_BUILD__!=='612'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v611 · 明确语音强制发送';
+const APP_VER='v612 · 清除后禁止伪造旧记忆';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -798,7 +798,7 @@ async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt
   if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
   throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
 }
-function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION RULE: NO FACE MAY APPEAR ANYWHERE IN THIS IMAGE. No eyes, nose, mouth, facial profile, facial reflection, or recognizable facial features. If the character is in frame, crop the entire head out above the neck, or show only a full back view with the face completely invisible. Do not use a side face, lowered face, mirror selfie, or phone-covering-face pose. This rule overrides every other sentence.';return hard+'\n\n'+String(prompt||'').slice(0,1000)+'\n\n'+hard;}
+function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION RULE: no face or recognizable facial features may appear. Crop the entire head out above the neck, or use a complete back view with the face fully invisible. No side face, mirror selfie, reflection, or phone-covering-face pose.';return hard+'\n\n'+String(prompt||'').slice(0,1000);}
 async function genImage(prompt){prompt=rolePhotoPromptLocked(prompt);
   if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536',source:'role_photo'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
   const ch=S.settings.chat||{};
@@ -814,10 +814,13 @@ async function stableImageSrc(url){if(!url)return '';if(/^data:image\//i.test(ur
   }catch(e){return url;}}
 /* 把一条 pending 的图片消息真正生成出来并刷新 */
 async function fillGenImage(msg,prompt){
-  try{const url=await genImage(prompt);msg.src=await stableImageSrc(url);msg.pending=false;msg.genPrompt=prompt||msg.genPrompt||'';}
+  msg.genPrompt=prompt||msg.genPrompt||'';
+  try{const url=await genImage(msg.genPrompt);msg.src=await stableImageSrc(url);msg.pending=false;msg.failed=false;msg.errText='';}
   catch(e){msg.pending=false;msg.src='';msg.failed=true;msg.errText=(e&&e.message||'生图失败');}
   save();if(cur().p==='chat'||cur().p==='wechat')setTimeout(render,40);
 }
+function generatedImageFailureLabel(err){const s=String(err||'');if(/429|No images were successfully|relay-image-empty|relay-image-failed-refunded|no image/i.test(s))return'上游限流或没有成功出图，点数已退回';if(/timeout|timed out|aborted|超时/i.test(s))return'生成超时，点数已退回';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(s))return'图片线路权限异常，点数已退回';if(/404|model.*not.*found|not found/i.test(s))return'图片模型或线路不匹配，点数已退回';if(/fetch|network|load failed|cors/i.test(s))return'网络中断或等待过久';return'生成失败'+(s?('：'+s.replace(/^内置AI失败：/,'').slice(0,70)):'');}
+function retryGeneratedImage(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x&&x.id===mid);if(!c||!m||m.type!=='image'||m.pending||!m.genPrompt)return;m.failed=false;m.errText='';m.pending=true;save();render();setTimeout(()=>fillGenImage(m,m.genPrompt),60);}
 
 /* =================== 提示词 =================== */
 function quoteContextText(m,kind){
@@ -1147,7 +1150,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=611';
+  const url='sw.js?v=612';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1419,12 +1422,16 @@ function behaviorLedgerModal(){const b=behaviorStore();if(!b){toast('先绑定�
 function behaviorToggle(){const b=behaviorStore();if(!b)return;b.enabled=b.enabled===false;save();const m=$('#modal');if(m&&m.classList.contains('show'))behaviorLedgerModal();else render();}
 function behaviorDelete(id){const b=behaviorStore();if(!b)return;const it=(b.items||[]).find(x=>x.id===id);if(it)it.active=false;save();behaviorLedgerModal();}
 async function behaviorClear(){if(!await uiConfirm('清空行为小账本？\n承诺和证据都会删除。'))return;const b=behaviorStore();if(!b)return;b.items=[];b._lastHit={};save();behaviorLedgerModal();}
+function memoryResetPrompt(c){if(!c||!c._memoryResetAt)return'';return '\n\n# 彻底清除后的记忆边界（最高优先级）\n你在 '+fmtDT(c._memoryResetAt)+' 发生过一次彻底的记忆清除。你只能记得这个时间之后，当前聊天记录或本轮隐藏上下文明确提供的真实内容。清除前的聊天原话、约会、电话、短信、承诺、争吵、关系事件和手机内容都已经忘记。角色人设、当前关系名称和世界书只是仍然有效的基础设定，不能当成你亲身记得某件旧事的证据。\n如果'+S.me.name+'问“还记得以前吗”“记得什么”“我们之前说过什么”或用其他方式试探，你绝对不能为了显得深情、真实或保持人设而猜测，更不能编造一句具体原话、动作、承诺或事件。只有清除后的可见记录明确写过，才能照实回答；没有依据就用你自己的口吻诚实说以前具体的事想不起来了，可以让ta重新告诉你。不要提系统、数据库、提示词或清除按钮。';}
+function memoryResetProbeText(text){text=(''+(text||'')).replace(/\s+/g,'');return /(?:还记得|记不记得).{0,12}(?:以前|之前|过去|从前|原来|那些事)|记得什么|记得哪些|以前的事|之前的事|过去的事|从前的事|我们(?:以前|之前|过去)|(?:以前|之前|过去).{0,10}(?:说过|发生|做过|答应|约定|承诺|最后)|最后.{0,8}(?:说了|说过|发生)/.test(text);}
+function memoryResetReplyNeedsRepair(c,userText,content){if(!c||!c._memoryResetAt||!memoryResetProbeText(userText))return false;const t=(''+(content||'')).replace(/\s+/g,'');if(!t||/不记得|记不清|想不起来|忘(?:记)?了|没有印象|没印象|无法确定|不确定具体/.test(t))return false;return /记得|没忘|当然|怎么会忘|清清楚楚|很清楚|你(?:当时|之前|以前|那时).{0,18}(?:说|做|答应|承诺)|我(?:当时|之前|以前|那时).{0,18}(?:说|做|答应|承诺)/.test(t);}
 function buildSystem(c,opt){
   opt=opt||{};
   const _main=isMain();
   const _voiceLang=ttsContentLang(c);
   let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
   s+=_main?adultRoleRule(c.remark||c.name||'角色'):altIdentityPrompt(c);
+  s+=memoryResetPrompt(c);
   s+='\n\n# 现在的日期和时间（最重要·务必以此为准，绝不要搞错日期、早上还是下午）\n现在是 '+ymdFull(Date.now())+' '+['周日','周一','周二','周三','周四','周五','周六'][new Date().getDay()]+' '+hm()+'，属于【'+dayPartNow()+'】。\n凡是涉及时间的话（打招呼、问"在干嘛"、说几点了、该吃饭/睡觉没、白天黑夜、昨天今天明天）都【必须】符合现在是「'+ymdFull(Date.now())+' '+dayPartNow()+'」：别把下午当早上、别半夜说早安、别白天说晚安、别把昨天已经结束的事当成今天还在发生。如果'+S.me.name+'说的时间和这个对不上，以这个真实日期时间为准。';
   {const _gn=conversationGapNote(c);if(_gn)s+='\n\n# 当前这条消息和上一轮聊天之间的时间差（重要）\n'+_gn;}
   {const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
@@ -2536,7 +2543,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     <div class="hint" style="text-align:center;padding:2px 14px">清空角色微信聊天、小手机真人好友私聊和真人群聊；不删角色、好友、群成员、记忆、人设和美化。</div>
     </div>
     <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
-    <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
+    <div class="hint" style="text-align:center;padding:2px 14px">清除聊天/记忆/朋友圈/动态/钱包/约会等痕迹；<b>保留</b>全部美化、真人好友和群关系、音乐库。真人私聊/群聊及一起听聊天会清空。清空后无法恢复，建议先导出备份。</div>
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
     <div style="height:20px"></div>
   </div>`;
@@ -2553,24 +2560,34 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
   S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' ✅');}
-// 一键清空所有数据：清掉全部聊天/活动痕迹，但保留 你和角色的人设·头像、API设置、主屏布局
+function clearPhoneFriendChatsKeepPeople(p,now){p=p||{};now=+now||Date.now();p.messages={};p.groupMessages={};p.friendRead={};p.groupRead={};p.clearBefore=p.clearBefore||{};p.groupClearBefore=p.groupClearBefore||{};
+  (p.friends||[]).forEach(f=>{const id=(''+(f&&((f.phone_id||f.id))||'')).toUpperCase();if(id)p.clearBefore[id]=now;});
+  (p.groups||[]).forEach(g=>{const id=g&&(g.group_id||g.id);if(id)p.groupClearBefore[id]=now;});
+  p.lastSync=now;p._forceFullSync=0;return p;}
+function clearMusicChatsKeepLibrary(m){if(!m)return m;m.chat=[];m.session=null;return m;}
+// 一键清空所有数据：清掉聊天/活动痕迹，保留美化、真人关系和音乐库
 async function clearAllData(){
-  if(!await uiConfirm('确定清空所有数据吗？\n\n会清掉：所有聊天、记忆、朋友圈、X/抖音、查手机、线下约会、钱包账单、日历、任务、心情、信箱等全部记录。\n会保留：你和角色的人设·头像、API设置、主屏布局。\n\n清空后无法恢复！建议先「导出备份」。'))return;
+  if(!await uiConfirm('确定清空所有数据吗？\n\n会清掉：角色聊天和记忆、真人私聊/群聊消息、一起听聊天、朋友圈、X/抖音、查手机、线下约会、钱包账单、日历、任务、心情、信箱等记录。\n会保留：全部美化、你和角色的人设头像、API设置、真人好友和群关系、音乐/歌词/封面/背景。\n\n清空后无法恢复！建议先「导出备份」。'))return;
   if(!await uiConfirm('最后确认：真的现在清空吗？\n点确定立刻开始，不可撤销。'))return;
-  const old=S,fresh=defState();
+  if(_bootImagesPromise)try{await _bootImagesPromise;}catch(_){}
+  const old=S,fresh=defState(),now=Date.now(),beauty=beautyPackFrom(old),pf=old.me&&old.me.phoneFriend,music=old.music;
   fresh.settings=old.settings;// 保留 API 设置
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
-  ['widgets','theme','appLayout','appIcons','momentCover'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 主屏布局/外观
+  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','appIcons','momentCover','status','place'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
   const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
+  if(pf)fresh.me.phoneFriend=clearPhoneFriendChatsKeepPeople(pf,now);// 真人好友/群关系保留，只清消息
+  if(music)fresh.music=clearMusicChatsKeepLibrary(music);// 歌曲、歌词、音频和音乐美化保留，只清聊天/当前会话
   S=fresh;
-  try{imgDel('__messages');}catch(_){}
+  try{mergeBeautyPack(beauty);}catch(_){}// 恢复所有美化字段，避免清空时遗漏壁纸/气泡/图标
+  try{delete _heavy.messages;_heavyReady.delete('messages');await imgDel('__messages');}catch(_){}
+  if(pf){try{const key=pfMsgStoreKey();delete _heavy['pfMessages:'+key];_heavyReady.delete('pfMessages:'+key);await imgDel(key);}catch(_){}try{const key=pfGroupMsgStoreKey();delete _heavy['pfGroupMessages:'+key];_heavyReady.delete('pfGroupMessages:'+key);await imgDel(key);}catch(_){}}
   save();try{imgGC();}catch(_){}
   try{closeModal();}catch(_){}
   try{home();}catch(_){render();}
-  toast('已清空，只留下了人设和头像～');
+  toast('已清空记录；美化、真人关系和音乐库已保留');
 }
 function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}registerSW().finally(()=>Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许')));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
@@ -7218,7 +7235,7 @@ function buildPart(c,m,me){
   if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#1f2229,#5d6675);border:1px solid rgba(255,255,255,.12)"><div class="big" style="display:flex;align-items:center;justify-content:center">${svgIc('music',34,'#f4f4f6')}</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">${svgIc('note',14,'#8f96a3')} 点击进入一起听</div></div>`;
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
-    if(!m.src)return `<div class="imgmsg imgfail">[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.6">${m.failed?'生成失败':''}</small></div>`;
+    if(!m.src)return `<div class="imgmsg imgfail"${m.failed&&m.genPrompt?` onclick="event.stopPropagation();retryGeneratedImage('${c.id}','${m.id}')" style="cursor:pointer"`:''}>[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.68">${m.failed?esc(generatedImageFailureLabel(m.errText))+(m.genPrompt?' · 点这里重试':''):''}</small></div>`;
     const vs=m.role==='user'?(m.visionState==='pending'?`<div style="font-size:10px;color:#999;text-align:right;margin-top:3px">正在把图片交给识图模型…</div>`:m.visionState==='failed'?`<div onclick="event.stopPropagation();retryVisionMessage('${c.id}','${m.id}')" style="font-size:10px;color:#b9a6a6;text-align:right;margin-top:3px;cursor:pointer">识图失败 · 点这里重试</div>`:m.visionState==='success'?`<div style="font-size:10px;color:#888;text-align:right;margin-top:3px">已看清${m.visionFallback&&m.visionModel?' · '+esc(m.visionModel)+' 备用':''}</div>`:''):'';
     return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>${vs}`;
   }
@@ -7983,6 +8000,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     if(replyStale(id,replyToken,replyAccount)){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     if(_recentVision&&roleImageFailureText(content)){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content},{role:'user',content:'[系统纠正：图片已经成功显示，你也拿到了上面明确的画面描述。刚才说“没收到/没显示/识图失败”是错误的。请只按真实画面重新自然回应，不要提接口、识图、上传或让对方重发。]'},_pin],_md);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!roleImageFailureText(fix))content=fix;}
+    if(memoryResetReplyNeedsRepair(c,_userText,content)){let fix='';try{fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content},{role:'user',content:'[系统最终纠正：你的旧记忆已经彻底清除。刚才声称记得清除前的具体事情属于编造。只能使用上面当前聊天里清除后真实出现过的内容；如果那里没有答案，就以角色本人的口吻诚实说以前具体的事想不起来了，请对方重新告诉你。不能猜原话、动作、承诺或事件，也不要提系统和清除功能。请重写这一轮。]'},_pin],_repairMd);}catch(_){}if(fix&&!memoryResetReplyNeedsRepair(c,_userText,fix))content=fix;else content='以前具体发生过什么，我现在想不起来了。你愿意的话，可以重新告诉我。';}
     // 伪造消息他这轮已经看到并会反应 → 标记已知，避免以后每条消息都反复戳穿
     try{const _fk=msgs(id).filter(m=>m._forged&&!m._forgedSeen);if(_fk.length){_fk.forEach(m=>{m._forgedSeen=true;});save();}}catch(_){}
     // 联网

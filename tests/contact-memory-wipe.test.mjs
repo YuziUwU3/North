@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v611 · 明确语音强制发送'/);
+assert.match(source, /APP_VER='v612 · 清除后禁止伪造旧记忆'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 
@@ -149,5 +149,42 @@ assert.equal(role.affection, 88);
 assert.match(source, /if\(!picked\.length\)picked=visible\.slice\(0,3\)/);
 assert.match(source, /if\(\(\+c\._memoryResetAt\|\|0\)!==resetAt\)return;/);
 assert.match(source, /_sp\.memorySince\?'你的旧记忆已经被清除/);
+
+assert.match(source, /s\+=memoryResetPrompt\(c\);/);
+
+context.fmtDT = () => "2026年7月23日 23:30";
+for (const name of ["memoryResetPrompt", "memoryResetProbeText", "memoryResetReplyNeedsRepair"]) {
+  vm.runInContext(functionSource(name), context);
+}
+const resetPrompt = context.memoryResetPrompt({ _memoryResetAt: Date.now() - 1000 });
+assert.match(resetPrompt, /彻底清除后的记忆边界/);
+assert.match(resetPrompt, /不能.*编造一句具体原话/);
+assert.equal(context.memoryResetProbeText("你还记得之前的事情吗"), true);
+assert.equal(context.memoryResetProbeText("你还记得刚才我发的图片吗"), false);
+assert.equal(context.memoryResetReplyNeedsRepair({ _memoryResetAt: 1 }, "记得什么", "记得很清楚，你以前说过不会分手"), true);
+assert.equal(context.memoryResetReplyNeedsRepair({ _memoryResetAt: 1 }, "记得什么", "以前具体的事我想不起来了"), false);
+
+for (const name of ["clearPhoneFriendChatsKeepPeople", "clearMusicChatsKeepLibrary"]) {
+  vm.runInContext(functionSource(name), context);
+}
+const people = { friends: [{ id: "P1" }], groups: [{ group_id: "G1" }], messages: { P1: [{ text: "old" }] }, groupMessages: { G1: [{ text: "old" }] }, remarks: { P1: "好友" } };
+context.clearPhoneFriendChatsKeepPeople(people, 123456);
+assert.deepEqual(plain(people.friends), [{ id: "P1" }]);
+assert.deepEqual(plain(people.groups), [{ group_id: "G1" }]);
+assert.deepEqual(plain(people.messages), {});
+assert.deepEqual(plain(people.groupMessages), {});
+assert.equal(people.clearBefore.P1, 123456);
+assert.equal(people.groupClearBefore.G1, 123456);
+assert.deepEqual(plain(people.remarks), { P1: "好友" });
+const library = { songs: [{ id: "song1" }], lyrics: "keep", bg: "beauty", chat: [{ content: "old" }], session: { cid: "r1" } };
+context.clearMusicChatsKeepLibrary(library);
+assert.deepEqual(plain(library.songs), [{ id: "song1" }]);
+assert.equal(library.lyrics, "keep");
+assert.equal(library.bg, "beauty");
+assert.deepEqual(plain(library.chat), []);
+assert.equal(library.session, null);
+assert.match(source, /fresh\.me\.phoneFriend=clearPhoneFriendChatsKeepPeople\(pf,now\)/);
+assert.match(source, /fresh\.music=clearMusicChatsKeepLibrary\(music\)/);
+assert.match(source, /mergeBeautyPack\(beauty\)/);
 
 console.log("contact memory wipe tests passed");
