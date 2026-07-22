@@ -1,0 +1,38 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
+
+// The already-paid call audio is cached with the video-call message and reused.
+assert.match(source, /async function callReplayStoreAudio\(m,ab\)/);
+assert.match(source, /if\(!m\|\|!ab\|\|m\._ck!==\x27video\x27\)return/);
+assert.match(source, /cacheMessage:video\?callMsg:null/);
+assert.match(source, /if\(opt\.cacheMessage\)await callReplayStoreAudio\(opt\.cacheMessage,ab\)/);
+assert.doesNotMatch(source, /callReplayStoreAudio[\s\S]{0,200}ttsArr/);
+
+// Original subtitle and translation stay paired instead of becoming duplicate replay clips.
+assert.match(source, /_callTrans:u\.trans\|\|\x27\x27/);
+assert.match(source, /_callTranslationOf:callMsg\.id/);
+assert.match(source, /!m\._callTranslationOf/);
+
+// Users select clips; unsupported/old silent records are never exported as silent videos.
+assert.match(source, /function clReplayPicker\(id,cs\)/);
+assert.match(source, /function callReplayPickRows\(id,cs\)/);
+assert.match(source, /if\(!audible\)\{toast\(\x27这些片段没有可用声音，不能导出静音视频\x27\);return;\}/);
+
+// Export contains both the canvas video track and an AudioContext destination track.
+assert.match(source, /canvas\.captureStream\(30\)/);
+assert.match(source, /createMediaStreamDestination\(\)/);
+assert.match(source, /dest\.stream\.getAudioTracks\(\)\.forEach\(t=>stream\.addTrack\(t\)\)/);
+assert.match(source, /new MediaRecorder\(stream,opts\)/);
+assert.match(source, /navigator\.canShare\(\{files:\[file\]\}\)/);
+
+// The live call send button is neutral gray, while the microphone retains its explicit state color.
+assert.match(html, /\.callinput button\{[^}]*background:#4a4a50/);
+assert.doesNotMatch(html, /\.callinput button\{[^}]*#ff6fa5/);
+
+console.log("video call replay tests passed");

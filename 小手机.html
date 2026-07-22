@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='617';</script>
+<script>window.__NORTH_SHELL_BUILD__='618';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,15 +29,15 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-617';
+  var key='north-sw-reloaded-618';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       if(window.__northBootReady)return;
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','617');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','618');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=617';
+  var url='sw.js?v=618';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -482,7 +482,7 @@ body{background:#000;padding:0;}
 .callinput{position:absolute;bottom:150px;left:14px;right:14px;display:none;gap:8px;z-index:3;}
 .callinput.show{display:flex;}
 .callinput input{flex:1;border:none;border-radius:18px;padding:9px 14px;background:rgba(255,255,255,.16);color:#fff;outline:none;font-size:15px;}
-.callinput button{border:none;border-radius:18px;padding:0 14px;background:linear-gradient(135deg,#ffa0c8,#ff6fa5);color:#fff;font-weight:600;}
+.callinput button{border:none;border-radius:18px;padding:0 14px;background:#4a4a50;color:#fff;font-weight:600;}
 .callbtns{position:absolute;bottom:40px;left:0;right:0;display:flex;justify-content:space-evenly;align-items:flex-end;}
 .cbtncol{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;color:#ccc;}
 .cbtn{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;}
@@ -773,8 +773,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=617" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=617" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=617"></script>
+<script src="license-gate.js?v=618" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=618" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=618"></script>
 </body>
 </html>
