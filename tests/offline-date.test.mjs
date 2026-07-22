@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v599 \u00b7 \u7ea6\u4f1a\u91cd\u70b9\u8bb0\u5fc6/);
+assert.match(source, /v600 \u00b7 \u539f\u6587\u7ea6\u4f1a\u8bb0\u5fc6/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -341,7 +341,9 @@ assert.match(source, /h\.summaryStatus='failed'/);
 assert.match(source, /h\.summaryError=/);
 assert.match(source, /function offSummaryChunks\(text,limit\)/);
 assert.match(source, /async function offSummaryPreparedText\(c,ended,text,useAux\)/);
-assert.match(source, /function offSummaryParsePoints\(raw,plan\)/);
+assert.match(source, /function offSummaryParsePoints\(raw,plan,ended,c\)/);
+assert.match(source, /function offSummaryPointFromIndexes\(ended,c,indexes,importance\)/);
+assert.match(source, /sourceIndexes:\(p\.indexes\|\|\[\]\)\.slice\(0,2\)/);
 assert.match(source, /function offSummarySavePoints\(o,h,c,ended,points,status,error\)/);
 assert.match(source, /h\.memoryIds=mems\.map\(m=>m\.id\)/);
 assert.match(source, /offSummarySavePoints\(o,h,c,ended,points,'done',''\)/);
@@ -357,9 +359,10 @@ assert.match(offEndSource, /const ended=\{session:/);
 assert.match(offEndSource, /draft=\{id:ended\.session/);
 assert.match(offEndSource, /msgs:ended\.msgs,summaryStatus:'pending'/);
 assert.match(source, /const ended=\{session:h\.id[\s\S]*?msgs:h\.msgs\},plan=offSummaryPlan\(ended\.msgs\)/);
-assert.match(source, /max:Math\.min\(plan\.tokens,2200\)/);
-assert.match(source, /offSummaryParsePoints\(sum,plan\)/);
-assert.match(source.slice(summaryStart, offEndStart), /只输出JSON数组/);
+assert.match(source, /\{aux:useAux,max:700,temp:\.1\}/);
+assert.match(source, /offSummaryParsePoints\(sum,plan,ended,c\)/);
+assert.match(source.slice(summaryStart, offEndStart), /禁止撰写、改写、概括或补充任何事件/);
+assert.doesNotMatch(source.slice(summaryStart, offEndStart), /"text":"第一人称记忆重点"/);
 assert.doesNotMatch(offEndSource, /120~200/);
 assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
 
@@ -412,7 +415,34 @@ assert.equal(fallbackOffline.memory.length, 2);
 assert.equal(fallbackContact.summaries.length, 2);
 assert.ok(fallbackOffline.memory.every((m) => /^\d{4}年\d{1,2}月\d{1,2}日$/.test(m.date)));
 assert.ok(fallbackOffline.memory.every((m) => m.imp >= 1 && m.imp <= 5));
+assert.ok(fallbackOffline.memory.every((m) => m.text.includes("我到了") || m.text.includes("我在门口等你")));
 assert.match(fallbackHistory.summaryError, /forced-summary-error/);
+
+const grounded = fallbackSandbox.offSummaryParsePoints(
+  '[{"indexes":[1],"importance":4,"text":"两个人约定了原文不存在的婚礼"}]',
+  { maxPoints: 3 },
+  { msgs: fallbackHistory.msgs },
+  fallbackContact,
+);
+assert.equal(grounded.length, 1);
+assert.match(grounded[0].text, /用户原话：「我到了。」/);
+assert.doesNotMatch(grounded[0].text, /婚礼/);
+assert.equal(fallbackSandbox.offSummaryParsePoints('[{"indexes":[999],"text":"编造"}]', { maxPoints: 3 }, { msgs: fallbackHistory.msgs }, fallbackContact).length, 0);
+
+const longHistory = {
+  id: "h-long",
+  ts: 2000,
+  loc: "长约会地点",
+  msgs: Array.from({ length: 80 }, (_, i) => ({ who: i % 2 ? "ta" : "me", text: `原文事件-${i + 1}` })),
+};
+fallbackOffline.history.unshift(longHistory);
+fallbackSandbox.chatCalls = 0;
+fallbackSandbox.chatAPI = async () => { fallbackSandbox.chatCalls += 1; throw new Error("超长约会不应调用模型"); };
+assert.equal(await fallbackSandbox.offSummarizeHistory("c1", "h-long", false), "done");
+assert.equal(fallbackSandbox.chatCalls, 0);
+const longMemories = fallbackOffline.memory.filter((m) => m.historyId === "h-long");
+assert.equal(longMemories.length, 12);
+assert.ok(longMemories.every((m) => /原文事件-\d+/.test(m.text) && m.sourceIndexes.length === 1));
 
 assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.cid,o,trip\.to,trip\.date,dayPartNow\(\)\)/);
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:'\uff08'\+tvMD\(trip\.date\)/);
@@ -435,6 +465,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=599/);
+assert.match(html, /app\.js\?v=600/);
 
 console.log("offline date tests passed");
