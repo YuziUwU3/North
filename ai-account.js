@@ -222,7 +222,7 @@ function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='
 async function aiTestVoice(){const text='我在测试这条语音的花销和声音效果。';
   if(_aiVoiceTestBusy){toast('语音还在生成中，请稍等');return;}
   if(!aiVoiceEnabled()){toast('先打开语音API');return;}
-  _aiVoiceTestBusy=true;_aiVoiceTestStatus='语音生成中，请稍等，不要重复点击';if(cur().p==='aiaccount')render();
+  _aiVoiceTestBusy=true;_aiVoiceTestStatus='语音生成中，请稍等，不要重复点击';if(cur().p==='aiaccount')aiRenderStable();
   try{initAudio();
     if(!aiVoiceRelayOn()&&typeof ttsArr==='function'){
       const ab=await Promise.race([ttsArr(text,{voice:{engine:'api',ttsVoice:((S.settings.tts||{}).voice)||''}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
@@ -238,12 +238,12 @@ async function aiTestVoice(){const text='我在测试这条语音的花销和声
     if(buf){playBuf(buf);_aiVoiceTestStatus='语音测试成功';toast('语音测试成功');setTimeout(()=>aiAccountRefresh(true,true),800);}
     else{if(typeof ttsRefundAudio==='function')await ttsRefundAudio(ab,'tts-test-decode-failed');_aiVoiceTestStatus='拿到语音数据，但播放失败，已退回本次AI点数';toast('播放失败，已退回本次AI点数');setTimeout(()=>aiAccountRefresh(true,true),800);}
   }catch(e){let refunded=false;if(typeof ttsRefundError==='function')refunded=await ttsRefundError(e,'tts-test-client-error');_aiVoiceTestStatus='语音测试失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,'')+(refunded?'，已退回本次AI点数':'');toast(_aiVoiceTestStatus);setTimeout(()=>aiAccountRefresh(true,true),800);}
-  finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')render();}}
+  finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')aiRenderStable();}}
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId(),points:0},pricing:null,plans:null,ledger:[]};
   if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(d.account)_aiAcct.account=d.account;
   if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;}
   if(d.charged){const feature=action||'chat';_aiAcct.ledger=_aiAcct.ledger||[];_aiAcct.ledger.unshift({kind:'charge',feature,points:-d.charged,balance_after:d.balance,status:d.ok===false?'failed':'done',billed:!!d.billed,note:d.note||d.error||'',created_at:new Date().toISOString()});_aiAcct.ledger=_aiAcct.ledger.slice(0,80);}
   if(_aiAcct.account&&_aiAcct.account.points!=null)aiCheckLowBalance(Number(_aiAcct.account.points));
-  if(cur().p==='aiaccount')setTimeout(()=>{if(cur().p==='aiaccount')render();},30);}
+  if(cur().p==='aiaccount')setTimeout(()=>{if(cur().p==='aiaccount')aiRenderStable();},30);}
 async function aiAccountRefresh(silent,preserveScroll){if(_aiAcctBusy)return;_aiAcctBusy=true;if(silent)_aiAutoTried=true;let ok=false;try{_aiAcct=await aiRelay('account',{});ok=true;if(_aiAcct&&_aiAcct.account)aiCheckLowBalance(Number(_aiAcct.account.points));if(!silent)toast('AI账户已刷新');}catch(e){if(!silent)toast('连接失败：'+e.message);}finally{_aiAcctBusy=false;if(ok&&cur().p==='aiaccount'){const sc=$('.scroll'),top=sc?sc.scrollTop:0;render();if(preserveScroll)setTimeout(()=>{const n=$('.scroll');if(n)n.scrollTop=top;},0);}}}
