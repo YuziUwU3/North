@@ -347,7 +347,7 @@ async function failCharged(ledgerId: string, cost: number, balance: number, mode
   return json({ ok: false, error: "model-failed-charged: " + reason, charged: cost, balance, billed: true, note }, 502);
 }
 
-type OpenAIRoute = { name: string; base: string; key: string; model?: string };
+type OpenAIRoute = { name: string; base: string; key: string; model?: string; timeoutMs?: number };
 
 function primaryOpenAIRoute(): OpenAIRoute {
   return {
@@ -358,18 +358,24 @@ function primaryOpenAIRoute(): OpenAIRoute {
 }
 
 function configuredImageRoutes(): OpenAIRoute[] {
-  const primary = primaryOpenAIRoute();
-  primary.model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
-  const routes = [primary];
+  const original = primaryOpenAIRoute();
+  original.model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
   const base2 = Deno.env.get("IMAGE_ROUTE_2_BASE_URL") || "";
   const key2 = Deno.env.get("IMAGE_ROUTE_2_API_KEY") || "";
-  if (base2 && key2) routes.push({
-    name: "route-2",
+  if (base2 && key2) return [{
+    name: "route-1",
     base: base2,
     key: key2,
-    model: Deno.env.get("IMAGE_ROUTE_2_MODEL") || primary.model,
-  });
-  return routes;
+    model: Deno.env.get("IMAGE_ROUTE_2_MODEL") || original.model,
+    timeoutMs: 150000,
+  }, {
+    ...original,
+    name: "route-2",
+    timeoutMs: 90000,
+  }];
+  original.name = "route-1";
+  original.timeoutMs = 90000;
+  return [original];
 }
 
 async function openai(path: string, body: unknown, timeoutMs = 180000, route?: OpenAIRoute) {
@@ -457,6 +463,10 @@ function relayImageResult(data: any) {
   for (const raw of candidates) {
     const dataUrl = raw.match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i)?.[0]?.replace(/\s+/g, "");
     if (dataUrl) return { data: [{ b64_json: dataUrl.slice(dataUrl.indexOf(",") + 1) }] };
+    const bareBase64 = raw.replace(/\s+/g, "");
+    if (bareBase64.length > 10000 && /^[a-z0-9+/]+={0,2}$/i.test(bareBase64)) {
+      return { data: [{ b64_json: bareBase64 }] };
+    }
     const markdown = raw.match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i)?.[1];
     const plain = raw.match(/https?:\/\/[^\s<>"')\]]+/i)?.[0];
     const url = markdown || plain;
@@ -483,9 +493,13 @@ function imageFailCode(reason: string) {
   return "image-upstream-failed";
 }
 
+function shouldRetrySameImageRoute(reason: string) {
+  return /relay-image-empty|No images were successfully|no image|429|rate.?limit/i.test(reason);
+}
+
 async function generateImageThroughRoute(route: OpenAIRoute, rawPrompt: unknown, size: string, rolePhoto: boolean) {
   const model = route.model || "gpt-image-2";
-  const chatTimeout = route.name === "route-2" ? 150000 : 90000;
+  const chatTimeout = route.timeoutMs || 90000;
   const prompt = guardedImagePrompt(rawPrompt, rolePhoto).slice(0, 4200);
   const chatBody = {
     model,
@@ -1063,22 +1077,30 @@ Deno.serve(async (req) => {
       let endpoint = "images-generations";
       let usedRoute = routes[0]?.name || "route-1";
       let firstFailure = "";
+      const routeFailures: Array<{ route: string; attempt: number; reason: string }> = [];
       try {
         if (!routes.length) throw new Error("missing-image-route");
         let result: Awaited<ReturnType<typeof generateImageThroughRoute>> | null = null;
         let lastError: unknown = null;
         for (let i = 0; i < routes.length; i++) {
           const route = routes[i];
-          try {
-            result = await generateImageThroughRoute(route, body.prompt, size, rolePhoto);
-            usedRoute = route.name;
-            model = result.model;
-            endpoint = result.endpoint;
-            break;
-          } catch (routeError) {
-            lastError = routeError;
-            if (i === 0) firstFailure = errText(routeError).slice(0, 300);
+          const maxAttempts = route.name === "route-1" ? 2 : 1;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+              result = await generateImageThroughRoute(route, body.prompt, size, rolePhoto);
+              usedRoute = route.name;
+              model = result.model;
+              endpoint = result.endpoint;
+              break;
+            } catch (routeError) {
+              lastError = routeError;
+              const routeReason = errText(routeError).slice(0, 300);
+              routeFailures.push({ route: route.name, attempt, reason: routeReason });
+              if (i === 0 && attempt === 1) firstFailure = routeReason;
+              if (attempt >= maxAttempts || !shouldRetrySameImageRoute(routeReason)) break;
+            }
           }
+          if (result) break;
         }
         if (!result) throw lastError || new Error("all-image-routes-failed");
         await finishCharge(c.ledgerId, true, {
@@ -1105,6 +1127,7 @@ Deno.serve(async (req) => {
           refunded: c.cost,
           balance: acct.points || 0,
           billed: false,
+          route_failures: routeFailures,
           note: reasonCode === "image-upstream-no-output-or-rate-limit"
             ? "中转站上游没有成功出图或正在限流，本次点数已自动退回"
             : "中转站图片生成失败，本次点数已自动退回",
