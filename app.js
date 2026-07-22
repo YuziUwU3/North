@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='613'){
+if(window.__NORTH_SHELL_BUILD__!=='614'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v613 · 语音扣点明码标价';
+const APP_VER='v614 · 表情包一键预览导入';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1150,7 +1150,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=613';
+  const url='sw.js?v=614';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -7297,13 +7297,27 @@ function sendSticker(id,i){const s=(S.me.stickers||[])[i];if(!s)return;const p=$
 function addSticker(){pickFile('image/*',async f=>{const img=await compress(f,260,.8);const meaning=prompt('这个表情是什么意思？（比如：伤心、得意、求抱抱）','');
   S.me.stickers=S.me.stickers||[];S.me.stickers.push({img,meaning:(meaning||'').trim()});save();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');toast('表情已添加');});}
 function _stkName(f){return (f&&f.name?f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim():'');}
-function addStickersBatch(){pickFiles('image/*',async fs=>{const common=prompt('批量表情的统一含义（可留空；留空就用文件名当含义）','')||'';
-  S.me.stickers=S.me.stickers||[];let n=0;for(const f of fs){try{const img=await compress(f,260,.8);S.me.stickers.push({img,meaning:common.trim()||_stkName(f)});n++;}catch(e){}}
-  save();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');toast('已批量添加 '+n+' 个表情');});}
-function openStickerBatchImport(){openModal(`<h3>批量添加表情</h3><div class="hint">可以从相册一次多选，也可以每行粘贴一个图片直链。链接只保存地址，更省本机空间。</div><button class="btn p" onclick="closeModal();addStickersBatch()">从相册多选图片</button><div class="field" style="margin-top:12px"><label>图片链接（每行一个，最多100个）</label><textarea id="stk_urls" rows="7" placeholder="https://example.com/1.jpg&#10;https://example.com/2.gif"></textarea></div><div class="field"><label>统一含义（可留空）</label><input id="stk_url_meaning" placeholder="开心 / 生气 / 求抱抱…"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="addStickerLinks()">导入链接</button></div>`);}
-function normalizeStickerUrl(url){try{const u=new URL((''+url).trim());return u.protocol==='http:'||u.protocol==='https:'?u.href:'';}catch(_){return '';}}
+let _stickerBatchPending=[],_stickerBatchText='';
+function addStickersBatch(){openStickerBatchImport();stickerBatchPickFiles();}
+function openStickerBatchImport(){_stickerBatchPending=[];_stickerBatchText='';renderStickerBatchImport();}
+function stickerAttr(s){return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function renderStickerBatchImport(){const cards=_stickerBatchPending.map((s,i)=>`<div style="position:relative;background:#18181a;border:1px solid #353538;border-radius:10px;padding:7px;min-width:0"><button type="button" onclick="stickerBatchRemove(${i})" style="position:absolute;right:3px;top:3px;width:22px;height:22px;border:0;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;z-index:2">×</button><img src="${stickerAttr(s.img)}" style="width:100%;aspect-ratio:1;object-fit:contain;border-radius:7px;background:#0d0d0e"><input value="${stickerAttr(s.meaning||'')}" oninput="stickerBatchSetMeaning(${i},this.value)" placeholder="表情含义" style="box-sizing:border-box;width:100%;margin-top:6px;padding:6px;border:1px solid #3b3b3e;border-radius:7px;background:#262628;color:#eee;font-size:12px"></div>`).join('');
+  openModal(`<h3>一键上传表情包</h3><div class="hint">支持 JPG、PNG、GIF。可以多选或拖进来；导入前能预览并修改每张表情下面的含义。</div><div onclick="stickerBatchPickFiles()" ondragover="event.preventDefault();this.style.borderColor='#7aa7ff'" ondragleave="this.style.borderColor='#555'" ondrop="stickerBatchDrop(event)" style="border:1.5px dashed #555;border-radius:12px;padding:20px 10px;text-align:center;cursor:pointer;background:#19191b"><div style="font-size:28px">☁️</div><b>点击或拖拽上传表情包</b><div style="font-size:12px;color:#888;margin-top:5px">可一次选择多张图片</div></div><div class="field" style="margin-top:12px"><label>从图床网址批量添加</label><textarea id="stk_urls" rows="6" oninput="_stickerBatchText=this.value" placeholder="开心：https://example.com/happy.jpg&#10;伤心：https://example.com/sad.gif&#10;https://example.com/求抱抱.png">${esc(_stickerBatchText)}</textarea></div><div style="font-size:11px;color:#777;line-height:1.6;margin-top:-5px">支持“含义：网址”“网址 含义”或每行一个网址；不写含义时自动使用文件名。</div><button class="btn g" style="margin-top:9px" onclick="previewStickerBatchImport()">预览网址表情</button>${cards?`<div style="display:flex;justify-content:space-between;align-items:center;margin:13px 0 7px"><b>导入预览</b><span style="font-size:12px;color:#888">${_stickerBatchPending.length}/100，可直接改含义</span></div><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;max-height:32vh;overflow:auto">${cards}</div>`:'<div style="color:#777;font-size:12px;text-align:center;padding:12px 0 2px">选择图片或粘贴网址后，预览会显示在这里</div>'}<div class="btns" style="margin-top:12px"><button class="btn g" onclick="stickerBatchCancel()">取消</button><button class="btn p" onclick="commitStickerBatchImport()">一键导入${_stickerBatchPending.length?' '+_stickerBatchPending.length:''}个</button></div>`);}
+function normalizeStickerUrl(url){try{const clean=(''+url).trim().replace(/[，。；;、）)\]}>]+$/g,''),u=new URL(clean);return u.protocol==='http:'||u.protocol==='https:'?u.href:'';}catch(_){return '';}}
 function stickerUrlName(url){try{const u=new URL(url),name=decodeURIComponent((u.pathname.split('/').pop()||'').replace(/\.[^.]+$/,''));return name.replace(/[_-]+/g,' ').trim();}catch(_){return '';}}
-function addStickerLinks(){const raw=(($('#stk_urls')||{}).value||''),meaning=(($('#stk_url_meaning')||{}).value||'').trim(),urls=uniq(raw.split(/\s+/).map(normalizeStickerUrl).filter(Boolean)).slice(0,100);if(!urls.length){toast('没有识别到可用的图片链接');return;}S.me.stickers=S.me.stickers||[];const seen=new Set(S.me.stickers.map(s=>s.img));let n=0;urls.forEach(url=>{if(seen.has(url))return;S.me.stickers.push({img:url,meaning:meaning||stickerUrlName(url)});seen.add(url);n++;});save();closeModal();_panelPage='emoji';render();toast(n?'已导入 '+n+' 个链接表情':'这些表情已经添加过了');}
+function parseStickerImportLine(line){line=(''+(line||'')).trim();if(!line)return null;const m=line.match(/https?:\/\/[^\s<>"']+/i);if(!m)return null;const img=normalizeStickerUrl(m[0]);if(!img)return null;let before=line.slice(0,m.index),after=line.slice(m.index+m[0].length);before=before.replace(/^(?:描述|含义|名称)\s*[:：]?\s*/,'').replace(/[\s:：=|｜-]+$/g,'').trim();after=after.replace(/^[\s:：=|｜-]+/g,'').trim();const meaning=(before||after||stickerUrlName(img)||'表情').slice(0,40);return {img,meaning,source:'url'};}
+function parseStickerImportText(raw){const seen=new Set(),out=[];(''+(raw||'')).split(/\r?\n/).forEach(line=>{const s=parseStickerImportLine(line);if(s&&!seen.has(s.img)){seen.add(s.img);out.push(s);}});return out.slice(0,100);}
+function stickerBatchSyncUrls(){const ta=$('#stk_urls');if(ta)_stickerBatchText=ta.value;const old=new Map(_stickerBatchPending.filter(s=>s.source==='url').map(s=>[s.img,s.meaning]));const files=_stickerBatchPending.filter(s=>s.source==='file'),urls=parseStickerImportText(_stickerBatchText).map(s=>{if(old.has(s.img))s.meaning=old.get(s.img);return s;});const seen=new Set();_stickerBatchPending=files.concat(urls).filter(s=>!seen.has(s.img)&&seen.add(s.img)).slice(0,100);return urls.length;}
+function previewStickerBatchImport(){const n=stickerBatchSyncUrls();if(!n&&!_stickerBatchPending.length){toast('没有识别到可用的图片或网址');return;}renderStickerBatchImport();}
+function stickerBatchPickFiles(){pickFiles('image/jpeg,image/png,image/gif,image/webp',fs=>stickerBatchAddFiles(fs));}
+function stickerBatchDrop(e){e.preventDefault();stickerBatchAddFiles([...(e.dataTransfer&&e.dataTransfer.files||[])]);}
+function stickerFileData(f){return new Promise(async(resolve,reject)=>{if(!f)return reject();if((f.type||'').toLowerCase()==='image/gif'){if(f.size>2*1024*1024)return reject(new Error('GIF_TOO_LARGE'));const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(f);return;}try{resolve(await compress(f,260,.82));}catch(e){reject(e);}});}
+async function stickerBatchAddFiles(files){const ok=[...(files||[])].filter(f=>/^image\/(?:jpeg|png|gif|webp)$/i.test(f.type||''));if(!ok.length){toast('请选择 JPG、PNG 或 GIF 图片');return;}const room=Math.max(0,100-_stickerBatchPending.length);if(!room){toast('一次最多导入100个');return;}toast('正在读取 '+Math.min(room,ok.length)+' 张图片…');let n=0,large=0;for(const f of ok.slice(0,room)){try{_stickerBatchPending.push({img:await stickerFileData(f),meaning:_stkName(f)||'表情',source:'file'});n++;}catch(e){if(e&&e.message==='GIF_TOO_LARGE')large++;}}renderStickerBatchImport();if(large)toast('已加入 '+n+' 个；超过2MB的GIF请先压缩');}
+function stickerBatchSetMeaning(i,value){if(_stickerBatchPending[i])_stickerBatchPending[i].meaning=(''+value).slice(0,40);}
+function stickerBatchRemove(i){const ta=$('#stk_urls');if(ta)_stickerBatchText=ta.value;const removed=_stickerBatchPending[i];if(removed&&removed.source==='url')_stickerBatchText=_stickerBatchText.split(/\r?\n/).filter(line=>{const s=parseStickerImportLine(line);return !s||s.img!==removed.img;}).join('\n');_stickerBatchPending.splice(i,1);renderStickerBatchImport();}
+function stickerBatchCancel(){_stickerBatchPending=[];_stickerBatchText='';closeModal();}
+function commitStickerBatchImport(){stickerBatchSyncUrls();if(!_stickerBatchPending.length){toast('请先选择图片或粘贴网址');return;}S.me.stickers=S.me.stickers||[];const seen=new Set(S.me.stickers.map(s=>s.img));let n=0;_stickerBatchPending.forEach(s=>{if(seen.has(s.img))return;S.me.stickers.push({img:s.img,meaning:(s.meaning||'表情').trim().slice(0,40)});seen.add(s.img);n++;});save();_stickerBatchPending=[];_stickerBatchText='';closeModal();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');toast(n?'已一键导入 '+n+' 个表情':'这些表情已经添加过了');}
+function addStickerLinks(){previewStickerBatchImport();}
 function delSticker(i){S.me.stickers.splice(i,1);save();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');}
 /* ===== 角色的表情包库（他能发的） ===== */
 function aiPickSticker(want){const pool=S.aiStickers||[];if(!pool.length)return null;want=(''+(want||'')).trim();
