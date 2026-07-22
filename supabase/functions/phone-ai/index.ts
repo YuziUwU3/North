@@ -3,6 +3,7 @@
 // PHONE_SUPABASE_URL, PHONE_SERVICE_ROLE_KEY
 // OPENAI_API_KEY（现有聊天/识图/图片生成中转站）
 // 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL, IMAGE_MODEL=gpt-image-2
+// 图片备用路线：IMAGE_ROUTE_2_BASE_URL, IMAGE_ROUTE_2_API_KEY, IMAGE_ROUTE_2_MODEL=gpt-image-2
 // 新账户不赠送点数；点数只允许通过已核对的充值订单或后台手动加点获得。
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -346,9 +347,35 @@ async function failCharged(ledgerId: string, cost: number, balance: number, mode
   return json({ ok: false, error: "model-failed-charged: " + reason, charged: cost, balance, billed: true, note }, 502);
 }
 
-async function openai(path: string, body: unknown, timeoutMs = 180000) {
-  const base = (Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/+$/, "");
-  const key = Deno.env.get("OPENAI_API_KEY") || "";
+type OpenAIRoute = { name: string; base: string; key: string; model?: string };
+
+function primaryOpenAIRoute(): OpenAIRoute {
+  return {
+    name: "route-1",
+    base: Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1",
+    key: Deno.env.get("OPENAI_API_KEY") || "",
+  };
+}
+
+function configuredImageRoutes(): OpenAIRoute[] {
+  const primary = primaryOpenAIRoute();
+  primary.model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
+  const routes = [primary];
+  const base2 = Deno.env.get("IMAGE_ROUTE_2_BASE_URL") || "";
+  const key2 = Deno.env.get("IMAGE_ROUTE_2_API_KEY") || "";
+  if (base2 && key2) routes.push({
+    name: "route-2",
+    base: base2,
+    key: key2,
+    model: Deno.env.get("IMAGE_ROUTE_2_MODEL") || primary.model,
+  });
+  return routes;
+}
+
+async function openai(path: string, body: unknown, timeoutMs = 180000, route?: OpenAIRoute) {
+  const selected = route || primaryOpenAIRoute();
+  const base = selected.base.replace(/\/+$/, "");
+  const key = selected.key;
   if (!key) throw new Error("missing-openai-key");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort("upstream-timeout"), Math.max(1000, timeoutMs));
@@ -454,6 +481,49 @@ function imageFailCode(reason: string) {
   if (/401|403|unauthori|forbidden|no access|invalid.*key/i.test(reason)) return "image-auth-or-permission";
   if (/404|model.*not.*found|not found|渠道不存在|可用渠道不存在|available.*channel|unsupported.*endpoint|unsupported.*path/i.test(reason)) return "image-model-or-endpoint";
   return "image-upstream-failed";
+}
+
+async function generateImageThroughRoute(route: OpenAIRoute, rawPrompt: unknown, size: string, rolePhoto: boolean) {
+  const model = route.model || "gpt-image-2";
+  const chatTimeout = route.name === "route-2" ? 150000 : 90000;
+  const prompt = guardedImagePrompt(rawPrompt, rolePhoto).slice(0, 4200);
+  const chatBody = {
+    model,
+    messages: [{ role: "user", content: guardedChatImagePrompt(rawPrompt, size, rolePhoto) }],
+    max_tokens: 1200,
+  };
+  let endpoint = "images-generations";
+  let upstream: any;
+  if (/^gpt-image-2$/i.test(model)) {
+    endpoint = "chat-completions";
+    upstream = await openai("/chat/completions", chatBody, chatTimeout, route);
+  } else {
+    try {
+      const richBody = {
+        model,
+        prompt,
+        n: 1,
+        size,
+        quality: "medium",
+        output_format: "jpeg",
+        output_compression: 88,
+        response_format: "url",
+      };
+      try {
+        upstream = await openai("/images/generations", richBody, 120000, route);
+      } catch (richError) {
+        const richReason = errText(richError);
+        if (!shouldRetryImagePlain(richReason)) throw richError;
+        upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000, route);
+      }
+    } catch (firstError) {
+      const firstReason = errText(firstError);
+      if (!shouldRetryImageAsChat(firstReason)) throw firstError;
+      endpoint = "chat-completions";
+      upstream = await openai("/chat/completions", chatBody, chatTimeout, route);
+    }
+  }
+  return { data: relayImageResult(upstream), model, endpoint };
 }
 
 function hexToBase64(hex: string) {
@@ -774,7 +844,10 @@ Deno.serve(async (req) => {
         account: publicAccount(acct),
         pricing: PRICE,
         plans: PLANS,
-        capabilities: { image: !!(Deno.env.get("OPENAI_API_KEY") && Deno.env.get("OPENAI_BASE_URL")) },
+        capabilities: {
+          image: configuredImageRoutes().some((route) => !!(route.key && route.base)),
+          image_routes: configuredImageRoutes().filter((route) => !!(route.key && route.base)).length,
+        },
         ledger: ledger || [],
         purchases: purchases || [],
       });
@@ -982,51 +1055,43 @@ Deno.serve(async (req) => {
 
     if (action === "image") {
       const c = await charge(userId, clientSecret, "image");
-      const model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
       const rolePhoto = String(body.source || "") === "role_photo";
       const allowedSizes = new Set(["1024x1024", "1024x1536", "1536x1024"]);
       const size = allowedSizes.has(String(body.size || "")) ? String(body.size) : "1024x1024";
+      const routes = configuredImageRoutes().filter((route) => !!(route.key && route.base));
+      let model = routes[0]?.model || Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
       let endpoint = "images-generations";
+      let usedRoute = routes[0]?.name || "route-1";
+      let firstFailure = "";
       try {
-        const prompt = guardedImagePrompt(body.prompt, rolePhoto).slice(0, 4200);
-        let upstream: any;
-        const chatBody = {
-          model,
-          messages: [{ role: "user", content: guardedChatImagePrompt(body.prompt, size, rolePhoto) }],
-          max_tokens: 1200,
-        };
-        if (/^gpt-image-2$/i.test(model)) {
-          endpoint = "chat-completions";
-          upstream = await openai("/chat/completions", chatBody, 90000);
-        } else {
+        if (!routes.length) throw new Error("missing-image-route");
+        let result: Awaited<ReturnType<typeof generateImageThroughRoute>> | null = null;
+        let lastError: unknown = null;
+        for (let i = 0; i < routes.length; i++) {
+          const route = routes[i];
           try {
-            const richBody = {
-              model,
-              prompt,
-              n: 1,
-              size,
-              quality: "medium",
-              output_format: "jpeg",
-              output_compression: 88,
-              response_format: "url",
-            };
-            try {
-              upstream = await openai("/images/generations", richBody, 120000);
-            } catch (richError) {
-              const richReason = errText(richError);
-              if (!shouldRetryImagePlain(richReason)) throw richError;
-              upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000);
-            }
-          } catch (firstError) {
-            const firstReason = errText(firstError);
-            if (!shouldRetryImageAsChat(firstReason)) throw firstError;
-            endpoint = "chat-completions";
-            upstream = await openai("/chat/completions", chatBody, 90000);
+            result = await generateImageThroughRoute(route, body.prompt, size, rolePhoto);
+            usedRoute = route.name;
+            model = result.model;
+            endpoint = result.endpoint;
+            break;
+          } catch (routeError) {
+            lastError = routeError;
+            if (i === 0) firstFailure = errText(routeError).slice(0, 300);
           }
         }
-        const data = relayImageResult(upstream);
-        await finishCharge(c.ledgerId, true, { model, provider: "configured-relay", endpoint, quality: "medium", size });
-        return json({ ok: true, data, charged: c.cost, balance: c.balance });
+        if (!result) throw lastError || new Error("all-image-routes-failed");
+        await finishCharge(c.ledgerId, true, {
+          model,
+          provider: "configured-relay",
+          route: usedRoute,
+          fallback: usedRoute === "route-2",
+          fallback_reason: usedRoute === "route-2" ? firstFailure : "",
+          endpoint,
+          quality: "medium",
+          size,
+        });
+        return json({ ok: true, data: result.data, charged: c.cost, balance: c.balance, image_route: usedRoute, fallback: usedRoute === "route-2" });
       } catch (e) {
         const reason = errText(e);
         const reasonCode = imageFailCode(reason);

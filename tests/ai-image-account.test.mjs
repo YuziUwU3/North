@@ -28,6 +28,8 @@ assert.match(account,/生成一张图片/);
 assert.match(account,/function aiGenerateAccountImage\(\)/);
 assert.match(account,/function aiImageReady\(\)/);
 assert.match(account,/图片中转站尚未配置/);
+assert.match(account,/图片双路线已启用/);
+assert.match(account,/成功只扣一次，两条都失败才退点/);
 assert.match(account,/生图API原生成功率约50%/);
 assert.match(account,/function aiShowPurchaseNotice\(\)/);
 assert.match(account,/更换浏览器会导致点数消失/);
@@ -35,6 +37,10 @@ assert.match(account,/如因换浏览器或手机而导致点数消失概不负�
 
 assert.match(backend,/image: 20/);
 assert.match(backend,/Deno\.env\.get\("IMAGE_MODEL"\) \|\| "gpt-image-2"/);
+assert.match(backend,/function configuredImageRoutes\(\)/);
+assert.match(backend,/IMAGE_ROUTE_2_BASE_URL/);
+assert.match(backend,/IMAGE_ROUTE_2_API_KEY/);
+assert.match(backend,/IMAGE_ROUTE_2_MODEL/);
 assert.match(backend,/openai\("\/images\/generations"/);
 assert.match(backend,/\[base \+ "\/v1" \+ path, base \+ path\]/);
 assert.match(backend,/function relayImageResult\(data: any\)/);
@@ -46,14 +52,15 @@ assert.match(backend,/provider: "configured-relay"/);
 assert.match(backend,/quality: "medium"/);
 assert.match(backend,/response_format: "url"/);
 assert.match(backend,/if \(\/\^gpt-image-2\$\/i\.test\(model\)\)/);
-assert.match(backend,/content: guardedChatImagePrompt\(body\.prompt, size, rolePhoto\)/);
-assert.match(backend,/upstream = await openai\("\/chat\/completions", chatBody, 90000\)/);
-assert.match(backend,/richBody, 120000\)/);
-assert.match(backend,/\}, 120000\)/);
+assert.match(backend,/content: guardedChatImagePrompt\(rawPrompt, size, rolePhoto\)/);
+assert.match(backend,/const chatTimeout = route\.name === "route-2" \? 150000 : 90000/);
+assert.match(backend,/upstream = await openai\("\/chat\/completions", chatBody, chatTimeout, route\)/);
+assert.match(backend,/richBody, 120000, route\)/);
+assert.match(backend,/\}, 120000, route\)/);
 assert.match(backend,/function recoverStalePendingCharges\(/);
 assert.match(backend,/stale-pending-auto-refund/);
 assert.match(backend,/await recoverStalePendingCharges\(userId, clientSecret\)/);
-assert.match(backend,/capabilities: \{ image: !!\(Deno\.env\.get\("OPENAI_API_KEY"\) && Deno\.env\.get\("OPENAI_BASE_URL"\)\) \}/);
+assert.match(backend,/image_routes: configuredImageRoutes\(\)\.filter/);
 assert.match(backend,/await refund\(userId, clientSecret, "image", c\.cost, c\.ledgerId, reason\)/);
 assert.match(backend,/refunded: c\.cost/);
 assert.match(backend,/billed: false/);
@@ -62,6 +69,8 @@ assert.doesNotMatch(backend,/https:\/\/api\.openai\.com\/v1\/images\/generations
 
 assert.match(setup,/OPENAI_API_KEY=你的聊天\/识图中转站 key/);
 assert.match(setup,/IMAGE_MODEL=gpt-image-2/);
+assert.match(setup,/IMAGE_ROUTE_2_BASE_URL=备用中转站地址/);
+assert.match(setup,/任一路线成功就只结算一次，两条路线都失败才全额退点/);
 assert.match(setup,/不需要额外配置官方 OpenAI Key/);
 
 assert.match(account,/点数不足提醒/);

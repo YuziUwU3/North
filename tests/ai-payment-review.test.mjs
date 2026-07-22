@@ -51,6 +51,12 @@ assert.match(account, /purchase_submit/);
 assert.match(account, /付款账号昵称或尾号（必填）/);
 assert.match(account, /请填写付款昵称或付款尾号/);
 assert.match(account, /请填写付款时间/);
+assert.match(account, /function aiDetectPointsArrival\(d\)/);
+assert.match(account, /AI点数已到账/);
+assert.match(account, /function aiPlayArrivalSound\(\)/);
+assert.match(account, /页面会每15秒自动查询/);
+assert.match(account, /function aiScheduleAccountPoll\(\)/);
+assert.match(account, /aiAccountRefresh\(true,true\)/);
 
 assert.doesNotMatch(account, />使用内置AI</);
 assert.match(app, /function aiCoreOn\(\)\{return false;\}/);

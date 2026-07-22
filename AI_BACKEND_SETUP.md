@@ -38,6 +38,16 @@ IMAGE_MODEL=gpt-image-2
 
 图片生成复用已经部署的 `OPENAI_BASE_URL` 和 `OPENAI_API_KEY`，通过中转站的 `/v1/images/generations` 请求 `IMAGE_MODEL`。不需要额外配置官方 OpenAI Key。
 
+图片备用路线（可选，建议配置）：
+
+```text
+IMAGE_ROUTE_2_BASE_URL=备用中转站地址
+IMAGE_ROUTE_2_API_KEY=备用中转站密钥
+IMAGE_ROUTE_2_MODEL=gpt-image-2
+```
+
+路线一失败后才会自动尝试路线二。一次生成只预扣一次点数：任一路线成功就只结算一次，两条路线都失败才全额退点，不会因为切换路线重复扣点。
+
 ## 4. 海螺语音 Secrets
 
 接入语音时再添加：

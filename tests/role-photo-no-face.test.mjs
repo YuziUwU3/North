@@ -35,7 +35,8 @@ assert.match(app, /点这里重试/);
 
 assert.match(backend, /const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:/);
 assert.match(backend, /const rolePhoto = String\(body\.source \|\| ""\) === "role_photo"/);
-assert.match(backend, /guardedImagePrompt\(body\.prompt, rolePhoto\)/);
-assert.match(backend, /guardedChatImagePrompt\(body\.prompt, size, rolePhoto\)/);
+assert.match(backend, /generateImageThroughRoute\(route, body\.prompt, size, rolePhoto\)/);
+assert.match(backend, /guardedImagePrompt\(rawPrompt, rolePhoto\)/);
+assert.match(backend, /guardedChatImagePrompt\(rawPrompt, size, rolePhoto\)/);
 assert.match(backend, /This lock overrides every other prompt sentence/);
 assert.doesNotMatch(backend, /If a person is requested, avoid a clear front-facing face by using a natural side/);
