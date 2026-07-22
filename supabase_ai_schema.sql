@@ -79,4 +79,9 @@ begin
 end;
 $$;
 
+-- Only database administrators and trusted server code may grant points.
+revoke all on function public.phone_ai_grant_points(text, integer, text) from public;
+revoke all on function public.phone_ai_grant_points(text, integer, text) from anon;
+revoke all on function public.phone_ai_grant_points(text, integer, text) from authenticated;
+
 -- 个人收款码阶段的订单确认函数见 supabase_ai_recharge_v533.sql。
