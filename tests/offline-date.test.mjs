@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v602 \u00b7 \u514b\u9686\u8ba2\u5355\u5fae\u4fe1\u529e\u7406/);
+assert.match(source, /v603 \u00b7 \u5b8c\u6574\u91cd\u70b9\u7ea6\u4f1a\u8bb0\u5fc6/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -346,6 +346,8 @@ assert.match(source, /function offSummaryPointFromIndexes\(ended,c,indexes,impor
 assert.match(source, /sourceIndexes:\(p\.indexes\|\|\[\]\)\.slice\(0,3\)/);
 assert.match(source, /function offSummaryCandidateIndexes\(ended,plan\)/);
 assert.match(source, /function offSummaryCandidateTranscript\(ended,c,plan\)/);
+assert.match(source, /function offSummaryRequiredPoints\(ended,c,plan\)/);
+assert.match(source, /function offSummaryMergeRequired\(points,required,plan\)/);
 assert.match(source, /function offSummarySavePoints\(o,h,c,ended,points,status,error\)/);
 assert.match(source, /h\.memoryIds=mems\.map\(m=>m\.id\)/);
 assert.match(source, /offSummarySavePoints\(o,h,c,ended,points,'done',''\)/);
@@ -361,7 +363,9 @@ assert.match(offEndSource, /const ended=\{session:/);
 assert.match(offEndSource, /draft=\{id:ended\.session/);
 assert.match(offEndSource, /msgs:ended\.msgs,summaryStatus:'pending'/);
 assert.match(source, /const ended=\{session:h\.id[\s\S]*?msgs:h\.msgs\},plan=offSummaryPlan\(ended\.msgs\)/);
-assert.match(source, /\{aux:useAux,max:700,temp:\.1\}/);
+assert.match(source, /max=Math\.min\(plan\.tokens,1800\)/);
+assert.match(source, /\{aux:useAux,max,temp:\.1\}/);
+assert.match(source, /\{aux:useAux,max,temp:\.05\}/);
 assert.match(source, /offSummaryParsePoints\(sum,plan,ended,c\)/);
 assert.match(source.slice(summaryStart, offEndStart), /禁止撰写、改写、概括或补充任何事件/);
 assert.doesNotMatch(source.slice(summaryStart, offEndStart), /"text":"第一人称记忆重点"/);
@@ -445,7 +449,7 @@ const longHistory = {
   loc: "长约会地点",
   msgs: Array.from({ length: 80 }, (_, i) => ({
     who: i % 2 ? "ta" : "me",
-    text: i === 9 ? "我答应以后遇到问题会直接告诉你。" : i === 39 ? "我告诉你一件关于家人的重要往事。" : i === 69 ? "争执后我向你道歉，我们说好不再冷战。" : `普通原文-${i + 1}`,
+    text: i === 9 ? "我答应以后遇到问题会直接告诉你。" : i === 39 ? "我告诉你一件关于家人的重要往事。" : i === 69 ? "争执后我向你道歉，我们说好不再冷战。" : i === 78 ? "最后我们决定以后不管多忙都要好好说晚安，我保证不会忘记。" : `普通原文-${i + 1}`,
   })),
 };
 fallbackOffline.history.unshift(longHistory);
@@ -456,8 +460,8 @@ fallbackSandbox.chatAPI = async (messages) => {
   return '[{"indexes":[10],"importance":5},{"indexes":[40],"importance":4},{"indexes":[70],"importance":5}]';
 };
 assert.equal(await fallbackSandbox.offSummarizeHistory("c1", "h-long", false), "done");
-assert.equal(fallbackSandbox.chatCalls, 1);
-assert.ok(fallbackSandbox.candidateInput.split("\n").length <= 48);
+assert.equal(fallbackSandbox.chatCalls, 2);
+assert.ok(fallbackSandbox.candidateInput.split("\n").length <= 72);
 assert.match(fallbackSandbox.candidateInput, /答应以后遇到问题/);
 assert.match(fallbackSandbox.candidateInput, /关于家人的重要往事/);
 assert.match(fallbackSandbox.candidateInput, /说好不再冷战/);
@@ -467,6 +471,7 @@ assert.ok(longMemories.every((m) => /普通原文-\d+|答应以后遇到问题|�
 assert.ok(longMemories.some((m) => m.text.includes("答应以后遇到问题")));
 assert.ok(longMemories.some((m) => m.text.includes("关于家人的重要往事")));
 assert.ok(longMemories.some((m) => m.text.includes("说好不再冷战")));
+assert.ok(longMemories.some((m) => m.text.includes("好好说晚安") && m.text.includes("保证不会忘记")));
 
 assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.cid,o,trip\.to,trip\.date,dayPartNow\(\)\)/);
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:'\uff08'\+tvMD\(trip\.date\)/);
@@ -489,6 +494,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=602/);
+assert.match(html, /app\.js\?v=603/);
 
 console.log("offline date tests passed");
