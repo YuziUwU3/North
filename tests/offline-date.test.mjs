@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v606 \u00b7 \u5b8c\u6574\u7ea6\u4f1a\u91cd\u70b9/);
+assert.match(source, /v607 \u00b7 \u7ea6\u4f1a\u539f\u6587\u91cd\u6ce8\u5165/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -376,10 +376,15 @@ assert.match(source.slice(summaryStart, offEndStart), /每条text必须写成【
 assert.match(source.slice(summaryStart, offEndStart), /严格的线下约会记忆核对员/);
 assert.match(source.slice(summaryStart, offEndStart), /每个候选都要返回一次/);
 assert.match(source, /function offCreateWechatHandoff\(c,ended\)/);
-assert.match(source, /function offWechatHandoffPrompt\(c\)/);
+assert.match(source, /function offHandoffRecallQuery\(text\)/);
+assert.match(source, /function offWechatHandoffPrompt\(c,query\)/);
+assert.match(source, /原文没有的台词、动作、承诺和称呼一律不能猜/);
 assert.match(source, /if\(c\)c\._offlineHandoff=offCreateWechatHandoff\(c,ended\)/);
-assert.match(source, /offRetryLatestSummary[\s\S]{0,900}c\._offlineHandoff=offCreateWechatHandoff\(c,ended\)/);
+assert.match(source, /function offReinjectLatestHandoff\(id,silent\)/);
+assert.match(source, /offRetryLatestSummary[\s\S]{0,900}offReinjectLatestHandoff\(id,true\)/);
+assert.match(source, /重新注入最近约会原文/);
 assert.match(source, /if\(got\)offWechatHandoffConsume\(c\)/);
+assert.doesNotMatch(source.slice(source.indexOf("function offWechatHandoffConsume"),source.indexOf("function offSummaryInstruction")),/delete c\._offlineHandoff/);
 assert.match(source, /# 刚结束的线下约会末段（微信隐藏承接上下文·优先级很高）/);
 assert.doesNotMatch(offEndSource, /120~200/);
 assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
@@ -461,6 +466,16 @@ fallbackContact._offlineHandoff = handoff;
 assert.equal(handoff.count, 2);
 assert.match(fallbackSandbox.offWechatHandoffPrompt(fallbackContact), /我到了/);
 assert.match(fallbackSandbox.offWechatHandoffPrompt(fallbackContact), /我在门口等你/);
+handoff.turns = 0;
+assert.equal(fallbackSandbox.offWechatHandoffPrompt(fallbackContact, "普通聊天"), "");
+const recallPrompt = fallbackSandbox.offWechatHandoffPrompt(fallbackContact, "你还记得我们最后说了什么吗？");
+assert.match(recallPrompt, /我到了/);
+assert.match(recallPrompt, /只能依据上面的逐条原文回答/);
+assert.match(recallPrompt, /绝不能为了显得记得而编造/);
+fallbackSandbox.offWechatHandoffConsume(fallbackContact);
+assert.equal(fallbackContact._offlineHandoff, handoff);
+assert.equal(fallbackSandbox.offReinjectLatestHandoff("c1", true), true);
+assert.equal(fallbackContact._offlineHandoff.turns, 3);
 
 fallbackSandbox.chatAPI = async () => '{"supported":[1]}';
 const rejectedInventedDraft = await fallbackSandbox.offSummaryVerifyDrafts(
@@ -528,6 +543,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=606/);
+assert.match(html, /app\.js\?v=607/);
 
 console.log("offline date tests passed");
