@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v597 · 角色记忆彻底清除'/);
+assert.match(source, /APP_VER='v598 · 美化导入导出修复'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 

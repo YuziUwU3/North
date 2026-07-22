@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='597'){
+if(window.__NORTH_SHELL_BUILD__!=='598'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v597 · 角色记忆彻底清除';
+const APP_VER='v598 · 美化导入导出修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1141,7 +1141,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=597';
+  const url='sw.js?v=598';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2515,7 +2515,9 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     <div id="set_backup">
     <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
-    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">只导出美化</button><button class="btn g" onclick="clearRoleCacheKeepBeauty()">清理缓存垃圾</button></div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">导出美化</button><button class="btn g" onclick="importBeautyData()">导入美化</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">美化包只恢复壁纸、图标、头像、气泡和音乐背景，不覆盖聊天、人设、API或真人好友数据。</div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="clearRoleCacheKeepBeauty()">清理缓存垃圾</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">只清聊天记录里的图片/语音缓存和失效旧图；不删角色、记忆、文字聊天、真人好友/群聊、壁纸、美化图和音乐背景。</div>
     <div class="btns" style="margin-top:8px"><button class="btn d" onclick="clearAllChatRecords()">一键清空所有聊天记录</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">清空角色微信聊天、小手机真人好友私聊和真人群聊；不删角色、好友、群成员、记忆、人设和美化。</div>
@@ -4063,7 +4065,7 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
       <b style="font-size:15px;color:#ffd0df">五、数据、备份与换设备</b><br>
       · 角色、聊天、设置、美化和多数记录主要保存在当前浏览器，不要随意清除网站数据或浏览器存储。<br>
       · 定期在<b>设置 → 备份</b>使用云同步或导出备份文件。换设备前先导出，导入后检查角色、聊天和设置。<br>
-      · “只导出美化”只包含壁纸、图标、气泡等外观，不是完整聊天备份。<br>
+      · “导出美化 / 导入美化”只处理壁纸、图标、头像、气泡和音乐背景，不会覆盖聊天、人设或API。<br>
       · “清理缓存垃圾”不会删角色、文字聊天和美化；清空聊天或全部数据不可恢复，操作前先备份。<br>
       · AI账户用户ID和点数属于浏览器本地身份，普通备份不能当成AI余额迁移工具。
     </div>
@@ -8920,7 +8922,8 @@ function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.
   try{a.click();}finally{setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}try{if(a.parentNode)a.parentNode.removeChild(a);}catch(_){}},3000);}}
 async function exportData(){const data=await fullBackupState();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   downloadBlob(blob,'North备份_'+new Date().toISOString().slice(0,10)+'.json');toast('已导出');}
-function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=mergeStateData(d,{keepPhoneFriend:true});phoneFriendState();save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
+function readJsonFile(f,onData){const r=new FileReader();r.onerror=()=>toast('文件读取失败，请重新选择');r.onload=async()=>{try{await onData(JSON.parse(r.result));}catch(e){toast((e&&e.message)||'文件读不了');}};r.readAsText(f);}
+function importData(){pickFile('.json',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}if(!d||!d.settings)throw new Error('不是小手机备份或美化包');S=mergeStateData(d,{keepPhoneFriend:true});phoneFriendState();if(saveNow()===false)throw new Error('导入后保存失败，请先清理存储空间');render();toast('完整备份已导入');}));}
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
@@ -8931,8 +8934,24 @@ function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFrien
     contacts:(data.contacts||[]).map(c=>pickObj(c,['id','name','remark','avatar','chatBg','bubbleStyle','phone','region'])),
     groups:(data.groups||[]).map(g=>pickObj(g,['id','name','avatar','chatBg','bubbleStyle','memberBubbleStyles'])),
     beautyArchive:data.beautyArchive||null};}
-async function exportBeautyData(){const data=await fullBackupState(),pack=beautyPackFrom(data),blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});
-  downloadBlob(blob,'North美化包_'+new Date().toISOString().slice(0,10)+'.json');toast('已导出美化包');}
+function beautyAppleDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}catch(_){return false;}}
+async function beautySaveFile(blob,name){if(beautyAppleDevice()&&typeof File==='function'&&navigator.share){const file=new File([blob],name,{type:'application/json'});try{if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return'shared';}}catch(e){if(e&&e.name==='AbortError')return'cancelled';}}
+  downloadBlob(blob,name);return'downloaded';}
+async function exportBeautyData(){const pack=beautyPackFrom(S),text=JSON.stringify(pack,null,2),blob=new Blob([text],{type:'application/json'}),name='North美化包_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);
+  if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('美化包已生成，请在系统面板选择“存储到文件”');else toast('美化包已下载（'+cacheSizeText(blob.size)+'）');}
+function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(v)):v;}
+function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
+function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
+function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
+  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place']);
+  const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
+  const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
+  (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});
+  (pack.groups||[]).forEach(src=>{const dst=beautyFind(S.groups,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle','memberBubbleStyles']);});
+  if(pack.beautyArchive!=null){S.beautyArchive=beautyClone(pack.beautyArchive);n++;}return n;}
+async function primeBeautyPackImages(pack){const found=new Set();(function walk(v){if(isBigImg(v)){found.add(v);return;}if(!v||typeof v!=='object')return;Object.keys(v).forEach(k=>walk(v[k]));})(pack);for(const img of found)await primeImageForSave(img);return found.size;}
+async function applyBeautyPack(pack){await primeBeautyPackImages(pack);const n=mergeBeautyPack(pack);if(saveNow()===false)throw new Error('美化图片保存失败，请先清理存储空间');try{renderLockScreen(true);}catch(_){}render();return n;}
+function importBeautyData(){pickFile('.json',f=>readJsonFile(f,async d=>{const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项），壁纸和图标已恢复');}));}
 function cacheMediaSize(v){v=''+(v||'');if(!v)return 0;if(/^idb-audio:/i.test(v)){try{return ((_imgCache&&_imgCache['__audio_'+v.slice(10)])||'').length||0;}catch(_){return 0;}}return /^(data:image\/|data:audio\/|idb:)/i.test(v)?v.length:0;}
 function mergeCacheStat(a,b){a.n+=(b&&b.n)||0;a.bytes+=(b&&b.bytes)||0;return a;}
 function cleanChatMediaMsg(m){const r={n:0,bytes:0};if(!m||typeof m!=='object')return r;
