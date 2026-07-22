@@ -8,10 +8,10 @@ const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 
 // The already-paid call audio is cached with the video-call message and reused.
-assert.match(source, /async function callReplayStoreAudio\(m,ab\)/);
+assert.match(source, /async function callReplayStoreAudio\(m,ab,dur\)/);
 assert.match(source, /if\(!m\|\|!ab\|\|m\._ck!==\x27video\x27\)return/);
 assert.match(source, /cacheMessage:video\?callMsg:null/);
-assert.match(source, /if\(opt\.cacheMessage\)await callReplayStoreAudio\(opt\.cacheMessage,ab\)/);
+assert.match(source, /if\(opt\.cacheMessage\)await callReplayStoreAudio\(opt\.cacheMessage,ab,buf\.duration\)/);
 assert.doesNotMatch(source, /callReplayStoreAudio[\s\S]{0,200}ttsArr/);
 
 // Original subtitle and translation stay paired instead of becoming duplicate replay clips.
@@ -31,8 +31,16 @@ assert.match(source, /dest\.stream\.getAudioTracks\(\)\.forEach\(t=>stream\.addT
 assert.match(source, /new MediaRecorder\(stream,opts\)/);
 assert.match(source, /navigator\.canShare\(\{files:\[file\]\}\)/);
 
+// During an active video call, each subtle tap moves one saved utterance farther back.
+assert.match(source, /function callLiveRewind\(step\)/);
+assert.match(source, /call\._rewindBack=\(call\._rewindBack\|\|0\)\+\(step\|\|5\)/);
+assert.match(source, /call\._rewindCursor--/);
+assert.match(source, /_call\.state===\x27active\x27&&video\?`<button class="callrewind" onclick="callLiveRewind\(5\)"/);
+assert.match(source, /if\(_callBusy\)\{toast\(\x27等TA说完这句话再回听\x27\);return;\}/);
+
 // The live call send button is neutral gray, while the microphone retains its explicit state color.
 assert.match(html, /\.callinput button\{[^}]*background:#4a4a50/);
 assert.doesNotMatch(html, /\.callinput button\{[^}]*#ff6fa5/);
+assert.match(html, /\.callrewind\{[^}]*bottom:9px[^}]*color:rgba\(255,255,255,\.48\)/);
 
 console.log("video call replay tests passed");
