@@ -17,7 +17,7 @@ const AI_PAYMENT_CHANNELS=[
   {id:'wechat',name:'微信支付',qr:'./pay-assets/wechat-receive.jpg',url:''}
 ];
 const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
-const AI_PURCHASE_NOTICE='生图API原生成功率约50%，单次扣费0.3元，算上失败重试和平台手续费，一张合格成品实际成本0.62-0.79元（已经尽力压低成本，原先每张成本在1元以上），定价统一按1元/张收取。定价不含人工辛苦费，全程自愿消费，没有强制消费。即便用户生成依旧失败，在接口已经扣费的情况下，你（用户）这边，会返还点数。本服务优势是出图稳定、出图速度较快；如果觉得不合适，大家可以自行去API站点购买接口。本系统只适合自己用的接口不稳定、花费更高的人使用。点数请按需购买，少量多次。购买点数之后不要更换浏览器，更换浏览器会导致点数消失！！！请将点数用完之后再换浏览器，如因换浏览器或手机而导致点数消失概不负责。';
+const AI_PURCHASE_NOTICE='图片生成每张固定扣20点，按当前套餐折算约0.62～0.79元/张。系统优先使用路线一，生成失败会自动重试并尝试路线二；无论切换或重试多少次，成功只扣一次20点，两条路线都失败则20点全额退回，不会因为切换路线重复扣点。点数属于通用点数，也可以用于文字、语音等功能，请按需购买、少量多次。AI账户与当前浏览器中的用户ID绑定，更换浏览器或手机前请先备份并确认用户ID，否则可能读取不到原账户点数。';
 function aiPageScroll(){const sc=typeof $==='function'?$('.scroll'):null;return sc?sc.scrollTop:0;}
 function aiBalanceCacheKey(){return'yibei_ai_balance_'+aiUserId();}
 function aiCachedBalance(){try{const raw=localStorage.getItem(aiBalanceCacheKey());if(raw==null||raw==='')return null;const n=Number(raw);return Number.isFinite(n)&&n>=0?n:null;}catch(_){return null;}}
