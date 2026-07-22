@@ -22,7 +22,7 @@ assert.match(source, /!m\._callTranslationOf/);
 // Users select clips; unsupported/old silent records are never exported as silent videos.
 assert.match(source, /function clReplayPicker\(id,cs\)/);
 assert.match(source, /function callReplayPickRows\(id,cs\)/);
-assert.match(source, /if\(!audible\)\{toast\(\x27这些片段没有可用声音，不能导出静音视频\x27\);return;\}/);
+assert.match(source, /if\(!firstAudio\)\{toast\(\x27这些片段没有可用声音，不能导出静音视频\x27\);return;\}/);
 
 // Export contains both the canvas video track and an AudioContext destination track.
 assert.match(source, /canvas\.captureStream\(30\)/);
@@ -30,6 +30,10 @@ assert.match(source, /createMediaStreamDestination\(\)/);
 assert.match(source, /dest\.stream\.getAudioTracks\(\)\.forEach\(t=>stream\.addTrack\(t\)\)/);
 assert.match(source, /new MediaRecorder\(stream,opts\)/);
 assert.match(source, /navigator\.canShare\(\{files:\[file\]\}\)/);
+assert.match(source, /if\(rows\.length>100\)\{toast\(\x27一次最多选择100段\x27\);return;\}/);
+assert.match(source, /rows\.length>50\?1800000:3500000/);
+assert.match(source, /let firstAudio=null/);
+assert.doesNotMatch(source, /prepared\.push\(\{row,buf/);
 
 // During an active video call, each subtle tap moves one saved utterance farther back.
 assert.match(source, /function callLiveRewind\(step\)/);
