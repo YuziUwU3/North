@@ -130,7 +130,7 @@ assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSetting\(setting\) \}/);
 assert.match(backend, /if \(allowed\.has\(emotion\)\) out\.emotion = emotion/);
 assert.doesNotMatch(backend, /: "neutral";/);
-assert.match(backend, /if \(chars > 300\)/);
+assert.match(backend, /if \(chars > TTS_MAX_CHARS\)/);
 assert.match(backend, /ledger_id: c\.ledgerId/);
 assert.match(backend, /action === "tts_refund"/);
 assert.match(backend, /function refundTtsLedger/);

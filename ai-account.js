@@ -37,7 +37,10 @@ function aiVoiceEnabled(){return typeof ttsEnabled==='function'?ttsEnabled(S.set
 function aiVoiceRelayOn(){return !!((S.settings.tts||{}).relay&&aiCoreUrl());}
 function aiImageReady(){return !_aiAcct||!_aiAcct.capabilities?null:_aiAcct.capabilities.image!==false;}
 function aiExternalTts(){const t=(typeof ttsCfg==='function'?ttsCfg():(S.settings.tts||{}));return t&&t.base&&t.key?t:null;}
-function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:20,tts:10,summary:2};return p[k]||0;}
+function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:20,tts:1,tts_chars_per_point:50,tts_max_chars:300,summary:2};return p[k]||0;}
+function aiTtsCharsPerPoint(){const n=Number(aiPrice('tts_chars_per_point'));return Number.isFinite(n)&&n>0?Math.round(n):50;}
+function aiTtsPointCost(chars){return Math.max(1,Math.ceil(Math.max(1,Number(chars)||1)/aiTtsCharsPerPoint()));}
+function aiTtsEstimatedCount(points,chars){return Math.floor(Math.max(0,Number(points)||0)/aiTtsPointCost(chars||100));}
 function aiLedgerTime(v){if(!v)return '';const d=new Date(v);if(isNaN(d))return String(v).replace('T',' ').slice(0,16);return d.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}
 function aiLedgerRows(){const rows=((_aiAcct&&_aiAcct.ledger)||[]).slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)),names={chat:'聊天',vision:'识图',image:'生图',tts:'语音',summary:'总结',manual:'手动加点',free:'赠送'};return rows.length?rows.map(x=>{const meta=x.meta||{},failed=x.status==='failed',billed=failed&&(meta.charged||x.billed),title=(names[x.feature]||x.feature)+(failed?(billed?' · 失败已计费':' · 失败未计费'):'');const note=meta.note||x.note||(failed?(meta.reason||'模型返回失败'):'');return `<div class="bill"><div><b>${esc(title)}</b><small>${esc(aiLedgerTime(x.created_at))}${note?' · '+esc(String(note).slice(0,80)):''}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`;}).join(''):'<div class="empty">还没有流水</div>';}
 function aiRechargePlans(){return _aiAcct&&Array.isArray(_aiAcct.plans)&&_aiAcct.plans.length?_aiAcct.plans:AI_RECHARGE_FALLBACK;}
@@ -51,7 +54,8 @@ function aiRechargeCards(){return aiRechargePlans().filter(p=>p.kind!=='service'
     <span style="display:block;font-size:12px;color:${i===1?'#ffb7d2':'#9297a1'}">${esc(p.tag||p.name||'充值套餐')}</span>
     <b style="display:block;font-size:23px;margin:5px 0 2px;letter-spacing:0">${Number(p.points||0).toLocaleString()}<small style="font-size:12px;font-weight:500;color:#a8adb6;margin-left:3px">点</small></b>
     <span style="font-size:14px;color:#e1e2e6">¥${Number(p.amount_cny||0).toFixed(1)}</span>
-    <small style="display:block;color:#747985;margin-top:5px">约 ${Math.floor(Number(p.points||0)/Math.max(1,aiPrice('tts')))} 条普通语音</small>
+    <small style="display:block;color:#747985;margin-top:5px">约 ${aiTtsEstimatedCount(p.points,100)} 条100字普通语音</small>
+    <small style="display:block;color:#747985;margin-top:2px">每50字1点，向上取整</small>
   </button>`).join('');}
 function aiImagePackageCards(){return aiRechargePlans().filter(p=>p.kind!=='service').map((p,i)=>`<button onclick="aiOpenRecharge('${esc(p.id)}')" style="min-width:0;text-align:left;border:1px solid ${i===1?'rgba(126,184,255,.68)':'rgba(255,255,255,.1)'};background:${i===1?'#1d2632':'#1c1d22'};color:#f5f5f7;border-radius:8px;padding:13px 12px;cursor:pointer">
     <span style="display:block;font-size:12px;color:${i===1?'#9dc7ff':'#9297a1'}">${esc(p.tag||p.name||'图片套餐')}</span>

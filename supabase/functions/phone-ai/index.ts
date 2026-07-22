@@ -18,9 +18,13 @@ const PRICE: Record<string, number> = {
   chat: 10,
   vision: 25,
   image: 20,
-  tts: 10,
+  tts: 1,
+  tts_chars_per_point: 50,
+  tts_max_chars: 300,
   summary: 2,
 };
+const TTS_CHARS_PER_POINT = 50;
+const TTS_MAX_CHARS = 300;
 const DEFAULT_TTS_VOICE = "male-qn-qingse";
 
 const CHAT_GUARD = `你是“小手机”应用里的角色回复引擎，不是通用问答助手。所有回复都必须适配微信、线下约会、角色扮演、购物、信箱等小手机场景。
@@ -188,8 +192,19 @@ async function ensureAccount(userId: string, clientSecret: string) {
   return data;
 }
 
-async function charge(userId: string, clientSecret: string, feature: string) {
-  const cost = PRICE[feature] || 1;
+function resolvePointCost(feature: string, requestedCost?: number) {
+  const cost = requestedCost == null ? Number(PRICE[feature] || 1) : Number(requestedCost);
+  if (!Number.isSafeInteger(cost) || cost < 1 || cost > 100000) throw new Error("invalid-point-cost");
+  return cost;
+}
+
+function ttsPointCost(chars: number) {
+  if (!Number.isSafeInteger(chars) || chars < 1 || chars > TTS_MAX_CHARS) throw new Error("invalid-tts-char-count");
+  return Math.ceil(chars / TTS_CHARS_PER_POINT);
+}
+
+async function charge(userId: string, clientSecret: string, feature: string, requestedCost?: number) {
+  const cost = resolvePointCost(feature, requestedCost);
   let lastBalance = 0;
   for (let i = 0; i < 4; i++) {
     const acct = await ensureAccount(userId, clientSecret);
@@ -225,8 +240,8 @@ async function charge(userId: string, clientSecret: string, feature: string) {
   throw new Error("balance-busy-retry-later");
 }
 
-async function requireBalance(userId: string, clientSecret: string, feature: string) {
-  const cost = PRICE[feature] || 1;
+async function requireBalance(userId: string, clientSecret: string, feature: string, requestedCost?: number) {
+  const cost = resolvePointCost(feature, requestedCost);
   const acct = await ensureAccount(userId, clientSecret);
   if (acct.disabled) throw new Error("account-disabled");
   const balance = acct.points || 0;
@@ -1027,8 +1042,9 @@ Deno.serve(async (req) => {
       const text = String(body.text || "").trim();
       if (!text) throw new Error("missing-tts-text");
       const chars = [...text].length;
-      if (chars > 300) throw new Error("tts-text-too-long");
-      await requireBalance(userId, clientSecret, "tts");
+      if (chars > TTS_MAX_CHARS) throw new Error("tts-text-too-long");
+      const ttsCost = ttsPointCost(chars);
+      await requireBalance(userId, clientSecret, "tts", ttsCost);
       model = "speech-02-turbo";
       const requestedVoiceId = body.voice_id || DEFAULT_TTS_VOICE;
       let voiceId = requestedVoiceId;
@@ -1070,7 +1086,7 @@ Deno.serve(async (req) => {
           throw e;
         }
       }
-      const c = await charge(userId, clientSecret, "tts");
+      const c = await charge(userId, clientSecret, "tts", ttsCost);
       const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
       await finishCharge(c.ledgerId, true, {
         model,
@@ -1078,6 +1094,8 @@ Deno.serve(async (req) => {
         requested_voice_id: requestedVoiceId,
         voice_fallback: voiceFallback,
         char_count: chars,
+        chars_per_point: TTS_CHARS_PER_POINT,
+        charged_points: ttsCost,
         estimated_cny: Number((chars * cnyPerChar).toFixed(4)),
         postpaid: true,
       });
