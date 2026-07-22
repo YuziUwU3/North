@@ -30,6 +30,7 @@ function functionSource(name) {
 const fallbackContext = vm.createContext({
   S: { me: { name: "North", callName: "小北" } },
   getVoice: (role) => role.voice,
+  ttsContentLang: (role) => role.voice.lang,
 });
 vm.runInContext(functionSource("normVoiceLang"), fallbackContext);
 vm.runInContext(functionSource("phVmLang"), fallbackContext);

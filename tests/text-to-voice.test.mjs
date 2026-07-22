@@ -15,6 +15,7 @@ const context = vm.createContext({
   S: { settings: { voiceFreq: 1 } },
   VOICE_MAX_CHARS: 300,
   normVoiceLang: (lang) => lang || "zh",
+  ttsContentLang: (c) => (c && c.voice && c.voice.lang) || "zh",
   parseVoiceTagLine: (line) => /^\s*[\[【]\s*语音[|｜:：]/.test(line || "") ? {} : null,
   ttsRequestedCue: () => "",
   ttsAutoCue: () => "",

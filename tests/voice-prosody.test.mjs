@@ -35,8 +35,8 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-const context = vm.createContext({ ttsUseRelay: () => false, DEFAULT_TTS_VOICE: "male-qn-qingse" });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
+const context = vm.createContext({ ttsUseRelay: () => false, ttsCfg: () => ({}), DEFAULT_TTS_VOICE: "male-qn-qingse" });
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
@@ -67,6 +67,16 @@ assert.deepEqual(JSON.parse(JSON.stringify(context.parseVoiceTagLine("[语音|Te
   cue: "质问",
 });
 assert.equal(context.voiceTagNeedsLangFix("[我发语音说：哦？ 是吗。|语气:低沉]", { voice: { lang: "英" } }), true);
+context.S = { settings: { voiceFreq: 1 } };
+context.VOICE_MAX_CHARS = 300;
+assert.equal(context.requestedVoiceNeedsFix("I miss you.", "给我发一条语音", { voice: { lang: "英" } }), true);
+assert.equal(context.requestedVoiceNeedsFix("[语音|I miss you.|我想你了|语气:温柔]", "给我发一条语音", { voice: { lang: "英" } }), false);
+assert.equal(context.requestedVoiceNeedsFix("[语音|I miss you.|我想你了]\n再补一大段普通文字", "给我发一条语音", { voice: { lang: "英" } }), true);
+context.ttsUseRelay = () => true;
+context.ttsCfg = () => ({ relayLang: "英" });
+assert.equal(context.ttsContentLang({ voice: { lang: "zh" } }), "英", "built-in language must override the role language");
+context.ttsUseRelay = () => false;
+assert.equal(context.ttsContentLang({ voice: { lang: "英" } }), "英", "external voice must keep the role language");
 assert.equal(context.voiceTagNeedsLangFix("[语音|Tell me why.|为什么这样？|语气:质问]", { voice: { lang: "英" } }), false);
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "british" }), "en-GB");
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "en-US" }), "en-US");

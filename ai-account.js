@@ -76,6 +76,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
   const knownBalance=aiVisibleBalance(),bal=knownBalance==null?'读取中…':knownBalance;
   const low=aiLowBalanceCfg();
   const voice=(tts.voice)||'未选择';
+  const relayLang=tts.relayLang||'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" onclick="aiAccountRefresh()">刷新</span></div>
   <div class="scroll" style="background:#0f1117;color:#e8eaf0;padding:12px">
     <div style="background:#17191f;border-radius:8px;padding:18px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 28px rgba(0,0,0,.2)">
@@ -102,6 +103,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     </div>
     <div class="section">
       <div class="it"><span>内置语音<br><small style="color:#888">开：角色语音条和语音电话走部署后台；关：若设置里填了外置海螺，则走外置海螺。</small></span><span class="sw ${aiVoiceRelayOn()?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
+      <div class="it"><span>内置语音语言<br><small style="color:#888">只影响内置AI语音；外置语音仍使用角色里的语言。</small></span><span class="v"><select onchange="aiSetVoiceLanguage(this.value)" style="background:#24262d;color:#eee;border:1px solid #3b3e48;border-radius:6px;padding:6px"><option value="" ${!relayLang?'selected':''}>暂未设置（沿用角色）</option><option value="zh" ${relayLang==='zh'?'selected':''}>中文</option><option value="英" ${relayLang==='英'?'selected':''}>英语</option><option value="日" ${relayLang==='日'?'selected':''}>日语</option><option value="韩" ${relayLang==='韩'?'selected':''}>韩语</option></select></span></div>
     </div>
     <div class="section">
       <div class="it"><span>启用图片生成<br><small style="color:${aiImageReady()===false?'#e6a0a8':'#888'}">${aiImageReady()===false?'图片中转站尚未配置，暂时不能开启。':'使用已部署的 gpt-image-2 中转站，每张 '+aiPrice('image')+' 点；生成失败自动退点。'}</small></span><span class="sw ${aiImageRelayOn()?'on':''}" onclick="aiToggleImageApi()"></span></div>
@@ -184,6 +186,7 @@ function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);
 
 function aiToggleCore(){const ac=aiCoreInit();ac.enabled=false;save();aiRenderStable();toast('内置 AI 主通道已固定关闭');}
 function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();aiRenderStable();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
+function aiSetVoiceLanguage(lang){S.settings.tts=S.settings.tts||{};S.settings.tts.relayLang=['zh','英','日','韩'].includes(lang)?lang:'';save();aiRenderStable();toast(lang?'内置语音已设为'+({zh:'中文','英':'英语','日':'日语','韩':'韩语'}[lang]||lang):'内置语音暂时沿用角色语言');}
 function aiToggleImageApi(){if(aiImageReady()===false){toast('图片中转站尚未配置，暂时不能开启');return;}const cfg=aiImageInit();cfg.enabled=!aiImageRelayOn();save();aiRenderStable();toast(cfg.enabled?'图片生成已开启':'图片生成已关闭');}
 function aiImageFailText(e){const full=String((e&&e.message)||e||'').replace(/^内置AI失败：/,'');const raw=full.slice(0,180);if(/429|No images were successfully|relay-image-empty|no image/i.test(full))return '中转站上游这次没有成功出图或正在限流排队；后台花费为0时不会扣真实费用，本次AI点数已退回。稍后再试，或把描述写短一点。';if(/upstream-timeout|timeout|timed out|aborted/i.test(full))return '中转站生成超时，通常不是密钥错误；本次点数已退回，可以稍后换短一点的描述再试。';if(/fetch|network|load failed|cors/i.test(full))return '网络等待太久断开；如果后台显示429/花费0，说明是中转站上游没有成功出图，不是密钥或付款问题。';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(full))return '中转站密钥或权限异常，本次点数已退回。';if(/404|model.*not.*found|not found/i.test(full))return '接口地址或图片模型不匹配，本次点数已退回。';return raw||'图片生成失败，本次点数已退回。';}
 function aiOpenImageGenerator(){if(aiImageReady()===false){toast('图片中转站尚未配置');return;}if(!aiImageRelayOn()){toast('请先打开「启用图片生成」');return;}if(_aiImageBusy){toast('上一张图片还在生成中');return;}
@@ -227,7 +230,8 @@ function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=id;save();closeModal();toast('已设为默认音色');if(cur().p==='aiaccount')render();}
 function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='';save();toast('已清空默认音色');render();}
-async function aiTestVoice(){const text='我在测试这条语音的花销和声音效果。';
+function aiVoiceTestText(){const lang=aiVoiceRelayOn()?((S.settings.tts||{}).relayLang||'zh'):'zh';return {zh:'我在测试这条语音的花销和声音效果。','英':'Hi, I am testing the cost and sound of this voice.','日':'こんにちは、この音声の費用と聞こえ方をテストしています。','韩':'안녕하세요, 이 음성의 비용과 소리를 테스트하고 있어요.'}[lang]||'我在测试这条语音的花销和声音效果。';}
+async function aiTestVoice(){const text=aiVoiceTestText();
   if(_aiVoiceTestBusy){toast('语音还在生成中，请稍等');return;}
   if(!aiVoiceEnabled()){toast('先打开语音API');return;}
   _aiVoiceTestBusy=true;_aiVoiceTestStatus='语音生成中，请稍等，不要重复点击';if(cur().p==='aiaccount')aiRenderStable();
