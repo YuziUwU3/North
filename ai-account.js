@@ -103,6 +103,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     </div>
     <div class="section">
       <div class="it"><span>内置语音<br><small style="color:#888">开：角色语音条和语音电话走部署后台；关：若设置里填了外置海螺，则走外置海螺。</small></span><span class="sw ${aiVoiceRelayOn()?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
+      <div style="margin:0 14px 10px;padding:10px 12px;border:1px solid rgba(255,72,92,.48);border-radius:10px;background:rgba(255,72,92,.08);color:#ff5b6f;font-size:13px;font-weight:700;line-height:1.7">语音扣点明码标价<br>1～50字：1点<br>51～100字：2点<br>101～150字：3点<br>最多300字：6点<br>生成失败：不扣点</div>
       <div class="it"><span>内置语音语言<br><small style="color:#888">只影响内置AI语音；外置语音仍使用角色里的语言。</small></span><span class="v"><select onchange="aiSetVoiceLanguage(this.value)" style="background:#24262d;color:#eee;border:1px solid #3b3e48;border-radius:6px;padding:6px"><option value="" ${!relayLang?'selected':''}>暂未设置（沿用角色）</option><option value="zh" ${relayLang==='zh'?'selected':''}>中文</option><option value="英" ${relayLang==='英'?'selected':''}>英语</option><option value="日" ${relayLang==='日'?'selected':''}>日语</option><option value="韩" ${relayLang==='韩'?'selected':''}>韩语</option></select></span></div>
     </div>
     <div class="section">

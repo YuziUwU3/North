@@ -6,6 +6,13 @@ const account = fs.readFileSync(new URL("../ai-account.js", import.meta.url), "u
 
 assert.match(account, /内置语音语言/);
 assert.match(account, /只影响内置AI语音；外置语音仍使用角色里的语言/);
+assert.match(account, /语音扣点明码标价/);
+assert.match(account, /1～50字：1点/);
+assert.match(account, /51～100字：2点/);
+assert.match(account, /101～150字：3点/);
+assert.match(account, /最多300字：6点/);
+assert.match(account, /生成失败：不扣点/);
+assert.match(account, /color:#ff5b6f/);
 assert.match(account, /function aiSetVoiceLanguage\(lang\)/);
 assert.match(account, /relayLang=\['zh','英','日','韩'\]\.includes\(lang\)\?lang:''/);
 assert.match(account, /function aiVoiceTestText\(\)/);
