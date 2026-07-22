@@ -13,10 +13,11 @@ assert.match(source, /\u5fae\u4fe1\u81ea\u52a8\u603b\u7ed3\u6a21\u578b/);
 assert.match(source, /\u7ebf\u4e0b\u7ea6\u4f1a\u603b\u7ed3\u6a21\u578b/);
 assert.match(source, /\{aux:S\.settings\.summaryModel==='aux',max:320,temp:\.35\}/);
 assert.match(source, /const useAux=S\.settings\.offSummaryModel==='aux'/);
-assert.match(source, /max=Math\.min\(plan\.tokens,1800\)/);
-assert.match(source, /\{aux:useAux,max,temp:\.1\}/);
-assert.match(source, /input=offSummaryCandidateTranscript\(ended,c,plan\)/);
-assert.match(source, /\{aux:useAux,max,temp:\.05\}/);
+assert.match(source, /max=Math\.min\(cp\.tokens,2200\)/);
+assert.match(source, /\{aux:useAux,max,temp:\.12\}/);
+assert.match(source, /full=offSummaryTranscript\(ended,c\),chunks=offSummaryChunks\(full,5600\)/);
+assert.match(source, /\{aux:useAux,max,temp:\.06\}/);
+assert.match(source, /offSummaryVerifyDrafts\(drafts\.slice\(0,plan\.maxPoints\),ended,c,useAux\)/);
 assert.match(source, /S\.settings\.offSummaryModel=this\.value;save\(\);offMemory/);
 assert.match(source, /S\.settings\.summaryModel=this\.value;save\(\);editSummary/);
 

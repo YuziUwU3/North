@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v603 \u00b7 \u5b8c\u6574\u91cd\u70b9\u7ea6\u4f1a\u8bb0\u5fc6/);
+assert.match(source, /v604 \u00b7 \u5b8c\u6574\u6838\u5bf9\u7ea6\u4f1a\u8bb0\u5fc6/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
@@ -309,7 +309,7 @@ vm.runInNewContext(
      "globalThis.longPlan=offSummaryPlan(make(50,60));" +
      "globalThis.fullPlan=offSummaryPlan(make(80,100));" +
      "globalThis.thinLong=offSummaryTooThin('\\u592a\\u7b80\\u5355\\u4e86',longPlan);" +
-     "globalThis.acceptedFull=!offSummaryTooThin('\\u8bb0'.repeat(300),fullPlan);" +
+     "globalThis.acceptedFull=!offSummaryTooThin('\\u8bb0'.repeat(600),fullPlan);" +
      "globalThis.chunkSizes=offSummaryChunks('\\u7ea6'.repeat(13000),6000).map(x=>x.length);",
   summarySandbox,
 );
@@ -342,6 +342,9 @@ assert.match(source, /h\.summaryError=/);
 assert.match(source, /function offSummaryChunks\(text,limit\)/);
 assert.match(source, /async function offSummaryPreparedText\(c,ended,text,useAux\)/);
 assert.match(source, /function offSummaryParsePoints\(raw,plan,ended,c\)/);
+assert.match(source, /function offSummaryParseDraftPoints\(raw,plan,ended\)/);
+assert.match(source, /async function offSummaryVerifyDrafts\(drafts,ended,c,useAux\)/);
+assert.match(source, /function offSummaryDraftAnchorSafe\(p,ended,c\)/);
 assert.match(source, /function offSummaryPointFromIndexes\(ended,c,indexes,importance\)/);
 assert.match(source, /sourceIndexes:\(p\.indexes\|\|\[\]\)\.slice\(0,3\)/);
 assert.match(source, /function offSummaryCandidateIndexes\(ended,plan\)/);
@@ -363,12 +366,12 @@ assert.match(offEndSource, /const ended=\{session:/);
 assert.match(offEndSource, /draft=\{id:ended\.session/);
 assert.match(offEndSource, /msgs:ended\.msgs,summaryStatus:'pending'/);
 assert.match(source, /const ended=\{session:h\.id[\s\S]*?msgs:h\.msgs\},plan=offSummaryPlan\(ended\.msgs\)/);
-assert.match(source, /max=Math\.min\(plan\.tokens,1800\)/);
-assert.match(source, /\{aux:useAux,max,temp:\.1\}/);
-assert.match(source, /\{aux:useAux,max,temp:\.05\}/);
-assert.match(source, /offSummaryParsePoints\(sum,plan,ended,c\)/);
-assert.match(source.slice(summaryStart, offEndStart), /禁止撰写、改写、概括或补充任何事件/);
-assert.doesNotMatch(source.slice(summaryStart, offEndStart), /"text":"第一人称记忆重点"/);
+assert.match(source, /max=Math\.min\(cp\.tokens,2200\)/);
+assert.match(source, /\{aux:useAux,max,temp:\.12\}/);
+assert.match(source, /\{aux:useAux,max,temp:\.06\}/);
+assert.match(source, /offSummaryParseDraftPoints\(sum,cp,ended\)/);
+assert.match(source.slice(summaryStart, offEndStart), /每个事实都必须能被sourceIndexes里的原文直接证明/);
+assert.match(source.slice(summaryStart, offEndStart), /逐条核对候选记忆是否完全被它标注的原文编号直接支持/);
 assert.doesNotMatch(offEndSource, /120~200/);
 assert.doesNotMatch(offEndSource, /o\.started=false;o\.session='';o\.startedAt=0;o\.msgs=\[\]/);
 
@@ -443,6 +446,17 @@ const perspective = fallbackSandbox.offSummaryParsePoints(
 assert.match(perspective[0].text, /^我记得我当时：「他把外套披到她肩上。」；我记得宝宝当时：「她握住了他的手。」$/);
 assert.doesNotMatch(perspective[0].text, /旁白|角色动作|现场原文/);
 
+fallbackSandbox.chatAPI = async () => '{"supported":[1]}';
+const rejectedInventedDraft = await fallbackSandbox.offSummaryVerifyDrafts(
+  [{ text: "我和宝宝决定举办原文没有的婚礼。", indexes: [1], importance: 5 }],
+  { msgs: fallbackHistory.msgs },
+  fallbackContact,
+  false,
+);
+assert.equal(rejectedInventedDraft.length, 1);
+assert.match(rejectedInventedDraft[0].text, /宝宝对我说：「我到了。」/);
+assert.doesNotMatch(rejectedInventedDraft[0].text, /婚礼/);
+
 const longHistory = {
   id: "h-long",
   ts: 2000,
@@ -457,17 +471,18 @@ fallbackSandbox.chatCalls = 0;
 fallbackSandbox.chatAPI = async (messages) => {
   fallbackSandbox.chatCalls += 1;
   fallbackSandbox.candidateInput = messages[1].content;
-  return '[{"indexes":[10],"importance":5},{"indexes":[40],"importance":4},{"indexes":[70],"importance":5}]';
+  if (messages[0].content.includes("逐条核对候选记忆")) return '{"supported":[1,2,3,4,5,6,7,8]}';
+  return '[{"text":"我答应以后遇到问题会直接告诉宝宝。","sourceIndexes":[10],"importance":5},{"text":"我记得普通原文-20。","sourceIndexes":[20],"importance":2},{"text":"我记得普通原文-30。","sourceIndexes":[30],"importance":2},{"text":"宝宝告诉我一件关于家人的重要往事。","sourceIndexes":[40],"importance":4},{"text":"我记得普通原文-50。","sourceIndexes":[50],"importance":2},{"text":"我记得普通原文-60。","sourceIndexes":[60],"importance":2},{"text":"争执后我向宝宝道歉，我们说好不再冷战。","sourceIndexes":[70],"importance":5},{"text":"最后我们决定以后不管多忙都要好好说晚安，我保证不会忘记。","sourceIndexes":[79],"importance":5}]';
 };
 assert.equal(await fallbackSandbox.offSummarizeHistory("c1", "h-long", false), "done");
 assert.equal(fallbackSandbox.chatCalls, 2);
-assert.ok(fallbackSandbox.candidateInput.split("\n").length <= 72);
+assert.match(fallbackSandbox.candidateInput, /候选记忆/);
 assert.match(fallbackSandbox.candidateInput, /答应以后遇到问题/);
 assert.match(fallbackSandbox.candidateInput, /关于家人的重要往事/);
 assert.match(fallbackSandbox.candidateInput, /说好不再冷战/);
 const longMemories = fallbackOffline.memory.filter((m) => m.historyId === "h-long");
-assert.equal(longMemories.length, 7);
-assert.ok(longMemories.every((m) => /普通原文-\d+|答应以后遇到问题|关于家人的重要往事|说好不再冷战/.test(m.text) && m.sourceIndexes.length >= 1));
+assert.equal(longMemories.length, 12);
+assert.ok(longMemories.every((m) => m.sourceIndexes.length >= 1));
 assert.ok(longMemories.some((m) => m.text.includes("答应以后遇到问题")));
 assert.ok(longMemories.some((m) => m.text.includes("关于家人的重要往事")));
 assert.ok(longMemories.some((m) => m.text.includes("说好不再冷战")));
@@ -494,6 +509,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=603/);
+assert.match(html, /app\.js\?v=604/);
 
 console.log("offline date tests passed");
