@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='608'){
+if(window.__NORTH_SHELL_BUILD__!=='609'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v608 · 语音按字数扣点';
+const APP_VER='v609 · 文字一键转语音';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -960,6 +960,8 @@ function ttsEmotionHint(text,o){const s=(String(text||'')+' '+String((o&&o.mood)
 function ttsCueKind(cue){cue=String(cue||'').replace(/^(?:语气|tone|emotion)\s*[:：]?/i,'').trim().toLowerCase();if(!cue)return '';if(/中性|平静|自然|neutral|calm|normal/.test(cue))return 'neutral';if(/亲|kiss|mwah|啵|mua/.test(cue))return 'kiss';if(/惊讶|震惊|surpris|shock/.test(cue))return 'surprised';if(/害怕|恐惧|fear|scared|afraid/.test(cue))return 'fearful';if(/厌恶|嫌弃|disgust|revolted/.test(cue))return 'disgusted';if(/笑|开心|高兴|laugh|giggle|happy|excited|playful/.test(cue))return 'laugh';if(/叹|委屈|难过|心疼|悲伤|sigh|sad|hurt|upset/.test(cue))return 'soft';if(/低声|低沉|沉声|压低|低哑|耳语|悄悄|气声|whisper|breathy|low voice|lower your voice|困|睡|sleepy/.test(cue))return 'sleepy';if(/强硬|严肃|愤怒|凶|firm|stern|tense|angry|mad|furious|jealous|envy|吃醋|生气|质问|逼问|反问|压着|questioning|interrogate/.test(cue))return 'tense';if(/温柔|宠溺|亲密|soft|warm|gentle|tender|affection|哄|撒娇|贴近/.test(cue))return 'warm';return '';}
 function ttsAutoCue(text,o){const s=(String(text||'')+' '+String((o&&o.mood)||'')).replace(/\s+/g,' ');if(/亲亲|亲一下|亲一口|亲你|吻|啵|\b(?:kiss(?: me| you)?|mwah|mua)\b/i.test(s))return 'kiss';if(/生气|吃醋|不爽|凶一点|凶我|严厉点|大声点|压低声音|你说呢|解释清楚|为什么|凭什么|怎么回事|到底|嗯？|哼|质问|逼问|反问|\b(?:angry|mad|furious|jealous|be mean|meaner|be stern|sound stern|sound angry|lower your voice|raise your voice|tell me why|explain yourself|how dare|don't lie)\b/i.test(s))return 'tense';if(/惊讶|震惊|\b(?:surprised|shocked|no way)\b/i.test(s))return 'surprised';if(/害怕|恐惧|\b(?:afraid|scared|fearful|terrified)\b/i.test(s))return 'fearful';if(/厌恶|嫌弃|\b(?:disgusted|disgusting|revolting)\b/i.test(s))return 'disgusted';if(/难过|委屈|伤心|\b(?:sad|hurt|upset|heartbroken|crying)\b/i.test(s))return 'soft';if(/晚安|睡吧|闭眼|困|哄睡|\b(?:whisper|breathy|sleepy|sleep|good night|close your eyes)\b/i.test(s))return 'sleepy';if(/开心|高兴|兴奋|\b(?:happy|excited|laugh|laughing|playful)\b/i.test(s))return 'laugh';return '';}
 function ttsRequestedCue(text){const s=String(text||'');if(/亲一下|亲一口|亲亲|啵一下|吻一下|\b(?:kiss me|kiss you|give me a kiss|mwah|mua)\b/i.test(s))return '亲亲';if(/大笑|笑出声|放声笑|\b(?:laugh out loud|laugh loudly|big laugh|lol)\b/i.test(s))return '大笑';if(/笑一下|轻笑|笑一声|低笑|哼笑|\b(?:laugh|giggle|chuckle|little laugh)\b/i.test(s))return '轻笑';if(/叹气|叹一口气|\b(?:sigh|exhale sadly)\b/i.test(s))return '叹气';if(/哭一下|哭出声|\b(?:cry|sob)\b/i.test(s))return '哭泣';if(/凶一点|凶我|严厉一点|强硬一点|大声一点|提高音量|压低声音|质问我|逼问我|生气一点|\b(?:be mean(?:er)?|be stern(?:er)?|sound angry|act angry|get angry|raise your voice|speak louder|lower your voice|question me|interrogate me|scold me)\b/i.test(s))return '质问';if(/温柔一点|轻一点|小声一点|耳语|气声|\b(?:be gentle|softer|speak softly|lower the volume|whisper|breathy)\b/i.test(s))return '低声';if(/开心一点|\b(?:sound happy|be happy)\b/i.test(s))return '开心';if(/难过一点|委屈一点|\b(?:sound sad|be sad|sound hurt)\b/i.test(s))return '难过';return '';}
+function explicitVoiceReplyRequest(text){const s=String(text||'').replace(/\s+/g,' ').trim();if(!s||/(?:不要|别|不用|禁止|不许|不想)(?:再)?[^，。！？!?\n]{0,8}语音/.test(s))return false;return /(?:^|[，,。！？!?\s])(?:请|麻烦)?(?:你|给我)?(?:发|来|回复|回)(?!过|了|的)[^，。！？!?\n]{0,18}语音|(?:想听|要听|想让你|要你|让你)[^，。！？!?\n]{0,18}语音|(?:用|改用|请用)语音(?:回|回复|说|讲|发)|语音(?:回|回复)(?:我|一下)?/.test(s);}
+function forceRequestedVoiceReply(content,userText,c){content=String(content||'');if(!explicitVoiceReplyRequest(userText)||(S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)return content;if((c&&c.voice&&normVoiceLang(c.voice.lang)!=='zh'))return content;const lines=content.split(/\n/);if(lines.some(x=>parseVoiceTagLine(x)))return content;const idx=[];for(let i=0;i<lines.length;i++){const t=String(lines[i]||'').trim();if(t&&!/^[\[【]/.test(t))idx.push(i);}if(!idx.length)return content;const joined=idx.map(i=>String(lines[i]||'').trim()).join(' ').replace(/[|｜]/g,'，').trim();if(!joined)return content;const chars=[...joined],voice=chars.slice(0,VOICE_MAX_CHARS).join('').trim(),rest=chars.slice(VOICE_MAX_CHARS).join('').trim(),cue=ttsRequestedCue(userText)||ttsAutoCue(voice,c)||'';if(!voice)return content;const first=idx[0],drop=new Set(idx);return lines.flatMap((line,i)=>i===first?['[语音|'+voice+(cue?'|语气:'+cue:'')+']',...(rest?[rest]:[])]:drop.has(i)?[]:[line]).join('\n');}
 function ttsSafeProsody(base,o){let s=String(base||'').trim();if(!s)return '';s=s.replace(/([。！？!?])(?=\S)/g,'$1 ').replace(/([，、；;：:])(?=\S)/g,'$1 ').replace(/\.{3,}|…{2,}/g,'……').replace(/([吧呢啊呀哦嘛])([。！？!?])(?=\S)/g,'$1$2 ');
   const emo=ttsEmotionHint(s,o),cn=hasCN(s);if(cn&&emo==='soft')s=s.replace(/别哭[，,]?/,'别哭，').replace(/我在[。!！]?$/,'我在。');if(cn&&emo==='sleepy')s=s.replace(/晚安[。!！]?$/,'晚安……');return s.replace(/\s+/g,' ').trim();}
 function tts2p8Interjection(s,rawCue){s=String(s||'').trim();const cue=String(rawCue||'').toLowerCase();if(!s||!cue)return s;let tag='',before=false;if(/亲亲|亲吻|kiss|mwah|啵|mua/.test(cue))tag='(lip-smacking)';else if(/轻笑|chuckle|giggle/.test(cue))tag='(chuckle)';else if(/大笑|laughs|laugh/.test(cue))tag='(laughs)';else if(/叹气|sigh/.test(cue)){tag='(sighs)';before=true;}else if(/吸气|inhale/.test(cue)){tag='(inhale)';before=true;}else if(/呼气|exhale/.test(cue)){tag='(exhale)';before=true;}else if(/喘息|pant/.test(cue))tag='(pant)';else if(/哭泣|crying/.test(cue)){tag='(crying)';before=true;}return tag?(before?(tag+' '+s):(s+' '+tag)):s;}
@@ -1141,7 +1143,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=608';
+  const url='sw.js?v=609';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -7954,8 +7956,9 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     if(_webAutoQuery){S._lastWebSearch={q:_webAutoQuery,time:Date.now(),ok:!webSearchFailed(_webAutoResult),source:(S.settings.search||{}).mode||'jina'};save();toast(webSearchFailed(_webAutoResult)?'🌐 联网查询失败，将如实说明':'🌐 已查到实时资料');}
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';
+    const _voiceRequired=!note&&explicitVoiceReplyRequest(_userText)&&(S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0,_voiceTurnPrompt=_voiceRequired?'\n\n# 本轮必须发语音\n'+S.me.name+'这一轮明确要求你发语音。回复正文必须合并成一条 [语音|要说的话]，不能只发普通文字，也不要在语音标签外重复一遍。严格满足ta提出的长度和内容要求，但语音最多'+VOICE_MAX_CHARS+'字。若角色语音语言不是中文，必须用 [语音|对应外语原文|中文翻译]。':'';
     const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。':'';
-    const _sys=buildSystem(c,_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{})+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard;
+    const _sys=buildSystem(c,_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{})+(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt;
     const hist=lastRounds(msgs(id),S.settings.hist||12).map(m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
       return {role:m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -7991,7 +7994,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
-    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c);content=consumeMomentCommands(content,c,{toast:true});
+    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c);content=consumeMomentCommands(content,c,{toast:true});content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     maybeSpyIntent(content,c,id,_lu);
@@ -8202,16 +8205,26 @@ function notifyIncoming(c,msg){
 function msgMenu(cid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=去引用了，别再弹菜单 */
   const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
   const canEdit=m.type==='text';
+  const canTextVoice=m.role==='assistant'&&m.type==='text'&&String(m.content||'').trim();
   const canQuote=(S.settings.quoteOn!==false)&&(m.type==='text'||m.type==='voice');
   // 重新生成：他发的(文字/语音/视频都行、不是系统提示)、且这条后面你没再说话(是最新那轮)才行
   let canRegen=(m.role==='assistant'&&m.type!=='sys'&&!m._call);
   if(canRegen){const i=list.findIndex(x=>x.id===mid);for(let j=i+1;j<list.length;j++){if(list[j].role==='user'&&list[j].type!=='sys'){canRegen=false;break;}}}
   openModal(`<h3>消息操作</h3>
     ${canQuote?`<button class="btn g" style="margin-bottom:8px" onclick="quoteSet('${cid}','${mid}')">引用这句</button>`:''}
+    ${canTextVoice?`<button class="btn g" style="margin-bottom:8px" onclick="openTextToVoice('${cid}','${mid}')">${svgIc('mic',15,'#eee')} 文字转语音</button>`:''}
     ${canEdit?`<button class="btn g" style="margin-bottom:8px" onclick="editMsg('${cid}','${mid}')">编辑</button>`:''}
     ${canRegen?`<button class="btn p" style="margin-bottom:8px" onclick="regenMsg('${cid}','${mid}')">${svgIc('refresh',15,'#fff')} 重新生成</button>`:''}
     <button class="btn d" onclick="recallMsg('${cid}','${mid}')">撤回</button>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+const _textToVoiceBusy=new Set();
+function textToVoiceInfo(text,c){const raw=ttsCleanBase(text),spoken=ttsPerformanceText(text,c,ttsCfg(),{cue:ttsAutoCue(raw,c)}),chars=[...spoken].length,points=typeof aiTtsPointCost==='function'?aiTtsPointCost(chars):Math.max(1,Math.ceil(chars/50));return {raw,spoken,chars,points,tooLong:![...raw].length||[...raw].length>VOICE_MAX_CHARS||chars>VOICE_MAX_CHARS};}
+function openTextToVoice(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid);if(!c||!m||m.role!=='assistant'||m.type!=='text')return;const info=textToVoiceInfo(m.content,c),cost=ttsUseRelay()?`预计扣 ${info.points} AI点数（按实际处理后的 ${info.chars} 字计费）`:ttsApiOn()?'使用当前语音API生成，不扣内置AI点数':'使用手机系统语音，不扣AI点数';
+  openModal(`<h3>文字转语音</h3><div class="hint">会用「${esc(c.remark||c.name)}」当前设置的音色，把这条文字转成语音。生成成功后会保存在这条消息里，重复播放不会再次扣点。</div><div class="field"><label>要转换的文字（${info.chars}/${VOICE_MAX_CHARS}字）</label><textarea rows="5" disabled>${esc(m.content||'')}</textarea></div><div class="hint" style="color:${info.tooLong?'#ff8b8b':'#aaa'}">${info.tooLong?'超过300字，暂时不能转换，请先编辑缩短。':cost}</div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" ${info.tooLong?'disabled':''} onclick="convertTextToVoice('${cid}','${mid}')">转换并播放</button></div>`);}
+async function convertTextToVoice(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid);if(!c||!m||m.role!=='assistant'||m.type!=='text'||_textToVoiceBusy.has(mid))return;const info=textToVoiceInfo(m.content,c);if(info.tooLong){toast('文字超过'+VOICE_MAX_CHARS+'字，先缩短再转换');return;}_textToVoiceBusy.add(mid);audioUnlock();closeModal();m.type='voice';m.showText=true;m.voiceCue=ttsAutoCue(m.content,c)||'';save();if(cur().p==='chat'&&cur().id===cid)render();
+  if(!ttsApiOn()){speakMsg(m,c);_textToVoiceBusy.delete(mid);toast('已转为系统语音');return;}
+  m._ttsLoading=true;m._playWhenReady=true;refreshVoiceBubble(m);const url=await warmVoiceMsg(m,c);_textToVoiceBusy.delete(mid);if(url){save();toast('已转为语音，重复播放不会再次扣点');return;}
+  delete m._playWhenReady;delete m._ttsLoading;delete m._ttsFailAt;m.type='text';delete m.showText;delete m.voiceCue;save();if(cur().p==='chat'&&cur().id===cid)render();toast('转换失败，原文字已保留');}
 function regenMsg(cid,mid){const c=getC(cid);if(!c){closeModal();return;}if(c.blocked){toast('ta把你拉黑了');closeModal();return;}
   const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0){closeModal();return;}
   // 这条之后若有"你发的"新消息，就不能重新生成(只能重生成最新那轮)
