@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='622'){
+if(window.__NORTH_SHELL_BUILD__!=='623'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v622 · 回放声音重生成';
+const APP_VER='v623 · 仅保留外部回放';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1151,7 +1151,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=622';
+  const url='sw.js?v=623';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4700,12 +4700,12 @@ function ucToggleWord(){if(!_uc)return;_uc.showWord=!_uc.showWord;render();}
 function ucQuit(){_uc=null;home();}
 /* ===== 通话记录（可删改）===== */
 let _clTab='all';
-let _callReplay=null,_callReplayExporting=false,_callReplayOutput=null,_callRewindSrc=null;
+let _callReplay=null,_callReplayExporting=false,_callReplayOutput=null;
 let _callReplayRevoiceBusy=false;
 function callReplayAudioKey(m){const x=m&&String(m.callAudio||'').match(/^idb-audio:(.+)$/i);return x?x[1]:'';}
 function callReplayClearAudio(m){if(!m)return;const k=callReplayAudioKey(m);if(k)imgDel('__audio_'+k);delete m.callAudio;delete m.callAudioTs;}
-async function callReplayStoreAudio(m,ab,dur){if(!m||!ab||m._ck!=='video')return '';const du=audioBufToDataUrl(ab,'audio/mpeg');if(!du)return '';const k='call_'+String(m.id||uid()).replace(/[^a-zA-Z0-9_-]/g,'');try{await imgPut('__audio_'+k,du);m.callAudio='idb-audio:'+k;m.callAudioTs=Date.now();m.callAudioDur=Math.max(0,+dur||0);if(_call&&_call.session===(m._cs||'')){_call._rewindCursor=null;_call._rewindBack=0;const b=$('.callrewind');if(b)b.textContent='↶ 5秒';}save();return m.callAudio;}catch(_){return '';}}
-async function callReplayReplaceAudio(m,ab,dur){if(!m||!ab||m._ck!=='video')return '';const du=audioBufToDataUrl(ab,'audio/mpeg');if(!du)return '';const old={audio:m.callAudio||'',ts:m.callAudioTs,dur:m.callAudioDur,key:callReplayAudioKey(m)},k='call_'+String(m.id||uid()).replace(/[^a-zA-Z0-9_-]/g,'')+'_redo_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);try{await imgPut('__audio_'+k,du);m.callAudio='idb-audio:'+k;m.callAudioTs=Date.now();m.callAudioDur=Math.max(0,+dur||0);save();if(old.key&&old.key!==k)await imgDel('__audio_'+old.key);if(_call&&_call.session===(m._cs||'')){_call._rewindCursor=null;_call._rewindBack=0;const b=$('.callrewind');if(b)b.textContent='↶ 5秒';}return m.callAudio;}catch(_){if(old.audio)m.callAudio=old.audio;else delete m.callAudio;if(old.ts!==undefined)m.callAudioTs=old.ts;else delete m.callAudioTs;if(old.dur!==undefined)m.callAudioDur=old.dur;else delete m.callAudioDur;await imgDel('__audio_'+k);return '';}}
+async function callReplayStoreAudio(m,ab,dur){if(!m||!ab||m._ck!=='video')return '';const du=audioBufToDataUrl(ab,'audio/mpeg');if(!du)return '';const k='call_'+String(m.id||uid()).replace(/[^a-zA-Z0-9_-]/g,'');try{await imgPut('__audio_'+k,du);m.callAudio='idb-audio:'+k;m.callAudioTs=Date.now();m.callAudioDur=Math.max(0,+dur||0);save();return m.callAudio;}catch(_){return '';}}
+async function callReplayReplaceAudio(m,ab,dur){if(!m||!ab||m._ck!=='video')return '';const du=audioBufToDataUrl(ab,'audio/mpeg');if(!du)return '';const old={audio:m.callAudio||'',ts:m.callAudioTs,dur:m.callAudioDur,key:callReplayAudioKey(m)},k='call_'+String(m.id||uid()).replace(/[^a-zA-Z0-9_-]/g,'')+'_redo_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);try{await imgPut('__audio_'+k,du);m.callAudio='idb-audio:'+k;m.callAudioTs=Date.now();m.callAudioDur=Math.max(0,+dur||0);save();if(old.key&&old.key!==k)await imgDel('__audio_'+old.key);return m.callAudio;}catch(_){if(old.audio)m.callAudio=old.audio;else delete m.callAudio;if(old.ts!==undefined)m.callAudioTs=old.ts;else delete m.callAudioTs;if(old.dur!==undefined)m.callAudioDur=old.dur;else delete m.callAudioDur;await imgDel('__audio_'+k);return '';}}
 function callReplayCue(m,prev,c){if(m&&m._callVoiceCue)return m._callVoiceCue;const a=prev&&callIsActionLine(prev.content)?String(prev.content||''):'';if(/大笑|笑出声|放声笑/.test(a))return'大笑';if(/轻笑|低笑|笑了|笑一下|笑起来|勾起.{0,3}笑/.test(a))return'轻笑';if(/叹气|叹了/.test(a))return'叹气';if(/哭|抽泣|哽咽/.test(a))return'哭泣';if(/亲|吻|啵/.test(a))return'亲亲';return ttsRequestedCue(a)||ttsAutoCue(a+' '+String(m&&m.content||''),c)||'';}
 function callReplayRows(id,cs){const c=getC(id);if(!c)return[];const raw=msgs(id).filter(m=>m&&m._call&&m._ck==='video'&&(m._cs||'')===cs&&!m._callTranslationOf),out=[];raw.forEach((m,i)=>{const text=String(m.content||'').trim(),legacyTrans=m.role==='assistant'&&/^[（(][^）)]*[）)]$/.test(text)&&hasCN(text);if(legacyTrans&&out.length&&out[out.length-1].role==='assistant'&&!out[out.length-1].action){if(!out[out.length-1].trans)out[out.length-1].trans=text;return;}const trans=String(m._callTrans||'').trim(),audio=m.role==='assistant'?m.callAudio:(m.type==='voice'?m.audio:'');out.push({id:m.id||uid(),role:m.role,text,trans,audio:audio||'',action:callIsActionLine(text),cue:callReplayCue(m,raw[i-1],c),interjection:m._callVoiceInterjection!==false,time:m.time||0});});return out.filter(x=>x.text||x.audio);}
 function callReplayChecked(){return Array.from(document.querySelectorAll('.call-replay-pick:checked')).map(x=>x.value);}
@@ -4726,8 +4726,6 @@ async function clReplayStart(id,cs){const rows=callReplayPickRows(id,cs);if(!row
 function restartCallReplay(){if(!_callReplay)return;const r=_callReplay;_callReplay=null;clReplayStartRows(r.id,r.cs,r.rows);}
 async function clReplayStartRows(id,cs,rows){_callReplay={id,cs,rows,index:0,sub:null,done:false,token:uid()};const token=_callReplay.token;renderCall();for(let i=0;i<rows.length;i++){if(!_callReplay||_callReplay.token!==token)return;_callReplay.index=i;_callReplay.sub={who:rows[i].role==='user'?'me':'them',text:rows[i].text+(rows[i].trans?'\n'+rows[i].trans:'')};updateCallReplaySub();await callReplayPlayRow(rows[i]);await sleep(220);}if(_callReplay&&_callReplay.token===token){_callReplay.done=true;_callReplay.sub=null;renderCall();}}
 function stopCallReplay(){if(_curSrc)try{_curSrc.stop();}catch(_){}if(_curAudio)try{_curAudio.pause();}catch(_){}_callReplay=null;renderCall();}
-function callLiveRewindStop(){if(_callRewindSrc)try{_callRewindSrc.stop();}catch(_){}_callRewindSrc=null;}
-async function callLiveRewind(step){if(!_call||_call.kind!=='video'||_call.state!=='active')return;if(_callBusy){toast('等TA说完这句话再回听');return;}const call=_call,rows=callReplayRows(call.id,call.session).filter(x=>x.audio);if(!rows.length){toast('刚才还没有可回听的声音');return;}const now=Date.now();if(!call._rewindTapAt||now-call._rewindTapAt>20000||!Number.isInteger(call._rewindCursor)||call._rewindCursor>rows.length){call._rewindCursor=rows.length;call._rewindBack=0;}if(call._rewindCursor<=0){toast('已经回听到这通电话最前面了');return;}call._rewindTapAt=now;call._rewindCursor--;call._rewindBack=(call._rewindBack||0)+(step||5);const row=rows[call._rewindCursor],token=uid();call._rewindToken=token;const btn=$('.callrewind');if(btn)btn.textContent='↶ '+call._rewindBack+'秒';callLiveRewindStop();let buf=null;try{const ab=await audioDataToBuf(row.audio);buf=await decodeBuf(ab);}catch(_){}if(!_call||_call.session!==call.session||call._rewindToken!==token)return;if(!buf){toast('这段声音暂时读取失败');return;}ensureAudio();if(!_audio)return;try{if(_audio.state==='suspended'||_audio.state==='interrupted')await _audio.resume();const src=_audio.createBufferSource(),gain=_audio.createGain();src.buffer=buf;gain.gain.value=volMul();src.connect(gain);gain.connect(_audio.destination);call.sub={who:row.role==='user'?'me':'them',text:'↶ 回听约'+call._rewindBack+'秒前\n'+row.text+(row.trans?'\n'+row.trans:''),_rewindToken:token};updateCallSub();src.onended=()=>{if(_call&&_call.session===call.session&&_call.sub&&_call.sub._rewindToken===token){_call.sub=null;updateCallSub();}if(_callRewindSrc===src)_callRewindSrc=null;};src.start();_callRewindSrc=src;}catch(_){toast('回听失败，请再点一次');}}
 function callReplayCanvasImage(src){return new Promise(res=>{if(!src||!isImg(src)){res(null);return;}const im=new Image();im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});}
 function callReplayCover(ctx,img,x,y,w,h){if(!img)return;const ir=img.width/img.height,rr=w/h;let sx=0,sy=0,sw=img.width,sh=img.height;if(ir>rr){sw=img.height*rr;sx=(img.width-sw)/2;}else{sh=img.width/rr;sy=(img.height-sh)/2;}ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
 function callReplayRound(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);}
@@ -8453,7 +8451,7 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   try{if(!callOnUserSay(t))await callAI();}catch(e){}
   _hfIgnoreUntil=Date.now()+800;/* 他刚说完那一下，麦克风可能还收着他的尾音，忽略0.8秒再听你 */
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
-function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}callLiveRewindStop();callHFStop();}
+function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}callHFStop();}
 function ringStart(){ringStop();ensureAudio();if(!_audio)return;let on=false;
   _ring=setInterval(()=>{try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
     o.frequency.value=on?660:520;o.type='sine';g.gain.setValueAtTime(.0001,_audio.currentTime);
@@ -8594,7 +8592,7 @@ function renderCall(){const L=$('#callLayer');if(!L)return;const _clrPos=()=>{L.
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
     ${_call.state==='active'?`<div class="callinput show" id="callInput"><button onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'};border:none;border-radius:50%;width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">${svgIc('mic',18,'#fff')}</button><input id="callMsg" placeholder="${_callHF?'免提中·直接对我说…':'打字说…'}" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>`:''}
-    <div class="callbtns">${btns}</div>${_call.state==='active'&&video?`<button class="callrewind" onclick="callLiveRewind(5)" title="连续点击会继续往前回听">↶ 5秒</button>`:''}`;
+    <div class="callbtns">${btns}</div>`;
   updateCallSub();}
 function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_call.sub;
   box.innerHTML=s?`<div class="csline ${s.who==='me'?'me':''}">${esc(s.text).replace(/\n/g,'<br>')}</div>`:'';}
@@ -8611,7 +8609,6 @@ function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.tri
   const um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);behaviorOnUserMsg(_call.id,um);lifeNoteOnUserMsg(_call.id,um);emotionOnUserMsg(_call.id,um);save();_call.sub={who:'me',text:t};updateCallSub();
   if(callOnUserSay(t))return;callAI();}
 async function callAI(sysNote,opts){if(!_call)return;
-  callLiveRewindStop();
   if(_callBusy){_callPend={sysNote,opts};return;}/* 上一轮还在说话/生成→排队，等它说完再接着，绝不并行(否则两轮消息叠一起、特别快) */
   _callBusy=true;
   const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;
