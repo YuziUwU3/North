@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false, ttsCfg: () => ({}), DEFAULT_TTS_VOICE: "male-qn-qingse" });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
@@ -111,6 +111,9 @@ assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "�
 assert.equal(context.ttsPerformanceText("Come here.", null, minimax02, { cue: "亲亲" }), "Come here.");
 assert.equal(context.ttsPerformanceText("Tell me.", null, eleven3, { cue: "质问" }), "[angry, controlled] Tell me.");
 assert.equal(context.ttsPerformanceText("Come here.", null, fish21, { cue: "亲亲" }), "[kissing softly] Mwah. Come here.");
+context.ttsUseRelay = () => true;
+assert.equal(context.ttsPerformanceText("That was funny.", null, minimax02, { cue: "giggle" }), "Heh... That was funny.");
+context.ttsUseRelay = () => false;
 assert.deepEqual(
   JSON.parse(JSON.stringify(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax28))),
   { speed: 1, vol: 1, pitch: 0, emotion: "angry" },
@@ -129,8 +132,8 @@ for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted",
   assert.equal(profile.vol, 1, `${cue} changed volume`);
 }
 
-assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo'\}\)/);
-assert.doesNotMatch(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:/);
+assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:setting\}\)/);
+assert.match(source, /if\(cue==='laugh'\)setting\.emotion='happy'/);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("bad-role-voice", { voice: "account-default" }))), ["bad-role-voice", "account-default", "male-qn-qingse"]);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("account-default", { voice: "account-default" }))), ["account-default", "male-qn-qingse"]);
 assert.equal(context.ttsVoiceAccessErrorText("you don't have access to this voice_id"), true);

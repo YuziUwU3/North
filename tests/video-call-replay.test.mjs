@@ -38,6 +38,18 @@ assert.match(source, /call\._rewindCursor--/);
 assert.match(source, /_call\.state===\x27active\x27&&video\?`<button class="callrewind" onclick="callLiveRewind\(5\)"/);
 assert.match(source, /if\(_callBusy\)\{toast\(\x27等TA说完这句话再回听\x27\);return;\}/);
 
+// Silent legacy lines can be voiced once with the original/inferred emotion, then cached.
+assert.match(source, /async function clReplayRevoice\(id,cs\)/);
+assert.match(source, /x\.role===\x27assistant\x27&&!x\.action&&!x\.audio/);
+assert.match(source, /ttsArr\(spoken,c,\{cue:row\.cue,interjection:row\.interjection\}\)/);
+assert.match(source, /ttsRefundAudio\(ab,\x27call-revoice-decode-failed\x27\)/);
+assert.match(source, /_callVoiceCue:_turnVoiceCue\|\|\x27\x27/);
+assert.match(source, /function ttsRelayInterjection\(s,rawCue\)/);
+assert.match(source, /voice_setting:setting/);
+
+// User-recorded voice is replayed from its original audio; typed/recognized text remains subtitle-only.
+assert.match(source, /m\.role===\x27assistant\x27\?m\.callAudio:\(m\.type===\x27voice\x27\?m\.audio:\x27\x27\)/);
+
 // The live call send button is neutral gray, while the microphone retains its explicit state color.
 assert.match(html, /\.callinput button\{[^}]*background:#4a4a50/);
 assert.doesNotMatch(html, /\.callinput button\{[^}]*#ff6fa5/);
