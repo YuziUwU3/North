@@ -93,12 +93,15 @@ context.fetch = async (_url, options) => {
     register_verify: { ok: true, session: { token: 'token-1', licenseId: 'license-1', sessionId: 'session-1' }, passkeyCount: 1 },
     restore_options: { ok: true, challengeId: 'challenge-auth', options: { challenge: 'AQID', rpId: 'example.com', allowCredentials: [] } },
     restore_verify: { ok: true, session: { token: 'token-2', licenseId: 'license-1', sessionId: 'session-2', activeCount: 2, evicted: [] } },
-    session_check: { ok: true, valid: true, licenseId: 'license-1', sessionId: 'session-2', sessionCount: 2, passkeyCount: 1 },
+    session_check: { ok: true, valid: true, licenseId: 'license-1', sessionId: 'session-2', sessionCount: 2, passkeyCount: 1, recoveryCount: 1 },
     session_list: { ok: true, currentSessionId: 'session-2', sessions: [{ id: 'session-2', label: 'iPhone · Edge', current: true }, { id: 'session-1', label: 'iPhone · Safari', current: false }] },
     session_revoke: { ok: true, revokedCurrent: true },
     ai_identity_sync: { ok: true, userId: 'ph_shared', clientSecret: 'sec_shared_1234567890', existing: true },
     transfer_create: { ok: true, code: 'ABCD-EFGH' },
     transfer_redeem: { ok: true, session: { token: 'token-3', licenseId: 'license-1', sessionId: 'session-3', activeCount: 3, evicted: [] } },
+    recovery_create: { ok: true, code: 'ABCD-EFGH-JKLM-NPQR-STUV-WXYZ', expiresAt: '2027-07-23T00:00:00.000Z' },
+    recovery_redeem: { ok: true, session: { token: 'token-4', licenseId: 'license-1', sessionId: 'session-4', activeCount: 3, evicted: [] } },
+    phone_friend_identity_sync: { ok: true, phoneFriendId: 'SPABCDEFGH' },
   };
   const payload = responses[body.action];
   return new Response(JSON.stringify(payload || { ok: false, error: 'missing mock' }), {
@@ -136,6 +139,7 @@ assert.equal(license.session().token, 'token-2');
 assert.equal(seen.some((item) => item.action === 'session_revoke' && item.targetSessionId === 'session-1'), true);
 await license.check();
 assert.equal(license.meta().sessionCount, 2);
+assert.equal(license.meta().recoveryCount, 1);
 const sessionList = await license.listSessions();
 assert.equal(sessionList.sessions.length, 2);
 assert.equal(license.meta().sessionCount, 2);
@@ -147,5 +151,13 @@ assert.equal(transfer.code, 'ABCD-EFGH');
 await license.relinkTransfer(transfer.code);
 assert.equal(license.session().token, 'token-3');
 assert.equal(seen.some((item) => item.action === 'session_revoke' && item.targetSessionId === 'session-2'), true);
+const recovery = await license.createRecovery();
+assert.equal(recovery.code, 'ABCD-EFGH-JKLM-NPQR-STUV-WXYZ');
+assert.equal(license.meta().recoveryCount, 1);
+await license.redeemRecovery(recovery.code);
+assert.equal(license.session().token, 'token-4');
+assert.equal(license.meta().recoveryCount, 0);
+await license.syncPhoneFriendIdentity('SPABCDEFGH', 'pfs_abcdefghijklmnopqrstuvwxyz123456');
+assert.equal(seen.some((item) => item.action === 'phone_friend_identity_sync' && item.phoneFriendId === 'SPABCDEFGH'), true);
 
 console.log('license gate browser contract tests passed');

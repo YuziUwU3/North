@@ -288,11 +288,34 @@
     return api('transfer_create', { sessionToken: current.token });
   }
 
+  async function createRecovery() {
+    const current = session();
+    if (!current) throw new Error('本浏览器还没有授权');
+    const result = await api('recovery_create', { sessionToken: current.token });
+    writeJSON(META_KEY, Object.assign({}, meta(), {
+      recoveryCount: 1,
+      recoveryExpiresAt: result.expiresAt || '',
+      checkedAt: Date.now(),
+    }));
+    return result;
+  }
+
   async function redeemTransfer(transferCode) {
     const result = await api('transfer_redeem', { transferCode: transferCode, deviceLabel: deviceLabel() });
     saveSession(result.session, {
       sessionCount: result.session.activeCount || 1,
       passkeyCount: 0,
+      evicted: result.session.evicted || [],
+    });
+    return result;
+  }
+
+  async function redeemRecovery(recoveryCode) {
+    const result = await api('recovery_redeem', { recoveryCode: recoveryCode, deviceLabel: deviceLabel() });
+    saveSession(result.session, {
+      sessionCount: result.session.activeCount || 1,
+      passkeyCount: 0,
+      recoveryCount: 0,
       evicted: result.session.evicted || [],
     });
     return result;
@@ -336,6 +359,16 @@
     });
   }
 
+  async function syncPhoneFriendIdentity(phoneFriendId, phoneFriendSecret) {
+    const current = session();
+    if (!current) throw new Error('本浏览器还没有授权');
+    return api('phone_friend_identity_sync', {
+      sessionToken: current.token,
+      phoneFriendId: phoneFriendId,
+      phoneFriendSecret: phoneFriendSecret,
+    });
+  }
+
   function init(nextConfig) {
     config = Object.assign({}, config, nextConfig || {});
     return api;
@@ -357,11 +390,14 @@
     relinkPasskey,
     check,
     createTransfer,
+    createRecovery,
     redeemTransfer,
+    redeemRecovery,
     relinkTransfer,
     listSessions,
     revokeSession,
     syncAIIdentity,
+    syncPhoneFriendIdentity,
     _test: { b64urlToBuffer, bufferToB64url, creationOptions, requestOptions },
   };
 })();

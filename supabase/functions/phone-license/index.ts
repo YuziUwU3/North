@@ -16,6 +16,8 @@ const TRANSFER_CREATE_HOURLY_LIMIT = 10;
 const TRANSFER_REDEEM_WINDOW_MS = 10 * 60 * 1000;
 const TRANSFER_REDEEM_FAILURE_LIMIT = 8;
 const TRANSFER_ATTEMPT_RETENTION_MS = 24 * 60 * 60 * 1000;
+const RECOVERY_CREATE_DAILY_LIMIT = 5;
+const RECOVERY_VALID_MS = 365 * 24 * 60 * 60 * 1000;
 // 大刷新时与 app.js 的 SHARE_EPOCH 一起递增并重新部署，旧通行密钥将无法恢复。
 const LICENSE_EPOCH = Number(Deno.env.get('LICENSE_EPOCH') || 4);
 const ALLOWED_ORIGINS = new Set([
@@ -65,6 +67,10 @@ function cleanTransferCode(value: unknown): string {
   return cleanText(value, 24).replace(/[^A-Z0-9]/gi, '').toUpperCase();
 }
 
+function cleanRecoveryCode(value: unknown): string {
+  return cleanText(value, 48).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+}
+
 function randomHex(byteLength = 32): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
@@ -74,6 +80,16 @@ function randomTransferCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+}
+
+function randomRecoveryCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+}
+
+function formatRecoveryCode(code: string): string {
+  return code.match(/.{1,4}/g)?.join('-') || code;
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -418,7 +434,7 @@ async function checkSession(body: JsonMap) {
   const now = new Date().toISOString();
   await supabase.from('phone_license_sessions').update({ last_seen_at: now }).eq('id', session.id);
   await supabase.from('phone_licenses').update({ last_seen_at: now }).eq('id', session.license_id);
-  const [{ count: sessionCount }, { count: passkeyCount }] = await Promise.all([
+  const [{ count: sessionCount }, { count: passkeyCount }, { count: recoveryCount }] = await Promise.all([
     supabase
       .from('phone_license_sessions')
       .select('*', { count: 'exact', head: true })
@@ -428,6 +444,13 @@ async function checkSession(body: JsonMap) {
       .from('phone_license_passkeys')
       .select('*', { count: 'exact', head: true })
       .eq('license_id', session.license_id),
+    supabase
+      .from('phone_license_transfers')
+      .select('*', { count: 'exact', head: true })
+      .eq('license_id', session.license_id)
+      .eq('kind', 'recovery')
+      .is('used_at', null)
+      .gt('expires_at', now),
   ]);
   return {
     ok: true,
@@ -436,6 +459,7 @@ async function checkSession(body: JsonMap) {
     sessionId: session.id,
     sessionCount: sessionCount || 0,
     passkeyCount: passkeyCount || 0,
+    recoveryCount: recoveryCount || 0,
   };
 }
 
@@ -478,11 +502,13 @@ async function createTransfer(req: Request, body: JsonMap) {
       .from('phone_license_transfers')
       .select('*', { count: 'exact', head: true })
       .eq('license_id', session.license_id)
+      .eq('kind', 'transfer')
       .gte('created_at', hourAgo),
     supabase
       .from('phone_license_transfers')
       .select('created_at')
       .eq('license_id', session.license_id)
+      .eq('kind', 'transfer')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -496,6 +522,7 @@ async function createTransfer(req: Request, body: JsonMap) {
     .from('phone_license_transfers')
     .update({ used_at: new Date().toISOString() })
     .eq('license_id', session.license_id)
+    .eq('kind', 'transfer')
     .is('used_at', null);
   const code = randomTransferCode();
   const codeHash = await sha256Hex(code);
@@ -504,6 +531,7 @@ async function createTransfer(req: Request, body: JsonMap) {
     license_id: session.license_id,
     code_hash: codeHash,
     created_by_session: session.id,
+    kind: 'transfer',
     expires_at: expiresAt,
   });
   if (error) throw new Error('生成迁移码失败');
@@ -534,6 +562,7 @@ async function redeemTransfer(req: Request, body: JsonMap) {
     .from('phone_license_transfers')
     .select('id,license_id,expires_at,used_at')
     .eq('code_hash', codeHash)
+    .eq('kind', 'transfer')
     .maybeSingle();
   if (error || !transfer || transfer.used_at || new Date(transfer.expires_at).getTime() < Date.now()) {
     await supabase.from('phone_license_transfer_attempts').insert({ requester_hash: requesterHash });
@@ -548,6 +577,85 @@ async function redeemTransfer(req: Request, body: JsonMap) {
     .maybeSingle();
   if (claimError || !claimed) throw new Error('迁移码已经被使用');
   const session = await createSession(transfer.license_id, req, body.deviceLabel);
+  await supabase.from('phone_license_transfer_attempts').delete().eq('requester_hash', requesterHash);
+  return { ok: true, session };
+}
+
+async function createRecovery(body: JsonMap) {
+  const session = await sessionAuth(body.sessionToken);
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: recentCount, error: countError } = await supabase
+    .from('phone_license_transfers')
+    .select('*', { count: 'exact', head: true })
+    .eq('license_id', session.license_id)
+    .eq('kind', 'recovery')
+    .not('created_by_session', 'is', null)
+    .gte('created_at', dayAgo);
+  if (countError) throw new Error('检查备用恢复码生成频率失败');
+  if ((recentCount || 0) >= RECOVERY_CREATE_DAILY_LIMIT) {
+    throw new Error('备用恢复码生成过于频繁，请24小时后再试');
+  }
+  await supabase
+    .from('phone_license_transfers')
+    .update({ used_at: new Date().toISOString() })
+    .eq('license_id', session.license_id)
+    .eq('kind', 'recovery')
+    .is('used_at', null);
+  const code = randomRecoveryCode();
+  const codeHash = await sha256Hex(code);
+  const expiresAt = new Date(Date.now() + RECOVERY_VALID_MS).toISOString();
+  const { error } = await supabase.from('phone_license_transfers').insert({
+    license_id: session.license_id,
+    code_hash: codeHash,
+    created_by_session: session.id,
+    kind: 'recovery',
+    expires_at: expiresAt,
+  });
+  if (error) throw new Error('生成备用恢复码失败');
+  return { ok: true, code: formatRecoveryCode(code), expiresAt };
+}
+
+async function redeemRecovery(req: Request, body: JsonMap) {
+  const requesterHash = await transferRequesterHash(req);
+  await supabase
+    .from('phone_license_transfer_attempts')
+    .delete()
+    .lt('created_at', new Date(Date.now() - TRANSFER_ATTEMPT_RETENTION_MS).toISOString());
+  const attemptCutoff = new Date(Date.now() - TRANSFER_REDEEM_WINDOW_MS).toISOString();
+  const { count: failedCount, error: attemptError } = await supabase
+    .from('phone_license_transfer_attempts')
+    .select('*', { count: 'exact', head: true })
+    .eq('requester_hash', requesterHash)
+    .gte('created_at', attemptCutoff);
+  if (attemptError) throw new Error('检查备用恢复码安全限制失败');
+  if ((failedCount || 0) >= TRANSFER_REDEEM_FAILURE_LIMIT) {
+    throw new Error('备用恢复码尝试过多，请10分钟后再试');
+  }
+  const code = cleanRecoveryCode(body.recoveryCode);
+  if (code.length !== 24) {
+    await supabase.from('phone_license_transfer_attempts').insert({ requester_hash: requesterHash });
+    throw new Error('请输入24位备用恢复码');
+  }
+  const codeHash = await sha256Hex(code);
+  const { data: recovery, error } = await supabase
+    .from('phone_license_transfers')
+    .select('id,license_id,expires_at,used_at')
+    .eq('code_hash', codeHash)
+    .eq('kind', 'recovery')
+    .maybeSingle();
+  if (error || !recovery || recovery.used_at || new Date(recovery.expires_at).getTime() < Date.now()) {
+    await supabase.from('phone_license_transfer_attempts').insert({ requester_hash: requesterHash });
+    throw new Error('备用恢复码无效、已使用或已过期');
+  }
+  const { data: claimed, error: claimError } = await supabase
+    .from('phone_license_transfers')
+    .update({ used_at: new Date().toISOString() })
+    .eq('id', recovery.id)
+    .is('used_at', null)
+    .select('id')
+    .maybeSingle();
+  if (claimError || !claimed) throw new Error('备用恢复码已经被使用');
+  const session = await createSession(recovery.license_id, req, body.deviceLabel);
   await supabase.from('phone_license_transfer_attempts').delete().eq('requester_hash', requesterHash);
   return { ok: true, session };
 }
@@ -605,6 +713,26 @@ async function syncAIIdentity(body: JsonMap) {
   };
 }
 
+async function syncPhoneFriendIdentity(body: JsonMap) {
+  const session = await sessionAuth(body.sessionToken);
+  const phoneFriendId = cleanText(body.phoneFriendId, 16).toUpperCase();
+  const phoneFriendSecret = cleanText(body.phoneFriendSecret, 180);
+  if (!/^SP[A-Z0-9]{8}$/.test(phoneFriendId) || phoneFriendSecret.length < 16) {
+    throw new Error('小手机ID身份不完整');
+  }
+  const { data: verified, error: verifyError } = await supabase.rpc('phone_friend_check', {
+    p_phone_id: phoneFriendId,
+    p_secret: phoneFriendSecret,
+  });
+  if (verifyError || verified !== true) throw new Error('小手机ID归属验证失败');
+  const { error } = await supabase
+    .from('phone_licenses')
+    .update({ phone_friend_id: phoneFriendId, updated_at: new Date().toISOString() })
+    .eq('id', session.license_id);
+  if (error) throw new Error('保存小手机ID授权记录失败');
+  return { ok: true, phoneFriendId };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
   if (req.method !== 'POST') return reply(req, { ok: false, error: '只支持POST请求' }, 405);
@@ -625,7 +753,10 @@ Deno.serve(async (req) => {
     else if (action === 'session_revoke') result = await revokeSession(body);
     else if (action === 'transfer_create') result = await createTransfer(req, body);
     else if (action === 'transfer_redeem') result = await redeemTransfer(req, body);
+    else if (action === 'recovery_create') result = await createRecovery(body);
+    else if (action === 'recovery_redeem') result = await redeemRecovery(req, body);
     else if (action === 'ai_identity_sync') result = await syncAIIdentity(body);
+    else if (action === 'phone_friend_identity_sync') result = await syncPhoneFriendIdentity(body);
     else throw new Error('未知的授权操作');
     return reply(req, result);
   } catch (error) {

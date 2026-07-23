@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const licenseBackend = fs.readFileSync(new URL('../supabase/functions/phone-license/index.ts', import.meta.url), 'utf8');
+const aiBackend = fs.readFileSync(new URL('../supabase/functions/phone-ai/index.ts', import.meta.url), 'utf8');
+const migration = fs.readFileSync(new URL('../supabase/migrations/202607230004_license_recovery_codes.sql', import.meta.url), 'utf8');
+const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const adminApp = fs.readFileSync(new URL('../admin/app.js', import.meta.url), 'utf8');
+const adminHtml = fs.readFileSync(new URL('../admin/index.html', import.meta.url), 'utf8');
+
+assert.match(migration, /add column if not exists kind text not null default 'transfer'/);
+assert.match(migration, /add column if not exists phone_friend_id text/);
+assert.match(migration, /create table if not exists public\.phone_license_admin_actions/);
+assert.match(licenseBackend, /RECOVERY_VALID_MS = 365 \* 24 \* 60 \* 60 \* 1000/);
+assert.match(licenseBackend, /action === 'recovery_create'/);
+assert.match(licenseBackend, /action === 'recovery_redeem'/);
+assert.match(licenseBackend, /action === 'phone_friend_identity_sync'/);
+assert.match(licenseBackend, /\.rpc\('phone_friend_check'/);
+assert.match(aiBackend, /action === "admin_license_users"/);
+assert.match(aiBackend, /action === "admin_license_block"/);
+assert.match(aiBackend, /action === "admin_license_recovery"/);
+assert.match(aiBackend, /\.update\(\{ status: "blocked"/);
+assert.match(aiBackend, /\.from\("phone_license_passkeys"\)\.delete\(\)/);
+assert.match(app, /扫脸不支持？使用迁移码 \/ 备用恢复码/);
+assert.match(app, /一年有效、只能使用一次/);
+assert.match(app, /licenseSyncPhoneFriendIdentity/);
+assert.match(adminHtml, /用户授权/);
+assert.match(adminApp, /<b>注册时间<\/b>/);
+assert.match(adminApp, /放进来并生成恢复码/);
+assert.match(adminApp, /24 小时有效、只能使用一次/);
+
+console.log('license admin recovery tests passed');

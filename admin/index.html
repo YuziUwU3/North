@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="North 核对">
-  <title>North 订单核对</title>
+  <title>North 管理后台</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="../icon.png">
   <style>
@@ -31,6 +31,8 @@
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:end center;padding:18px;z-index:20}.sheet{width:min(100%,520px);background:#191a1e;border:1px solid var(--line);border-radius:8px;padding:16px;max-height:88vh;overflow:auto}.sheet h2{font-size:19px;margin:0 0 8px}.sheet p{color:var(--muted);font-size:13px;line-height:1.6}.sheet-actions{display:flex;gap:8px;margin-top:14px}.sheet-actions .btn{flex:1}
     .viewer{position:fixed;inset:0;background:#000;z-index:30;display:grid;place-items:center;padding:16px}.viewer img{max-width:100%;max-height:92vh;object-fit:contain}.viewer button{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:12px}
     .install-tip{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
+    .license-tools{display:flex;gap:8px;margin:2px 0 12px}.license-tools input{flex:1;min-width:0;border:1px solid var(--line);background:#17181c;color:var(--text);border-radius:8px;padding:12px;outline:0}.license-tools input:focus{border-color:#8b6675}
+    .license-id{font-size:18px;font-weight:800;letter-spacing:.8px}.license-state{font-size:12px;padding:4px 8px;border-radius:999px;background:#153322;color:#8ce2ad}.license-state.blocked{background:#3a2023;color:#ffadb2}.recovery-code{width:100%;margin:12px 0;padding:13px 8px;text-align:center;font-size:17px;letter-spacing:1px;border:1px solid #735a3b;border-radius:8px;background:#15110d;color:#f3d29c}
     @media(max-width:560px){.shell{padding-left:10px;padding-right:10px}.meta{grid-template-columns:1fr}.order{padding:12px}.tools .btn{padding:0 10px}.hide-mobile{display:none}}
   </style>
 </head>
@@ -38,7 +40,7 @@
   <main class="shell">
     <section id="auth" class="auth">
       <h2>管理员核对</h2>
-      <p>输入管理员授权码后，可以查看付款截图并给对应的小手机 AI 账户加点。</p>
+      <p>输入管理员授权码后，可以核对付款，也可以按小手机 ID 管理用户授权。</p>
       <label class="field"><span>管理员授权码</span><input id="adminToken" type="password" autocomplete="current-password" placeholder="仅保存在这台设备"></label>
       <button class="btn primary" style="width:100%" id="loginBtn">进入核对台</button>
       <div class="install-tip">建议添加到手机主屏幕。iPhone：Safari 分享按钮 → 添加到主屏幕。</div>
@@ -46,7 +48,7 @@
 
     <section id="workspace" class="hidden">
       <header>
-        <div><h1>付款核对</h1><div class="sub">North AI 账户管理</div></div>
+        <div><h1>North 管理后台</h1><div class="sub">付款核对与用户授权</div></div>
         <div class="tools">
           <button class="btn" id="installBtn">安装</button>
           <button class="btn" id="notifyBtn">通知</button>
@@ -56,14 +58,23 @@
       <nav class="tabs">
         <button class="tab on" data-scope="pending">待核对 <span class="count" id="pendingCount">0</span></button>
         <button class="tab" data-scope="all">全部订单</button>
+        <button class="tab" id="licenseTab">用户授权 <span class="count" id="licenseCount">0</span></button>
       </nav>
       <div class="status"><span id="statusText">准备加载</span><span style="display:flex;gap:8px;align-items:center"><button class="tab" id="deleteAllBtn">清空订单</button><button class="tab" id="logoutBtn">退出授权</button></span></div>
       <section id="orders" class="orders"></section>
+      <section id="licensePanel" class="hidden">
+        <div class="license-tools">
+          <input id="licenseSearch" inputmode="text" autocomplete="off" placeholder="搜索小手机 ID、AI 用户 ID 或授权编号">
+          <button class="btn" id="licenseRefreshBtn">刷新</button>
+        </div>
+        <div class="sub" style="margin:0 2px 12px">显示所有核销过邀请码的授权记录；旧用户更新并打开一次小手机后会补齐小手机 ID。</div>
+        <section id="licenseUsers" class="orders"></section>
+      </section>
     </section>
   </main>
 
   <div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
   <div id="viewer" class="viewer hidden"><button class="icon" id="closeViewer" aria-label="关闭">×</button><img id="viewerImg" alt="付款截图大图"></div>
-  <script src="./app.js?v=626"></script>
+  <script src="./app.js?v=627"></script>
 </body>
 </html>

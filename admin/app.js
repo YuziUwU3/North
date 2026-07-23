@@ -4,8 +4,11 @@ const TOKEN_KEY = 'north_admin_access';
 
 let token = localStorage.getItem(TOKEN_KEY) || '';
 let scope = 'pending';
+let workspaceView = 'orders';
 let orders = [];
+let licenseUsers = [];
 let loadingOrders = false;
+let loadingLicenses = false;
 let actionBusy = false;
 let installPrompt = null;
 let pollTimer = 0;
@@ -19,6 +22,12 @@ const fmtTime = (value) => {
   if (!value) return '未填写';
   const d = new Date(value);
   return Number.isFinite(d.getTime()) ? d.toLocaleString('zh-CN', {hour12:false}) : String(value);
+};
+const fmtDateTime = (value) => {
+  const d = new Date(value || 0);
+  if (!Number.isFinite(d.getTime())) return '未知';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 const stateLabel = (order) => order.status === 'paid' ? '已确认' : order.review_status === 'rejected' ? '已驳回' : order.review_status === 'submitted' ? '待核对' : '未提交';
 const providerLabel = (provider) => provider === 'wechat' ? '微信' : '支付宝';
@@ -75,7 +84,8 @@ function showWorkspace() {
 function schedulePoll() {
   clearTimeout(pollTimer);
   pollTimer = setTimeout(async () => {
-    await loadOrders(false);
+    if (workspaceView === 'licenses') await loadLicenseUsers(false);
+    else await loadOrders(false);
     schedulePoll();
   }, 15000);
 }
@@ -123,6 +133,150 @@ function renderOrders() {
     </article>`;
   }).join('');
 }
+
+function renderLicenseUsers() {
+  const root = $('licenseUsers');
+  const query = String($('licenseSearch').value || '').trim().toUpperCase().replace(/\s+/g, '');
+  const rows = licenseUsers.filter((user) => {
+    if (!query) return true;
+    return [user.phone_friend_id, user.ai_user_id, user.id]
+      .some((value) => String(value || '').toUpperCase().includes(query));
+  });
+  if (!rows.length) {
+    root.innerHTML = `<div class="empty">${query ? '没有找到对应用户' : '还没有邀请码核销记录'}</div>`;
+    return;
+  }
+  root.innerHTML = rows.map((user) => {
+    const active = user.status === 'active';
+    const phoneId = user.phone_friend_id || '待同步小手机 ID';
+    const actionLabel = user.phone_friend_id || shortId(user.id);
+    return `<article class="order">
+      <div class="order-head">
+        <div>
+          <div class="license-id">${esc(phoneId)}</div>
+          <div class="sub">授权编号 ${esc(shortId(user.id))}</div>
+        </div>
+        <span class="license-state ${active ? '' : 'blocked'}">${active ? '可进入' : '已移出'}</span>
+      </div>
+      <div class="meta">
+        <div><b>注册时间</b>${esc(fmtDateTime(user.created_at))}</div>
+        <div><b>最近使用</b>${esc(user.last_seen_at ? fmtDateTime(user.last_seen_at) : '尚无记录')}</div>
+        <div><b>小手机 ID</b>${esc(user.phone_friend_id || '旧版本尚未补齐')}</div>
+        <div><b>AI 用户 ID</b>${esc(user.ai_user_id || '尚未绑定')}</div>
+      </div>
+      <div class="actions">
+        ${active ? `<button class="btn danger" onclick="openBlockLicense('${esc(user.id)}','${esc(actionLabel)}')">移出去</button>` : ''}
+        <button class="btn approve" onclick="openRecoverLicense('${esc(user.id)}','${esc(actionLabel)}',${active ? 'false' : 'true'})">${active ? '生成恢复码' : '放进来并生成恢复码'}</button>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+async function loadLicenseUsers(showLoading) {
+  if (loadingLicenses) return;
+  loadingLicenses = true;
+  if (showLoading) $('licenseUsers').innerHTML = '<div class="empty"><div class="spinner"></div>正在读取全部用户</div>';
+  setStatus('正在同步用户授权…');
+  try {
+    const data = await api('admin_license_users');
+    licenseUsers = Array.isArray(data.users) ? data.users : [];
+    $('licenseCount').textContent = licenseUsers.length;
+    renderLicenseUsers();
+    setStatus('共 ' + licenseUsers.length + ' 条授权记录 · ' + new Date().toLocaleTimeString('zh-CN', {hour12:false}));
+  } catch (error) {
+    if (error.status === 401 || /admin-unauthorized/i.test(error.message)) {
+      token = '';
+      localStorage.removeItem(TOKEN_KEY);
+      showAuth('授权码无效');
+    } else {
+      setStatus('用户授权读取失败：' + error.message);
+      if (showLoading) $('licenseUsers').innerHTML = '<div class="empty">暂时无法读取用户记录</div>';
+    }
+  } finally {
+    loadingLicenses = false;
+  }
+}
+
+function openLicenseView() {
+  workspaceView = 'licenses';
+  $('orders').classList.add('hidden');
+  $('licensePanel').classList.remove('hidden');
+  $('deleteAllBtn').classList.add('hidden');
+  document.querySelectorAll('.tab[data-scope]').forEach((item) => item.classList.remove('on'));
+  $('licenseTab').classList.add('on');
+  loadLicenseUsers(true);
+}
+
+function openOrdersView(nextScope) {
+  workspaceView = 'orders';
+  scope = nextScope || scope;
+  $('orders').classList.remove('hidden');
+  $('licensePanel').classList.add('hidden');
+  $('deleteAllBtn').classList.remove('hidden');
+  $('licenseTab').classList.remove('on');
+  document.querySelectorAll('.tab[data-scope]').forEach((item) => item.classList.toggle('on', item.dataset.scope === scope));
+  loadOrders(true);
+}
+
+window.openBlockLicense = (id, phoneId) => {
+  openSheet(`<h2>移出 ${esc(phoneId)}</h2>
+    <p>移出后，这个用户的全部浏览器授权、扫脸/指纹通行密钥和恢复码都会失效。聊天和本机存档不会被后台删除。</p>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn danger" id="licenseActionBtn" onclick="confirmBlockLicense('${esc(id)}')">确认移出</button></div>`);
+};
+
+window.confirmBlockLicense = async (id) => {
+  if (actionBusy) return;
+  actionBusy = true;
+  const button = $('licenseActionBtn');
+  if (button) { button.disabled = true; button.textContent = '正在移出…'; }
+  try {
+    await api('admin_license_block', {license_id:id});
+    closeSheet();
+    await loadLicenseUsers(false);
+  } catch (error) {
+    alert('移出失败：' + error.message);
+  } finally {
+    actionBusy = false;
+  }
+};
+
+window.openRecoverLicense = (id, phoneId, blocked) => {
+  openSheet(`<h2>${blocked ? '放进来' : '生成恢复码'} · ${esc(phoneId)}</h2>
+    <p>${blocked ? '系统会重新启用这条授权，' : ''}并生成一个 24 小时有效、只能使用一次的管理员恢复码。把号码私下发给本人，让对方在登录页选择“迁移码 / 备用恢复码”进入。</p>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="licenseActionBtn" onclick="confirmRecoverLicense('${esc(id)}')">生成号码</button></div>`);
+};
+
+window.confirmRecoverLicense = async (id) => {
+  if (actionBusy) return;
+  actionBusy = true;
+  const button = $('licenseActionBtn');
+  if (button) { button.disabled = true; button.textContent = '正在生成…'; }
+  try {
+    const data = await api('admin_license_recovery', {license_id:id});
+    await loadLicenseUsers(false);
+    openSheet(`<h2>一次性管理员恢复码</h2>
+      <p>24 小时内有效，只能使用一次。请私下发给对应用户；生成下一枚恢复码后，这一枚会失效。</p>
+      <input class="recovery-code" id="adminRecoveryCode" readonly value="${esc(data.code || '')}">
+      <div class="sheet-actions"><button class="btn" onclick="closeSheet()">关闭</button><button class="btn approve" onclick="copyAdminRecoveryCode()">复制号码</button></div>`);
+  } catch (error) {
+    alert('生成失败：' + error.message);
+  } finally {
+    actionBusy = false;
+  }
+};
+
+window.copyAdminRecoveryCode = async () => {
+  const input = $('adminRecoveryCode');
+  const value = String(input && input.value || '');
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(value);
+    copied = true;
+  } catch (_) {
+    try { input.focus(); input.select(); copied = !!document.execCommand('copy'); } catch (_) {}
+  }
+  alert(copied ? '恢复码已复制' : '请长按号码手动复制');
+};
 
 async function loadOrders(showLoading) {
   if (loadingOrders) return;
@@ -368,7 +522,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=626', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=627', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -404,7 +558,10 @@ $('installBtn').addEventListener('click', async () => {
 });
 $('loginBtn').addEventListener('click', login);
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
-$('refreshBtn').addEventListener('click', () => loadOrders(true));
+$('refreshBtn').addEventListener('click', () => workspaceView === 'licenses' ? loadLicenseUsers(true) : loadOrders(true));
+$('licenseRefreshBtn').addEventListener('click', () => loadLicenseUsers(true));
+$('licenseSearch').addEventListener('input', renderLicenseUsers);
+$('licenseTab').addEventListener('click', openLicenseView);
 $('notifyBtn').addEventListener('click', enableNotifications);
 $('deleteAllBtn')?.addEventListener('click', openDeleteAllOrders);
 $('logoutBtn').addEventListener('click', () => {
@@ -415,13 +572,11 @@ $('logoutBtn').addEventListener('click', () => {
 $('modal').addEventListener('click', (event) => { if (event.target === $('modal')) closeSheet(); });
 $('closeViewer').addEventListener('click', () => $('viewer').classList.add('hidden'));
 document.querySelectorAll('.tab[data-scope]').forEach((button) => button.addEventListener('click', () => {
-  scope = button.dataset.scope;
   collapsedOrders.clear();
   seenOrders.clear();
-  document.querySelectorAll('.tab[data-scope]').forEach((item) => item.classList.toggle('on', item === button));
-  loadOrders(true);
+  openOrdersView(button.dataset.scope);
 }));
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=626', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=627', {scope:'./'}).catch(() => {});
 if (token) api('admin_auth').then(showWorkspace).catch(() => showAuth('请重新授权'));
 else showAuth();
