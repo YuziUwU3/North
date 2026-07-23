@@ -81,6 +81,19 @@ test('role opens the real small-phone pages and searches the current desktop lay
   assert.match(app, /await remoteControlOpenApp\(a,c\)/);
 });
 
+test('locking apps never opens settings and completion triggers an immediate natural message', () => {
+  assert.match(app, /op==='lock_app'\|\|op==='unlock_app'\?'home'/);
+  assert.match(app, /a\.op==='lock_app'\|\|a\.op==='unlock_app'\?'home'/);
+  assert.match(app, /base\.app='home';base\.label='主屏幕'/);
+  assert.match(app, /锁软件不需要也不允许打开普通设置页/);
+  const finish = app.match(/async function remoteControlFinish\(reason\)[\s\S]*?(?=\n\/\/ ===== 他登录我的微信)/)?.[0] || '';
+  assert.match(finish, /replyTouch\(c\.id\);delayedAccountReply/);
+  assert.match(finish, /delayedAccountReply\(c\.id,[\s\S]*?,0\)/);
+  assert.match(finish, /现在立即给ta发一两句自然消息/);
+  assert.match(finish, /不要复盘、汇报、列举或暗示/);
+  assert.doesNotMatch(finish, /const done=|你亲手做了这些真实操作|这次主要查看了手机/);
+});
+
 test('X and Weibo posting, deletion and likes are part of the control plan', () => {
   assert.match(app, /post_x/);
   assert.match(app, /delete_x/);

@@ -133,7 +133,7 @@ test('the role can independently delete social content and DMs, declare ownershi
   assert.match(app, /角色当时亲口说/);
   assert.match(app, /post_moment/);
   assert.match(app, /发朋友圈宣示主权/);
-  assert.match(app, /锁软件必须基于真实疑点；没疑点就不要锁/);
+  assert.match(app, /锁软件不需要也不允许打开普通设置页；必须基于真实疑点，没疑点就不要锁/);
   assert.match(app, /没有可疑或让你不舒服的内容时，可以输出空 actions/);
 });
 
