@@ -62,6 +62,7 @@ test('every action has slow silent subtitles and persistent memory', () => {
   assert.match(app, /function remoteControlCaption\(say\)/);
   assert.match(app, /cap\.replaceChildren\(b\)/);
   assert.match(html, /\.remote-caption-bubble/);
+  assert.match(html, /\.remote-caption-wrap\{[^}]*bottom:max\(20px,env\(safe-area-inset-bottom\)\)/);
   assert.match(html, /@keyframes remoteCaptionUp/);
   assert.match(app, /remoteControlRemember\(c,\{ts:Date\.now\(\),startedAt/);
   assert.match(app, /function remoteControlHistoryPrompt\(c\)/);

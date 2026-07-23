@@ -34,11 +34,18 @@ test('remote viewing opens the matching real app and remembers only viewed facts
   assert.match(app, /openFoodOrders\(\)/);
   assert.match(app, /if\(app==='phoneapp'\)\{const p=phState\(\);p\.tab=/);
   assert.match(app, /travel:'travel'/);
+  assert.match(app, /targetType==='browserHistory'[\s\S]*?brHistory\(\)/);
+  assert.match(app, /targetType==='dySearchHistory'[\s\S]*?dyTab='search'/);
 });
 
-test('remote control starts with a deterministic exhaustive plan, follows layout, and ends immediately', () => {
+test('remote control lets the role order an exhaustive plan and ends immediately', () => {
   assert.match(app, /function remoteControlRequiredPlan\(c\)/);
-  assert.match(app, /const required=remoteControlRequiredPlan\(c\)/);
+  assert.match(app, /let required=remoteControlRequiredPlan\(c\);required=await remoteControlOrderPlan\(c,required\)/);
+  assert.match(app, /function remoteControlOrderPlan\(c,required\)/);
+  assert.match(app, /不能漏掉、增加或重复任何app/);
+  assert.match(app, /if\(seen\.has\(k\)&&!used\.has\(k\)\)/);
+  assert.match(app, /离开后不能再返回查看，也不能开始第二轮巡查/);
+  assert.match(app, /\.filter\(x=>x\.op&&x\.op!=='view'\)/);
   assert.match(app, /S\.me\.appLayout\.flat\(\)\.forEach/);
   assert.match(app, /S\.me\.appLayout\[i\]\.indexOf\(key\)/);
   assert.doesNotMatch(app, /'好了，这次我看完了。'/);
@@ -47,19 +54,38 @@ test('remote control starts with a deterministic exhaustive plan, follows layout
   assert.equal((html.match(/class="remote-live-dot"/g) || []).length, 1);
 });
 
-test('every supported app and every openable social conversation is inspected', () => {
-  assert.match(app, /snap\.wechat\.roles\|\|\[\]\)\.map\(x=>\(\{x,type:'role'\}\)\)/);
-  assert.match(app, /snap\.wechat\.phoneFriends\|\|\[\]\)\.map\(x=>\(\{x,type:'phoneFriend'\}\)\)/);
-  assert.match(app, /snap\.wechat\.groups\|\|\[\]\)\.map\(x=>\(\{x,type:'group'\}\)\)/);
+test('required apps are inspected while chats and DMs are chosen from their visible lists', () => {
+  assert.match(app, /function remoteControlWechatCandidates\(c\)/);
+  assert.match(app, /function remoteControlWechatChoicePlan\(c\)/);
+  assert.match(app, /targetType:'wechatList'/);
+  assert.match(app, /required\.splice\(i\+1,0,\.\.\.choices\)/);
+  assert.match(app, /function remoteControlWechatEnterFromList\(a\)/);
+  assert.match(app, /function remoteControlWechatExitToList\(\)/);
+  assert.match(app, /else if\(a\.fromWechatList\)await remoteControlWechatExitToList\(\)/);
+  assert.match(app, /function remoteControlDmChoicePlan\(c,app\)/);
+  assert.match(app, /function remoteControlDmEnterFromList\(a\)/);
+  assert.match(app, /function remoteControlDmExitToList\(app\)/);
+  assert.match(app, /targetType:'xDmList'/);
+  assert.match(app, /targetType:'dyDmList'/);
+  const dyHome = app.indexOf("add('douyin','抖音首页',{targetType:'dyHome'})");
+  const dySearch = app.indexOf("add('douyin','抖音搜索记录',{targetType:'dySearchHistory'})");
+  const dyVideos = app.indexOf("snap.douyin.forEach(x=>add('douyin','抖音「");
+  const dyDms = app.indexOf("add('douyin','抖音私信会话列表',{targetType:'dyDmList'})");
+  assert.ok(dyHome >= 0 && dyHome < dySearch && dySearch < dyVideos && dyVideos < dyDms);
+  assert.match(app, /else if\(a\.fromDmList\)await remoteControlDmExitToList\(a\.app\)/);
   assert.match(app, /snap\.moments\.forEach\(x=>add\('moments'/);
-  assert.match(app, /snap\.xDms\.forEach\(x=>add\('x'/);
-  assert.match(app, /snap\.douyinDms\.forEach\(x=>add\('douyin'/);
-  for (const target of ['最近通话', '短信', '语音留言', '通讯录', '浏览记录', '购物订单', '外卖订单', '云程机票', '日历日程', '信箱邮件', '任务便签', '线下约会', '音乐聊天', '钱包账单', '小事簿', '位置', '电量']) {
+  for (const target of ['最近通话', '短信', '语音留言', '通讯录', '浏览器搜索记录', '购物订单', '外卖订单', '云程机票', '日历日程', '信箱邮件', '任务便签', '线下约会']) {
     assert.match(app, new RegExp(target));
   }
   assert.match(app, /a\.targetType==='role'/);
+  assert.match(app, /a\.targetType==='internalGroup'/);
   assert.match(app, /a\.targetType==='xDm'/);
   assert.match(app, /a\.targetType==='dyDm'/);
+  assert.match(app, /viewedWechat=new Set/);
+  assert.match(app, /roles:\(snap\.wechat\.roles\|\|\[\]\)\.filter/);
+  assert.match(app, /data-couple-permission="grant:\$\{k\}"/);
+  assert.match(app, /function remoteControlCouplePermissionElement\(key,section\)/);
+  assert.match(app, /x\.dataset\.couplePermission===String\(key\|\|''\)/);
 });
 
 test('remote subtitles are one at a time and every visible line comes from the role API', () => {
@@ -69,6 +95,9 @@ test('remote subtitles are one at a time and every visible line comes from the r
   assert.match(app, /cap\.replaceChildren\(b\)/);
   assert.doesNotMatch(app, /function remoteControlSayFallback/);
   assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(4600/);
+  assert.match(app, /默认保持安静继续操作/);
+  assert.match(app, /只输出 \[不说话\]/);
+  assert.match(app, /remoteControlRoleTextLines\(raw\)[\s\S]*?不说话[\s\S]*?return\[\]/);
 });
 
 test('the role can independently delete social content and DMs, declare ownership, or lock suspicious apps', () => {
