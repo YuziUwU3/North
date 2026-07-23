@@ -57,9 +57,10 @@ test('live overlay blocks the phone while preserving an emergency stop', () => {
 
 test('every action has slow silent subtitles and persistent memory', () => {
   const remote = app.match(/let _remoteCtl[\s\S]*?(?=\/\/ ===== 他登录我的微信)/)?.[0] || '';
-  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(3300/);
+  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(4600/);
   assert.doesNotMatch(remote, /SpeechSynthesisUtterance|speechSynthesis|remoteControlSpeak/);
   assert.match(app, /function remoteControlCaption\(say\)/);
+  assert.match(app, /cap\.replaceChildren\(b\)/);
   assert.match(html, /\.remote-caption-bubble/);
   assert.match(html, /@keyframes remoteCaptionUp/);
   assert.match(app, /remoteControlRemember\(c,\{ts:Date\.now\(\),startedAt/);
@@ -86,4 +87,6 @@ test('X and Weibo posting, deletion and likes are part of the control plan', () 
   assert.match(app, /推特\|微博\|X/);
   assert.match(app, /x:'X \/ 微博'/);
   assert.match(app, /发布微博 \/ X/);
+  assert.match(app, /delete_x_dm/);
+  assert.match(app, /delete_douyin_dm/);
 });
