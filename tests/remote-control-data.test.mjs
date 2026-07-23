@@ -97,7 +97,7 @@ test('remote subtitles are one at a time and every visible line comes from the r
   assert.match(app, /await chatAPI\(\[\{role:'system',content:buildSystem\(c\)\}/);
   assert.match(app, /max:520,complete:true,temp:\.82,aux:false/);
   assert.match(app, /await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
-  assert.match(app, /cap\.replaceChildren\(b\)/);
+  assert.match(app, /replaceChildrenCompat\(cap,b\)/);
   assert.doesNotMatch(app, /function remoteControlSayFallback/);
   assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(4600/);
   assert.match(app, /默认保持安静继续操作/);

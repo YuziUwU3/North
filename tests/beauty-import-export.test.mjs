@@ -49,7 +49,7 @@ const context = vm.createContext({
   phState: () => S.phoneapp,
   isBigImg: (v) => typeof v === "string" && v.startsWith("data:image") && v.length > 2000,
   primeImageForSave: async (v) => { primed.push(v); },
-  saveNow: () => { saved++; return true; },
+  saveNowAsync: async () => { saved++; return true; },
   render: () => { rendered++; },
   renderLockScreen: () => { lockRendered++; },
 });

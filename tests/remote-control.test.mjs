@@ -60,7 +60,7 @@ test('every action has slow silent subtitles and persistent memory', () => {
   assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(4600/);
   assert.doesNotMatch(remote, /SpeechSynthesisUtterance|speechSynthesis|remoteControlSpeak/);
   assert.match(app, /function remoteControlCaption\(say\)/);
-  assert.match(app, /cap\.replaceChildren\(b\)/);
+  assert.match(app, /replaceChildrenCompat\(cap,b\)/);
   assert.match(html, /\.remote-caption-bubble/);
   assert.match(html, /\.remote-caption-wrap\{[^}]*bottom:max\(20px,env\(safe-area-inset-bottom\)\)/);
   assert.match(html, /@keyframes remoteCaptionUp/);

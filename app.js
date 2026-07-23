@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='639'){
+if(window.__NORTH_SHELL_BUILD__!=='640'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -184,7 +184,9 @@ let _pfSwipe=null;
 function pfSwipeStart(e,id){_pfSwipe={id,x:e.clientX,y:e.clientY,dx:0};}
 function pfSwipeMove(e,id){if(!_pfSwipe||_pfSwipe.id!==id)return;_pfSwipe.dx=e.clientX-_pfSwipe.x;if(Math.abs(_pfSwipe.dx)>18&&Math.abs(_pfSwipe.dx)>Math.abs(e.clientY-_pfSwipe.y)){try{e.preventDefault();}catch(_){} }}
 function pfSwipeEnd(e,id){if(!_pfSwipe||_pfSwipe.id!==id)return;const el=$('#pfsw_'+id);if(el){if(_pfSwipe.dx<-34)el.classList.add('open');else if(_pfSwipe.dx>16)el.classList.remove('open');} _pfSwipe=null;}
-function copyPhoneFriendId(){const id=phoneFriendId();try{navigator.clipboard&&navigator.clipboard.writeText(id);}catch(_){}toast('已复制小手机ID：'+id);}
+function legacyCopyText(text,input){let el=input,own=false;try{if(!el){el=document.createElement('textarea');el.value=text;el.setAttribute('readonly','');el.style.cssText='position:fixed;left:-9999px;top:0';document.body.appendChild(el);own=true;}el.focus();el.select();if(el.setSelectionRange)el.setSelectionRange(0,String(text).length);const ok=!!(document.execCommand&&document.execCommand('copy'));if(own&&el.parentNode)el.parentNode.removeChild(el);return ok;}catch(_){try{if(own&&el&&el.parentNode)el.parentNode.removeChild(el);}catch(__){}return false;}}
+function copyTextCompat(text,input){text=String(text||'');try{if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(text).then(()=>true).catch(()=>legacyCopyText(text,input));}catch(_){}return Promise.resolve(legacyCopyText(text,input));}
+function copyPhoneFriendId(){const id=phoneFriendId();copyTextCompat(id).then(ok=>toast((ok?'已复制小手机ID：':'请手动复制小手机ID：')+id));}
 async function phoneFriendToggleSearch(){const p=phoneFriendState();p.allowSearch=p.allowSearch===false;save();render();try{await pfEnsure(true);toast(p.allowSearch?'别人可以搜到你':'已关闭被搜索');}catch(e){toast(e.message||'同步失败');}}
 async function phoneFriendSearch(q){q=(q||($('#pf_search')&&$('#pf_search').value)||'').trim().toUpperCase();if(!q){toast('输入对方的小手机ID');return;}const p=phoneFriendState();p.search={q,busy:true,items:[]};render();
   try{await pfEnsure();const items=await pfRpc('phone_friend_search',{p_query:q},20000);p.search={q,busy:false,items:Array.isArray(items)?items:[]};save();render();}
@@ -348,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v639 · 跳过设置并立即来信';
+const APP_VER='v640 · 大容量存档与浏览器兼容';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -385,26 +387,39 @@ function defState(){return{
   _proactiveCount:{},
   _mailCount:{}
 };}
+const CORE_IDB_KEY='__core_state',CORE_INLINE_LIMIT=3.5*1024*1024;
+let _coreBootRef=null,_coreOverflowMode=false,_coreMirrorWrite=Promise.resolve(true),_coreQueuedSave=null,_coreLogicalBytes=0,_coreSavePending=false,_coreFailureAt=0,_appBootFinished=false;
 let S=load();
-try{S.me=S.me||{};S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
-// 把旧的默认绘图模型切到更适合日常照片的新默认；如果用户自己填了别的名字，就尊重原设置
-try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}
+function normalizeLoadedState(){try{S.me=S.me||{};S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
+  // 把旧的默认绘图模型切到更适合日常照片的新默认；如果用户自己填了别的名字，就尊重原设置
+  try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}}
+normalizeLoadedState();
 function mergeStateData(d,opt){const n=Object.assign(defState(),d||{});if(opt&&opt.keepPhoneFriend){const old=S&&S.me&&S.me.phoneFriend,has=d&&d.me&&d.me.phoneFriend&&d.me.phoneFriend.id;if(old&&!has){n.me=n.me||{};n.me.phoneFriend=old;}if(n.messages&&n.messages.__idb==='messages'&&S.messages&&!S.messages.__idb)n.messages=S.messages;}return n;}
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return mergeStateData(v);}catch(e){}return seed();}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings){if(v.__coreIdb){_coreBootRef=v.__coreIdb;_coreOverflowMode=true;}return mergeStateData(v);}}catch(e){}return seed();}
 let _bootImagesPromise=null;
 let _saveTimer=null,_savePending=false,_saveLast=0,_saveOkLast=0;
 function isQuotaError(e){const n=(e&&e.name||'')+' '+(e&&e.message||'');return /quota|storage|exceeded|full/i.test(n);}
+function storedTextBytes(v){v=String(v||'');try{return new Blob([v]).size;}catch(_){try{return unescape(encodeURIComponent(v)).length;}catch(__){return v.length*2;}}}
+function coreBootShell(savedAt){const d=defState();return {settings:d.settings,me:d.me,__coreIdb:{ver:1,savedAt:+savedAt||Date.now()},_fresh:false};}
+function writeCoreBootShell(savedAt){localStorage.setItem(KEY,JSON.stringify(coreBootShell(savedAt)));_coreBootRef={ver:1,savedAt:+savedAt||Date.now()};}
+function queueCoreMirror(json,savedAt,activateOverflow){_coreQueuedSave={json,savedAt,activateOverflow:!!activateOverflow};_coreLogicalBytes=storedTextBytes(json);if(_coreSavePending)return _coreMirrorWrite;_coreSavePending=true;
+  _coreMirrorWrite=(async()=>{let ok=true;while(_coreQueuedSave){const job=_coreQueuedSave;_coreQueuedSave=null;try{await imgPut(CORE_IDB_KEY,{ver:1,savedAt:job.savedAt,json:job.json});if(job.activateOverflow||_coreOverflowMode){_coreOverflowMode=true;writeCoreBootShell(job.savedAt);}_saveOkLast=Date.now();_coreFailureAt=0;ok=true;}catch(e){ok=false;storageSaveFailure(e,true);}}_coreSavePending=false;return ok;})();return _coreMirrorWrite;}
 function saveNow(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}
   if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;
-  try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));_saveLast=Date.now();_saveOkLast=_saveLast;return true;}catch(e){toast(isQuotaError(e)?'核心存档写不进去了，先导出备份再清理旧聊天/图片':'保存失败，先别退出，建议导出备份');try{storageFullAlert(e);}catch(_){}return false;}}
+  if(_coreBootRef&&!_appBootFinished)return true;
+  const savedAt=Date.now();let json;try{S._persistedAt=savedAt;json=JSON.stringify(S,_imgReplacer);}catch(e){storageSaveFailure(e,false);return false;}
+  const bytes=storedTextBytes(json),overflow=_coreOverflowMode||bytes>CORE_INLINE_LIMIT;_coreLogicalBytes=bytes;_saveLast=savedAt;
+  if(overflow){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);return true;}
+  try{localStorage.setItem(KEY,json);_saveOkLast=savedAt;return true;}catch(e){if(isQuotaError(e)){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);if(Date.now()-_coreFailureAt>60000){_coreFailureAt=Date.now();toast('核心存档偏大，正在自动迁入大容量存储');}return true;}storageSaveFailure(e,false);return false;}}
+function saveNowAsync(){const ok=saveNow();return _coreOverflowMode?_coreMirrorWrite.then(Boolean):Promise.resolve(ok);}
 function save(delay){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
 let _imgCache={},_imgRev=new Map(),_imgReady=new Set(),_imgSeq=0,_heavy={},_heavyReady=new Set();
-function imgDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiImg',1);r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('img');}catch(_){}};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej();});}
-function imgPut(k,v){return imgDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej();}));}
-function imgGet(k){return imgDB().then(db=>new Promise(res=>{const tx=db.transaction('img','readonly');const q=tx.objectStore('img').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);})).catch(()=>null);}
-function imgAll(){return imgDB().then(db=>new Promise(res=>{const out={};const tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){if(String(c.key).indexOf('__')!==0)out[c.key]=c.value;c.continue();}else res(out);};cur.onerror=()=>res(out);})).catch(()=>({}));}
-function imgDel(k){return imgDB().then(db=>new Promise(res=>{const tx=db.transaction('img','readwrite');tx.objectStore('img').delete(k);tx.oncomplete=()=>res();tx.onerror=()=>res();})).catch(()=>{});}
+function imgDB(){return new Promise((res,rej)=>{let settled=false;const r=indexedDB.open('yibeiImg',1),fail=()=>{if(settled)return;settled=true;rej(r.error||new Error('IndexedDB unavailable'));};r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('img');}catch(_){}};r.onsuccess=e=>{if(settled){try{e.target.result.close();}catch(_){}return;}settled=true;const db=e.target.result;db.onversionchange=()=>{try{db.close();}catch(_){}};res(db);};r.onerror=fail;r.onblocked=fail;});}
+function imgPut(k,v){return imgDB().then(db=>new Promise((res,rej)=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);}catch(e){try{db.close();}catch(_){}rej(e);return;}const done=(ok,e)=>{try{db.close();}catch(_){}ok?res():rej((e&&e.target&&e.target.error)||tx.error||new Error('IndexedDB write failed'));};tx.oncomplete=()=>done(true);tx.onerror=e=>done(false,e);tx.onabort=e=>done(false,e);}));}
+function imgGet(k){return imgDB().then(db=>new Promise(res=>{let value=null,tx;try{tx=db.transaction('img','readonly');const q=tx.objectStore('img').get(k);q.onsuccess=()=>{value=q.result;};q.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(null);return;}const done=()=>{try{db.close();}catch(_){}res(value);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>null);}
+function imgAll(){return imgDB().then(db=>new Promise(res=>{const out={};let tx;try{tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){if(String(c.key).indexOf('__')!==0)out[c.key]=c.value;c.continue();}};cur.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>({}));}
+function imgDel(k){return imgDB().then(db=>new Promise(res=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').delete(k);}catch(_){try{db.close();}catch(__){}res();return;}const done=()=>{try{db.close();}catch(_){}res();};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>{});}
 function isBigImg(v){return typeof v==='string'&&v.length>2000&&v.indexOf('data:image')===0;}
 async function primeImageForSave(v){if(!isBigImg(v))return;let key=_imgRev.get(v);if(!key){key='i'+(_imgSeq++)+Date.now().toString(36);_imgRev.set(v,key);_imgCache[key]=v;}await imgPut(key,v);_imgReady.add(key);}
 // 存档时：已确认写进 IndexedDB 的大图→换成短引用 idb:key；新图先照旧存、并异步写进库，下次保存才精简（确保绝不丢图）
@@ -433,7 +448,8 @@ function _rehydrate(o){if(!o||typeof o!=='object')return;for(const k in o){const
 function mergeBootMessages(restored,live){restored=restored&&typeof restored==='object'?restored:{};if(!live||typeof live!=='object')return restored;for(const k of Object.keys(live)){if(k==='__idb'||!Array.isArray(live[k])||!live[k].length)continue;const dst=Array.isArray(restored[k])?restored[k]:(restored[k]=[]),seen=new Set(dst.map(m=>m&&m.id).filter(Boolean));for(const m of live[k]){if(!m)continue;if(m.id&&seen.has(m.id))continue;dst.push(m);if(m.id)seen.add(m.id);}dst.sort((a,b)=>(+a.time||0)-(+b.time||0));}return restored;}
 function repairWxLogoutEmoji(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(!m||m.type!=='sys'||typeof m.content!=='string')return;const next=m.content.replace(/^🔓\s+(?=.+退出了你的微信登录$)/,'');if(next!==m.content){m.content=next;changed=true;}});}}catch(_){}return changed;}
 function repairStaleVisionStates(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(m&&m.type==='image'&&m.role==='user'&&m.visionState==='pending'&&!_visionTasks.has(m.id)){m.visionState='failed';m.visionError='上次识图被页面刷新中断，点图片下方可重试';changed=true;}});}}catch(_){}return changed;}
-async function bootImages(){try{_imgCache=await imgAll();_imgRev=new Map();_imgReady=new Set();for(const k in _imgCache){_imgRev.set(_imgCache[k],k);_imgReady.add(k);}
+async function bootOverflowCore(){if(!_coreBootRef)return false;const rec=await imgGet(CORE_IDB_KEY),savedAt=+(rec&&rec.savedAt||0),needed=+(_coreBootRef&&_coreBootRef.savedAt||0);if(!rec||!rec.json||savedAt<needed)throw new Error('大容量核心存档暂时无法读取，请不要清除网站数据并重新打开');let restored;try{restored=JSON.parse(rec.json);}catch(_){throw new Error('大容量核心存档校验失败，请用最近的备份恢复');}if(!restored||!restored.settings)throw new Error('大容量核心存档内容不完整');S=mergeStateData(restored);_coreOverflowMode=true;_coreBootRef={ver:1,savedAt};_coreLogicalBytes=storedTextBytes(rec.json);normalizeLoadedState();return true;}
+async function bootImages(){await bootOverflowCore();try{_imgCache=await imgAll();_imgRev=new Map();_imgReady=new Set();for(const k in _imgCache){_imgRev.set(_imgCache[k],k);_imgReady.add(k);}
     // 回填搬进大空间的聊天记录
     if(S.messages&&S.messages.__idb==='messages'){const live=S.messages,added=Object.keys(live).some(k=>k!=='__idb'&&Array.isArray(live[k])&&live[k].length),b=await imgGet('__messages');if(b){try{S.messages=mergeBootMessages(JSON.parse(b),live);if(added){_heavy.messages='';_heavyReady.delete('messages');save(0);}else{_heavy.messages=b;_heavyReady.add('messages');}}catch(_){S.messages=mergeBootMessages({},live);}}else{S.messages=mergeBootMessages({},live);}}
     {const p=S.me&&S.me.phoneFriend;if(p&&p.messages&&p.messages.__idb==='phoneFriendMessages'){const key='__pf_messages_'+(p.messages.id||p.id||'main'),b=await imgGet(key);if(b){try{p.messages=JSON.parse(b);_heavy['pfMessages:'+key]=b;_heavyReady.add('pfMessages:'+key);}catch(_){p.messages={};p.lastSync=0;p._forceFullSync=1;}}else{p.messages={};p.lastSync=0;p._forceFullSync=1;}}else if(p&&p.messages&&p.messages.__idb){p.messages={};p.lastSync=0;p._forceFullSync=1;}}
@@ -1152,7 +1168,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=639';
+  const url='sw.js?v=640';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1720,10 +1736,10 @@ function musicSwitchSongForSession(song,cid,spoken){musicInit();const sess=S.mus
   S.music.chat.push({cid,role:'sys',content:line,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);
   musicMirrorToWechat(cid,'sys',line+(spoken?'，因为'+S.me.name+'说：'+spoken:''));
   mShowBub('r','切到 '+(song.title||'这首歌'));musicPlay(song.id);return true;}
-function mIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiMusic',1);r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('audio');}catch(_){}};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej();});}
-function mPut(k,b){return mIDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').put(b,k);tx.oncomplete=()=>res();tx.onerror=()=>rej();}));}
-function mGet(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readonly');const q=tx.objectStore('audio').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);}));}
-function mDelIDB(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').delete(k);tx.oncomplete=()=>res();tx.onerror=()=>res();})).catch(()=>{});}
+function mIDB(){return new Promise((res,rej)=>{let settled=false;const r=indexedDB.open('yibeiMusic',1),fail=()=>{if(settled)return;settled=true;rej(r.error||new Error('Music storage unavailable'));};r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('audio');}catch(_){}};r.onsuccess=e=>{if(settled){try{e.target.result.close();}catch(_){}return;}settled=true;const db=e.target.result;db.onversionchange=()=>{try{db.close();}catch(_){}};res(db);};r.onerror=fail;r.onblocked=fail;});}
+function mPut(k,b){return mIDB().then(db=>new Promise((res,rej)=>{let tx;try{tx=db.transaction('audio','readwrite');tx.objectStore('audio').put(b,k);}catch(e){try{db.close();}catch(_){}rej(e);return;}const done=(ok,e)=>{try{db.close();}catch(_){}ok?res():rej((e&&e.target&&e.target.error)||tx.error||new Error('Music storage write failed'));};tx.oncomplete=()=>done(true);tx.onerror=e=>done(false,e);tx.onabort=e=>done(false,e);}));}
+function mGet(k){return mIDB().then(db=>new Promise(res=>{let value=null,tx;try{tx=db.transaction('audio','readonly');const q=tx.objectStore('audio').get(k);q.onsuccess=()=>{value=q.result;};q.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(null);return;}const done=()=>{try{db.close();}catch(_){}res(value);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>null);}
+function mDelIDB(k){return mIDB().then(db=>new Promise(res=>{let tx;try{tx=db.transaction('audio','readwrite');tx.objectStore('audio').delete(k);}catch(_){try{db.close();}catch(__){}res();return;}const done=()=>{try{db.close();}catch(_){}res();};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>{});}
 function mBlobDataURL(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result||'');r.onerror=()=>res('');r.readAsDataURL(b);});}
 function mDataURLBlob(s){try{const a=String(s||'').split(','),m=(a[0]||'').match(/data:([^;]+)/),bin=atob(a[1]||''),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:(m&&m[1])||'application/octet-stream'});}catch(e){return null;}}
 function openMusic(){musicInit();go('music');}
@@ -1845,13 +1861,13 @@ function musicChatHistoryModal(){musicInit();const sess=S.music.session;let rows
 async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!songs.length){toast('还没有歌单');return;}toast('正在打包歌单…');
   try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
     for(const s of songs){const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}pack.music.songs.push(x);}
-    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});downloadBlob(blob,'小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json');toast('歌单已导出');
+    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'}),mode=await beautySaveFile(blob,'小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json');toast(mode==='cancelled'?'已取消导出':mode==='shared'?'歌单已生成，请存储到文件':'歌单已导出');
   }catch(e){toast('导出失败，文件太大；请用“分首导出”');}}
 function musicSafeName(s){return String(s||'未命名').replace(/[\\/:*?"<>|]/g,'_').slice(0,40)||'未命名';}
 async function musicExportOne(id){musicInit();const s=(S.music.songs||[]).find(x=>x.id===id);if(!s){toast('没找到这首');return;}toast('正在导出…');
   try{const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}
     const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[x],loop:false,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:''}};
-    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'});downloadBlob(blob,'小手机单曲_'+musicSafeName(s.title)+'.json');toast('已导出 '+(s.title||'这首歌'));
+    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'}),mode=await beautySaveFile(blob,'小手机单曲_'+musicSafeName(s.title)+'.json');toast(mode==='cancelled'?'已取消导出':mode==='shared'?'单曲文件已生成，请存储到文件':'已导出 '+(s.title||'这首歌'));
   }catch(e){toast('这首也太大了，建议重新上传音频版');}}
 function musicExportOneModal(){musicInit();const songs=S.music.songs||[];const list=songs.length?songs.map(s=>`<div class="it"><span style="flex:1;color:#eee">${esc(s.title||'未命名')}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><button class="minibtn" onclick="musicExportOne('${s.id}')">导出</button></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌</div>';
   openModal(`<h3>分首导出</h3><div class="hint">录屏/大文件不要一次性导出全部，点每首右边的“导出”，到主屏幕版再逐个导入。</div><div class="section" style="max-height:54vh;overflow:auto">${list}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
@@ -2609,7 +2625,8 @@ async function clearAllData(){
   try{home();}catch(_){render();}
   toast('已清空记录；美化、真人关系和音乐库已保留');
 }
-function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}registerSW().finally(()=>Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许')));}
+function requestNotificationPermission(){return new Promise(res=>{let done=false,finish=p=>{if(done)return;done=true;res(p||Notification.permission||'default');};try{const out=Notification.requestPermission(finish);if(out&&typeof out.then==='function')out.then(finish).catch(()=>finish('default'));}catch(_){finish('default');}});}
+function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}registerSW().finally(()=>requestNotificationPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许')));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
   const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
   if(!base||!key){o.style.color='#e85';o.textContent='先填地址和 Key';return;}
@@ -7937,8 +7954,9 @@ async function remoteControlExecute(a,c){const app=a.app||remoteControlAppKey(a.
 function remoteControlCaptionMs(t){return Math.max(4600,Math.min(10000,Array.from(String(t||'')).length*190));}
 function remoteControlRoleTextLines(raw){if(/^\s*[\[【]?\s*(?:不说话|保持沉默|跳过发言)\s*[\]】]?\s*$/.test(String(raw||'')))return[];return splitBubbles(cleanReply(raw)).map(x=>x.replace(/^[「"']+|[」"']+$/g,'').trim()).filter(x=>x&&!/^(?:系统|提示|说明)[:：]/.test(x)&&!LEAKRE.test(x)&&!/^(?:不说话|保持沉默|跳过发言)$/.test(x)).slice(0,2);}
 function remoteControlDeleteCapability(a,c){if(!a||a.op!=='view')return null;if(a.targetType==='role'){const t=remoteControlFindRole(a.targetId,a.targetName,c&&c.id);return t?{kind:'contact'}:null;}if(a.targetType==='moment'){const t=remoteControlFindMoment(a);return t&&t.authorId==='me'?{kind:'post'}:null;}if(a.targetType==='xPost'){const t=remoteControlFindTweet(a);return t&&t.who==='me'?{kind:'post'}:null;}if(a.targetType==='dyVideo'){const t=remoteControlFindDy(a);return t&&t.cid==='me'?{kind:'post'}:null;}if(a.targetType==='xDm'||a.targetType==='dyDm')return remoteControlFindDmThread(a)?{kind:'dmThread'}:null;return null;}
+function replaceChildrenCompat(el,node){if(!el)return;if(typeof el.replaceChildren==='function'){if(node==null)el.replaceChildren();else el.replaceChildren(node);return;}while(el.firstChild)el.removeChild(el.firstChild);if(node)el.appendChild(node);}
 async function remoteControlRoleReaction(c,a,r){
-  const cap=$('#remoteCaption');if(cap)cap.replaceChildren();
+  const cap=$('#remoteCaption');if(cap)replaceChildrenCompat(cap);
   if(['wechatList','xDmList','dyDmList'].includes(a&&a.targetType))return{lines:[],deleteIntent:false,messageIndex:-1};
   const task=a.op==='view'?'你刚刚亲手打开并仔细看完「'+(a.targetName||r.label)+'」':'你刚刚实际执行了「'+(r.detail||a.op)+'」';
   const capability=remoteControlDeleteCapability(a,c),deleteRule=capability?('\n【删除决定必须一致】这个目标允许你删除。若你真正觉得它碍眼、不舒服、越界、不想再看到，或你的台词会说“删掉/别留/我来处理”，delete必须为true；不能嘴上明确要删却返回false。'+(capability.kind==='dmThread'?'这里的删除是删除当前整个私信会话，不是只删其中一条消息；messageIndex写-1。':'删除当前目标时messageIndex写-1。')):'\n当前目标不能删除，delete必须为false、messageIndex写-1。';
@@ -7964,7 +7982,7 @@ function remoteControlNavigate(a,r){
   if(app==='food'){remoteControlSetPage('food');if(a&&a.op==='view')setTimeout(()=>{if(remoteControlActive())openFoodOrders();},120);return;}
   if(app==='offline'){remoteControlSetPage('home');setTimeout(()=>{if(remoteControlActive())openOfflineMenu();},120);return;}
   const routes={music:'music',calendar:'calendar',mail:'mail',tasks:'tasks',settings:'settings'};remoteControlSetPage(routes[app]||'home');}
-function remoteControlCaption(say){const cap=$('#remoteCaption');if(!cap||!say)return;const b=document.createElement('div');b.className='remote-caption-bubble';b.textContent=say;cap.replaceChildren(b);}
+function remoteControlCaption(say){const cap=$('#remoteCaption');if(!cap||!say)return;const b=document.createElement('div');b.className='remote-caption-bubble';b.textContent=say;replaceChildrenCompat(cap,b);}
 function remoteControlPointer(x,y){const p=$('#remotePointer');if(!p)return;p.style.setProperty('--tap-x',typeof x==='number'?x+'px':x);p.style.setProperty('--tap-y',typeof y==='number'?y+'px':y);p.classList.remove('tap');void p.offsetWidth;p.classList.add('tap');}
 async function remoteControlWechatEnterFromList(a){if(!remoteControlActive())return;wxTab='chats';remoteControlSetPage('wechat');await sleep(900);if(!remoteControlActive())return;const rows=Array.from(document.querySelectorAll('.list .row')),row=rows.find(x=>{const n=x.querySelector('.n');return n&&String(n.textContent||'').trim().includes(a.targetName||'');}),layer=$('#remoteControlLayer');if(row){try{row.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){row.scrollIntoView();}await sleep(700);if(layer){const rr=row.getBoundingClientRect(),lr=layer.getBoundingClientRect();remoteControlPointer(rr.left-lr.left+Math.min(70,rr.width*.2),rr.top-lr.top+rr.height/2);}}else remoteControlPointer('24%','42%');await sleep(900);}
 async function remoteControlWechatExitToList(){if(!remoteControlActive())return;remoteControlPointer('6%','5%');await sleep(650);if(!remoteControlActive())return;wxTab='chats';remoteControlSetPage('wechat');await sleep(1100);}
@@ -9361,9 +9379,9 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'North导出文件';a.style.display='none';document.body.appendChild(a);
   try{a.click();}finally{setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}try{if(a.parentNode)a.parentNode.removeChild(a);}catch(_){}},3000);}}
 async function exportData(){const data=await fullBackupState();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  downloadBlob(blob,'North备份_'+new Date().toISOString().slice(0,10)+'.json');toast('已导出');}
+  const name='North备份_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”');else toast('已导出');}
 function readJsonFile(f,onData){const r=new FileReader();r.onerror=()=>toast('文件读取失败，请重新选择');r.onload=async()=>{try{await onData(JSON.parse(r.result));}catch(e){toast((e&&e.message)||'文件读不了');}};r.readAsText(f);}
-function importData(){pickFile('.json',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}if(!d||!d.settings)throw new Error('不是小手机备份或美化包');S=mergeStateData(d,{keepPhoneFriend:true});phoneFriendState();if(saveNow()===false)throw new Error('导入后保存失败，请先清理存储空间');render();toast('完整备份已导入');}));}
+function importData(){pickFile('.json',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}if(!d||!d.settings)throw new Error('不是小手机备份或美化包');S=mergeStateData(d,{keepPhoneFriend:true});phoneFriendState();if(!await saveNowAsync())throw new Error('导入后保存失败，请检查浏览器存储权限');render();toast('完整备份已导入');}));}
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
@@ -9390,7 +9408,7 @@ function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.
   (pack.groups||[]).forEach(src=>{const dst=beautyFind(S.groups,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle','memberBubbleStyles']);});
   if(pack.beautyArchive!=null){S.beautyArchive=beautyClone(pack.beautyArchive);n++;}return n;}
 async function primeBeautyPackImages(pack){const found=new Set();(function walk(v){if(isBigImg(v)){found.add(v);return;}if(!v||typeof v!=='object')return;Object.keys(v).forEach(k=>walk(v[k]));})(pack);for(const img of found)await primeImageForSave(img);return found.size;}
-async function applyBeautyPack(pack){await primeBeautyPackImages(pack);const n=mergeBeautyPack(pack);if(saveNow()===false)throw new Error('美化图片保存失败，请先清理存储空间');try{renderLockScreen(true);}catch(_){}render();return n;}
+async function applyBeautyPack(pack){await primeBeautyPackImages(pack);const n=mergeBeautyPack(pack);if(!await saveNowAsync())throw new Error('美化图片保存失败，请检查浏览器存储权限');try{renderLockScreen(true);}catch(_){}render();return n;}
 function importBeautyData(){pickFile('.json',f=>readJsonFile(f,async d=>{const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项），壁纸和图标已恢复');}));}
 function cacheMediaSize(v){v=''+(v||'');if(!v)return 0;if(/^idb-audio:/i.test(v)){try{return ((_imgCache&&_imgCache['__audio_'+v.slice(10)])||'').length||0;}catch(_){return 0;}}return /^(data:image\/|data:audio\/|idb:)/i.test(v)?v.length:0;}
 function mergeCacheStat(a,b){a.n+=(b&&b.n)||0;a.bytes+=(b&&b.bytes)||0;return a;}
@@ -9458,7 +9476,7 @@ function cloudSyncModal(){const id=cloudId();const last=S.settings.cloudLast?(fm
     <div class="it" style="margin-top:8px"><span>自动备份<br><small style="color:#888">打开后：进App时+之后每10分钟自动备份一次（这台push到云）</small></span><span class="sw ${S.settings.cloudAuto?'on':''}" onclick="S.settings.cloudAuto=!S.settings.cloudAuto;save();this.classList.toggle('on');toast(S.settings.cloudAuto?'已开自动备份':'已关自动备份')"></span></div>
     <div class="hint" style="color:#888;margin-top:6px">提示：云ID是你的钥匙，别随便发别人。恢复会用云端覆盖这台当前的数据。</div>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function cloudCopyId(){const id=cloudId();try{navigator.clipboard&&navigator.clipboard.writeText(id);}catch(_){}const el=$('#cl_id');if(el){el.select&&el.select();}toast('已复制云ID');}
+function cloudCopyId(){const id=cloudId(),el=$('#cl_id');copyTextCompat(id,el).then(ok=>toast(ok?'已复制云ID':'请长按输入框手动复制云ID'));}
 function cloudSaveKeys(){S.settings=S.settings||{};S.settings.cloudUrl=((($('#cl_url')||{}).value)||'').trim();S.settings.cloudKey=((($('#cl_key')||{}).value)||'').trim();save();toast(cloudUrl()&&cloudKey()?'✅ 云配置已保存':'已保存(还差地址或Key)');cloudSyncModal();}
 async function cloudDoBackup(){toast('备份中…☁️');try{const n=await cloudBackup();toast('✅ 已备份到云（'+Math.round(n/1024)+'KB）');cloudSyncModal();}catch(e){toast('备份失败：'+e.message);}}
 async function cloudDoRestore(){if(!await uiConfirm('用云端备份覆盖这台设备现在的数据？\n（当前这台会被云上的替换，建议先备份当前的）'))return;toast('恢复中…');try{const w=await cloudRestore();closeModal();render();toast('✅ 已从云恢复');}catch(e){toast('恢复失败：'+e.message);}}
@@ -9469,35 +9487,39 @@ setInterval(cloudAutoTick,600000);setTimeout(()=>{if(S.settings&&S.settings.clou
 /* ---------- 存储用量 ---------- */
 let _storageEstimate={usage:0,quota:0,ts:0};
 function refreshStorageEstimate(){try{if(!(navigator.storage&&navigator.storage.estimate))return;navigator.storage.estimate().then(x=>{if(x&&x.quota){_storageEstimate={usage:+x.usage||0,quota:+x.quota||0,ts:Date.now()};}}).catch(()=>{});}catch(_){}}
-function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=new Blob([s||JSON.stringify(S)]).size;}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
+function requestPersistentStorage(){try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>false);}catch(_){}}
+function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=storedTextBytes(s||JSON.stringify(S));}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
   const CAP=5*1024*1024,est=(_storageEstimate&&Date.now()-_storageEstimate.ts<120000)?_storageEstimate:null;
   const devicePct=est&&est.quota?Math.min(100,Math.round(est.usage/est.quota*100)):0;
-  return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100)),deviceMb:est?est.usage/1048576:0,deviceCapMb:est?est.quota/1048576:0,devicePct,hasDevice:!!est,okRecently:_saveOkLast&&Date.now()-_saveOkLast<180000};}
-function storageMeter(){refreshStorageEstimate();const si=storageInfo();const col=si.pct>=92?'#fa5151':si.pct>=75?'#ffb83b':'#19a463';
-  return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
-    <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${si.pct}%;background:${col};transition:.3s"></div></div>
-    <div class="hint" style="padding:7px 0 0">${si.pct>=92?'核心存档偏大，但图片和长聊天会自动搬进大空间；只要保存正常，不会再误弹满额提醒。':si.pct>=75?'核心存档偏多，保存正常时不用急着清。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}${si.hasDevice?`<br>浏览器总空间约 ${si.deviceMb.toFixed(1)} / ${si.deviceCapMb.toFixed(0)}MB（${si.devicePct}%）`:''}</div></div></div>`;}
+  const logicalBytes=_coreLogicalBytes||bytes,overflow=!!_coreOverflowMode;
+  return {bytes,mb:bytes/1048576,logicalBytes,logicalMb:logicalBytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100)),overflow,pending:_coreSavePending,deviceMb:est?est.usage/1048576:0,deviceCapMb:est?est.quota/1048576:0,devicePct,hasDevice:!!est,okRecently:_saveOkLast&&Date.now()-_saveOkLast<180000};}
+function storageMeter(){refreshStorageEstimate();const si=storageInfo(),meterPct=si.overflow?(si.hasDevice?si.devicePct:(si.pending?32:18)):si.pct,col=meterPct>=92?'#fa5151':meterPct>=75?'#ffb83b':'#19a463',label=si.overflow?('大容量存档 '+si.logicalMb.toFixed(2)+'MB'+(si.pending?' · 保存中':'')):(si.mb.toFixed(2)+' / '+si.capMb+'MB（'+si.pct+'%）'),hint=si.overflow?'核心索引已自动精简，聊天、图片和其他增长数据保存在浏览器的大容量库中，不再受5MB核心额度限制。':si.pct>=75?'核心存档正在接近小容量上限，达到安全阈值后会自动迁入大容量存储。':'图片、长聊天和增长较快的数据会自动转入大容量存储。';
+  return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${label}</span></div>
+    <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${meterPct}%;background:${col};transition:.3s"></div></div>
+    <div class="hint" style="padding:7px 0 0">${hint}${si.hasDevice?`<br>浏览器总空间约 ${si.deviceMb.toFixed(1)} / ${si.deviceCapMb.toFixed(0)}MB（${si.devicePct}%）`:''}</div></div></div>`;}
 let _storeWarned=false;
-function checkStorageWarn(){refreshStorageEstimate();if(_storeWarned)return;const si=storageInfo();const realDanger=si.hasDevice&&si.devicePct>=92,coreDanger=si.pct>=99&&!si.okRecently;if(!realDanger&&!coreDanger)return;const last=+(S.settings&&S.settings.storageWarnAt||0);if(Date.now()-last<86400000)return;S.settings.storageWarnAt=Date.now();_storeWarned=true;save(0);
+function checkStorageWarn(){refreshStorageEstimate();if(_storeWarned)return;const si=storageInfo();const realDanger=si.hasDevice&&si.devicePct>=92,coreDanger=!si.overflow&&si.pct>=99&&!si.okRecently;if(!realDanger&&!coreDanger)return;const last=+(S.settings&&S.settings.storageWarnAt||0);if(Date.now()-last<86400000)return;S.settings.storageWarnAt=Date.now();_storeWarned=true;save(0);
   openModal(`<h3>${realDanger?'手机存储快满了':'核心存档偏大'}</h3><div style="font-size:14px;line-height:1.9;color:#333">${realDanger?`浏览器总空间已经用了 <b style="color:#fa5151">${si.devicePct}%</b>。`:`核心存档用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB</b>，最近没有确认保存成功。`}<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 用「清理缓存垃圾」或删一些旧聊天图片</div>
     <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">立即导出备份</button></div>`);}
-function storageFullAlert(e){const quota=isQuotaError(e);openModal(`<h3>${quota?'核心存档写不进去了':'保存失败'}</h3><div style="font-size:14px;line-height:1.9;color:#333">刚才有内容没能存进去。${quota?'<br>这通常是浏览器给 localStorage 的小额度满了，不代表手机总存储真的满。':''}<br><br>建议：<br>1️⃣ 点下面导出备份<br>2️⃣ 用「清理缓存垃圾」或删一些旧聊天图片</div>
+let _storageFailureToastAt=0,_storageFailureModalAt=0;
+function storageSaveFailure(e,largeStore){const now=Date.now(),msg=largeStore?'浏览器大容量存储暂时不可用，刚才的改动可能尚未落盘':'保存失败，先别退出并尽快导出备份';if(now-_storageFailureToastAt>60000){_storageFailureToastAt=now;toast(msg);}if(now-_storageFailureModalAt>300000){_storageFailureModalAt=now;storageFullAlert(e,largeStore);}}
+function storageFullAlert(e,largeStore){const quota=isQuotaError(e);openModal(`<h3>${largeStore?'大容量存档保存失败':quota?'核心存档写不进去了':'保存失败'}</h3><div style="font-size:14px;line-height:1.9;color:#333">刚才有内容没能确认写入。${largeStore?'<br>这通常是无痕/隐私模式、浏览器禁止网站存储，或系统正在回收站点空间。':quota?'<br>核心存档会自动尝试迁入大容量存储，不代表手机总存储真的满。':''}<br><br>建议：<br>1️⃣ 保持本页开启并点下面导出备份<br>2️⃣ 退出无痕模式，确认浏览器允许网站保存数据</div>
   <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">立即导出备份</button></div>`);}
 
 /* ---------- 时钟 & 启动 ---------- */
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 let _androidResumeRepairAt=0;
-function androidResumeRepair(force){const host=document.getElementById('app');if(!force&&host&&host.firstElementChild){window.__northBootReady=true;return;}const now=Date.now();if(now-_androidResumeRepairAt<800)return;_androidResumeRepairAt=now;try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
-initBattery();
+function androidResumeRepair(force){if(!_appBootFinished)return;const host=document.getElementById('app');if(!force&&host&&host.firstElementChild){window.__northBootReady=true;return;}const now=Date.now();if(now-_androidResumeRepairAt<800)return;_androidResumeRepairAt=now;try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
 window.addEventListener('pagehide',()=>{sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{sleepMarkAway();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
 window.addEventListener('pageshow',e=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});
-try{sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}/* 先立刻渲染；失败时由安卓启动保护显示中文自救页 */
-_bootImagesPromise=bootImages().then(()=>{render();window.__northBootReady=true;}).catch(e=>{if(!window.__northBootReady&&typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'图片数据载入失败');});/* 图片从 IndexedDB 回填好后再重渲染一次 */
+function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();initBattery();requestPersistentStorage();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}
+if(!_coreBootRef)finishAppBoot();else{const host=document.getElementById('app');if(host)host.innerHTML='<div class="bootbox"><div class="bootcard"><div class="bootlogo">💾</div><div class="boottitle">正在读取大容量存档</div><div class="bootmsg">聊天、图片和设置正在从浏览器存储中恢复，请稍候。</div></div></div>';}
+_bootImagesPromise=bootImages().then(()=>{if(!_appBootFinished)finishAppBoot();else render();window.__northBootReady=true;}).catch(e=>{window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'存档数据载入失败');});/* 大容量核心、聊天和图片从 IndexedDB 回填好后再渲染 */
 setTimeout(()=>pollExternalEvents(true),2600);
 setTimeout(idleOpenHeartbeatStart,3800);
 setInterval(()=>pollExternalEvents(false),30000);
