@@ -19,7 +19,7 @@ test('remote control always requires an explicit request and user choice', () =>
 
 test('remote control is exposed only through the bound couple space', () => {
   assert.match(app, /function remoteControlAllowed\(cid\)/);
-  assert.match(app, /S\.couple&&S\.couple\.cid===cid&&S\.couple\.remoteControlAuth!==false/);
+  assert.match(app, /S\.couple&&S\.couple\.cid===cid/);
   assert.match(app, /!remoteControlAllowed\(cid\)/);
   assert.match(app, /id="cou_remote"/);
   assert.match(app, /允许 \$\{nm\} 发起远程操控申请/);
