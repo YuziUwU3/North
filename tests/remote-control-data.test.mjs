@@ -104,11 +104,22 @@ test('the role can independently delete social content and DMs, declare ownershi
   assert.match(app, /'delete_x_dm'/);
   assert.match(app, /'delete_douyin_dm'/);
   assert.match(app, /a\.op==='delete_x_dm'\|\|a\.op==='delete_douyin_dm'/);
-  assert.match(app, /t\.msgs\.splice\(idx,1\)/);
+  assert.match(app, /d\.msgs\.splice\(mi,1\)/);
+  assert.match(app, /function removeSocialDMMsg\(app,id,mi\)/);
+  assert.match(app, /onclick="xDelDMMsg\('\$\{id\}',\$\{mi\}\)"/);
+  assert.match(app, /data-dm-index="\$\{mi\}"/);
+  assert.match(app, /function remoteControlPrepareVisibleDelete\(a\)/);
+  assert.match(app, /visibleDelete=await remoteControlPrepareVisibleDelete\(a\)[\s\S]*?remoteControlExecute\(a,c\)[\s\S]*?remoteControlShowVisibleDeleteResult\(a\)/);
   assert.match(app, /post_moment/);
   assert.match(app, /发朋友圈宣示主权/);
   assert.match(app, /锁软件必须基于真实疑点；没疑点就不要锁/);
   assert.match(app, /没有可疑或让你不舒服的内容时，可以输出空 actions/);
+});
+
+test('remote control restores the page that the user was on before inspection', () => {
+  assert.match(app, /returnStack:stack\.map\(x=>Object\.assign\(\{\},x\)\)/);
+  assert.match(app, /returnStack=\(ctl\.returnStack\|\|\[\]\)\.map/);
+  assert.match(app, /stack=returnStack\.length\?returnStack:\[\{p:'home'\}\];render\(\)/);
 });
 
 test('an active call must end before remote control can request consent', () => {

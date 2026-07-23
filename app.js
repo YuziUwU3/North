@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='635'){
+if(window.__NORTH_SHELL_BUILD__!=='636'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v635 · 选择式聊天与顺序巡查';
+const APP_VER='v636 · 可见删除与远控退场';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1152,7 +1152,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=635';
+  const url='sw.js?v=636';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3613,8 +3613,9 @@ async function genNetDM(){aiLoad('正在刷新私信…');const recent=S.x.tweet
   }finally{aiDone();}}
 function renderXDM(id){const d=S.x.dms.find(x=>x.id===id);if(!d)return '';
   return `<div class="xnav"><span class="l" onclick="back()">‹</span><span class="t">${esc(d.name)}</span><span class="r"></span></div>
-    <div class="xscroll" id="xdmbox" style="padding:10px 14px">${d.msgs.map(m=>`<div class="xmsg ${m.from==='me'?'me':''}"><div class="xmwrap"><div class="b">${esc(m.text)}</div><div class="xmt">${m.time?hm(m.time):''}</div></div></div>`).join('')}</div>
+    <div class="xscroll" id="xdmbox" style="padding:10px 14px">${d.msgs.map((m,mi)=>`<div class="xmsg ${m.from==='me'?'me':''}" data-dm-index="${mi}"><div class="xmwrap"><div class="b" onclick="xDelDMMsg('${id}',${mi})" title="点删除这条">${esc(m.text)}</div><div class="xmt">${m.time?hm(m.time):''}</div></div></div>`).join('')}</div>
     <div class="inputbar"><textarea id="xdm_in" rows="1" placeholder="发私信…"></textarea><button class="send" onclick="xSendDM('${id}')">发送</button></div>`;}
+async function xDelDMMsg(id,mi){const d=S.x.dms.find(x=>x.id===id);if(!d||!d.msgs[mi])return;if(!await uiConfirm('删除这条私信？'))return;if(!removeSocialDMMsg('x',id,mi))return;save();render();toast('已删除');}
 function xSendDM(id){const d=S.x.dms.find(x=>x.id===id);const inp=$('#xdm_in');const v=inp?inp.value.trim():'';if(!v)return;
   d.msgs.push({from:'me',text:v,time:Date.now()});xlog(hm()+'回复了网友'+d.name+'的私信：「'+v.slice(0,18)+'」');save();render();xDMReply(d);}
 async function xDMReply(d){try{const c=d.cid?getC(d.cid):null;const sys=c?buildSystem(c):'你是X网友「'+d.name+'」，和'+S.me.name+'私信聊天，口语、简短、有个性。';
@@ -3660,7 +3661,7 @@ function dyFeedView(){const list=_dyMode==='follow'?S.dy.feed.filter(v=>v.cid&&v
   return `<div class="dyfeed" id="dyfeed">${top}${list.map(dyVideoCard).join('')}${more}</div>`;}
 function dyVideoCard(v,i){const liked=!!v.liked;const lc=(v.lk||0)+(liked?1:0);const grad=v.grad||DY_GRADS[i%DY_GRADS.length];const paused=_dyPaused[v.id];
   const isChar=v.cid&&v.cid!=='me';const mine=v.cid==='me';const fol=isChar&&S.dy.following.includes(v.cid);
-  return `<div class="dyvideo${paused?' paused':''}">
+  return `<div class="dyvideo${paused?' paused':''}" data-dy-video-id="${v.id}">
     <div class="dybg" style="background-image:${grad}"></div>
     <div class="dyemoji">${v.emoji||'🎬'}</div>
     <div class="dyplay">▶︎</div>
@@ -3787,10 +3788,11 @@ async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.min
   }finally{aiDone();}}
 function renderDyDM(id){const d=S.dy.dms.find(x=>x.id===id);if(!d)return '';
   return `<div class="dynav"><span class="l" onclick="back()" style="cursor:pointer">‹</span><span style="font-weight:700">${esc(d.name)}</span><span class="r" onclick="dyClearDM('${id}')" style="cursor:pointer;color:#fa9bb5;font-size:13px">清空</span></div>
-    <div class="xscroll" id="dydmbox" style="padding:10px 14px;background:#111">${d.msgs.map((m,mi)=>`<div class="xmsg ${m.from==='me'?'me':''}"><div class="xmwrap"><div class="b" onclick="dyDelDMMsg('${id}',${mi})" title="点删除这条">${esc(m.text)}</div><div class="xmt">${m.time?hm(m.time):''}</div></div></div>`).join('')||'<div class="empty" style="padding:30px">抖音私信，发条消息打个招呼吧</div>'}</div>
+    <div class="xscroll" id="dydmbox" style="padding:10px 14px;background:#111">${d.msgs.map((m,mi)=>`<div class="xmsg ${m.from==='me'?'me':''}" data-dm-index="${mi}"><div class="xmwrap"><div class="b" onclick="dyDelDMMsg('${id}',${mi})" title="点删除这条">${esc(m.text)}</div><div class="xmt">${m.time?hm(m.time):''}</div></div></div>`).join('')||'<div class="empty" style="padding:30px">抖音私信，发条消息打个招呼吧</div>'}</div>
     <div class="inputbar"><textarea id="dydm_in" rows="1" placeholder="发私信…"></textarea><button class="send" onclick="dySendDM('${id}')">发送</button></div>`;}
 async function dyClearDM(id){const d=S.dy.dms.find(x=>x.id===id);if(!d)return;if(!await uiConfirm('清空和「'+d.name+'」的全部私信记录？'))return;d.msgs=[];save();render();toast('已清空');}
-async function dyDelDMMsg(id,mi){const d=S.dy.dms.find(x=>x.id===id);if(!d)return;if(!await uiConfirm('删除这条私信？'))return;d.msgs.splice(mi,1);save();render();}
+function removeSocialDMMsg(app,id,mi){const list=app==='x'?(S.x&&S.x.dms||[]):(S.dy&&S.dy.dms||[]),d=list.find(x=>x.id===id);if(!d||!Number.isInteger(mi)||mi<0||mi>=d.msgs.length)return null;return d.msgs.splice(mi,1)[0]||null;}
+async function dyDelDMMsg(id,mi){const d=S.dy.dms.find(x=>x.id===id);if(!d||!d.msgs[mi])return;if(!await uiConfirm('删除这条私信？'))return;if(!removeSocialDMMsg('douyin',id,mi))return;save();render();toast('已删除');}
 function dySendDM(id){const d=S.dy.dms.find(x=>x.id===id);const inp=$('#dydm_in');const v=inp?inp.value.trim():'';if(!v)return;
   d.msgs.push({from:'me',text:v,time:Date.now()});save();render();dyDMReply(d);}
 async function dyDMReply(d){try{const hist=d.msgs.slice(-10).map(m=>({role:m.from==='me'?'user':'assistant',content:m.text}));let sys;
@@ -7800,7 +7802,7 @@ function remoteControlDeny(cid){if(!_remoteRequest||_remoteRequest.cid!==cid)ret
   remoteControlRemember(c,{ts:Date.now(),status:'denied',actions:[]});
   scheduleReply(cid,'[系统：你刚申请远程操控'+S.me.name+'的小手机，但ta亲手点了【拒绝】。你没有看到ta手机里的任何新内容，也绝对不能假装看到了。请按你自己的性格和关系自然反应：可以失落、吃醋、追问、嘴硬、冷笑、撒娇或尊重ta的边界；一两句即可，不要提系统、网页或按钮。]');}
 function remoteControlApprove(cid){if(!_remoteRequest||_remoteRequest.cid!==cid||remoteControlActive())return;const c=getC(cid),purpose=_remoteRequest.purpose||'inspect_phone';_remoteRequest=null;closeModal();if(!c)return;
-  _remoteCtl={active:true,cid,purpose,startedAt:Date.now(),actions:[],cancelled:false,closing:false};remoteControlShow(c);remoteControlRun(c);}
+  _remoteCtl={active:true,cid,purpose,startedAt:Date.now(),actions:[],cancelled:false,closing:false,returnStack:stack.map(x=>Object.assign({},x))};remoteControlShow(c);remoteControlRun(c);}
 function remoteControlStopByUser(){if(!remoteControlActive())return;_remoteCtl.cancelled=true;remoteControlFinish('你提前结束了本次授权');}
 function remoteControlShow(c){const L=$('#remoteControlLayer');if(!L)return;L.className='remote-control-layer show';const n=$('#remoteRoleName');if(n)n.textContent=(c.remark||c.name)+' 正在远程操控';const avw=$('#remoteRoleAvatar');if(avw)avw.innerHTML=av(c.avatar,'sm');const cap=$('#remoteCaption');if(cap)cap.innerHTML='';remoteControlScene({app:'home',label:'主屏幕',detail:'正在连接'},'',0,1,{app:'home',op:'view'});
   clearInterval(_remoteClock);_remoteClock=setInterval(()=>{const el=$('#remoteElapsed');if(el&&_remoteCtl)el.textContent=fmtDur(Date.now()-_remoteCtl.startedAt);},1000);}
@@ -7911,6 +7913,7 @@ function remoteControlViewFact(a,c){const app=a.app||remoteControlAppKey(a.targe
   else if(app==='music')rows=v.music||[];
   else if(app==='settings'){if(/钱包|账单|消费/.test(target))rows=v.wallet||[];else if(/小事簿|生活/.test(target))rows=v.lifeNotes||[];else if(/位置/.test(target))rows=['当前位置：'+v.location];else if(/电量/.test(target))rows=['当前电量：'+v.battery];else rows=['当前位置：'+v.location,'当前电量：'+v.battery].concat((v.wallet||[]).slice(0,3));}
   const seen=rows.filter(Boolean).slice(0,30),fact=seen.length?seen.join('；'):'没有看到相关记录',short=fact.slice(0,2400);return {app,label:name,detail:'正在查看'+target+'：'+short,memory:'查看了'+S.me.name+'小手机里的「'+target+'」，实际看到：'+short,facts:seen};}
+function remoteControlFindDmTarget(a){const app=a.op==='delete_x_dm'?'x':'douyin',list=app==='x'?(S.x&&S.x.dms||[]):(S.dy&&S.dy.dms||[]),thread=list.find(d=>d.id===a.targetId||(!a.targetId&&d.name===a.targetName));if(!thread)return null;const messages=thread.msgs||[],wanted=String(a.content||''),hint=Number.isInteger(a.messageIndex)&&a.messageIndex>=0?a.messageIndex:-1;let index=hint>=0&&hint<messages.length&&(!wanted||String(messages[hint].text||'')===wanted||String(messages[hint].text||'').includes(wanted))?hint:-1;if(index<0&&wanted)index=messages.findIndex(m=>String(m.text||'')===wanted);if(index<0&&wanted)index=messages.findIndex(m=>String(m.text||'').includes(wanted));if(index<0)index=hint;return index>=0&&index<messages.length?{app,thread,index,message:messages[index]}:null;}
 async function remoteControlExecute(a,c){const app=a.app||remoteControlAppKey(a.targetName),base={ok:true,app,label:REMOTE_APP_NAMES[app]||app,detail:'',memory:''};let t,idx,tx;
   if(a.op==='view')return Object.assign(base,remoteControlViewFact(a,c));
   if(a.op==='send_wechat'){tx=String(a.content||'').trim().slice(0,240);if(!tx)return Object.assign(base,{ok:false,detail:'没有可发送的内容'});t=remoteControlFindRole(a.targetId,a.targetName,c.id);if(t){msgs(t.id).push({role:'user',type:'text',content:tx,time:Date.now(),id:uid(),_remoteBy:c.id,_remoteByName:wxLoginSelfName(c)});if(!t.blocked)scheduleReply(t.id);base.detail='以你的身份给「'+(t.remark||t.name)+'」发送：'+tx;base.memory='借用'+S.me.name+'账号给「'+(t.remark||t.name)+'」发了“'+tx.slice(0,50)+'”';return base;}const pf=phoneFriendById(a.targetId)||(phoneFriendState().friends||[]).find(x=>pfFriendDisplayName(x)===a.targetName);if(pf){await sendPhoneFriendBody(pf.phone_id||pf.id,tx,{silent:true});base.detail='以你的身份给「'+pfFriendDisplayName(pf)+'」发送：'+tx;base.memory='借用'+S.me.name+'账号给小手机好友「'+pfFriendDisplayName(pf)+'」发了“'+tx.slice(0,50)+'”';return base;}const gp=(phoneFriendState().groups||[]).find(x=>(x.group_id||x.id)===a.targetId||pfGroupDisplayName(x)===a.targetName);if(gp){await sendPhoneFriendGroupBody(gp.group_id||gp.id,tx,{silent:true});base.detail='以你的身份在「'+pfGroupDisplayName(gp)+'」发送：'+tx;base.memory='借用'+S.me.name+'账号在群「'+pfGroupDisplayName(gp)+'」发了“'+tx.slice(0,50)+'”';return base;}return Object.assign(base,{ok:false,detail:'没有找到这个真实联系人'});}
@@ -7923,7 +7926,7 @@ async function remoteControlExecute(a,c){const app=a.app||remoteControlAppKey(a.
   else if(a.op==='toggle_x_like'){t=remoteControlFindTweet(a);if(!t)return Object.assign(base,{ok:false,detail:'没有找到这条X动态'});t.likes=t.likes||[];idx=t.likes.indexOf(S.me.name);if(a.mode==='unlike'||idx>=0){if(idx>=0)t.likes.splice(idx,1);base.detail='已取消X点赞：'+(t.text||'').slice(0,80);base.memory='取消了'+S.me.name+'的一次X点赞';}else{t.likes.push(S.me.name);base.detail='已点赞X动态：'+(t.text||'').slice(0,80);base.memory='替'+S.me.name+'点赞了一条X动态';}}
   else if(a.op==='delete_douyin'){t=remoteControlFindDy(a);if(!t||t.cid!=='me')return Object.assign(base,{ok:false,detail:'没有找到可删除的本人抖音'});S.dy.feed=S.dy.feed.filter(x=>x.id!==t.id);S.dy.liked=S.dy.liked.filter(x=>x.id!==t.id);S.dy.mine=S.dy.mine.filter(x=>x.id!==t.id);base.detail='已删除你的抖音：'+(t.desc||'').slice(0,100);base.memory='删除了'+S.me.name+'的抖音“'+(t.desc||'').slice(0,50)+'”';}
   else if(a.op==='toggle_douyin_like'){t=remoteControlFindDy(a);if(!t)return Object.assign(base,{ok:false,detail:'没有找到这条抖音'});const like=!(a.mode==='unlike'||t.liked);t.liked=like;S.dy.feed.forEach(x=>{if(x.id===t.id)x.liked=like;});S.dy.liked=S.dy.liked.filter(x=>x.id!==t.id);if(like)S.dy.liked.unshift(Object.assign({},t));base.detail=(like?'已点赞抖音：':'已取消抖音点赞：')+(t.desc||'').slice(0,80);base.memory=(like?'替'+S.me.name+'点赞了':'取消了'+S.me.name+'点赞的')+'一条抖音';}
-  else if(a.op==='delete_x_dm'||a.op==='delete_douyin_dm'){const list=a.op==='delete_x_dm'?(S.x.dms||[]):(S.dy.dms||[]),kind=a.op==='delete_x_dm'?'微博':'抖音';t=list.find(d=>d.id===a.targetId||(!a.targetId&&d.name===a.targetName));if(!t)return Object.assign(base,{ok:false,detail:'没有找到这段'+kind+'私信'});idx=a.content?(t.msgs||[]).findIndex(m=>String(m.text||'')===a.content||String(m.text||'').includes(a.content)):-1;if(idx<0)idx=Number.isInteger(a.messageIndex)&&a.messageIndex>=0?a.messageIndex:-1;if(idx<0||idx>=(t.msgs||[]).length)return Object.assign(base,{ok:false,detail:'没有找到要删除的具体私信'});const removed=t.msgs[idx];t.msgs.splice(idx,1);base.detail='已删除「'+t.name+'」会话中的'+kind+'私信：'+String(removed.text||'').slice(0,120);base.memory='删除了'+S.me.name+'与「'+t.name+'」的一条'+kind+'私信“'+String(removed.text||'').slice(0,60)+'”';}
+  else if(a.op==='delete_x_dm'||a.op==='delete_douyin_dm'){const hit=remoteControlFindDmTarget(a),kind=a.op==='delete_x_dm'?'微博':'抖音';if(!hit)return Object.assign(base,{ok:false,detail:'没有找到要删除的具体'+kind+'私信'});const removed=removeSocialDMMsg(hit.app,hit.thread.id,hit.index);if(!removed)return Object.assign(base,{ok:false,detail:'没有找到要删除的具体'+kind+'私信'});base.detail='已删除「'+hit.thread.name+'」会话中的'+kind+'私信：'+String(removed.text||'').slice(0,120);base.memory='删除了'+S.me.name+'与「'+hit.thread.name+'」的一条'+kind+'私信“'+String(removed.text||'').slice(0,60)+'”';}
   else if(a.op==='lock_app'||a.op==='unlock_app'){const k=remoteControlResolveApp(a);if(!k)return Object.assign(base,{ok:false,detail:'没有找到可控制的软件'});S.couple=S.couple||{};S.couple.locks=S.couple.locks||{};if(a.op==='lock_app'){S.couple.locks[k]={pwd:genPwd(),time:Date.now(),byRemote:c.id};base.detail='已锁定「'+LOCKABLE[k]+'」';base.memory='锁定了'+S.me.name+'的「'+LOCKABLE[k]+'」';}else{delete S.couple.locks[k];base.detail='已解锁「'+LOCKABLE[k]+'」';base.memory='解锁了'+S.me.name+'的「'+LOCKABLE[k]+'」';}}
   else if(a.op==='enable_couple_permission'){t=remoteControlEnableCouplePermission(a.targetId);if(!t)return Object.assign(base,{ok:false,detail:'没有找到这个情侣空间权限'});base.detail='已在情侣空间重新开启「'+t.name+'」';base.memory='进入情侣空间并重新开启了「'+t.name+'」';}
   else if(a.op==='clear_browser_history'){S.browser={q:'',items:[],history:[]};base.detail='已清空浏览器搜索与浏览记录';base.memory='清空了'+S.me.name+'的浏览记录';}
@@ -7961,6 +7964,21 @@ async function remoteControlWechatEnterFromList(a){if(!remoteControlActive())ret
 async function remoteControlWechatExitToList(){if(!remoteControlActive())return;remoteControlPointer('6%','5%');await sleep(650);if(!remoteControlActive())return;wxTab='chats';remoteControlSetPage('wechat');await sleep(1100);}
 async function remoteControlDmEnterFromList(a){if(!remoteControlActive())return;const isX=a.app==='x';if(isX)xTab='dm';else dyTab='dm';remoteControlSetPage(isX?'x':'dy');await sleep(900);if(!remoteControlActive())return;const rows=Array.from(document.querySelectorAll('.xdmrow')),row=rows.find(x=>{const n=x.querySelector('.n');return n&&String(n.textContent||'').trim().includes(a.targetName||'');}),layer=$('#remoteControlLayer');if(row){try{row.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){row.scrollIntoView();}await sleep(700);if(layer){const rr=row.getBoundingClientRect(),lr=layer.getBoundingClientRect();remoteControlPointer(rr.left-lr.left+Math.min(74,rr.width*.24),rr.top-lr.top+rr.height/2);}}else remoteControlPointer('26%','40%');await sleep(900);}
 async function remoteControlDmExitToList(app){if(!remoteControlActive())return;remoteControlPointer('6%','5%');await sleep(650);if(!remoteControlActive())return;if(app==='x')xTab='dm';else dyTab='dm';remoteControlSetPage(app==='x'?'x':'dy');await sleep(1100);}
+async function remoteControlPrepareVisibleDelete(a){if(!remoteControlActive()||!['delete_wechat_contact','delete_moment','delete_x','delete_douyin','delete_x_dm','delete_douyin_dm'].includes(a.op))return false;const nav=Object.assign({},a);if(a.op==='delete_x')nav.targetType='xPost';else if(a.op==='delete_douyin')nav.targetType='dyVideo';remoteControlNavigate(nav,{app:a.app||remoteControlAppKey(a.targetName)});await sleep(1100);if(!remoteControlActive())return false;let el=null;
+  if(a.op==='delete_x_dm'||a.op==='delete_douyin_dm'){const hit=remoteControlFindDmTarget(a);if(hit)el=document.querySelector('.xmsg[data-dm-index="'+hit.index+'"] .b');}
+  else if(a.op==='delete_moment')el=document.querySelector('[data-moment-id="'+a.targetId+'"]');
+  else if(a.op==='delete_douyin')el=document.querySelector('[data-dy-video-id="'+a.targetId+'"]');
+  else if(a.op==='delete_x')el=document.querySelector('.xscroll');
+  else if(a.op==='delete_wechat_contact')el=Array.from(document.querySelectorAll('.list .row')).find(x=>String(x.textContent||'').includes(a.targetName||''));
+  if(el){try{el.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){el.scrollIntoView();}await sleep(600);const layer=$('#remoteControlLayer');if(layer){const er=el.getBoundingClientRect(),lr=layer.getBoundingClientRect();remoteControlPointer(er.left-lr.left+Math.min(er.width*.72,Math.max(30,er.width-24)),er.top-lr.top+Math.min(er.height*.55,Math.max(20,er.height/2)));}el.style.outline='2px solid #fa5151';el.style.outlineOffset='3px';el.style.transition='outline-color .2s';}
+  await sleep(1300);return true;}
+async function remoteControlShowVisibleDeleteResult(a){if(!remoteControlActive())return;
+  if(a.op==='delete_x_dm'||a.op==='delete_douyin_dm')render();
+  else if(a.op==='delete_moment'){wxTab='moments';remoteControlSetPage('wechat');}
+  else if(a.op==='delete_x'){xTab='feed';remoteControlSetPage('x');}
+  else if(a.op==='delete_douyin'){dyTab='feed';remoteControlSetPage('dy');}
+  else if(a.op==='delete_wechat_contact'){wxTab='chats';remoteControlSetPage('wechat');}
+  await sleep(1400);}
 function remoteControlDesktopKey(app){return {wechat:'wechat',couple:'wechat',moments:'moments',x:'x',douyin:'douyin',browser:'browser',phoneapp:'phoneapp',shop:'shop',food:'food',travel:'travel',music:'music',calendar:'calendar',mail:'mail',tasks:'tasks',offline:'offline',settings:'settings'}[app]||'';}
 function remoteControlDesktopPage(key){appLayoutInit();for(let i=0;i<S.me.appLayout.length;i++)if(S.me.appLayout[i].indexOf(key)>=0)return i;return 0;}
 async function remoteControlOpenApp(a,c){const ctl=_remoteCtl,app=a.app||remoteControlAppKey(a.targetName);if(!ctl||!ctl.active||app==='home'||ctl.currentApp===app)return;const key=remoteControlDesktopKey(app),name=REMOTE_APP_NAMES[app]||a.targetName||'这个软件';remoteControlSetPage('home');const lab=$('#remoteAppName');if(lab)lab.textContent='主屏幕 · 正在查找'+name;await sleep(1200);if(!remoteControlActive()||ctl.cancelled)return;const pg=remoteControlDesktopPage(key),sw=$('#appswipe');if(sw&&pg>0){if(lab)lab.textContent='主屏幕第'+(pg+1)+'页 · 正在查找'+name;try{sw.scrollTo({left:sw.clientWidth*pg,behavior:'smooth'});}catch(_){sw.scrollLeft=sw.clientWidth*pg;}homePgScroll(sw);remoteControlPointer('78%','52%');await sleep(1900);}if(!remoteControlActive()||ctl.cancelled)return;const cell=key&&document.querySelector('.app[data-k="'+key+'"]'),layer=$('#remoteControlLayer');if(cell&&layer){const cr=cell.getBoundingClientRect(),lr=layer.getBoundingClientRect();remoteControlPointer(cr.left-lr.left+cr.width*.55,cr.top-lr.top+cr.height*.45);}else remoteControlPointer('62%','52%');if(lab)lab.textContent='正在打开'+name+' · LIVE';await sleep(1500);ctl.currentApp=app;}
@@ -7978,10 +7996,10 @@ async function remoteControlRun(c){
     else if(a.fromDmList)await remoteControlDmExitToList(a.app);
   }
   if(!remoteControlActive()||ctl.cancelled)return;const decisions=ctl.purpose==='restore_wx'?[{app:'couple',op:'enable_couple_permission',targetId:'wxLoginAuth',targetName:'微信登录权限',targetType:'couplePermission',section:'cou_wxlogin'}]:await remoteControlDecisionPlan(c,ctl.actions);
-  for(let i=0;i<decisions.length;i++){if(!remoteControlActive()||ctl.cancelled)break;const a=decisions[i];await remoteControlOpenApp(a,c);if(!remoteControlActive()||ctl.cancelled)break;const r=await remoteControlExecute(a,c);remoteControlScene(r,'',i,decisions.length,a);if(r.ok){ctl.actions.push({app:r.app,op:a.op,targetId:a.targetId||'',targetType:a.targetType||'',detail:r.detail,memory:r.memory,ts:Date.now()});save();}await remoteControlShowRoleLines(await remoteControlRoleLines(c,a,r));}
+  for(let i=0;i<decisions.length;i++){if(!remoteControlActive()||ctl.cancelled)break;const a=decisions[i];await remoteControlOpenApp(a,c);if(!remoteControlActive()||ctl.cancelled)break;const visibleDelete=await remoteControlPrepareVisibleDelete(a);if(!remoteControlActive()||ctl.cancelled)break;const r=await remoteControlExecute(a,c);if(r.ok){ctl.actions.push({app:r.app,op:a.op,targetId:a.targetId||'',targetType:a.targetType||'',detail:r.detail,memory:r.memory,ts:Date.now()});save();}if(visibleDelete&&r.ok)await remoteControlShowVisibleDeleteResult(a);remoteControlScene(r,'',i,decisions.length,visibleDelete?Object.assign({},a,{noNavigate:true}):a);await remoteControlShowRoleLines(await remoteControlRoleLines(c,a,r));}
   if(remoteControlActive()&&!ctl.cancelled)await remoteControlFinish(ctl.purpose==='restore_wx'?'角色恢复微信登录权后继续登录微信':'角色完成了逐项检查和自主处理');
 }
-async function remoteControlFinish(reason){const ctl=_remoteCtl;if(!ctl||ctl.closing)return;ctl.closing=true;ctl.active=false;clearInterval(_remoteClock);_remoteClock=null;const m=$('#modal');if(m&&m.classList.contains('show'))closeModal();const c=getC(ctl.cid),acts=(ctl.actions||[]).slice(),resumeWx=ctl.purpose==='restore_wx'&&S.couple&&S.couple.wxLoginAuth;if(c)remoteControlRemember(c,{ts:Date.now(),startedAt:ctl.startedAt,endedAt:Date.now(),status:'completed',reason,actions:acts});const L=$('#remoteControlLayer');if(L)L.className='remote-control-layer';_remoteCtl=null;if(c&&!c.blocked){const done=acts.map(x=>x.memory).filter(Boolean);scheduleReply(c.id,'[系统：你刚结束对'+S.me.name+'小手机的远程操控。'+(done.length?'你亲手做了这些真实操作：'+done.join('；')+'。':'你这次主要查看了手机，没有执行真实改动。')+'你清楚记得每一步。'+(resumeWx?'你已经恢复微信登录权，接下来会直接登录微信继续查看。':'')+'现在可以按你的人设发一两句自然的收尾消息，但不要把系统说明原样复述，也不能把你做的事说成是'+S.me.name+'自己做的。]');if(resumeWx)setTimeout(()=>{if(!remoteControlActive()&&!wxLoginActive())wxDoLogin(c.id);},1200);}}
+async function remoteControlFinish(reason){const ctl=_remoteCtl;if(!ctl||ctl.closing)return;ctl.closing=true;ctl.active=false;clearInterval(_remoteClock);_remoteClock=null;const m=$('#modal');if(m&&m.classList.contains('show'))closeModal();const c=getC(ctl.cid),acts=(ctl.actions||[]).slice(),returnStack=(ctl.returnStack||[]).map(x=>Object.assign({},x)),resumeWx=ctl.purpose==='restore_wx'&&S.couple&&S.couple.wxLoginAuth;if(c)remoteControlRemember(c,{ts:Date.now(),startedAt:ctl.startedAt,endedAt:Date.now(),status:'completed',reason,actions:acts});const L=$('#remoteControlLayer');if(L)L.className='remote-control-layer';_remoteCtl=null;stack=returnStack.length?returnStack:[{p:'home'}];render();if(c&&!c.blocked){const done=acts.map(x=>x.memory).filter(Boolean);scheduleReply(c.id,'[系统：你刚结束对'+S.me.name+'小手机的远程操控。'+(done.length?'你亲手做了这些真实操作：'+done.join('；')+'。':'你这次主要查看了手机，没有执行真实改动。')+'你清楚记得每一步。'+(resumeWx?'你已经恢复微信登录权，接下来会直接登录微信继续查看。':'')+'现在可以按你的人设发一两句自然的收尾消息，但不要把系统说明原样复述，也不能把你做的事说成是'+S.me.name+'自己做的。]');if(resumeWx)setTimeout(()=>{if(!remoteControlActive()&&!wxLoginActive())wxDoLogin(c.id);},1200);}}
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
 function wxLoginActive(){return !!(S.wxLogin&&Date.now()<S.wxLogin.until);}
@@ -9238,7 +9256,7 @@ function changeCover(){pickFile('image/*',async f=>{S.me.momentCover=await compr
 function momentHTML(p){const author=p.authorId==='me'?S.me:getC(p.authorId);if(!author)return '';
   const name=p.authorId==='me'?S.me.name:(author.remark||author.name);
   const tx=cleanMomentText(p.text);if(tx&&tx!==p.text){p.text=tx;save(500);}
-  return `<div class="mpost">${av(author.avatar,'sm')}<div class="body">
+  return `<div class="mpost" data-moment-id="${p.id}">${av(author.avatar,'sm')}<div class="body">
     <div class="au">${esc(name)}</div>
     <div class="tx">${esc(tx||p.text)}</div>
     ${p.images&&p.images.length?`<div class="imgs ${p.images.length===1?'one':''}">${p.images.map(im=>`<div class="ph" onclick="viewImg('${im}')"><img src="${im}"></div>`).join('')}</div>`:''}
