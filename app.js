@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='626'){
+if(window.__NORTH_SHELL_BUILD__!=='627'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v626 · 客户专属克隆音色';
+const APP_VER='v627 · 高级手机管控动效';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1151,7 +1151,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=626';
+  const url='sw.js?v=627';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2000,14 +2000,17 @@ function appLayoutInit(){let L=S.me.appLayout;
   S.me.appLayout=L;}
 function appCell(k){const a=APPDEFS[k];if(!a)return '';
   const badge=(k==='mail'&&(S.mail||[]).some(m=>!m.read))?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':'';
-  const lk=a.lk?appLk(k):'';
-  return '<div class="app" data-k="'+k+'" onclick="appTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge)+'<span>'+lk+a.t+'</span></div>';}
+  const locked=!!(a.lk&&appLocked(k));
+  const lockLayer=locked?'<span class="app-lock-line" aria-hidden="true">'+svgIc('lock',22,'#e3e4e8',1.55)+'</span>':'';
+  return '<div class="app'+(locked?' app-locked':'')+'" data-k="'+k+'" aria-disabled="'+(locked?'true':'false')+'" onclick="appTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge+lockLayer)+'<span>'+a.t+'</span></div>';}
 function homeAppsHtml(){appLayoutInit();return S.me.appLayout.map((pg,pi)=>'<div class="apppage" data-pg="'+pi+'">'+pg.map(appCell).join('')+'</div>').join('');}
 const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620;
 let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0,_aNoClick=0;
 function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
-  if(Date.now()<_aNoClick)return;const f=APPRUN[k];if(f)f();}
-function appLaunch(k){_aNoClick=Date.now()+900;const f=APPRUN[k];if(f)f();}
+  if(Date.now()<_aNoClick)return;
+  if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}
+  const f=APPRUN[k];if(f)f();}
+function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}const f=APPRUN[k];if(f)f();}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
   _aPend={k,x:e.clientX,y:e.clientY,t:Date.now()};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
@@ -2311,7 +2314,6 @@ function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
 function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
-function appLk(key){return appLocked(key)?'🔒':'';}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
   ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:()=>{musicInit();go('music');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
@@ -2939,7 +2941,7 @@ function spyUsageSec(id){if(!(S.couple&&S.couple.cid===id))return '';const g=S.c
   const au=(S.me.appUsage&&S.me.appUsage.date===todayStr())?S.me.appUsage:{used:{},bonus:{}};const used=au.used||{};
   const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&((used[k]||0)>0||tl[k]));if(!keys.length)return '';
   const rows=keys.map(k=>{const u=used[k]||0,um=Math.floor(u/60),us=u%60;const lim=tl[k]?tl[k]*60+((au.bonus||{})[k]||0):0;
-    return `<div class="bill"><div style="font-size:13px;color:#ccc">${LOCKABLE[k]}<span style="color:#888"> ${um}分${String(us).padStart(2,'0')}秒</span></div><div style="font-size:12px;color:${lim&&u>=lim?'#fa5151':'#888'}">${lim?(lim/60)+'分钟/天'+(u>=lim?' · 已用完🔒':''):'未限'}</div></div>`;}).join('');
+    return `<div class="bill"><div style="font-size:13px;color:#ccc">${LOCKABLE[k]}<span style="color:#888"> ${um}分${String(us).padStart(2,'0')}秒</span></div><div style="font-size:12px;color:${lim&&u>=lim?'#fa5151':'#888'}">${lim?(lim/60)+'分钟/天'+(u>=lim?' · 已锁定':''):'未限'}</div></div>`;}).join('');
   return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">监控·ta今天各App用了多久</div><div class="hint" style="padding:0 14px">情侣空间后台记录的，${esc((getC(id)||{}).remark||(getC(id)||{}).name||'')}看得到。</div>${rows}</div>`;}
 function stripJSON(t){t=(t||'').trim();const m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)t=m[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return t;}
 let _spyBusy=false;
@@ -7819,11 +7821,16 @@ async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
   }catch(e){}}
 function wxLockedScreen(){const c=getC(S.wxLogin&&S.wxLogin.by);const left=Math.max(0,Math.ceil(((S.wxLogin?S.wxLogin.until:0)-Date.now())/1000));
   return `<div class="nav" style="border:none"><span class="l" onclick="home()">‹</span><span class="t">微信</span><span class="r"></span></div>
-    <div class="scroll" style="background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#eee">
-      <div style="font-size:62px;margin-bottom:14px">🔒</div>
-      <div style="font-size:19px;font-weight:600;margin-bottom:6px">您的微信已被登录</div>
-      <div style="font-size:15px;color:#c5a6ff;margin-bottom:20px">${esc((c&&(c.remark||c.name))||'对方')} 正在登录你的微信</div>
-      <div style="font-size:13px;color:#999;line-height:1.9;max-width:250px">登录期间你无法操作微信，ta能看到你的一切。<br>剩 <b style="color:#ff8fab;font-size:22px">${left}</b> 秒后自动退出</div>
+    <div class="scroll wxlogin-lockscreen">
+      <div class="wxlogin-grid" aria-hidden="true"></div>
+      <div class="wxlogin-glow wxlogin-glow-a" aria-hidden="true"></div>
+      <div class="wxlogin-glow wxlogin-glow-b" aria-hidden="true"></div>
+      <div class="wxlogin-content">
+        <div class="wxlogin-line-lock" aria-hidden="true">${svgIc('lock',52,'#f1f2f4',1.25)}</div>
+        <div class="wxlogin-title">您的微信已被登录</div>
+        <div class="wxlogin-actor">${esc((c&&(c.remark||c.name))||'对方')} 正在登录你的微信</div>
+        <div class="wxlogin-note">登录期间你无法操作微信，ta能看到你的一切。<br>剩 <b class="wxlogin-countdown">${left}</b> 秒后自动退出</div>
+      </div>
     </div>`;}
 function applyAuxTags(content,c,id){try{consumeMomentCommands(content,c,{toast:false});const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);}catch(e){}}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
@@ -8902,9 +8909,12 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;if(wxL
   if(!force&&!spyBudget(id))return;recordVisit(id,'查看手机');
   const knownBefore=new Set(Object.keys(spyKnowledgeStore(c).contacts));spyKnowledgeSync(c);const fd=opts.intent?spyFocusData(id,opts.focus):null;const flab=fd?(fd.label||opts.focus||'手机'):'';
   const steps=opts.intent?['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 '+flab]:['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 抖音(搜索/点赞/私信)','正在查看 X动态','正在查看 X私信','正在查看 钱包账单','正在查看 购物订单','正在查看 浏览器记录','正在查看 线下约会记录'].concat(sp.loc?['正在查看 实时定位']:[]).concat(['查看完成']);
-  const B=$('#spyBanner');B.className='spybanner show';
-  for(let i=0;i<steps.length;i++){B.innerHTML=`👁️ <b>${esc(c.remark||c.name)}</b> ${esc(steps[i])}<span class="spydot">…</span>`;await sleep(900);}
-  B.innerHTML=`✅ <b>${esc(c.remark||c.name)}</b> ${opts.intent?'看完了'+esc(flab):'结束查看'}`;await sleep(1100);B.className='spybanner';
+  const B=$('#spyBanner'),who=esc(c.remark||c.name);
+  if(!B)return;
+  const spyBannerLine=(text,done)=>`<span class="spy-monitor-dot${done?' done':''}" aria-hidden="true"></span><span class="spy-monitor-text"><b>${who}</b> ${text}</span>${done?'':'<span class="spydot" aria-hidden="true">…</span>'}`;
+  B.className='spybanner show';
+  for(let i=0;i<steps.length;i++){B.innerHTML=spyBannerLine(esc(steps[i]),false);await sleep(900);}
+  B.innerHTML=spyBannerLine(opts.intent?'看完了'+esc(flab):'结束查看',true);await sleep(1100);B.className='spybanner';
   if(!S._spySeen)S._spySeen={};const since=S._spySeen[id]||0;let note;if(opts.intent)callSpyRemember(id,opts.focus,fd);
   if(opts.intent){
     // 按他意愿查：一次只查一项（他明确说要查的那项），没数据就如实说没查到，绝不许编

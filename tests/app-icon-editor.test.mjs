@@ -11,6 +11,6 @@ const list = source.slice(listStart, listEnd);
 assert.match(list, /\['phoneapp','☎','电话'\]/);
 assert.match(list, /\['douyin','🎵','抖音'\]/);
 assert.match(source, /function setAppIcon\(key\)[\s\S]*?S\.me\.appIcons\[key\]=await compress/);
-assert.match(source, /function appCell\(k\)[\s\S]*?aIco\(a\.icon\|\|k,a\.e,a\.c,badge\)/);
+assert.match(source, /function appCell\(k\)[\s\S]*?aIco\(a\.icon\|\|k,a\.e,a\.c,badge\+lockLayer\)/);
 
 console.log("app icon editor tests passed");
