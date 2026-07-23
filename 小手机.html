@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='627';</script>
+<script>window.__NORTH_SHELL_BUILD__='628';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,15 +29,15 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-627';
+  var key='north-sw-reloaded-628';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       if(window.__northBootReady)return;
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','627');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','628');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=627';
+  var url='sw.js?v=628';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -530,6 +530,55 @@ body{background:#000;padding:0;}
 @keyframes wxloginLockFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 @keyframes wxloginPulse{0%{opacity:.55;transform:scale(.84)}100%{opacity:0;transform:scale(1.2)}}
 @keyframes wxloginCount{0%,100%{opacity:1}50%{opacity:.58}}
+.remote-consent{position:relative;overflow:hidden;margin:-18px -16px;padding:24px 20px 20px;border-radius:18px;background:radial-gradient(circle at 50% -20%,rgba(211,31,62,.34),transparent 55%),linear-gradient(160deg,#151116,#08090c 58%,#040506);color:#e9e9ec;text-align:center;border:1px solid rgba(255,70,91,.22);}
+.remote-consent:before{content:"";position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(255,67,88,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(255,67,88,.12) 1px,transparent 1px);background-size:31px 31px;pointer-events:none;}
+.remote-consent-scan{position:absolute;left:-20%;right:-20%;height:70px;top:-80px;background:linear-gradient(180deg,transparent,rgba(255,44,69,.11),transparent);animation:remoteConsentScan 3.2s linear infinite;pointer-events:none;}
+.remote-consent-head{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;color:#ff5366;font-size:9px;letter-spacing:1.7px;margin-bottom:20px;}
+.remote-consent-dot{width:7px;height:7px;border-radius:50%;background:#ff2d46;box-shadow:0 0 10px #ff2d46;animation:spyRecordBlink .92s ease-in-out infinite;}
+.remote-consent-avatar{position:relative;width:70px;height:70px;margin:0 auto 15px;border-radius:23px;padding:3px;background:linear-gradient(145deg,rgba(255,82,103,.68),rgba(255,255,255,.1));box-shadow:0 14px 34px rgba(0,0,0,.48),0 0 30px rgba(255,41,67,.12);}
+.remote-consent-avatar .avatar{width:64px!important;height:64px!important;border-radius:20px!important;}
+.remote-consent h3{position:relative;color:#f4f4f6!important;font-size:19px!important;margin-bottom:10px!important;}
+.remote-consent-copy{position:relative;color:#aaa9b0;font-size:13px;line-height:1.75;max-width:300px;margin:0 auto;}
+.remote-consent-warning{position:relative;color:#e35e6c;font-size:10px;margin:15px 0 18px;letter-spacing:.2px;}
+.remote-consent-actions{position:relative;display:flex;gap:10px;}
+.remote-consent-actions button{height:44px;flex:1;border-radius:12px;font-size:14px;font-weight:650;cursor:pointer;}
+.remote-deny{border:1px solid #39383e;background:#17171b;color:#aaaab0;}
+.remote-allow{border:1px solid rgba(255,74,94,.5);background:linear-gradient(135deg,#ca203b,#ff4058);color:#fff;box-shadow:0 8px 22px rgba(233,34,65,.24);}
+@keyframes remoteConsentScan{from{top:-80px}to{top:110%}}
+.remote-control-layer{position:absolute;inset:0;z-index:550;display:none;overflow:hidden;color:#f4f4f6;background:radial-gradient(circle at 18% 10%,rgba(151,18,43,.25),transparent 38%),radial-gradient(circle at 92% 78%,rgba(77,16,34,.3),transparent 42%),linear-gradient(155deg,#08090c,#030405 58%,#09060a);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;}
+.remote-control-layer.show{display:flex;flex-direction:column;animation:remoteLayerIn .34s ease-out;}
+.remote-control-layer:before{content:"";position:absolute;inset:-30%;opacity:.15;background-image:linear-gradient(rgba(255,50,72,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(255,50,72,.1) 1px,transparent 1px);background-size:42px 42px;transform:perspective(500px) rotateX(58deg) translateY(32%);animation:remoteGridMove 10s linear infinite;pointer-events:none;}
+.remote-control-top{position:relative;z-index:4;flex:0 0 56px;display:flex;align-items:center;gap:9px;padding:7px 12px;border-bottom:1px solid rgba(255,61,82,.16);background:rgba(8,8,11,.72);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);}
+.remote-control-top .avatar{width:32px!important;height:32px!important;flex-basis:32px!important;border-radius:10px!important;}
+.remote-live-dot{position:relative;width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#ff2942;box-shadow:0 0 8px #ff2942,0 0 16px rgba(255,41,66,.5);animation:spyRecordBlink .9s ease-in-out infinite;}
+.remote-live-dot:after{content:"";position:absolute;inset:-4px;border:1px solid rgba(255,45,67,.5);border-radius:50%;animation:spyRecordRing 1.3s ease-out infinite;}
+.remote-control-who{flex:1;min-width:0;}
+.remote-control-who b{display:block;color:#ff5265;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.remote-control-who small{display:block;color:#74747b;font-size:9px;letter-spacing:.8px;margin-top:2px;}
+.remote-elapsed{color:#ff4056;font-size:11px;font-variant-numeric:tabular-nums;}
+.remote-stop{border:1px solid #35343a;border-radius:8px;background:rgba(22,22,26,.9);color:#8e8e95;font-size:10px;padding:6px 8px;cursor:pointer;}
+.remote-device{position:relative;z-index:2;flex:1;min-height:0;margin:14px 14px 9px;border:1px solid rgba(255,255,255,.1);border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#17181d,#0c0d10);box-shadow:0 22px 50px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);}
+.remote-device:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 24%,rgba(255,255,255,.035) 45%,transparent 67%);animation:remoteGlass 3.7s linear infinite;pointer-events:none;z-index:3;}
+.remote-appbar{height:43px;display:flex;align-items:center;gap:8px;padding:0 14px;background:rgba(3,4,6,.72);border-bottom:1px solid rgba(255,255,255,.065);color:#d8d9dd;font-size:13px;font-weight:600;}
+.remote-appbar:before{content:"";width:6px;height:6px;border-radius:50%;background:#ff354d;box-shadow:0 0 8px rgba(255,53,77,.7);}
+.remote-viewport{position:absolute;inset:43px 0 0;padding:28px 22px;display:flex;flex-direction:column;justify-content:center;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.035),transparent 52%);}
+.remote-screen-kicker{color:#ff4d61;font-size:9px;letter-spacing:1.9px;margin-bottom:8px;}
+.remote-screen-title{font-size:27px;font-weight:300;letter-spacing:.3px;color:#f1f1f3;margin-bottom:22px;}
+.remote-screen-card{position:relative;min-height:74px;border:1px solid rgba(255,255,255,.09);border-radius:15px;padding:17px 16px 15px 23px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));color:#c5c5ca;font-size:13px;line-height:1.65;box-shadow:0 12px 28px rgba(0,0,0,.22);}
+.remote-screen-line{position:absolute;left:10px;top:16px;bottom:16px;width:2px;border-radius:2px;background:#ff3c54;box-shadow:0 0 10px rgba(255,60,84,.62);}
+.remote-screen-meta{color:#55565e;font-size:9px;margin-top:13px;letter-spacing:.25px;}
+.remote-pointer{position:absolute;z-index:5;width:19px;height:25px;right:20%;bottom:25%;opacity:0;filter:drop-shadow(0 4px 7px rgba(0,0,0,.7));}
+.remote-pointer:before{content:"";display:block;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:20px solid #f5f5f6;transform:rotate(-32deg);transform-origin:center;}
+.remote-pointer.tap{animation:remoteTap 1.15s cubic-bezier(.2,.75,.25,1);}
+.remote-caption-wrap{position:relative;z-index:3;flex:0 0 auto;padding:0 16px 18px;}
+.remote-caption{min-height:58px;display:flex;align-items:center;justify-content:center;text-align:center;padding:11px 15px;border:1px solid rgba(255,67,88,.2);border-radius:15px;background:rgba(13,10,13,.88);color:#eeeef1;font-size:14px;line-height:1.65;box-shadow:0 10px 28px rgba(0,0,0,.35);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.remote-caption:before{content:"";display:inline-block;width:6px;height:6px;flex:0 0 6px;border-radius:50%;background:#ff344c;box-shadow:0 0 8px #ff344c;margin-right:9px;animation:spyRecordBlink .9s ease-in-out infinite;}
+.remote-progress{height:2px;margin-top:9px;border-radius:2px;background:#17171b;overflow:hidden;}
+.remote-progress-fill{height:100%;width:4%;background:linear-gradient(90deg,#8f152b,#ff3d55);box-shadow:0 0 9px rgba(255,61,85,.62);transition:width .45s ease;}
+@keyframes remoteLayerIn{from{opacity:0;transform:scale(1.02)}to{opacity:1;transform:none}}
+@keyframes remoteGridMove{from{background-position:0 0,0 0}to{background-position:0 42px,42px 0}}
+@keyframes remoteGlass{from{transform:translateX(-120%)}to{transform:translateX(150%)}}
+@keyframes remoteTap{0%{opacity:0;transform:translate(28px,24px) scale(.9)}35%{opacity:1;transform:translate(0,0) scale(1)}58%{opacity:1;transform:translate(0,4px) scale(.83)}75%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(-5px,-4px)}}
 .msgbanner{position:absolute;top:8px;left:10px;right:10px;z-index:440;background:rgba(40,40,46,.97);border:1px solid #3a3a40;border-radius:14px;padding:10px 12px;display:none;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.5);cursor:pointer;}
 .msgbanner.show{display:flex;animation:slided .25s ease;}
 @keyframes slided{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -789,6 +838,24 @@ body{background:#000;padding:0;}
   <div class="msgbanner" id="callBanner"></div>
   <div class="spybanner" id="spyBanner"></div>
   <div class="callscreen" id="callLayer"></div>
+  <div class="remote-control-layer" id="remoteControlLayer">
+    <div class="remote-control-top">
+      <span class="remote-live-dot" aria-hidden="true"></span>
+      <span id="remoteRoleAvatar"></span>
+      <div class="remote-control-who"><b id="remoteRoleName">正在远程操控</b><small>LIVE · SCREEN CONTROL</small></div>
+      <span class="remote-elapsed" id="remoteElapsed">0秒</span>
+      <button class="remote-stop" onclick="remoteControlStopByUser()">立即结束</button>
+    </div>
+    <div class="remote-device">
+      <div class="remote-appbar"><span id="remoteAppName">主屏幕</span></div>
+      <div class="remote-viewport" id="remoteViewport"></div>
+      <span class="remote-pointer" id="remotePointer" aria-hidden="true"></span>
+    </div>
+    <div class="remote-caption-wrap">
+      <div class="remote-caption" id="remoteCaption">正在建立连接…</div>
+      <div class="remote-progress"><div class="remote-progress-fill" id="remoteProgressFill"></div></div>
+    </div>
+  </div>
   <!-- 全局弹窗容器 -->
   <div class="modal" id="modal"><div class="sheet" id="modalSheet"></div></div>
   <div class="viewer" id="viewer" onclick="this.classList.remove('show')"><img id="viewerImg"></div>
@@ -811,8 +878,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=627" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=627" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=627"></script>
+<script src="license-gate.js?v=628" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=628" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=628"></script>
 </body>
 </html>
