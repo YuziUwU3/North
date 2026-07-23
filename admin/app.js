@@ -8,8 +8,15 @@ let scope = 'pending';
 let workspaceView = 'orders';
 let orders = [];
 let licenseUsers = [];
+let licenseTotal = 0;
+let licensePage = 1;
+const licensePageSize = 50;
+let licenseQuery = '';
+let licenseStatus = 'all';
+let licenseSearchTimer = 0;
 let loadingOrders = false;
 let loadingLicenses = false;
+let licenseReloadQueued = false;
 let actionBusy = false;
 let consecutiveAuthFailures = 0;
 let installPrompt = null;
@@ -33,6 +40,12 @@ const fmtDateTime = (value) => {
 };
 const stateLabel = (order) => order.status === 'paid' ? '已确认' : order.review_status === 'rejected' ? '已驳回' : order.review_status === 'submitted' ? '待核对' : '未提交';
 const providerLabel = (provider) => provider === 'wechat' ? '微信' : '支付宝';
+const operatorLabel = (value) => {
+  const operator = String(value || '');
+  if (operator === 'owner') return '主管理员';
+  const numbered = operator.match(/^(?:admin|license)-(\d+)$/);
+  return numbered ? `管理员${Number(numbered[1])}` : '旧记录';
+};
 
 async function api(action, payload = {}) {
   const controller = new AbortController();
@@ -154,14 +167,10 @@ function renderOrders() {
 
 function renderLicenseUsers() {
   const root = $('licenseUsers');
-  const query = String($('licenseSearch').value || '').trim().toUpperCase().replace(/\s+/g, '');
-  const rows = licenseUsers.filter((user) => {
-    if (!query) return true;
-    return [user.phone_friend_id, user.ai_user_id, user.id]
-      .some((value) => String(value || '').toUpperCase().includes(query));
-  });
+  const rows = licenseUsers;
   if (!rows.length) {
-    root.innerHTML = `<div class="empty">${query ? '没有找到对应用户' : '还没有邀请码核销记录'}</div>`;
+    const filtered = licenseQuery || licenseStatus !== 'all';
+    root.innerHTML = `<div class="empty">${filtered ? '当前搜索或状态下没有用户' : '还没有邀请码核销记录'}</div>`;
     return;
   }
   root.innerHTML = rows.map((user) => {
@@ -181,6 +190,7 @@ function renderLicenseUsers() {
         <div><b>最近使用</b>${esc(user.last_seen_at ? fmtDateTime(user.last_seen_at) : '尚无记录')}</div>
         <div><b>小手机 ID</b>${esc(user.phone_friend_id || '旧版本尚未补齐')}</div>
         <div><b>AI 用户 ID</b>${esc(user.ai_user_id || '尚未绑定')}</div>
+        ${user.last_admin_action ? `<div><b>最近管理操作</b>${esc(operatorLabel(user.last_admin_operator))} · ${user.last_admin_action === 'block' ? '移出' : '放回'} · ${esc(fmtDateTime(user.last_admin_action_at))}</div>` : ''}
       </div>
       <div class="actions">
         ${active ? `<button class="btn danger" onclick="openBlockLicense('${esc(user.id)}','${esc(actionLabel)}')">移出去</button>` : ''}
@@ -190,18 +200,56 @@ function renderLicenseUsers() {
   }).join('');
 }
 
+function renderLicensePager() {
+  const totalPages = Math.max(1, Math.ceil(licenseTotal / licensePageSize));
+  $('licenseCount').textContent = licenseTotal;
+  $('licenseResultText').textContent = licenseTotal
+    ? `共 ${licenseTotal.toLocaleString()} 人 · 本页 ${licenseUsers.length} 人`
+    : '共 0 人';
+  $('licensePageText').textContent = `第 ${licensePage.toLocaleString()} / ${totalPages.toLocaleString()} 页`;
+  $('licensePrevBtn').disabled = licensePage <= 1 || loadingLicenses;
+  $('licenseNextBtn').disabled = licensePage >= totalPages || loadingLicenses;
+}
+
 async function loadLicenseUsers(showLoading) {
-  if (loadingLicenses) return;
+  if (loadingLicenses) {
+    licenseReloadQueued = true;
+    return;
+  }
   loadingLicenses = true;
-  if (showLoading) $('licenseUsers').innerHTML = '<div class="empty"><div class="spinner"></div>正在读取全部用户</div>';
-  setStatus('正在同步用户授权…');
+  licenseReloadQueued = false;
+  const requestedPage = licensePage;
+  const requestedQuery = licenseQuery;
+  const requestedStatus = licenseStatus;
+  if (showLoading) $('licenseUsers').innerHTML = '<div class="empty"><div class="spinner"></div>正在读取当前页用户</div>';
+  renderLicensePager();
+  setStatus('正在从云端搜索用户授权…');
   try {
-    const data = await api('admin_license_users');
+    const data = await api('admin_license_users', {
+      page: requestedPage,
+      page_size: licensePageSize,
+      query: requestedQuery,
+      status: requestedStatus,
+    });
+    if (
+      requestedPage !== licensePage ||
+      requestedQuery !== licenseQuery ||
+      requestedStatus !== licenseStatus
+    ) {
+      licenseReloadQueued = true;
+      return;
+    }
+    licenseTotal = Math.max(0, Number(data.total || 0));
+    const totalPages = Math.max(1, Math.ceil(licenseTotal / licensePageSize));
+    if (licensePage > totalPages) {
+      licensePage = totalPages;
+      licenseReloadQueued = true;
+      return;
+    }
     licenseUsers = Array.isArray(data.users) ? data.users : [];
     consecutiveAuthFailures = 0;
-    $('licenseCount').textContent = licenseUsers.length;
     renderLicenseUsers();
-    setStatus('共 ' + licenseUsers.length + ' 条授权记录 · ' + new Date().toLocaleTimeString('zh-CN', {hour12:false}));
+    setStatus('用户授权已同步 · ' + new Date().toLocaleTimeString('zh-CN', {hour12:false}));
   } catch (error) {
     if (error.status === 401 || /admin-unauthorized/i.test(error.message)) {
       handleAuthFailure();
@@ -211,6 +259,11 @@ async function loadLicenseUsers(showLoading) {
     }
   } finally {
     loadingLicenses = false;
+    renderLicensePager();
+    if (licenseReloadQueued) {
+      licenseReloadQueued = false;
+      loadLicenseUsers(true);
+    }
   }
 }
 
@@ -541,7 +594,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=629', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=630', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -579,7 +632,35 @@ $('loginBtn').addEventListener('click', login);
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
 $('refreshBtn').addEventListener('click', () => workspaceView === 'licenses' ? loadLicenseUsers(true) : loadOrders(true));
 $('licenseRefreshBtn').addEventListener('click', () => loadLicenseUsers(true));
-$('licenseSearch').addEventListener('input', renderLicenseUsers);
+$('licenseSearch').addEventListener('input', () => {
+  clearTimeout(licenseSearchTimer);
+  licenseQuery = String($('licenseSearch').value || '').trim();
+  licensePage = 1;
+  licenseSearchTimer = setTimeout(() => loadLicenseUsers(true), 350);
+});
+$('licenseSearch').addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  clearTimeout(licenseSearchTimer);
+  licenseQuery = String($('licenseSearch').value || '').trim();
+  licensePage = 1;
+  loadLicenseUsers(true);
+});
+$('licenseStatus').addEventListener('change', () => {
+  licenseStatus = String($('licenseStatus').value || 'all');
+  licensePage = 1;
+  loadLicenseUsers(true);
+});
+$('licensePrevBtn').addEventListener('click', () => {
+  if (licensePage <= 1 || loadingLicenses) return;
+  licensePage -= 1;
+  loadLicenseUsers(true);
+});
+$('licenseNextBtn').addEventListener('click', () => {
+  const totalPages = Math.max(1, Math.ceil(licenseTotal / licensePageSize));
+  if (licensePage >= totalPages || loadingLicenses) return;
+  licensePage += 1;
+  loadLicenseUsers(true);
+});
 $('licenseTab').addEventListener('click', openLicenseView);
 $('notifyBtn').addEventListener('click', enableNotifications);
 $('deleteAllBtn')?.addEventListener('click', openDeleteAllOrders);
@@ -609,6 +690,6 @@ async function restoreSavedLogin() {
   showAuth('请重新进入');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=629', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=630', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();

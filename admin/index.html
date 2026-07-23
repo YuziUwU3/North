@@ -13,7 +13,7 @@
   <style>
     :root{color-scheme:dark;--bg:#0d0e10;--panel:#17181c;--line:#2b2d33;--text:#f4f4f5;--muted:#92959d;--pink:#f28bb1;--green:#42c889;--red:#ef6a73}
     *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;letter-spacing:0}
-    button,input,textarea{font:inherit;letter-spacing:0}button{cursor:pointer}.hidden{display:none!important}
+    button,input,textarea,select{font:inherit;letter-spacing:0}button{cursor:pointer}.hidden{display:none!important}
     .shell{max-width:920px;margin:0 auto;min-height:100vh;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 28px)}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 2px 14px;border-bottom:1px solid var(--line)}
     h1{font-size:22px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:4px}.tools{display:flex;gap:8px;align-items:center}
@@ -31,9 +31,10 @@
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:end center;padding:18px;z-index:20}.sheet{width:min(100%,520px);background:#191a1e;border:1px solid var(--line);border-radius:8px;padding:16px;max-height:88vh;overflow:auto}.sheet h2{font-size:19px;margin:0 0 8px}.sheet p{color:var(--muted);font-size:13px;line-height:1.6}.sheet-actions{display:flex;gap:8px;margin-top:14px}.sheet-actions .btn{flex:1}
     .viewer{position:fixed;inset:0;background:#000;z-index:30;display:grid;place-items:center;padding:16px}.viewer img{max-width:100%;max-height:92vh;object-fit:contain}.viewer button{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:12px}
     .install-tip{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
-    .license-tools{display:flex;gap:8px;margin:2px 0 12px}.license-tools input{flex:1;min-width:0;border:1px solid var(--line);background:#17181c;color:var(--text);border-radius:8px;padding:12px;outline:0}.license-tools input:focus{border-color:#8b6675}
+    .license-tools{display:flex;gap:8px;margin:2px 0 12px}.license-tools input{flex:1;min-width:180px}.license-tools input,.license-tools select{border:1px solid var(--line);background:#17181c;color:var(--text);border-radius:8px;padding:12px;outline:0}.license-tools input:focus,.license-tools select:focus{border-color:#8b6675}.license-tools select{min-width:112px}
     .license-id{font-size:18px;font-weight:800;letter-spacing:.8px}.license-state{font-size:12px;padding:4px 8px;border-radius:999px;background:#153322;color:#8ce2ad}.license-state.blocked{background:#3a2023;color:#ffadb2}.recovery-code{width:100%;margin:12px 0;padding:13px 8px;text-align:center;font-size:17px;letter-spacing:1px;border:1px solid #735a3b;border-radius:8px;background:#15110d;color:#f3d29c}
-    @media(max-width:560px){.shell{padding-left:10px;padding-right:10px}.meta{grid-template-columns:1fr}.order{padding:12px}.tools .btn{padding:0 10px}.hide-mobile{display:none}}
+    .license-summary{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 2px 12px}.license-pager{display:flex;justify-content:center;align-items:center;gap:10px;padding:16px 0 2px}.license-pager .btn{min-width:88px}.license-pager .btn:disabled{opacity:.42;cursor:default}.license-page{min-width:110px;text-align:center;color:var(--muted);font-size:13px}
+    @media(max-width:560px){.shell{padding-left:10px;padding-right:10px}.meta{grid-template-columns:1fr}.order{padding:12px}.tools .btn{padding:0 10px}.hide-mobile{display:none}.license-tools{flex-wrap:wrap}.license-tools input{flex-basis:100%}.license-tools select{flex:1}.license-summary{align-items:flex-start;flex-direction:column}}
   </style>
 </head>
 <body>
@@ -65,16 +66,26 @@
       <section id="licensePanel" class="hidden">
         <div class="license-tools">
           <input id="licenseSearch" inputmode="text" autocomplete="off" placeholder="搜索小手机 ID、AI 用户 ID 或授权编号">
+          <select id="licenseStatus" aria-label="授权状态">
+            <option value="all">全部状态</option>
+            <option value="active">可进入</option>
+            <option value="blocked">已移出</option>
+          </select>
           <button class="btn" id="licenseRefreshBtn">刷新</button>
         </div>
-        <div class="sub" style="margin:0 2px 12px">显示所有核销过邀请码的授权记录；旧用户更新并打开一次小手机后会补齐小手机 ID。</div>
+        <div class="license-summary sub"><span>云端搜索，每页只读取50人；已移出记录不会删除。</span><span id="licenseResultText">准备读取用户</span></div>
         <section id="licenseUsers" class="orders"></section>
+        <div class="license-pager">
+          <button class="btn" id="licensePrevBtn">上一页</button>
+          <span class="license-page" id="licensePageText">第 1 / 1 页</span>
+          <button class="btn" id="licenseNextBtn">下一页</button>
+        </div>
       </section>
     </section>
   </main>
 
   <div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
   <div id="viewer" class="viewer hidden"><button class="icon" id="closeViewer" aria-label="关闭">×</button><img id="viewerImg" alt="付款截图大图"></div>
-  <script src="./app.js?v=629"></script>
+  <script src="./app.js?v=630"></script>
 </body>
 </html>

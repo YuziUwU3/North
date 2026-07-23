@@ -108,24 +108,40 @@ function secureEqual(a: string, b: string) {
   return diff === 0;
 }
 
-function adminRole(req: Request, body: any): "owner" | "license" {
+type AdminIdentity = {
+  role: "owner" | "license";
+  operatorId: string;
+};
+
+function adminIdentity(req: Request, body: any): AdminIdentity {
   const supplied = String(req.headers.get("x-admin-token") || body?.admin_token || "").trim();
   const ownerToken = String(Deno.env.get("ADMIN_ACCESS_TOKEN") || "").trim();
-  if (ownerToken && secureEqual(supplied, ownerToken)) return "owner";
+  if (ownerToken && secureEqual(supplied, ownerToken)) {
+    return { role: "owner", operatorId: "owner" };
+  }
   const licenseTokens = String(Deno.env.get("LICENSE_ADMIN_TOKENS") || "")
     .split(/[\n,;]+/)
     .map((token) => token.trim())
     .filter(Boolean);
-  if (licenseTokens.some((token) => secureEqual(supplied, token))) return "license";
+  const tokenIndex = licenseTokens.findIndex((token) => secureEqual(supplied, token));
+  if (tokenIndex >= 0) {
+    const labelled = supplied.match(/^ADMIN-(\d{2})-/i);
+    return {
+      role: "license",
+      operatorId: labelled ? `admin-${labelled[1]}` : `license-${tokenIndex + 1}`,
+    };
+  }
   throw new Error("admin-unauthorized");
 }
 
 function requireAdmin(req: Request, body: any) {
-  if (adminRole(req, body) !== "owner") throw new Error("admin-unauthorized");
+  const identity = adminIdentity(req, body);
+  if (identity.role !== "owner") throw new Error("admin-unauthorized");
+  return identity;
 }
 
 function requireLicenseAdmin(req: Request, body: any) {
-  return adminRole(req, body);
+  return adminIdentity(req, body);
 }
 
 function proofBytes(dataUrl: unknown) {
@@ -820,8 +836,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === "admin_auth") {
-      const role = requireLicenseAdmin(req, body);
-      return json({ ok: true, role });
+      const identity = requireLicenseAdmin(req, body);
+      return json({ ok: true, role: identity.role });
     }
 
     if (action === "admin_subscribe") {
@@ -846,23 +862,37 @@ Deno.serve(async (req) => {
 
     if (action === "admin_license_users") {
       requireLicenseAdmin(req, body);
-      const users: any[] = [];
-      for (let start = 0; ; start += 1000) {
-        const { data, error } = await supabase
-          .from("phone_licenses")
-          .select("id,phone_friend_id,ai_user_id,status,epoch,created_at,updated_at,last_seen_at")
-          .order("created_at", { ascending: false })
-          .range(start, start + 999);
-        if (error) throw error;
-        const page = data || [];
-        users.push(...page);
-        if (page.length < 1000) break;
-      }
-      return json({ ok: true, users });
+      const pageSize = Math.min(100, Math.max(10, Math.trunc(Number(body.page_size || 50))));
+      const page = Math.min(200000, Math.max(1, Math.trunc(Number(body.page || 1))));
+      const query = String(body.query || "").trim().slice(0, 120);
+      const requestedStatus = String(body.status || "all").trim().toLowerCase();
+      const status = requestedStatus === "active" || requestedStatus === "blocked"
+        ? requestedStatus
+        : "all";
+      const { data, error } = await supabase.rpc("phone_license_admin_page", {
+        p_query: query,
+        p_status: status,
+        p_offset: (page - 1) * pageSize,
+        p_limit: pageSize,
+      });
+      if (error) throw error;
+      const payload = data && typeof data === "object" ? data : {};
+      const users = Array.isArray(payload.users) ? payload.users : [];
+      const total = Math.max(0, Number(payload.total || 0));
+      return json({
+        ok: true,
+        users,
+        total,
+        page,
+        page_size: pageSize,
+        total_pages: Math.max(1, Math.ceil(total / pageSize)),
+        status,
+        query,
+      });
     }
 
     if (action === "admin_license_block") {
-      requireLicenseAdmin(req, body);
+      const identity = requireLicenseAdmin(req, body);
       const licenseId = String(body.license_id || "").trim();
       if (!/^[0-9a-f-]{36}$/i.test(licenseId)) {
         return json({ ok: false, error: "invalid-license-id" }, 400);
@@ -890,12 +920,13 @@ Deno.serve(async (req) => {
         license_id: license.id,
         phone_friend_id: license.phone_friend_id,
         action: "block",
+        operator_id: identity.operatorId,
       });
       return json({ ok: true });
     }
 
     if (action === "admin_license_recovery") {
-      requireLicenseAdmin(req, body);
+      const identity = requireLicenseAdmin(req, body);
       const licenseId = String(body.license_id || "").trim();
       if (!/^[0-9a-f-]{36}$/i.test(licenseId)) {
         return json({ ok: false, error: "invalid-license-id" }, 400);
@@ -933,6 +964,7 @@ Deno.serve(async (req) => {
         license_id: license.id,
         phone_friend_id: license.phone_friend_id,
         action: "recovery",
+        operator_id: identity.operatorId,
       });
       return json({ ok: true, code: formatLicenseRecoveryCode(code), expires_at: expiresAt });
     }
