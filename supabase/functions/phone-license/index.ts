@@ -17,7 +17,7 @@ const TRANSFER_REDEEM_WINDOW_MS = 10 * 60 * 1000;
 const TRANSFER_REDEEM_FAILURE_LIMIT = 8;
 const TRANSFER_ATTEMPT_RETENTION_MS = 24 * 60 * 60 * 1000;
 // 大刷新时与 app.js 的 SHARE_EPOCH 一起递增并重新部署，旧通行密钥将无法恢复。
-const LICENSE_EPOCH = Number(Deno.env.get('LICENSE_EPOCH') || 3);
+const LICENSE_EPOCH = Number(Deno.env.get('LICENSE_EPOCH') || 4);
 const ALLOWED_ORIGINS = new Set([
   'https://fenglina35-dotcom.github.io',
   'http://localhost:3000',

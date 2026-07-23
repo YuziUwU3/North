@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='624'){
+if(window.__NORTH_SHELL_BUILD__!=='625'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -19,7 +19,7 @@ const SHARE_GATE=true, SHARE_PW='';
 const GATE_URL='https://lkhlyfpssmrjkkzhuzag.supabase.co';
 const GATE_KEY='sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
 /* 大刷新时同时更新 phone-license 云函数的 LICENSE_EPOCH；旧通行密钥会在云端一起失效。 */
-const SHARE_EPOCH=3;
+const SHARE_EPOCH=4;
 function normalizeInviteCode(code){return String(code||'').trim().replace(/\s+/g,'').toUpperCase();}
 /* 小手机好友：公开ID + 本机密钥。ID可以给别人搜，密钥只存在本机，用来防冒充。 */
 function pfRand(n){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';try{const b=new Uint8Array(n);crypto.getRandomValues(b);for(let i=0;i<n;i++)s+=a[b[i]%a.length];return s;}catch(_){for(let i=0;i<n;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}}
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v624 · 电话查岗防重复';
+const APP_VER='v625 · 旧授权统一失效';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1151,7 +1151,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=624';
+  const url='sw.js?v=625';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
