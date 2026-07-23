@@ -109,6 +109,17 @@ test('the role can independently delete social content and DMs, declare ownershi
   assert.match(app, /'delete_x_dm'/);
   assert.match(app, /'delete_douyin_dm'/);
   assert.match(app, /a\.op==='delete_x_dm'\|\|a\.op==='delete_douyin_dm'/);
+  assert.match(app, /function removeSocialDMThread\(app,id\)/);
+  assert.match(app, /function deleteSocialDMThread\(app,id\)/);
+  assert.match(app, /data-dm-thread-id="\$\{d\.id\}"/);
+  assert.match(app, /removeSocialDMThread\(hit\.app,hit\.thread\.id\)/);
+  assert.match(app, /删除【整个私信会话】/);
+  assert.match(app, /当前整个私信会话，不是只删其中一条消息/);
+  assert.match(app, /document\.querySelectorAll\('\[data-dm-thread-id\]'\)/);
+  assert.match(app, /a\.op==='delete_x_dm'\)\{xTab='dm';remoteControlSetPage\('x'\)/);
+  assert.match(app, /a\.op==='delete_douyin_dm'\)\{dyTab='dm';remoteControlSetPage\('dy'\)/);
+  const remoteExecute = app.slice(app.indexOf('async function remoteControlExecute'), app.indexOf('function remoteControlCaptionMs'));
+  assert.doesNotMatch(remoteExecute, /removeSocialDMMsg/);
   assert.match(app, /d\.msgs\.splice\(mi,1\)/);
   assert.match(app, /function removeSocialDMMsg\(app,id,mi\)/);
   assert.match(app, /onclick="xDelDMMsg\('\$\{id\}',\$\{mi\}\)"/);
@@ -124,6 +135,15 @@ test('the role can independently delete social content and DMs, declare ownershi
   assert.match(app, /发朋友圈宣示主权/);
   assert.match(app, /锁软件必须基于真实疑点；没疑点就不要锁/);
   assert.match(app, /没有可疑或让你不舒服的内容时，可以输出空 actions/);
+});
+
+test('Douyin inspection visibly scrolls through the feed instead of resetting one screen', () => {
+  assert.match(app, /function remoteControlFocusViewedTarget\(a\)/);
+  assert.match(app, /a\.targetType==='dyHome'\)cards=Array\.from\(document\.querySelectorAll\('\[data-dy-video-id\]'\)\)\.slice\(0,4\)/);
+  assert.match(app, /card\.scrollIntoView\(\{behavior:'smooth',block:'center'\}\)/);
+  assert.match(app, /await remoteControlFocusViewedTarget\(a\)/);
+  assert.match(app, /targetType==='dyHome'\|\|a\.targetType==='dyVideo'/);
+  assert.match(app, /cur\(\)\.p==='dy'&&dyTab==='feed'/);
 });
 
 test('remote control restores the page that the user was on before inspection', () => {
