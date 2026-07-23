@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='628'){
+if(window.__NORTH_SHELL_BUILD__!=='629'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v628 · 角色远程操控授权';
+const APP_VER='v629 · 微信退出无表情残留';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -431,13 +431,14 @@ function _rehydrate(o){if(!o||typeof o!=='object')return;for(const k in o){const
     if(typeof v==='string'){if(v.indexOf('idb:')===0)o[k]=_imgCache[v.slice(4)]||v;}
     else if(v&&typeof v==='object')_rehydrate(v);}}
 function mergeBootMessages(restored,live){restored=restored&&typeof restored==='object'?restored:{};if(!live||typeof live!=='object')return restored;for(const k of Object.keys(live)){if(k==='__idb'||!Array.isArray(live[k])||!live[k].length)continue;const dst=Array.isArray(restored[k])?restored[k]:(restored[k]=[]),seen=new Set(dst.map(m=>m&&m.id).filter(Boolean));for(const m of live[k]){if(!m)continue;if(m.id&&seen.has(m.id))continue;dst.push(m);if(m.id)seen.add(m.id);}dst.sort((a,b)=>(+a.time||0)-(+b.time||0));}return restored;}
+function repairWxLogoutEmoji(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(!m||m.type!=='sys'||typeof m.content!=='string')return;const next=m.content.replace(/^🔓\s+(?=.+退出了你的微信登录$)/,'');if(next!==m.content){m.content=next;changed=true;}});}}catch(_){}return changed;}
 function repairStaleVisionStates(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(m&&m.type==='image'&&m.role==='user'&&m.visionState==='pending'&&!_visionTasks.has(m.id)){m.visionState='failed';m.visionError='上次识图被页面刷新中断，点图片下方可重试';changed=true;}});}}catch(_){}return changed;}
 async function bootImages(){try{_imgCache=await imgAll();_imgRev=new Map();_imgReady=new Set();for(const k in _imgCache){_imgRev.set(_imgCache[k],k);_imgReady.add(k);}
     // 回填搬进大空间的聊天记录
     if(S.messages&&S.messages.__idb==='messages'){const live=S.messages,added=Object.keys(live).some(k=>k!=='__idb'&&Array.isArray(live[k])&&live[k].length),b=await imgGet('__messages');if(b){try{S.messages=mergeBootMessages(JSON.parse(b),live);if(added){_heavy.messages='';_heavyReady.delete('messages');save(0);}else{_heavy.messages=b;_heavyReady.add('messages');}}catch(_){S.messages=mergeBootMessages({},live);}}else{S.messages=mergeBootMessages({},live);}}
     {const p=S.me&&S.me.phoneFriend;if(p&&p.messages&&p.messages.__idb==='phoneFriendMessages'){const key='__pf_messages_'+(p.messages.id||p.id||'main'),b=await imgGet(key);if(b){try{p.messages=JSON.parse(b);_heavy['pfMessages:'+key]=b;_heavyReady.add('pfMessages:'+key);}catch(_){p.messages={};p.lastSync=0;p._forceFullSync=1;}}else{p.messages={};p.lastSync=0;p._forceFullSync=1;}}else if(p&&p.messages&&p.messages.__idb){p.messages={};p.lastSync=0;p._forceFullSync=1;}}
     {const p=S.me&&S.me.phoneFriend;if(p&&p.groupMessages&&p.groupMessages.__idb==='phoneFriendGroupMessages'){const key='__pf_group_messages_'+(p.groupMessages.id||p.id||'main'),b=await imgGet(key);if(b){try{p.groupMessages=JSON.parse(b);_heavy['pfGroupMessages:'+key]=b;_heavyReady.add('pfGroupMessages:'+key);}catch(_){p.groupMessages={};p.lastSync=0;p._forceFullSync=1;}}else{p.groupMessages={};p.lastSync=0;p._forceFullSync=1;}}else if(p&&p.groupMessages&&p.groupMessages.__idb){p.groupMessages={};p.lastSync=0;p._forceFullSync=1;}}
-    _rehydrate(S);const changed=repairStaleVisionStates()||voiceAudioGC();if(changed)save(0);}catch(e){}}
+    _rehydrate(S);const changed=[repairWxLogoutEmoji(),repairStaleVisionStates(),voiceAudioGC()].some(Boolean);if(changed)save(0);}catch(e){}}
 async function fullBackupState(){if(_bootImagesPromise)try{await _bootImagesPromise;}catch(_){}let c=null;if(S.messages&&S.messages.__idb==='messages'){const b=await imgGet('__messages');if(b){c=JSON.parse(JSON.stringify(S));try{c.messages=JSON.parse(b);}catch(_){c.messages={};}}}
   const base=c||S,p=base.me&&base.me.phoneFriend;if(p&&p.messages&&p.messages.__idb==='phoneFriendMessages'){const b=await imgGet('__pf_messages_'+(p.messages.id||p.id||'main'));if(b){if(!c)c=JSON.parse(JSON.stringify(S));try{c.me.phoneFriend.messages=JSON.parse(b);}catch(_){c.me.phoneFriend.messages={};}}}
   {const base2=c||S,p2=base2.me&&base2.me.phoneFriend;if(p2&&p2.groupMessages&&p2.groupMessages.__idb==='phoneFriendGroupMessages'){const b=await imgGet('__pf_group_messages_'+(p2.groupMessages.id||p2.id||'main'));if(b){if(!c)c=JSON.parse(JSON.stringify(S));try{c.me.phoneFriend.groupMessages=JSON.parse(b);}catch(_){c.me.phoneFriend.groupMessages={};}}}}
@@ -1151,7 +1152,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=628';
+  const url='sw.js?v=629';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -7868,7 +7869,7 @@ function wxDoLogin(cid){if(wxLoginActive())return;const c=getC(cid);if(!c)return
 function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer=null;}const wl=S.wxLogin;S.wxLogin=null;save();
   if(wl){const c=getC(wl.by);if(c){const did=(wl.did||[]);
     wxLoginCommitHistory(c,wl);
-    msgs(wl.by).push({role:'user',type:'sys',content:'🔓 '+(c.remark||c.name)+' 退出了你的微信登录',time:Date.now(),id:uid()});save();
+    msgs(wl.by).push({role:'user',type:'sys',content:(c.remark||c.name)+' 退出了你的微信登录',time:Date.now(),id:uid()});save();
     const saw=wl.saw?('\n\n你刚看到的摘要如下：\n'+wl.saw.slice(0,2200)):'';
     const deferred=(wl.deferredNotes||[]).length?'\n\n登录期间本来触发但被暂缓的事情：'+wl.deferredNotes.join('；').slice(0,900)+'。现在已经退出微信，只能在这条退出后的回复里自然接住真正重要的一件，别把系统提示逐条复述、别连续补发很多条。':'';
     if(!c.blocked)scheduleReply(wl.by,'[系统：你刚【登录'+S.me.name+'的微信看了整整一分钟】，现在已经退出；登录期间你不能给'+S.me.name+'发微信，只有退出后才可以发。'+(did.length?'你在里面做了这些：'+did.join('；')+'。':'你把ta和所有人的聊天都仔细翻了一遍。')+saw+deferred+'\n\n现在只发一轮消息来找ta，把你最在意的1到3个人/群聊挑出来总结给ta听：说清楚你看到谁和谁在聊、最近大概聊了什么、你为什么在意。不要复制大段聊天原文，不要一口气列全名单；符合你人设，可以质问、吃醋、敲打、宣示主权或装作平静。]');}}

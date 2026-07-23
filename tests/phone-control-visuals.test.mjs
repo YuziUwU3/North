@@ -41,3 +41,10 @@ test('phone viewing banner uses a red recording indicator without emoji', () => 
   assert.match(html, /\.spy-monitor-dot\{[^}]*background:#ff253f/);
   assert.match(html, /@keyframes spyScan/);
 });
+
+test('wechat logout record has no unlock emoji residue', () => {
+  assert.doesNotMatch(app, /content:'🔓 '/);
+  assert.match(app, /退出了你的微信登录/);
+  assert.match(app, /function repairWxLogoutEmoji\(\)/);
+  assert.match(app, /replace\(\/\^🔓\\s\+/);
+});
