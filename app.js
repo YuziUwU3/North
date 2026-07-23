@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='640'){
+if(window.__NORTH_SHELL_BUILD__!=='641'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v640 · 大容量存档与浏览器兼容';
+const APP_VER='v641 · 音色筛选与存储明细';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1168,7 +1168,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=640';
+  const url='sw.js?v=641';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -9493,10 +9493,25 @@ function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=s
   const devicePct=est&&est.quota?Math.min(100,Math.round(est.usage/est.quota*100)):0;
   const logicalBytes=_coreLogicalBytes||bytes,overflow=!!_coreOverflowMode;
   return {bytes,mb:bytes/1048576,logicalBytes,logicalMb:logicalBytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100)),overflow,pending:_coreSavePending,deviceMb:est?est.usage/1048576:0,deviceCapMb:est?est.quota/1048576:0,devicePct,hasDevice:!!est,okRecently:_saveOkLast&&Date.now()-_saveOkLast<180000};}
-function storageMeter(){refreshStorageEstimate();const si=storageInfo(),meterPct=si.overflow?(si.hasDevice?si.devicePct:(si.pending?32:18)):si.pct,col=meterPct>=92?'#fa5151':meterPct>=75?'#ffb83b':'#19a463',label=si.overflow?('大容量存档 '+si.logicalMb.toFixed(2)+'MB'+(si.pending?' · 保存中':'')):(si.mb.toFixed(2)+' / '+si.capMb+'MB（'+si.pct+'%）'),hint=si.overflow?'核心索引已自动精简，聊天、图片和其他增长数据保存在浏览器的大容量库中，不再受5MB核心额度限制。':si.pct>=75?'核心存档正在接近小容量上限，达到安全阈值后会自动迁入大容量存储。':'图片、长聊天和增长较快的数据会自动转入大容量存储。';
+function storageValueBytes(v){if(v==null)return 0;if(typeof v==='string')return storedTextBytes(v);if(typeof Blob!=='undefined'&&v instanceof Blob)return v.size||0;if(typeof ArrayBuffer!=='undefined'&&v instanceof ArrayBuffer)return v.byteLength||0;if(typeof ArrayBuffer!=='undefined'&&ArrayBuffer.isView&&ArrayBuffer.isView(v))return v.byteLength||0;try{return storedTextBytes(JSON.stringify(v));}catch(_){return 0;}}
+function scanIDBStoreBytes(openDB,storeName,classify){return openDB().then(db=>new Promise(res=>{const out={};let tx,finished=false;const done=()=>{if(finished)return;finished=true;try{db.close();}catch(_){}res(out);};try{tx=db.transaction(storeName,'readonly');const q=tx.objectStore(storeName).openCursor();q.onsuccess=e=>{const c=e.target.result;if(!c)return;const group=classify?classify(String(c.key),c.value):'total';out[group]=(out[group]||0)+storageValueBytes(c.value);c.continue();};q.onerror=done;tx.oncomplete=done;tx.onerror=done;tx.onabort=done;}catch(_){done();}})).catch(()=>({}));}
+function localStorageBreakdown(){const out={core:0,local:0};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),v=localStorage.getItem(k)||'',bytes=storedTextBytes(k||'')+storedTextBytes(v);if(k===KEY)out.core+=bytes;else out.local+=bytes;}}catch(_){}return out;}
+function appStorageBreakdown(){const img=scanIDBStoreBytes(imgDB,'img',k=>k===CORE_IDB_KEY?'core':/^__(?:messages|pf_messages|pf_group_messages)/.test(k)?'chat':k.indexOf('__audio_')===0?'voice':k.indexOf('__')===0?'other':'images'),music=scanIDBStoreBytes(mIDB,'audio',()=> 'music');return Promise.all([img,music]).then(([a,m])=>Object.assign(localStorageBreakdown(),a,m));}
+function storageSizeLabel(bytes){bytes=Math.max(0,+bytes||0);if(bytes>=1073741824)return(bytes/1073741824).toFixed(2)+'GB';if(bytes>=1048576)return(bytes/1048576).toFixed(2)+'MB';if(bytes>=1024)return(bytes/1024).toFixed(1)+'KB';return Math.round(bytes)+'B';}
+async function showStorageBreakdown(){openModal('<h3>存储占用明细</h3><div class="hint" style="padding:18px 0;text-align:center">正在逐项读取核心、聊天、图片、语音和音乐…</div>');let parts;try{parts=await appStorageBreakdown();}catch(_){parts={};}let estimate=null;try{if(navigator.storage&&navigator.storage.estimate)estimate=await navigator.storage.estimate();}catch(_){}if(estimate&&estimate.quota)_storageEstimate={usage:+estimate.usage||0,quota:+estimate.quota||0,ts:Date.now()};const known=['core','chat','images','voice','music','local','other'].reduce((n,k)=>n+(+parts[k]||0),0),total=estimate&&estimate.usage?+estimate.usage:known,browserOther=Math.max(0,total-known),rows=[
+    ['核心数据',parts.core||(_coreOverflowMode?_coreLogicalBytes:0),'角色、设置、朋友圈等主体存档'],
+    ['长聊天库',parts.chat||0,'角色聊天与小手机好友聊天'],
+    ['图片',parts.images||0,'头像、壁纸及聊天图片'],
+    ['语音/通话缓存',parts.voice||0,'生成语音与视频通话声音'],
+    ['音乐文件',parts.music||0,'音乐 App 上传的音频'],
+    ['本地索引',parts.local||0,'启动索引和少量浏览器设置'],
+    ['浏览器缓存及数据库开销',(parts.other||0)+browserOther,'离线文件、数据库索引及浏览器预留'],
+  ];const max=Math.max(1,...rows.map(x=>+x[1]||0));
+  openModal(`<h3>存储占用明细</h3><div class="hint">这里显示的是<b>已经存了多少数据</b>，不是容量上限。${estimate&&estimate.quota?`本站共用约 <b>${storageSizeLabel(total)}</b> / 浏览器可用 <b>${storageSizeLabel(estimate.quota)}</b>。`:'当前浏览器没有提供总配额数字，但大容量库不再受5MB核心上限限制。'}不同浏览器的数据库索引会产生少量统计误差。</div><div style="margin-top:12px">${rows.map(x=>`<div style="padding:9px 0;border-bottom:1px solid #eee"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-size:13px">${x[0]}</b><span style="font-size:13px;color:#555">${storageSizeLabel(x[1])}</span></div><div style="height:5px;background:#eee;border-radius:5px;margin:6px 0 4px;overflow:hidden"><div style="height:100%;width:${Math.max(x[1]?2:0,Math.round((+x[1]||0)/max*100))}%;background:#19a463"></div></div><small style="color:#888">${x[2]}</small></div>`).join('')}</div><div class="btns" style="margin-top:12px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();clearRoleCacheKeepBeauty()">清理聊天媒体缓存</button></div>`);}
+function storageMeter(){refreshStorageEstimate();const si=storageInfo(),meterPct=si.overflow?(si.hasDevice?si.devicePct:(si.pending?32:18)):si.pct,col=meterPct>=92?'#fa5151':meterPct>=75?'#ffb83b':'#19a463',label=si.overflow?(si.hasDevice?('已用 '+si.deviceMb.toFixed(1)+' / '+si.deviceCapMb.toFixed(0)+'MB（'+si.devicePct+'%）'):('数据量 '+si.logicalMb.toFixed(2)+'MB · 大容量模式'+(si.pending?' · 保存中':''))):(si.mb.toFixed(2)+' / '+si.capMb+'MB（'+si.pct+'%）'),hint=si.overflow?'当前数字是本站已经使用的数据量，不是容量上限。核心索引已自动精简，增长数据保存在浏览器大容量库中。':si.pct>=75?'核心存档正在接近小容量上限，达到安全阈值后会自动迁入大容量存储。':'图片、长聊天和增长较快的数据会自动转入大容量存储。';
   return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${label}</span></div>
     <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${meterPct}%;background:${col};transition:.3s"></div></div>
-    <div class="hint" style="padding:7px 0 0">${hint}${si.hasDevice?`<br>浏览器总空间约 ${si.deviceMb.toFixed(1)} / ${si.deviceCapMb.toFixed(0)}MB（${si.devicePct}%）`:''}</div></div></div>`;}
+    <div class="hint" style="padding:7px 0 0">${hint}${si.hasDevice&&!si.overflow?`<br>浏览器总空间约 ${si.deviceMb.toFixed(1)} / ${si.deviceCapMb.toFixed(0)}MB（${si.devicePct}%）`:''}</div><button class="minibtn" style="margin-top:9px" onclick="showStorageBreakdown()">查看占用明细</button></div></div>`;}
 let _storeWarned=false;
 function checkStorageWarn(){refreshStorageEstimate();if(_storeWarned)return;const si=storageInfo();const realDanger=si.hasDevice&&si.devicePct>=92,coreDanger=!si.overflow&&si.pct>=99&&!si.okRecently;if(!realDanger&&!coreDanger)return;const last=+(S.settings&&S.settings.storageWarnAt||0);if(Date.now()-last<86400000)return;S.settings.storageWarnAt=Date.now();_storeWarned=true;save(0);
   openModal(`<h3>${realDanger?'手机存储快满了':'核心存档偏大'}</h3><div style="font-size:14px;line-height:1.9;color:#333">${realDanger?`浏览器总空间已经用了 <b style="color:#fa5151">${si.devicePct}%</b>。`:`核心存档用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB</b>，最近没有确认保存成功。`}<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 用「清理缓存垃圾」或删一些旧聊天图片</div>

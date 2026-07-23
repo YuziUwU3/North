@@ -36,10 +36,20 @@ const voiceListRoute = backend.slice(
   backend.indexOf('if (action === "external_tts")'),
 );
 assert.doesNotMatch(voiceListRoute, /minimaxVoices\(\)/);
+assert.match(voiceListRoute, /visibleTTSVoicesForUser\(userId\)/);
+assert.match(backend, /async function activePrivateVoiceBindings\(\)/);
+assert.match(backend, /if \(binding && binding\.user_id !== userId\) return/);
+assert.match(backend, /unbound: !!voice\.clone && !binding/);
+assert.match(backend, /if \(data\.user_id !== userId\) throw new Error\("tts-private-voice-not-owned"\)/);
+assert.match(backend, /const available = await minimaxVoices\(\)/);
+assert.match(backend, /async function minimaxVoices\(force = false\)/);
+assert.match(backend, /await minimaxVoices\(true\)/);
 
-assert.doesNotMatch(account, /onclick="aiPullVoices\(\)"/);
-assert.match(account, /付款办理完成后由管理员直接绑定/);
-assert.match(account, /其他AI账户也无法使用/);
+assert.match(account, /onclick="aiPullVoices\(\)"/);
+assert.match(account, /系统免费音色和尚未绑定的克隆音色/);
+assert.match(account, /未绑定克隆/);
+assert.match(account, /管理员会直接绑定到这里/);
+assert.match(account, /已经绑定的克隆音色只对绑定账户显示/);
 assert.match(account, /function aiUsePrivateVoice/);
 assert.match(admin, /绑定客户专属音色/);
 assert.match(admin, /admin_assign_private_voice/);

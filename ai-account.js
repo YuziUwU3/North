@@ -128,10 +128,11 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     <div style="padding:5px 2px 9px"><b style="font-size:17px">图片生成套餐</b><small style="display:block;color:#777;margin-top:3px">套餐购买的是通用点数，按每张 ${aiPrice('image')} 点估算；文字、语音也可以使用同一余额。</small></div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">${aiImagePackageCards()}</div>
     <div class="section">
-      <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">专属语音音色</div>
-      <div class="hint" style="padding:0 14px 8px">付款办理完成后由管理员直接绑定。客户无需拉取或填写音色 ID，其他AI账户也无法使用。</div>
+      <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音音色</div>
+      <div class="hint" style="padding:0 14px 8px">系统免费音色和尚未绑定的克隆音色，所有账户都可以拉取使用；已经绑定的克隆音色只对绑定账户显示。</div>
+      <div class="it"><span>可用公共音色<br><small style="color:#888">包含系统音色与未绑定克隆</small></span><span class="v"><button class="minibtn" onclick="aiPullVoices()">拉取音色</button></span></div>
       ${aiPrivateVoiceRows()}
-      <div class="it"><span>当前使用<small>${esc(voice)}</small></span><span class="v">账户专属验证</span></div>
+      <div class="it"><span>当前使用<small>${esc(voice)}</small></span><span class="v">自动校验权限</span></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="aiClearVoice()">清空音色</button><button class="btn p" ${_aiVoiceTestBusy?'disabled':''} onclick="aiTestVoice()">${_aiVoiceTestBusy?'生成中…':'测试语音'}</button></div>
       ${_aiVoiceTestBusy||_aiVoiceTestStatus?`<div class="hint" style="padding:0 14px 10px;color:${_aiVoiceTestBusy?'#ffb7d2':'#9aa0aa'}">${_aiVoiceTestBusy?'<span class="spin" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;vertical-align:-2px;margin-right:6px"></span>':''}${esc(_aiVoiceTestStatus||'语音生成中，请稍等，不要重复点击')}</div>`:''}
     </div>
@@ -218,22 +219,9 @@ async function aiGenerateAccountImage(){if(_aiImageBusy)return;if(!aiImageRelayO
   finally{_aiImageBusy=false;setTimeout(()=>aiAccountRefresh(true,true),500);if(cur().p==='aiaccount')aiRenderStable();}}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
-async function aiPullVoices(){toast('正在拉取音色…');
-  try{const ext=aiExternalTts();
-    if(!aiVoiceRelayOn()&&ext&&/minimax/i.test(ext.base||'')){
-      const base=(ext.base||'').replace(/\/+$/,'');
-      const gid=(ext.group||'').trim(),url=base+'/v1/get_voice'+(gid?('?GroupId='+encodeURIComponent(gid)):'');
-      const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+ext.key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
-      const d=await r.json().catch(()=>null);
-      if(!d||(d.base_resp&&d.base_resp.status_code!==0)){toast('拉取失败：'+((d&&d.base_resp&&d.base_resp.status_msg)||r.status));return;}
-      const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
-      const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
-      _aiVoiceList=aiMergeVoicePresets(clones.concat(sys));_aiVoiceQ='';
-      if(!_aiVoiceList.length){toast('没有拉到音色，检查 MiniMax Key / GroupId');return;}
-      aiShowVoicePicker();return;
-    }
-    const d=await aiRelay('tts_voices',{});_aiVoiceList=aiMergeVoicePresets((d&&d.voices)||[]);_aiVoiceQ='';
-    if(!_aiVoiceList.length){toast('没有拉到音色，检查 MiniMax Key / GroupId');return;}
+async function aiPullVoices(){toast('正在拉取可用音色…');
+  try{const d=await aiRelay('tts_voices',{});_aiVoiceList=Array.isArray(d&&d.voices)?d.voices:[];_aiVoiceQ='';
+    if(!_aiVoiceList.length){toast('暂时没有可用音色，请稍后重试');return;}
     aiShowVoicePicker();
   }catch(e){toast('拉取失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}}
 function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.settings.tts||{}).voice)||'';
@@ -241,7 +229,7 @@ function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.
   openModal(`<h3>选择默认语音</h3>
     <div class="hint">当前默认：${esc(curVoice||'未选择')}</div>
     <div class="field"><input id="ai_vq" placeholder="搜名字或ID" value="${esc(_aiVoiceQ)}" oninput="_aiVoiceQ=this.value;aiShowVoicePicker();setTimeout(()=>{var e=document.getElementById('ai_vq');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}},0)"></div>
-    <div style="max-height:52vh;overflow:auto">${list.slice(0,160).map(v=>`<div class="it" onclick="aiPickVoice('${esc(v.id)}')" style="cursor:pointer"><span>${v.clone?'<b style="color:#ffb83b">克隆 · </b>':''}${esc(v.name||v.id)}<small>${esc(v.id)}</small></span><span class="v">${v.id===curVoice?'已选':'选'}</span></div>`).join('')||'<div class="empty" style="padding:18px">没有匹配的音色</div>'}${list.length>160?'<div class="hint" style="padding:8px">只显示前160个，用搜索更快</div>':''}</div>
+    <div style="max-height:52vh;overflow:auto">${list.slice(0,160).map(v=>`<div class="it" onclick="aiPickVoice('${esc(v.id)}')" style="cursor:pointer"><span>${v.private?'<b style="color:#ffb7d2">专属 · </b>':v.unbound?'<b style="color:#ffb83b">未绑定克隆 · </b>':'<b style="color:#71e69f">免费 · </b>'}${esc(v.name||v.id)}<small>${esc(v.id)}</small></span><span class="v">${v.id===curVoice?'已选':'选'}</span></div>`).join('')||'<div class="empty" style="padding:18px">没有匹配的音色</div>'}${list.length>160?'<div class="hint" style="padding:8px">只显示前160个，用搜索更快</div>':''}</div>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=id;save();closeModal();toast('已设为默认音色');if(cur().p==='aiaccount')render();}
 function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='';save();toast('已清空默认音色');render();}

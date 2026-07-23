@@ -59,10 +59,21 @@ test('overflow saves are verified asynchronously and failures are rate limited',
 
 test('storage meter distinguishes the compact core index from browser-wide capacity', () => {
   assert.match(app, /overflow=!!_coreOverflowMode/);
-  assert.match(app, /大容量存档 '\+si\.logicalMb\.toFixed\(2\)\+'MB/);
-  assert.match(app, /不再受5MB核心额度限制/);
+  assert.match(app, /数据量 '\+si\.logicalMb\.toFixed\(2\)\+'MB · 大容量模式/);
+  assert.match(app, /当前数字是本站已经使用的数据量，不是容量上限/);
   assert.match(app, /coreDanger=!si\.overflow&&si\.pct>=99/);
   assert.match(app, /navigator\.storage&&navigator\.storage\.persist/);
+});
+
+test('storage details separate core, chats, images, voice cache and music', () => {
+  assert.match(app, /function scanIDBStoreBytes\(openDB,storeName,classify\)/);
+  assert.match(app, /function appStorageBreakdown\(\)/);
+  assert.match(app, /k===CORE_IDB_KEY\?'core'/);
+  assert.match(app, /\^__\(\?:messages\|pf_messages\|pf_group_messages\)/);
+  assert.match(app, /k\.indexOf\('__audio_'\)===0\?'voice'/);
+  assert.match(app, /scanIDBStoreBytes\(mIDB,'audio',\(\)=> 'music'\)/);
+  assert.match(app, /核心数据[\s\S]*长聊天库[\s\S]*图片[\s\S]*语音\/通话缓存[\s\S]*音乐文件/);
+  assert.match(app, /onclick="showStorageBreakdown\(\)">查看占用明细/);
 });
 
 test('browser compatibility fallbacks cover clipboard, notifications, DOM replacement and iOS exports', () => {

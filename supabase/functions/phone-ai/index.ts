@@ -33,6 +33,8 @@ const PUBLIC_TTS_VOICES = [
   { id: DEFAULT_TTS_VOICE, name: "系统默认", clone: false, preset: true },
 ];
 const PUBLIC_TTS_VOICE_IDS = new Set(PUBLIC_TTS_VOICES.map((voice) => voice.id));
+let minimaxVoiceCache: any[] = [];
+let minimaxVoiceCacheAt = 0;
 
 const CHAT_GUARD = `你是“小手机”应用里的角色回复引擎，不是通用问答助手。所有回复都必须适配微信、线下约会、角色扮演、购物、信箱等小手机场景。
 最高优先级规则：
@@ -240,19 +242,34 @@ async function privateVoicesForUser(userId: string) {
   return (data || []).map(publicPrivateVoice);
 }
 
-async function authorizedTTSVoice(userId: string, requested: unknown) {
-  const voiceId = String(requested || DEFAULT_TTS_VOICE).trim() || DEFAULT_TTS_VOICE;
-  if (PUBLIC_TTS_VOICE_IDS.has(voiceId)) return { voiceId, privateVoice: false };
+async function activePrivateVoiceBindings() {
   const { data, error } = await supabase
     .from("phone_ai_private_voices")
-    .select("voice_id")
-    .eq("user_id", userId)
+    .select("user_id,voice_id,display_name,created_at")
+    .eq("status", "active");
+  if (error) throw error;
+  return data || [];
+}
+
+async function authorizedTTSVoice(userId: string, requested: unknown) {
+  const voiceId = String(requested || DEFAULT_TTS_VOICE).trim() || DEFAULT_TTS_VOICE;
+  const { data, error } = await supabase
+    .from("phone_ai_private_voices")
+    .select("user_id,voice_id")
     .eq("voice_id", voiceId)
     .eq("status", "active")
     .maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error("tts-private-voice-not-owned");
-  return { voiceId, privateVoice: true };
+  if (data) {
+    if (data.user_id !== userId) throw new Error("tts-private-voice-not-owned");
+    return { voiceId, privateVoice: true };
+  }
+  if (PUBLIC_TTS_VOICE_IDS.has(voiceId)) return { voiceId, privateVoice: false };
+  const available = await minimaxVoices();
+  if (available.some((voice: any) => voice.id === voiceId)) {
+    return { voiceId, privateVoice: false };
+  }
+  throw new Error("tts-voice-not-accessible");
 }
 
 function ttsPointCost(chars: number) {
@@ -658,7 +675,10 @@ async function minimaxTTS(text: string, voiceId: string, model: string, setting?
   return { audio: audioToDataUrl(String(hex)), raw: data };
 }
 
-async function minimaxVoices() {
+async function minimaxVoices(force = false) {
+  if (!force && minimaxVoiceCache.length && Date.now() - minimaxVoiceCacheAt < 5 * 60 * 1000) {
+    return minimaxVoiceCache.slice();
+  }
   const base = (Deno.env.get("MINIMAX_BASE_URL") || "https://api.minimaxi.com").replace(/\/+$/, "");
   const key = Deno.env.get("MINIMAX_API_KEY") || "";
   const groupId = Deno.env.get("MINIMAX_GROUP_ID") || "";
@@ -683,7 +703,45 @@ async function minimaxVoices() {
     name: String(v.voice_name || v.voice_id || "系统音色"),
     clone: false,
   })).filter((v: { id: string }) => v.id);
-  return clones.concat(system);
+  minimaxVoiceCache = clones.concat(system);
+  minimaxVoiceCacheAt = Date.now();
+  return minimaxVoiceCache.slice();
+}
+
+async function visibleTTSVoicesForUser(userId: string) {
+  const bindings = await activePrivateVoiceBindings();
+  let available: any[] = [];
+  try {
+    available = await minimaxVoices(true);
+  } catch (_) {
+    available = [];
+  }
+  const boundById = new Map(bindings.map((row: any) => [String(row.voice_id || ""), row]));
+  const out: any[] = [];
+  const seen = new Set<string>();
+  const add = (voice: any) => {
+    const id = String(voice?.id || "").trim();
+    if (!id || seen.has(id)) return;
+    const binding: any = boundById.get(id);
+    if (binding && binding.user_id !== userId) return;
+    seen.add(id);
+    out.push({
+      id,
+      name: binding?.display_name || voice.name || id,
+      clone: !!voice.clone,
+      private: !!binding,
+      unbound: !!voice.clone && !binding,
+      preset: !!voice.preset,
+    });
+  };
+  PUBLIC_TTS_VOICES.forEach(add);
+  available.forEach(add);
+  bindings.filter((row: any) => row.user_id === userId).forEach((row: any) => add({
+    id: row.voice_id,
+    name: row.display_name,
+    clone: true,
+  }));
+  return out;
 }
 
 async function externalFishTTS(body: Record<string, unknown>) {
@@ -832,7 +890,7 @@ Deno.serve(async (req) => {
       if (purchase.status !== "paid" || purchase.review_status !== "approved") {
         return json({ ok: false, error: "voice-clone-payment-not-approved" }, 409);
       }
-      const availableVoices = await minimaxVoices();
+      const availableVoices = await minimaxVoices(true);
       const clone = availableVoices.find((voice: any) => voice.clone && voice.id === voiceId);
       if (!clone) return json({ ok: false, error: "private-voice-not-found-in-minimax-account" }, 404);
       const { data: assigned, error: assignError } = await supabase
@@ -1324,14 +1382,7 @@ Deno.serve(async (req) => {
 
     if (action === "tts_voices") {
       await ensureAccount(userId, clientSecret);
-      const privateVoices = await privateVoicesForUser(userId);
-      const voices = [...PUBLIC_TTS_VOICES, ...privateVoices.map((voice) => ({
-        id: voice.voice_id,
-        name: voice.display_name,
-        clone: true,
-        private: true,
-        preset: false,
-      }))];
+      const voices = await visibleTTSVoicesForUser(userId);
       return json({ ok: true, voices });
     }
 
