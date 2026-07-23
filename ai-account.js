@@ -29,6 +29,10 @@ function aiVisiblePurchases(){const hidden=new Set(aiHiddenPurchases().map(Strin
 function aiHidePurchase(id){if(!id)return;const arr=aiHiddenPurchases(),sid=String(id);if(!arr.map(String).includes(sid))arr.unshift(sid);aiCoreInit().hiddenPurchases=arr.slice(0,80);save();aiRenderStable();toast('订单已从本机列表移除');}
 function aiShowPurchaseNotice(){openModal(`<h3>购买说明</h3><div style="border:1px solid rgba(255,91,111,.5);background:#271419;color:#ff9aa8;border-radius:10px;padding:12px 13px;font-size:13px;line-height:1.8;white-space:pre-wrap">${esc(AI_PURCHASE_NOTICE)}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
+function aiPrivateVoices(){return _aiAcct&&Array.isArray(_aiAcct.private_voices)?_aiAcct.private_voices.filter(v=>v&&v.voice_id):[];}
+function aiVoiceLabel(id){id=String(id||'');if(!id)return'系统默认';const own=aiPrivateVoices().find(v=>String(v.voice_id)===id);if(own)return own.display_name||'我的专属音色';const preset=AI_VOICE_PRESETS.find(v=>v.id===id);return preset?preset.name:'已设置音色';}
+function aiPrivateVoiceRows(){const current=String((S.settings.tts||{}).voice||''),voices=aiPrivateVoices();return voices.length?voices.map(v=>`<div class="it"><span><b style="color:#ffb7d2">${esc(v.display_name||'我的专属音色')}</b><small>仅当前AI账户可用 · 云端已绑定</small></span><span class="v"><button class="minibtn" ${current===String(v.voice_id)?'disabled':''} onclick="aiUsePrivateVoice('${esc(v.voice_id)}')">${current===String(v.voice_id)?'使用中':'使用'}</button></span></div>`).join(''):'<div class="hint" style="padding:0 14px 10px">还没有专属音色。购买克隆服务并办理完成后，管理员会直接绑定到这里，不需要拉取或填写 ID。</div>';}
+function aiUsePrivateVoice(id){const voice=aiPrivateVoices().find(v=>String(v.voice_id)===String(id));if(!voice){toast('这个专属音色不属于当前AI账户，请刷新后重试');return;}S.settings.tts=S.settings.tts||{};S.settings.tts.voice=voice.voice_id;save();toast('已使用专属音色：'+(voice.display_name||'我的音色'));aiRenderStable();}
 
 function openAIAccount(){go('aiaccount');}
 function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};S.settings.aiCore.enabled=false;if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
@@ -83,7 +87,7 @@ function aiServiceCards(){return aiRechargePlans().filter(p=>p.kind==='service')
 function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
   const knownBalance=aiVisibleBalance(),bal=knownBalance==null?'读取中…':knownBalance;
   const low=aiLowBalanceCfg();
-  const voice=(tts.voice)||'未选择';
+  const voice=aiVoiceLabel(tts.voice);
   const relayLang=tts.relayLang||'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" onclick="aiAccountRefresh()">刷新</span></div>
   <div class="scroll" style="background:#0f1117;color:#e8eaf0;padding:12px">
@@ -124,9 +128,10 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     <div style="padding:5px 2px 9px"><b style="font-size:17px">图片生成套餐</b><small style="display:block;color:#777;margin-top:3px">套餐购买的是通用点数，按每张 ${aiPrice('image')} 点估算；文字、语音也可以使用同一余额。</small></div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">${aiImagePackageCards()}</div>
     <div class="section">
-      <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音音色</div>
-      <div class="hint" style="padding:0 14px 8px">选中的音色会作为小手机默认语音音色。</div>
-      <div class="it"><span>默认音色<small>${esc(voice)}</small></span><span class="v"><button class="minibtn" onclick="aiPullVoices()">拉取音色</button></span></div>
+      <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">专属语音音色</div>
+      <div class="hint" style="padding:0 14px 8px">付款办理完成后由管理员直接绑定。客户无需拉取或填写音色 ID，其他AI账户也无法使用。</div>
+      ${aiPrivateVoiceRows()}
+      <div class="it"><span>当前使用<small>${esc(voice)}</small></span><span class="v">账户专属验证</span></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="aiClearVoice()">清空音色</button><button class="btn p" ${_aiVoiceTestBusy?'disabled':''} onclick="aiTestVoice()">${_aiVoiceTestBusy?'生成中…':'测试语音'}</button></div>
       ${_aiVoiceTestBusy||_aiVoiceTestStatus?`<div class="hint" style="padding:0 14px 10px;color:${_aiVoiceTestBusy?'#ffb7d2':'#9aa0aa'}">${_aiVoiceTestBusy?'<span class="spin" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;vertical-align:-2px;margin-right:6px"></span>':''}${esc(_aiVoiceTestStatus||'语音生成中，请稍等，不要重复点击')}</div>`:''}
     </div>
@@ -263,7 +268,7 @@ async function aiTestVoice(){const text=aiVoiceTestText();
   finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')aiRenderStable();}}
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId()},pricing:null,plans:null,ledger:[]};
-  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
+  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(Array.isArray(d.private_voices)){_aiAcct.private_voices=d.private_voices;const first=d.private_voices.find(v=>v&&v.voice_id),core=aiCoreInit();if(first&&!(S.settings.tts||{}).voice&&core.privateVoiceAutoSet!==first.voice_id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=first.voice_id;core.privateVoiceAutoSet=first.voice_id;save();}}if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
   if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;aiRememberBalance(d.balance);}
   if(d.charged){const feature=action||'chat';_aiAcct.ledger=_aiAcct.ledger||[];_aiAcct.ledger.unshift({kind:'charge',feature,points:-d.charged,balance_after:d.balance,status:d.ok===false?'failed':'done',billed:!!d.billed,note:d.note||d.error||'',created_at:new Date().toISOString()});_aiAcct.ledger=_aiAcct.ledger.slice(0,80);}
   if(_aiAcct.account&&_aiAcct.account.points!=null)aiCheckLowBalance(Number(_aiAcct.account.points));if(d.purchases)aiDetectPointsArrival(d);

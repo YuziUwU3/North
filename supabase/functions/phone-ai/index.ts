@@ -27,6 +27,12 @@ const PRICE: Record<string, number> = {
 const TTS_CHARS_PER_POINT = 50;
 const TTS_MAX_CHARS = 300;
 const DEFAULT_TTS_VOICE = "male-qn-qingse";
+const PUBLIC_TTS_VOICES = [
+  { id: "phonevoice20260709b", name: "月岛萤", clone: true, preset: true },
+  { id: "phonevoice20260709a", name: "御叔", clone: true, preset: true },
+  { id: DEFAULT_TTS_VOICE, name: "系统默认", clone: false, preset: true },
+];
+const PUBLIC_TTS_VOICE_IDS = new Set(PUBLIC_TTS_VOICES.map((voice) => voice.id));
 
 const CHAT_GUARD = `你是“小手机”应用里的角色回复引擎，不是通用问答助手。所有回复都必须适配微信、线下约会、角色扮演、购物、信箱等小手机场景。
 最高优先级规则：
@@ -206,6 +212,47 @@ function resolvePointCost(feature: string, requestedCost?: number) {
   const cost = requestedCost == null ? Number(PRICE[feature] || 1) : Number(requestedCost);
   if (!Number.isSafeInteger(cost) || cost < 1 || cost > 100000) throw new Error("invalid-point-cost");
   return cost;
+}
+
+function validPrivateVoiceId(value: unknown) {
+  const voiceId = String(value || "").trim();
+  return /^[A-Za-z][A-Za-z0-9_-]{6,254}[A-Za-z0-9]$/.test(voiceId) ? voiceId : "";
+}
+
+function publicPrivateVoice(row: any) {
+  return {
+    id: row.id,
+    voice_id: row.voice_id,
+    display_name: row.display_name,
+    purchase_id: row.purchase_id || null,
+    created_at: row.created_at,
+  };
+}
+
+async function privateVoicesForUser(userId: string) {
+  const { data, error } = await supabase
+    .from("phone_ai_private_voices")
+    .select("id,voice_id,display_name,purchase_id,created_at")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(publicPrivateVoice);
+}
+
+async function authorizedTTSVoice(userId: string, requested: unknown) {
+  const voiceId = String(requested || DEFAULT_TTS_VOICE).trim() || DEFAULT_TTS_VOICE;
+  if (PUBLIC_TTS_VOICE_IDS.has(voiceId)) return { voiceId, privateVoice: false };
+  const { data, error } = await supabase
+    .from("phone_ai_private_voices")
+    .select("voice_id")
+    .eq("user_id", userId)
+    .eq("voice_id", voiceId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("tts-private-voice-not-owned");
+  return { voiceId, privateVoice: true };
 }
 
 function ttsPointCost(chars: number) {
@@ -729,13 +776,30 @@ Deno.serve(async (req) => {
           .in("user_id", users);
         (accounts || []).forEach((account: any) => balances.set(account.user_id, Number(account.points || 0)));
       }
+      const purchaseIds = (rows || []).map((row: any) => row.id).filter(Boolean);
+      const voicesByPurchase = new Map<string, any>();
+      if (purchaseIds.length) {
+        const { data: privateVoices, error: privateVoiceError } = await supabase
+          .from("phone_ai_private_voices")
+          .select("id,user_id,purchase_id,voice_id,display_name,status,created_at")
+          .in("purchase_id", purchaseIds);
+        if (privateVoiceError) throw privateVoiceError;
+        (privateVoices || []).forEach((voice: any) => {
+          if (voice.purchase_id) voicesByPurchase.set(voice.purchase_id, publicPrivateVoice(voice));
+        });
+      }
       const orders = await Promise.all((rows || []).map(async (row: any) => {
         let proof_url = "";
         if (row.proof_path) {
           const { data } = await supabase.storage.from(PROOF_BUCKET).createSignedUrl(row.proof_path, 600);
           proof_url = data?.signedUrl || "";
         }
-        return { ...row, account_points: balances.get(row.user_id) || 0, proof_url };
+        return {
+          ...row,
+          account_points: balances.get(row.user_id) || 0,
+          private_voice: voicesByPurchase.get(row.id) || null,
+          proof_url,
+        };
       }));
       const { count } = await supabase
         .from("phone_ai_purchases")
@@ -743,6 +807,53 @@ Deno.serve(async (req) => {
         .eq("status", "pending")
         .eq("review_status", "submitted");
       return json({ ok: true, orders, pending_count: count || 0 });
+    }
+
+    if (action === "admin_assign_private_voice") {
+      requireAdmin(req, body);
+      const purchaseId = String(body.purchase_id || "").trim();
+      const voiceId = validPrivateVoiceId(body.voice_id);
+      const displayName = String(body.display_name || "").trim().slice(0, 60);
+      if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) {
+        return json({ ok: false, error: "invalid-purchase-id" }, 400);
+      }
+      if (!voiceId) return json({ ok: false, error: "invalid-private-voice-id" }, 400);
+      if (!displayName) return json({ ok: false, error: "private-voice-name-required" }, 400);
+      const { data: purchase, error: purchaseError } = await supabase
+        .from("phone_ai_purchases")
+        .select("id,user_id,plan_id,points,status,review_status")
+        .eq("id", purchaseId)
+        .maybeSingle();
+      if (purchaseError) throw purchaseError;
+      if (!purchase) return json({ ok: false, error: "purchase-not-found" }, 404);
+      if (purchase.plan_id !== "svc_clone_1990" || Number(purchase.points) !== 0) {
+        return json({ ok: false, error: "purchase-is-not-voice-clone-service" }, 409);
+      }
+      if (purchase.status !== "paid" || purchase.review_status !== "approved") {
+        return json({ ok: false, error: "voice-clone-payment-not-approved" }, 409);
+      }
+      const availableVoices = await minimaxVoices();
+      const clone = availableVoices.find((voice: any) => voice.clone && voice.id === voiceId);
+      if (!clone) return json({ ok: false, error: "private-voice-not-found-in-minimax-account" }, 404);
+      const { data: assigned, error: assignError } = await supabase
+        .from("phone_ai_private_voices")
+        .upsert({
+          user_id: purchase.user_id,
+          purchase_id: purchase.id,
+          voice_id: voiceId,
+          display_name: displayName,
+          status: "active",
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "purchase_id" })
+        .select("id,voice_id,display_name,purchase_id,created_at")
+        .single();
+      if (assignError) {
+        if (assignError.code === "23505") {
+          return json({ ok: false, error: "private-voice-already-belongs-to-another-customer" }, 409);
+        }
+        throw assignError;
+      }
+      return json({ ok: true, private_voice: publicPrivateVoice(assigned) });
     }
 
     if (action === "admin_review") {
@@ -841,6 +952,7 @@ Deno.serve(async (req) => {
     if (action === "account") {
       await recoverStalePendingCharges(userId, clientSecret);
       const acct = await ensureAccount(userId, clientSecret);
+      const privateVoices = await privateVoicesForUser(userId);
       const { data: ledger } = await supabase
         .from("phone_ai_ledger")
         .select("kind,feature,points,balance_after,status,created_at,meta")
@@ -861,7 +973,9 @@ Deno.serve(async (req) => {
         capabilities: {
           image: configuredImageRoutes().some((route) => !!(route.key && route.base)),
           image_routes: configuredImageRoutes().filter((route) => !!(route.key && route.base)).length,
+          private_voice: privateVoices.length > 0,
         },
+        private_voices: privateVoices,
         ledger: ledger || [],
         purchases: purchases || [],
       });
@@ -1142,16 +1256,17 @@ Deno.serve(async (req) => {
       const chars = [...text].length;
       if (chars > TTS_MAX_CHARS) throw new Error("tts-text-too-long");
       const ttsCost = ttsPointCost(chars);
+      const authorizedVoice = await authorizedTTSVoice(userId, body.voice_id);
       await requireBalance(userId, clientSecret, "tts", ttsCost);
       model = "speech-02-turbo";
-      const requestedVoiceId = body.voice_id || DEFAULT_TTS_VOICE;
+      const requestedVoiceId = authorizedVoice.voiceId;
       let voiceId = requestedVoiceId;
       let voiceFallback = false;
       let data;
       try {
         data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
       } catch (e) {
-        if (voiceId !== DEFAULT_TTS_VOICE && errText(e).includes("invalid-voice-id")) {
+        if (!authorizedVoice.privateVoice && voiceId !== DEFAULT_TTS_VOICE && errText(e).includes("invalid-voice-id")) {
           voiceId = DEFAULT_TTS_VOICE;
           voiceFallback = true;
           try {
@@ -1208,7 +1323,15 @@ Deno.serve(async (req) => {
     }
 
     if (action === "tts_voices") {
-      const voices = await minimaxVoices();
+      await ensureAccount(userId, clientSecret);
+      const privateVoices = await privateVoicesForUser(userId);
+      const voices = [...PUBLIC_TTS_VOICES, ...privateVoices.map((voice) => ({
+        id: voice.voice_id,
+        name: voice.display_name,
+        clone: true,
+        private: true,
+        preset: false,
+      }))];
       return json({ ok: true, voices });
     }
 
@@ -1225,7 +1348,7 @@ Deno.serve(async (req) => {
     const status = msg.includes("admin-unauthorized") ? 401
       : /invalid-proof-image|proof-image-too-large/.test(msg) ? 400
       : msg.includes("no-balance") ? 402
-      : (msg.includes("disabled") || msg.includes("bad-client-secret")) ? 403
+      : (msg.includes("disabled") || msg.includes("bad-client-secret") || msg.includes("tts-private-voice-not-owned")) ? 403
       : 500;
     return json({ ok: false, error: msg }, status);
   }

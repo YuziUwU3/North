@@ -87,9 +87,11 @@ function renderOrders() {
     return;
   }
   root.innerHTML = orders.map((order) => {
-    const service = Number(order.points || 0) === 0;
+    const service = order.plan_id === 'svc_clone_1990' || Number(order.points || 0) === 0;
     const folded = collapsedOrders.has(String(order.id));
     const reviewable = order.status === 'pending' && order.review_status === 'submitted';
+    const voice = order.private_voice || null;
+    const canAssignVoice = service && order.status === 'paid' && order.review_status === 'approved';
     return `<article class="order ${reviewable ? 'pending' : ''}" id="order-${esc(order.id)}">
       <div class="order-head">
         <button class="fold-head" type="button" onclick="toggleOrderFold('${esc(order.id)}')" aria-expanded="${folded ? 'false' : 'true'}">
@@ -109,10 +111,12 @@ function renderOrders() {
           <div><b>付款昵称或尾号</b>${esc(order.payer_hint || '未填写')}</div>
           <div><b>提交时间</b>${esc(fmtTime(order.review_submitted_at))}</div>
           <div><b>审核说明</b>${esc(order.review_note || '无')}</div>
+          ${service ? `<div><b>专属音色</b>${voice ? `${esc(voice.display_name)}<br><span class="sub">${esc(voice.voice_id)}</span>` : '尚未绑定'}</div>` : ''}
         </div>
         ${order.proof_url ? `<button class="proof-btn" onclick="openProof('${esc(order.proof_url)}')"><img class="proof" src="${esc(order.proof_url)}" alt="付款截图"></button>` : '<div class="sub">没有付款截图</div>'}
         <div class="actions">
-          ${reviewable ? `<button class="btn danger" onclick="openReject('${esc(order.id)}')">驳回</button><button class="btn approve" onclick="openApprove('${esc(order.id)}')">确认到账并加点</button>` : ''}
+          ${reviewable ? `<button class="btn danger" onclick="openReject('${esc(order.id)}')">驳回</button><button class="btn approve" onclick="openApprove('${esc(order.id)}')">${service ? '确认付款到账' : '确认到账并加点'}</button>` : ''}
+          ${canAssignVoice ? `<button class="btn approve" onclick="openAssignVoice('${esc(order.id)}')">${voice ? '更换专属音色' : '绑定专属音色'}</button>` : ''}
           <button class="btn danger wide-hit" onclick="openDeleteOrder('${esc(order.id)}')">删除记录</button>
         </div>
       </div>
@@ -179,10 +183,23 @@ window.openProof = (url) => {
 window.openApprove = (id) => {
   const order = orders.find((item) => item.id === id);
   if (!order) return;
+  const service = order.plan_id === 'svc_clone_1990' || Number(order.points || 0) === 0;
   openSheet(`<h2>确认实际到账</h2>
-    <p>请先在微信或支付宝账单中核对金额、时间和付款人。确认后，${Number(order.points || 0).toLocaleString()} 点会立刻进入 AI 账户 <b>${esc(order.user_id)}</b>。</p>
+    <p>请先在微信或支付宝账单中核对金额、时间和付款人。${service ? '确认后可在这笔订单中绑定客户的专属音色。' : `确认后，${Number(order.points || 0).toLocaleString()} 点会立刻进入 AI 账户 <b>${esc(order.user_id)}</b>。`}</p>
     <label class="field"><span>真实交易单号或账单尾号（必填）</span><input id="paymentRef" maxlength="120" placeholder="用于防止同一笔付款重复加点"></label>
     <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" onclick="reviewOrder('${esc(id)}','approve')">确认到账</button></div>`);
+};
+
+window.openAssignVoice = (id) => {
+  const order = orders.find((item) => item.id === id);
+  if (!order) return;
+  const voice = order.private_voice || {};
+  openSheet(`<h2>绑定客户专属音色</h2>
+    <p>只填写已经在当前 MiniMax 账户中克隆成功的音色。保存后，只有这笔订单所属的 AI 账户可以使用；客户刷新 AI 账户即可看到。</p>
+    <label class="field"><span>客户看到的音色名称</span><input id="privateVoiceName" maxlength="60" value="${esc(voice.display_name || '')}" placeholder="例如：先生专属音色"></label>
+    <label class="field"><span>MiniMax voice_id</span><input id="privateVoiceId" maxlength="256" value="${esc(voice.voice_id || '')}" placeholder="例如：customerVoice01"></label>
+    <div class="sub">系统会先核对该 voice_id 是否属于当前 MiniMax 账户，不会通过试听触发额外克隆费用。</div>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button id="assignVoiceBtn" class="btn approve" onclick="assignPrivateVoice('${esc(id)}')">保存专属音色</button></div>`);
 };
 
 window.openReject = (id) => {
@@ -234,6 +251,40 @@ window.reviewOrder = async (id, decision) => {
     await loadOrders(true);
   } catch (error) {
     alert('处理失败：' + error.message);
+  } finally {
+    actionBusy = false;
+  }
+};
+
+window.assignPrivateVoice = async (id) => {
+  if (actionBusy) return;
+  const voiceId = ($('privateVoiceId') && $('privateVoiceId').value || '').trim();
+  const displayName = ($('privateVoiceName') && $('privateVoiceName').value || '').trim();
+  if (!displayName) {
+    $('privateVoiceName').focus();
+    return;
+  }
+  if (!/^[A-Za-z][A-Za-z0-9_-]{6,254}[A-Za-z0-9]$/.test(voiceId)) {
+    alert('voice_id 必须为 8～256 位，以英文字母开头，只能包含字母、数字、-、_，结尾不能是 - 或 _。');
+    $('privateVoiceId').focus();
+    return;
+  }
+  actionBusy = true;
+  const btn = $('assignVoiceBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '正在核对并绑定…';
+  }
+  try {
+    await api('admin_assign_private_voice', {
+      purchase_id: id,
+      voice_id: voiceId,
+      display_name: displayName,
+    });
+    closeSheet();
+    await loadOrders(true);
+  } catch (error) {
+    alert('绑定失败：' + error.message);
   } finally {
     actionBusy = false;
   }
@@ -317,7 +368,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=546', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=626', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -371,6 +422,6 @@ document.querySelectorAll('.tab[data-scope]').forEach((button) => button.addEven
   loadOrders(true);
 }));
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=546', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=626', {scope:'./'}).catch(() => {});
 if (token) api('admin_auth').then(showWorkspace).catch(() => showAuth('请重新授权'));
 else showAuth();
