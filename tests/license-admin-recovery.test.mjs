@@ -34,5 +34,8 @@ assert.match(adminApp, /放进来并生成恢复码/);
 assert.match(adminApp, /24 小时有效、只能使用一次/);
 assert.match(adminApp, /adminAccessRole === 'license'/);
 assert.match(adminApp, /document\.querySelectorAll\('\[data-owner-only\]'\)/);
+assert.match(adminApp, /let consecutiveAuthFailures = 0/);
+assert.match(adminApp, /if \(consecutiveAuthFailures < 3\)/);
+assert.match(adminApp, /async function restoreSavedLogin\(\)/);
 
 console.log('license admin recovery tests passed');

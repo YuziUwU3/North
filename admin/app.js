@@ -11,6 +11,7 @@ let licenseUsers = [];
 let loadingOrders = false;
 let loadingLicenses = false;
 let actionBusy = false;
+let consecutiveAuthFailures = 0;
 let installPrompt = null;
 let pollTimer = 0;
 const collapsedOrders = new Set();
@@ -77,6 +78,7 @@ function showAuth(message = '') {
 }
 
 function showWorkspace(role) {
+  consecutiveAuthFailures = 0;
   adminAccessRole = role === 'license' ? 'license' : 'owner';
   $('auth').classList.add('hidden');
   $('workspace').classList.remove('hidden');
@@ -89,11 +91,21 @@ function showWorkspace(role) {
 
 function schedulePoll() {
   clearTimeout(pollTimer);
+  if (!adminAccessRole) return;
   pollTimer = setTimeout(async () => {
     if (workspaceView === 'licenses') await loadLicenseUsers(false);
     else await loadOrders(false);
-    schedulePoll();
+    if (adminAccessRole) schedulePoll();
   }, 15000);
+}
+
+function handleAuthFailure() {
+  consecutiveAuthFailures += 1;
+  if (consecutiveAuthFailures < 3) {
+    setStatus(`授权连接短暂中断，正在自动重试（${consecutiveAuthFailures}/3）…`);
+    return;
+  }
+  showAuth('授权已变化，请重新进入');
 }
 
 function renderOrders() {
@@ -186,14 +198,13 @@ async function loadLicenseUsers(showLoading) {
   try {
     const data = await api('admin_license_users');
     licenseUsers = Array.isArray(data.users) ? data.users : [];
+    consecutiveAuthFailures = 0;
     $('licenseCount').textContent = licenseUsers.length;
     renderLicenseUsers();
     setStatus('共 ' + licenseUsers.length + ' 条授权记录 · ' + new Date().toLocaleTimeString('zh-CN', {hour12:false}));
   } catch (error) {
     if (error.status === 401 || /admin-unauthorized/i.test(error.message)) {
-      token = '';
-      localStorage.removeItem(TOKEN_KEY);
-      showAuth('授权码无效');
+      handleAuthFailure();
     } else {
       setStatus('用户授权读取失败：' + error.message);
       if (showLoading) $('licenseUsers').innerHTML = '<div class="empty">暂时无法读取用户记录</div>';
@@ -294,6 +305,7 @@ async function loadOrders(showLoading) {
   try {
     const data = await api('admin_orders', {scope});
     orders = Array.isArray(data.orders) ? data.orders : [];
+    consecutiveAuthFailures = 0;
     orders.forEach((order) => {
       const id = String(order && order.id || '');
       if (id && !seenOrders.has(id)) {
@@ -308,9 +320,7 @@ async function loadOrders(showLoading) {
     if (target) setTimeout(() => document.getElementById('order-' + target)?.scrollIntoView({behavior:'smooth', block:'center'}), 120);
   } catch (error) {
     if (error.status === 401 || /admin-unauthorized/i.test(error.message)) {
-      token = '';
-      localStorage.removeItem(TOKEN_KEY);
-      showAuth('授权码无效');
+      handleAuthFailure();
     } else {
       setStatus('同步失败：' + error.message);
       if (showLoading) $('orders').innerHTML = '<div class="empty">暂时无法读取订单，请检查网络后刷新</div>';
@@ -531,7 +541,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=628', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=629', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -586,6 +596,19 @@ document.querySelectorAll('.tab[data-scope]').forEach((button) => button.addEven
   openOrdersView(button.dataset.scope);
 }));
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=628', {scope:'./'}).catch(() => {});
-if (token) api('admin_auth').then((result) => showWorkspace(result.role)).catch(() => showAuth('请重新授权'));
+async function restoreSavedLogin() {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await api('admin_auth');
+      showWorkspace(result.role);
+      return;
+    } catch (_) {
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 900));
+    }
+  }
+  showAuth('请重新进入');
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=629', {scope:'./'}).catch(() => {});
+if (token) restoreSavedLogin();
 else showAuth();
