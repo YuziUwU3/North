@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='642'){
+if(window.__NORTH_SHELL_BUILD__!=='643'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v642 · 授权恢复与用户后台';
+const APP_VER='v643 · 心情标签显示开关';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -361,7 +361,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', proactiveIdleMin:20, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, initiative:true, currentActivity:true, personaGuard:true,
+    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', proactiveIdleMin:20, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}, aiImage:{enabled:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -1168,7 +1168,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=642';
+  const url='sw.js?v=643';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2520,6 +2520,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
+      <div class="it"><span>聊天顶部心情标签<br><small style="color:#888">关闭后隐藏聊天页最上方的角色心情，不会删除或重置心情内容</small></span><span class="sw ${S.settings.showMoodTag!==false?'on':''}" onclick="S.settings.showMoodTag=(S.settings.showMoodTag===false);save();render()"></span></div>
       <div class="it"><span>查他手机·刷新用副模型<br><small style="color:#888">开：用便宜的副模型生成ta手机内容（省钱）；关：用主模型（更稳更贴人设）。哪个刷得出、刷得好就用哪个</small></span><span class="sw ${S.settings.spyAux?'on':''}" onclick="S.settings.spyAux=!S.settings.spyAux;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -7278,7 +7279,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   const list=skipped?all.slice(skipped):all;
   let body=skipped?`<div class="tstamp"><span onclick="showOlderChat('${id}')" style="cursor:pointer">加载更早 ${Math.min(CHAT_RENDER_LIMIT,skipped)} 条 · 还剩 ${skipped} 条</span></div>`:'';
   list.forEach((m,i)=>{if(m._silent)return;const prev=i?list[i-1]:all[skipped-1];if(!prev||m.time-prev.time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
-  const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#9a9b9f')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
+  const mood=S.settings.showMoodTag!==false&&c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#9a9b9f')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
   const visionBusy=hasPendingVision(id);
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
