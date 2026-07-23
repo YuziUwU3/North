@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='632';</script>
+<script>window.__NORTH_SHELL_BUILD__='633';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,15 +29,15 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-632';
+  var key='north-sw-reloaded-633';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       if(window.__northBootReady)return;
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','632');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','633');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=632';
+  var url='sw.js?v=633';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -451,6 +451,12 @@ body{background:#000;padding:0;}
 .home.twhite .pgdot.on{background:#9aa0b0;}
 .home.twhite .hwid{background:rgba(255,255,255,.92)!important;border-color:rgba(0,0,0,.05)!important;backdrop-filter:none!important;box-shadow:0 6px 16px rgba(150,150,160,.16);}
 .home.twhite .hwid .wic{background:rgba(120,128,150,.12)!important;}
+/* 用户自定义组件卡片颜色与透明度（覆盖主题默认，但不影响文字清晰度） */
+.home .hwwrap .hwid:not(.wpet){background:var(--widget-bg)!important;border-color:var(--widget-border)!important;}
+.home .hwwrap .hwid:not(.wpet) .wic{background:var(--widget-icon-bg)!important;}
+.wapbox{margin-top:16px;padding:4px 12px;background:#252529;border:1px solid #38383e;border-radius:14px;}
+.waprow{display:flex;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid rgba(255,255,255,.07);color:#bbb;font-size:13px;}
+.waprow:last-child{border-bottom:none}.waprow>span{flex:1}.waprow input[type="color"]{width:48px;height:34px;padding:0;background:none;border:none;cursor:pointer}.waprow input[type="range"]{width:118px;accent-color:#ff8fab}.waprow b{width:38px;color:#eee;font-size:12px;text-align:right;}
 /* 双头像情侣组件 */
 .wcp2{gap:10px;}
 .wcp2 .av2{display:flex;}
@@ -861,8 +867,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=632" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=632" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=632"></script>
+<script src="license-gate.js?v=633" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=633" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=633"></script>
 </body>
 </html>

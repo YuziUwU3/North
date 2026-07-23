@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='632'){
+if(window.__NORTH_SHELL_BUILD__!=='633'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -348,7 +348,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v632 · 全量侦查与角色自主处置';
+const APP_VER='v633 · 组件透明度与自由换色';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1152,7 +1152,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=632';
+  const url='sw.js?v=633';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2101,6 +2101,14 @@ function moodKeyOf(v){if(!v)return '';if(MOODS[v])return v;if(EMOJI2MOOD[v])retu
 function moodGlyph(v,size,color){const k=moodKeyOf(v);return k?moodIc(k,size,color):'';}
 function moodLabel(v){const k=moodKeyOf(v);return k&&MOODS[k]?MOODS[k][0]:'';}
 function wcol(){const t=S.me.theme,def=(!S.me.wColor||S.me.wColor==='#ffffff');if(def&&t==='pink')return '#b85c81';if(def&&t==='white')return '#555a66';return S.me.wColor||'#fff';}
+function widgetHex(v,fallback){v=String(v||'').trim();return /^#[0-9a-f]{6}$/i.test(v)?v:(fallback||'#ffffff');}
+function widgetOpacityValue(){if(S.me.wOpacity!=null&&isFinite(+S.me.wOpacity))return Math.max(0,Math.min(100,Math.round(+S.me.wOpacity)));return S.me.theme==='pink'?82:S.me.theme==='white'?92:13;}
+function widgetCardColor(){return widgetHex(S.me.wCardColor,S.me.theme==='pink'?'#fff8fb':'#ffffff');}
+function widgetRgba(hex,alpha){hex=widgetHex(hex,'#ffffff');const n=parseInt(hex.slice(1),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+Math.max(0,Math.min(1,alpha)).toFixed(3)+')';}
+function widgetStyleVars(){if(!S.me.wCardColor&&S.me.wOpacity==null){if(S.me.theme==='pink')return '--widget-bg:rgba(255,248,251,.82);--widget-border:rgba(255,255,255,.65);--widget-icon-bg:rgba(255,182,201,.5)';if(S.me.theme==='white')return '--widget-bg:rgba(255,255,255,.92);--widget-border:rgba(0,0,0,.05);--widget-icon-bg:rgba(120,128,150,.12)';return '--widget-bg:rgba(255,255,255,.13);--widget-border:rgba(255,255,255,.14);--widget-icon-bg:rgba(255,255,255,.16)';}const col=widgetCardColor(),a=widgetOpacityValue()/100;return '--widget-bg:'+widgetRgba(col,a)+';--widget-border:'+widgetRgba(col,Math.min(.72,a*.72+.04))+';--widget-icon-bg:'+widgetRgba(col,Math.min(.5,a*.42+.1));}
+function petcol(){return widgetHex(S.me.petColor,wcol());}
+function widgetAppearanceSet(key,value){widInit();if(key==='wOpacity'){S.me.wOpacity=Math.max(0,Math.min(100,Math.round(+value||0)));const n=$('#wopacityVal');if(n)n.textContent=S.me.wOpacity+'%';}else if(key==='wCardColor')S.me.wCardColor=widgetHex(value,'#ffffff');else if(key==='wColor')S.me.wColor=widgetHex(value,'#ffffff');else if(key==='petColor')S.me.petColor=widgetHex(value,'#ffffff');save(350);render();}
+function widgetAppearanceReset(){delete S.me.wCardColor;delete S.me.wOpacity;delete S.me.petColor;S.me.wColor='#ffffff';save();render();widgetManager();toast('已恢复当前主题的组件默认样式');}
 function _wCard(ic,top,main,onclick){const col=wcol();return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
 function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const days=coupleDays(S.couple.startDate);
@@ -2162,7 +2170,7 @@ function petCatNight(col){return `<svg class="petcat petsleep" viewBox="0 0 80 5
   <path d="M22 36 q3 3 7 0"/>
   <path d="M14 38 l7 0M14 41 l7 -1.5"/>
   <path class="ptail" d="M68 48 q11 -1 5 -13"/></svg>`;}
-function wPet(){const col=wcol();const hr=new Date().getHours();const night=(hr>=21||hr<7);
+function wPet(){const col=petcol();const hr=new Date().getHours();const night=(hr>=21||hr<7);
   const cat=night?petCatNight(col):petCatDay(col);
   const zzz=night?`<span class="pzzz" style="color:${col}">z<small>z</small></span>`:'';
   const sub=night?'呼呼…睡着了':'精神满满～';
@@ -2175,7 +2183,7 @@ function petTap(el){const box=el.querySelector('.petbox');const c=el.querySelect
   toast(night?'喵…（迷糊地蹭了蹭你）':'喵～ 蹭蹭你的手');}
 function homeWidgets(){widInit();
   const html=S.me.widgets.map(k=>WIDR[k]?WIDR[k]():'').filter(Boolean).join('');
-  return html?'<div class="hwwrap">'+html+'</div>':'';}
+  return html?'<div class="hwwrap" style="'+widgetStyleVars()+'">'+html+'</div>':'';}
 function wNoteEdit(){widInit();const n=S.me.note;const papers=['#fff7d6','#ffd9e0','#d6f0ff','#e2ffd9','#efe2ff','#ffffff'];window._wnPaper=null;
   openModal(`<h3>可爱便签</h3>
     <textarea id="wn_t" rows="4" style="width:100%;box-sizing:border-box;background:#2c2c2e;border:1px solid #38383a;border-radius:10px;color:#eee;padding:10px;font-size:15px" placeholder="写点什么…文案、碎碎念、想说的话">${esc(n.text||'')}</textarea>
@@ -2191,12 +2199,18 @@ function wMoodSet(k){widInit();S.me.mood={k,date:wToday()};save();closeModal();r
 // 组件管理（开关 + 拖动排序）
 function widgetManager(){widInit();const meta={};WIDS.forEach(w=>meta[w[0]]=w);
   const en=S.me.widgets.filter(k=>meta[k]);const off=WIDS.map(w=>w[0]).filter(k=>!S.me.widgets.includes(k));
-  openModal(`<h3>主屏组件</h3><div class="hint">拖左边手柄排序，点开关增减。组件都固定在主屏第一页。文字颜色可在下面改。</div>
+  openModal(`<h3>主屏组件</h3><div class="hint">拖左边手柄排序，点开关增减。组件固定在主屏第一页；颜色和透明度修改后会立即预览。</div>
    <div style="color:#aaa;font-size:13px;margin:12px 0 2px">已显示（拖动排序）</div>
    <div class="wlist" id="wlist" onpointermove="wDragMove(event)" onpointerup="wDragEnd()" onpointercancel="wDragEnd()">
    ${en.length?en.map(k=>wManRow(k,meta[k],true)).join(''):'<div style="color:#777;padding:8px">都关掉了</div>'}</div>
    ${off.length?`<div style="color:#aaa;font-size:13px;margin:14px 0 2px">已关闭（点开启）</div>${off.map(k=>wManRow(k,meta[k],false)).join('')}`:''}
-   <div style="display:flex;align-items:center;gap:10px;margin:18px 0 4px"><span style="color:#aaa;font-size:13px">组件文字颜色</span><input type="color" id="wcolor" value="${S.me.wColor||'#ffffff'}" onchange="S.me.wColor=this.value;save();render()" style="width:46px;height:32px;background:none;border:none"><button class="minibtn" onclick="S.me.wColor='#ffffff';save();render();widgetManager()">恢复白</button></div>
+   <div class="wapbox">
+     <div class="waprow"><span>卡片颜色</span><input type="color" id="wcardcolor" value="${widgetCardColor()}" oninput="widgetAppearanceSet('wCardColor',this.value)"></div>
+     <div class="waprow"><span>卡片透明度<small style="display:block;color:#777">0透明 · 100实色</small></span><input type="range" id="wopacity" min="0" max="100" step="1" value="${widgetOpacityValue()}" oninput="widgetAppearanceSet('wOpacity',this.value)"><b id="wopacityVal">${widgetOpacityValue()}%</b></div>
+     <div class="waprow"><span>文字和图标颜色</span><input type="color" id="wcolor" value="${widgetHex(wcol(),'#ffffff')}" oninput="widgetAppearanceSet('wColor',this.value)"></div>
+     <div class="waprow"><span>桌面小猫颜色</span><input type="color" id="wpetcolor" value="${petcol()}" oninput="widgetAppearanceSet('petColor',this.value)"></div>
+   </div>
+   <button class="minibtn" style="margin-top:10px" onclick="widgetAppearanceReset()">恢复主题默认</button>
    <div class="btns" style="margin-top:10px"><button class="btn p" onclick="closeModal()">完成</button></div>`);}
 function wManRow(k,w,on){return `<div class="wrow" data-k="${k}">${on?`<span class="whandle" onpointerdown="wDragDown(event,'${k}')">${svgIc('dots',20,'#888')}</span>`:'<span style="width:26px;flex:none"></span>'}<div class="wnm">${w[1]}<small>${w[2]}</small></div><span class="sw ${on?'on':''}" onclick="wToggle('${k}')"></span></div>`;}
 function wToggle(k){widInit();const i=S.me.widgets.indexOf(k);if(i>=0)S.me.widgets.splice(i,1);else S.me.widgets.push(k);widInit();save();render();widgetManager();}
@@ -2580,7 +2594,7 @@ async function clearAllData(){
   fresh.settings=old.settings;// 保留 API 设置
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
-  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','appIcons','momentCover','status','place'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
+  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','appIcons','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
   const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
@@ -4009,22 +4023,21 @@ function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机�
     ${gag?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把「${esc(pfGroupDisplayName(g))}」锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间查看</span></div>`:`<div class="inputbar"><span class="plus" style="background:transparent;box-shadow:none;color:#aaa" onclick="document.getElementById('pfgpanel').classList.toggle('show')">＋</span><textarea id="pfg_input" rows="1" placeholder="发群消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPhoneFriendGroup('${gid}')}"></textarea><button class="send" onclick="sendPhoneFriendGroup('${gid}')">发送</button></div>`}`;}
 
 function wxChats(){
-  const list=[...S.contacts].filter(c=>!c.deleted&&(isMain()||addedHere(c)||msgs(c.id).length)).sort((a,b)=>{
-    if(a.pinned!==b.pinned)return a.pinned?-1:1;
-    return (lastMsg(b.id)?.time||0)-(lastMsg(a.id)?.time||0);});
+  const list=[...S.contacts].filter(c=>!c.deleted&&(isMain()||addedHere(c)||msgs(c.id).length));
   const groups=isMain()?(S.groups||[]):[];
   const banner=isMain()?'':`<div style="padding:8px 12px;background:#3a2d4a;color:#d6c2f0;font-size:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">${svgIc('idcard',14,'#d6c2f0')}当前身份：${esc(S.me.name)}（在「我」里可切换/搜微信号加人）</div>`;
   const searchbar=`<div onclick="openWxSearch()" style="margin:8px 12px;padding:8px 12px;background:${S.me.wxTheme==='white'?'#fff':'#1c1c1e'};border-radius:9px;color:#999;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">${svgIc('search',15,'#999')} 搜索聊天记录</div>`;
-  const pfBlock=isMain()?(pfGroupRowsHTML()+pfFriendRowsHTML()):'';
   const roleRow=c=>{const lm=lastMsg(c.id);return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
       <div class="s">${lm?esc(previewOf(lm)):'打个招呼吧～'}</div></div>
       <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;};
-  let html=banner+searchbar+'<div class="list">'+list.filter(c=>c.pinned).map(roleRow).join('')+pfBlock;
-  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;});
-  if(!list.length&&!groups.length&&!pfBlock)return banner+'<div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
-  html+=list.filter(c=>!c.pinned).map(roleRow).join('');
-  return html+'</div>';
+  const entries=[],add=(time,pinned,html)=>entries.push({time:+time||0,pinned:!!pinned,html,order:entries.length});
+  list.forEach(c=>{const lm=lastMsg(c.id);add(lm&&lm.time,c.pinned,roleRow(c));});
+  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];add(lm&&lm.time,g.pinned,`<div class="row ${g.pinned?'pin':''}" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});
+  if(isMain()){const p=phoneFriendState();(p.groups||[]).forEach(g=>{const gid=g.group_id||g.id,arr=pfMsgList(p.groupMessages,gid),lm=arr[arr.length-1],unread=arr.filter(m=>m.from!==p.id&&m.time>(p.groupRead[gid]||0)).length;add(lm&&lm.time,g.pinned,`<div class="row ${g.pinned?'pin':''}" onclick="openPhoneFriendGroup('${gid}')"><div class="avatar" style="background:linear-gradient(135deg,#ff8fab,#ffc2d8)">${svgIc('users',24,'#fff')}</div><div class="meta"><div class="n">${esc(pfGroupDisplayName(g))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((pfNameById(lm.from)||'成员')+'：'+pfMsgPreview(lm))):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});(p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=arr.filter(m=>m.from===id&&m.time>(p.friendRead[id]||0)).length;add(lm&&lm.time,f.pinned,`<div class="row ${f.pinned?'pin':''}" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}${f.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});}
+  if(!entries.length)return banner+'<div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
+  entries.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||b.time-a.time||a.order-b.order);
+  return banner+searchbar+'<div class="list">'+entries.map(x=>x.html).join('')+'</div>';
 }
 function gpreview(m,g){const nm=gnm(g,m.senderId);return nm+'：'+gmText(m);}
 function gmText(m){return m.type==='text'?m.content:m.type==='transfer'?'[转账]':m.type==='redpacket'?'[红包]':'[消息]';}
@@ -9244,7 +9257,7 @@ function importData(){pickFile('.json',f=>readJsonFile(f,async d=>{if(d&&d.type=
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
-    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place']),
+    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
     phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
     phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
     music:pickObj(music,['bg','cover','theme','layout','widgets']),
@@ -9260,7 +9273,7 @@ function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
-  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place']);
+  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
   const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
   const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});
