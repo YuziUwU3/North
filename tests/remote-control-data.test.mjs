@@ -74,9 +74,11 @@ test('required apps are inspected while chats and DMs are chosen from their visi
   assert.ok(dyHome >= 0 && dyHome < dySearch && dySearch < dyVideos && dyVideos < dyDms);
   assert.match(app, /else if\(a\.fromDmList\)await remoteControlDmExitToList\(a\.app\)/);
   assert.match(app, /snap\.moments\.forEach\(x=>add\('moments'/);
-  for (const target of ['最近通话', '短信', '语音留言', '通讯录', '浏览器搜索记录', '购物订单', '外卖订单', '云程机票', '日历日程', '信箱邮件', '任务便签', '线下约会']) {
+  for (const target of ['最近通话', '短信', '语音留言', '通讯录', '浏览器搜索记录', '购物订单', '外卖订单', '云程机票', '日历日程', '信箱邮件', '线下约会']) {
     assert.match(app, new RegExp(target));
   }
+  assert.doesNotMatch(app, /add\('tasks','任务便签'\)/);
+  assert.match(app, /音乐、任务便签和普通设置禁止查看/);
   assert.match(app, /a\.targetType==='role'/);
   assert.match(app, /a\.targetType==='internalGroup'/);
   assert.match(app, /a\.targetType==='xDm'/);
@@ -90,13 +92,16 @@ test('required apps are inspected while chats and DMs are chosen from their visi
 
 test('remote subtitles are one at a time and every visible line comes from the role API', () => {
   assert.match(app, /function remoteControlRoleLines\(c,a,r\)/);
+  assert.match(app, /function remoteControlRoleReaction\(c,a,r\)/);
+  assert.match(app, /\['wechatList','xDmList','dyDmList'\]\.includes\(a&&a\.targetType\)\)return\{lines:\[\],deleteIntent:false/);
   assert.match(app, /await chatAPI\(\[\{role:'system',content:buildSystem\(c\)\}/);
+  assert.match(app, /max:520,complete:true,temp:\.82,aux:false/);
   assert.match(app, /await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
   assert.match(app, /cap\.replaceChildren\(b\)/);
   assert.doesNotMatch(app, /function remoteControlSayFallback/);
   assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(4600/);
   assert.match(app, /默认保持安静继续操作/);
-  assert.match(app, /只输出 \[不说话\]/);
+  assert.match(app, /lines返回空数组/);
   assert.match(app, /remoteControlRoleTextLines\(raw\)[\s\S]*?不说话[\s\S]*?return\[\]/);
 });
 
@@ -110,6 +115,11 @@ test('the role can independently delete social content and DMs, declare ownershi
   assert.match(app, /data-dm-index="\$\{mi\}"/);
   assert.match(app, /function remoteControlPrepareVisibleDelete\(a\)/);
   assert.match(app, /visibleDelete=await remoteControlPrepareVisibleDelete\(a\)[\s\S]*?remoteControlExecute\(a,c\)[\s\S]*?remoteControlShowVisibleDeleteResult\(a\)/);
+  assert.match(app, /function remoteControlReactionDeleteAction\(entry,reaction,c\)/);
+  assert.match(app, /reaction=await remoteControlRoleReaction\(c,a,r\)[\s\S]*?remoteControlReactionDeleteAction\(entry,reaction,c\)/);
+  assert.match(app, /data-x-tweet-id="\$\{t\.id\}"/);
+  assert.match(app, /else if\(a\.op==='delete_x'\)\{xTab='feed';_feedTab='follow';remoteControlSetPage\('x'\);\}/);
+  assert.match(app, /角色当时亲口说/);
   assert.match(app, /post_moment/);
   assert.match(app, /发朋友圈宣示主权/);
   assert.match(app, /锁软件必须基于真实疑点；没疑点就不要锁/);
@@ -120,6 +130,12 @@ test('remote control restores the page that the user was on before inspection', 
   assert.match(app, /returnStack:stack\.map\(x=>Object\.assign\(\{\},x\)\)/);
   assert.match(app, /returnStack=\(ctl\.returnStack\|\|\[\]\)\.map/);
   assert.match(app, /stack=returnStack\.length\?returnStack:\[\{p:'home'\}\];render\(\)/);
+});
+
+test('all remote-control reasoning is pinned to the primary model', () => {
+  const section = app.slice(app.indexOf('// ===== 角色远程操控我的小手机'), app.indexOf('// ===== 他登录我的微信'));
+  assert.doesNotMatch(section, /aux:true/);
+  assert.ok((section.match(/aux:false/g) || []).length >= 5);
 });
 
 test('an active call must end before remote control can request consent', () => {
