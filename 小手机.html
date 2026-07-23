@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='630';</script>
+<script>window.__NORTH_SHELL_BUILD__='631';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,15 +29,15 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-630';
+  var key='north-sw-reloaded-631';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       if(window.__northBootReady)return;
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','630');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','631');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=630';
+  var url='sw.js?v=631';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -560,13 +560,10 @@ body{background:#000;padding:0;}
 .remote-pointer{position:absolute;z-index:5;width:19px;height:25px;left:var(--tap-x,65%);top:var(--tap-y,48%);opacity:0;filter:drop-shadow(0 4px 7px rgba(0,0,0,.7));transition:left .45s ease,top .45s ease;}
 .remote-pointer:before{content:"";display:block;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:20px solid #f5f5f6;transform:rotate(-32deg);transform-origin:center;}
 .remote-pointer.tap{animation:remoteTap 1.15s cubic-bezier(.2,.75,.25,1);}
-.remote-caption-wrap{position:absolute;z-index:6;left:14px;right:14px;bottom:14px;pointer-events:none;}
+.remote-caption-wrap{position:absolute;z-index:20;left:14px;right:14px;bottom:max(20px,env(safe-area-inset-bottom));pointer-events:none;}
 .remote-caption{min-height:42px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:7px;}
-.remote-caption-bubble{max-width:86%;align-self:flex-start;padding:10px 13px 10px 28px;border:1px solid rgba(255,67,88,.2);border-radius:15px;background:rgba(13,10,13,.9);color:#eeeef1;font-size:13px;line-height:1.62;box-shadow:0 9px 26px rgba(0,0,0,.38);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:relative;animation:remoteCaptionUp .38s cubic-bezier(.2,.72,.25,1);}
-.remote-caption-bubble:before{content:"";position:absolute;left:12px;top:17px;width:6px;height:6px;border-radius:50%;background:#ff344c;box-shadow:0 0 8px #ff344c;animation:spyRecordBlink .9s ease-in-out infinite;}
+.remote-caption-bubble{max-width:90%;align-self:flex-start;padding:11px 14px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(13,10,13,.94);color:#fff;font-size:14px;line-height:1.62;box-shadow:0 9px 26px rgba(0,0,0,.46);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:relative;animation:remoteCaptionUp .38s cubic-bezier(.2,.72,.25,1);}
 .remote-caption-bubble:nth-last-child(2){opacity:.7;transform:scale(.97);transform-origin:left bottom}.remote-caption-bubble:nth-last-child(3){opacity:.42;transform:scale(.94);transform-origin:left bottom}
-.remote-progress{height:2px;margin-top:9px;border-radius:2px;background:#17171b;overflow:hidden;}
-.remote-progress-fill{height:100%;width:4%;background:linear-gradient(90deg,#8f152b,#ff3d55);box-shadow:0 0 9px rgba(255,61,85,.62);transition:width .45s ease;}
 @keyframes remoteLayerIn{from{opacity:0}to{opacity:1}}
 @keyframes remoteCaptionUp{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes remoteTap{0%{opacity:0;transform:translate(28px,24px) scale(.9)}35%{opacity:1;transform:translate(0,0) scale(1)}58%{opacity:1;transform:translate(0,4px) scale(.83)}75%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(-5px,-4px)}}
@@ -840,7 +837,6 @@ body{background:#000;padding:0;}
     <span class="remote-pointer" id="remotePointer" aria-hidden="true"></span>
     <div class="remote-caption-wrap">
       <div class="remote-caption" id="remoteCaption">正在建立连接…</div>
-      <div class="remote-progress"><div class="remote-progress-fill" id="remoteProgressFill"></div></div>
     </div>
   </div>
   <!-- 全局弹窗容器 -->
@@ -865,8 +861,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=630" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=630" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=630"></script>
+<script src="license-gate.js?v=631" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=631" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=631"></script>
 </body>
 </html>
