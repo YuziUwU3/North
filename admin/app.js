@@ -3,6 +3,7 @@ const PUBLIC_KEY = 'sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
 const TOKEN_KEY = 'north_admin_access';
 
 let token = localStorage.getItem(TOKEN_KEY) || '';
+let adminAccessRole = '';
 let scope = 'pending';
 let workspaceView = 'orders';
 let orders = [];
@@ -65,6 +66,7 @@ function setStatus(text) {
 
 function showAuth(message = '') {
   clearTimeout(pollTimer);
+  adminAccessRole = '';
   $('workspace').classList.add('hidden');
   $('auth').classList.remove('hidden');
   $('adminToken').value = token;
@@ -74,10 +76,14 @@ function showAuth(message = '') {
   }
 }
 
-function showWorkspace() {
+function showWorkspace(role) {
+  adminAccessRole = role === 'license' ? 'license' : 'owner';
   $('auth').classList.add('hidden');
   $('workspace').classList.remove('hidden');
-  loadOrders(true);
+  const licenseOnly = adminAccessRole === 'license';
+  document.querySelectorAll('[data-owner-only]').forEach((item) => item.classList.toggle('hidden', licenseOnly));
+  if (licenseOnly) openLicenseView();
+  else openOrdersView(scope);
   schedulePoll();
 }
 
@@ -208,6 +214,7 @@ function openLicenseView() {
 }
 
 function openOrdersView(nextScope) {
+  if (adminAccessRole === 'license') return;
   workspaceView = 'orders';
   scope = nextScope || scope;
   $('orders').classList.remove('hidden');
@@ -279,6 +286,7 @@ window.copyAdminRecoveryCode = async () => {
 };
 
 async function loadOrders(showLoading) {
+  if (adminAccessRole === 'license') return;
   if (loadingOrders) return;
   loadingOrders = true;
   if (showLoading) $('orders').innerHTML = '<div class="empty"><div class="spinner"></div>正在读取订单</div>';
@@ -496,9 +504,9 @@ async function login() {
   $('loginBtn').disabled = true;
   $('loginBtn').textContent = '正在验证…';
   try {
-    await api('admin_auth');
+    const result = await api('admin_auth');
     localStorage.setItem(TOKEN_KEY, token);
-    showWorkspace();
+    showWorkspace(result.role);
   } catch (_) {
     token = '';
     localStorage.removeItem(TOKEN_KEY);
@@ -515,6 +523,7 @@ function urlBase64ToBytes(value) {
 }
 
 async function enableNotifications() {
+  if (adminAccessRole !== 'owner') return;
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     alert('当前浏览器不支持后台通知。iPhone 请先用 Safari 添加到主屏幕后再打开。');
     return;
@@ -522,7 +531,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=627', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=628', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -577,6 +586,6 @@ document.querySelectorAll('.tab[data-scope]').forEach((button) => button.addEven
   openOrdersView(button.dataset.scope);
 }));
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=627', {scope:'./'}).catch(() => {});
-if (token) api('admin_auth').then(showWorkspace).catch(() => showAuth('请重新授权'));
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=628', {scope:'./'}).catch(() => {});
+if (token) api('admin_auth').then((result) => showWorkspace(result.role)).catch(() => showAuth('请重新授权'));
 else showAuth();

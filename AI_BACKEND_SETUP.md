@@ -32,6 +32,7 @@ OPENAI_BASE_URL=https://vg.v1api.cc/v1
 CHAT_MODEL=gemini-2.5-pro
 VISION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gpt-image-2
+ADMIN_ACCESS_TOKEN=主管理员独立强口令
 ```
 
 注意：Supabase 不允许自定义 Secret 以 `SUPABASE_` 开头，所以这里用的是 `PHONE_SUPABASE_URL` 和 `PHONE_SERVICE_ROLE_KEY`。
@@ -45,6 +46,14 @@ IMAGE_ROUTE_2_BASE_URL=备用中转站地址
 IMAGE_ROUTE_2_API_KEY=备用中转站密钥
 IMAGE_ROUTE_2_MODEL=gpt-image-2
 ```
+
+如果要让其他管理员只管理用户授权、不能查看付款核对，再配置：
+
+```text
+LICENSE_ADMIN_TOKENS=授权管理员A的独立强口令,授权管理员B的独立强口令
+```
+
+每位授权管理员使用不同口令，多个口令用英文逗号、分号或换行分隔。`ADMIN_ACCESS_TOKEN` 是主管理员口令，可查看付款和用户授权；`LICENSE_ADMIN_TOKENS` 里的口令只能查询小手机 ID、查看注册时间、移出用户或签发恢复码。付款订单、截图、金额和审核接口会在云端拒绝授权管理员，不只是前端隐藏。
 
 配置备用站后，它会作为新的主路线；原图片站改为副路线。新主路线若返回空图片会在同一笔请求内自动补试一次，再失败才尝试原路线。一次生成只预扣一次点数：任一路线成功就只结算一次，全部尝试都失败才全额退点，不会因为重试或切换路线重复扣点。
 

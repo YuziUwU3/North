@@ -108,10 +108,24 @@ function secureEqual(a: string, b: string) {
   return diff === 0;
 }
 
-function requireAdmin(req: Request, body: any) {
+function adminRole(req: Request, body: any): "owner" | "license" {
   const supplied = String(req.headers.get("x-admin-token") || body?.admin_token || "").trim();
-  const expected = String(Deno.env.get("ADMIN_ACCESS_TOKEN") || "").trim();
-  if (!expected || !secureEqual(supplied, expected)) throw new Error("admin-unauthorized");
+  const ownerToken = String(Deno.env.get("ADMIN_ACCESS_TOKEN") || "").trim();
+  if (ownerToken && secureEqual(supplied, ownerToken)) return "owner";
+  const licenseTokens = String(Deno.env.get("LICENSE_ADMIN_TOKENS") || "")
+    .split(/[\n,;]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+  if (licenseTokens.some((token) => secureEqual(supplied, token))) return "license";
+  throw new Error("admin-unauthorized");
+}
+
+function requireAdmin(req: Request, body: any) {
+  if (adminRole(req, body) !== "owner") throw new Error("admin-unauthorized");
+}
+
+function requireLicenseAdmin(req: Request, body: any) {
+  return adminRole(req, body);
 }
 
 function proofBytes(dataUrl: unknown) {
@@ -806,8 +820,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === "admin_auth") {
-      requireAdmin(req, body);
-      return json({ ok: true });
+      const role = requireLicenseAdmin(req, body);
+      return json({ ok: true, role });
     }
 
     if (action === "admin_subscribe") {
@@ -831,7 +845,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "admin_license_users") {
-      requireAdmin(req, body);
+      requireLicenseAdmin(req, body);
       const users: any[] = [];
       for (let start = 0; ; start += 1000) {
         const { data, error } = await supabase
@@ -848,7 +862,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "admin_license_block") {
-      requireAdmin(req, body);
+      requireLicenseAdmin(req, body);
       const licenseId = String(body.license_id || "").trim();
       if (!/^[0-9a-f-]{36}$/i.test(licenseId)) {
         return json({ ok: false, error: "invalid-license-id" }, 400);
@@ -881,7 +895,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "admin_license_recovery") {
-      requireAdmin(req, body);
+      requireLicenseAdmin(req, body);
       const licenseId = String(body.license_id || "").trim();
       if (!/^[0-9a-f-]{36}$/i.test(licenseId)) {
         return json({ ok: false, error: "invalid-license-id" }, 400);
