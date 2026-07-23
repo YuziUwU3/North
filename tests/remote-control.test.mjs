@@ -17,6 +17,16 @@ test('remote control always requires an explicit request and user choice', () =>
   assert.match(app, /拒绝后不会获得任何内容/);
 });
 
+test('remote control is exposed only through the bound couple space', () => {
+  assert.match(app, /function remoteControlAllowed\(cid\)/);
+  assert.match(app, /S\.couple&&S\.couple\.cid===cid&&S\.couple\.remoteControlAuth!==false/);
+  assert.match(app, /!remoteControlAllowed\(cid\)/);
+  assert.match(app, /id="cou_remote"/);
+  assert.match(app, /允许 \$\{nm\} 发起远程操控申请/);
+  assert.match(app, /每一次都会先弹出【同意 \/ 拒绝】/);
+  assert.match(app, /不是苹果系统里的其他真实 App/);
+});
+
 test('refusal never starts a session and produces a personality reaction', () => {
   const deny = app.match(/function remoteControlDeny\(cid\)[\s\S]*?(?=\nfunction remoteControlApprove\(cid\))/)?.[0] || '';
   assert.doesNotMatch(deny, /remoteControlSnapshot|remoteControlRun/);
@@ -45,12 +55,28 @@ test('live overlay blocks the phone while preserving an emergency stop', () => {
   assert.match(html, /\.remote-live-dot\{[^}]*background:#ff2942/);
 });
 
-test('every action has slow subtitles, free device speech, and persistent memory', () => {
+test('every action has slow silent subtitles and persistent memory', () => {
+  const remote = app.match(/let _remoteCtl[\s\S]*?(?=\/\/ ===== 他登录我的微信)/)?.[0] || '';
   assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(3300/);
-  assert.match(app, /SpeechSynthesisUtterance/);
+  assert.doesNotMatch(remote, /SpeechSynthesisUtterance|speechSynthesis|remoteControlSpeak/);
+  assert.match(app, /function remoteControlCaption\(say\)/);
+  assert.match(html, /\.remote-caption-bubble/);
+  assert.match(html, /@keyframes remoteCaptionUp/);
   assert.match(app, /remoteControlRemember\(c,\{ts:Date\.now\(\),startedAt/);
   assert.match(app, /function remoteControlHistoryPrompt\(c\)/);
   assert.match(app, /'remoteControlHistory'/);
+});
+
+test('role opens the real small-phone pages and searches the current desktop layout', () => {
+  assert.doesNotMatch(html, /class="remote-device"/);
+  assert.match(html, /\.remote-control-layer\{[^}]*background:transparent/);
+  assert.match(app, /function remoteControlSetPage\(p,params\)/);
+  assert.match(app, /function remoteControlNavigate\(a,r\)/);
+  assert.match(app, /function remoteControlDesktopPage\(key\)/);
+  assert.match(app, /S\.me\.appLayout\[i\]\.indexOf\(key\)/);
+  assert.match(app, /sw\.scrollTo\(\{left:sw\.clientWidth\*pg,behavior:'smooth'\}\)/);
+  assert.match(app, /document\.querySelector\('\.app\[data-k="'\+key\+'"\]'\)/);
+  assert.match(app, /await remoteControlOpenApp\(a,c\)/);
 });
 
 test('X and Weibo posting, deletion and likes are part of the control plan', () => {
