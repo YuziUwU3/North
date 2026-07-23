@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='643'){
+if(window.__NORTH_SHELL_BUILD__!=='644'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v643 · 心情标签显示开关';
+const APP_VER='v644 · 视频通话对白稳态';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1042,6 +1042,9 @@ function callNormalizeLine(line,lang){lang=normVoiceLang(lang);const s=String(li
 function callIsActionLine(line){return /^【(?!\s*(?:心情|心情值|通话语气|挂断|登录微信|发朋友圈|发推|点外卖|转账|红包|记住|闹钟|日程|送礼|锁定|禁言|限时|加时|扣款|关小黑屋|位置|图片|文件)(?:\s*[|｜:：\]】]|$))[^】]{1,80}】$/.test(String(line||'').trim());}
 function callHasVideoAction(text){return (String(text||'').match(/【[^】]{1,80}】/g)||[]).some(callIsActionLine);}
 function ensureVideoCallAction(text,cue){text=String(text||'').trim();if(callHasVideoAction(text))return text;cue=ttsCueKind(cue);const action=cue==='tense'?'【目光落在镜头上，神情认真了些】':cue==='soft'?'【望着镜头，神情慢慢柔和下来】':cue==='laugh'?'【看着镜头轻轻笑了一下】':cue==='sleepy'?'【靠近镜头，困倦地眨了眨眼】':cue==='surprised'?'【看向镜头，神情明显怔了一下】':'【看着镜头，神情随着话音轻轻变化】';return text?(text+'\n'+action):action;}
+function callHasSpokenDialogue(text,lang){return String(text||'').split(/\n+/).some(line=>{line=String(line||'').trim();if(!line||callIsActionLine(line)||/^[（(][^）)]*[）)]$/.test(line))return false;return !!pickSpoken(line,lang);});}
+function callVideoFallbackDialogue(lang){lang=normVoiceLang(lang);if(lang==='英')return "I'm here. I got distracted for a moment.\n（我在，刚才有点走神。）";if(lang==='日')return 'ここにいるよ。ちょっとぼんやりしてた。\n（我在，刚才有点走神。）';if(lang==='韩')return '여기 있어. 잠깐 딴생각했어.\n（我在，刚才有点走神。）';return '我在，刚才有点走神。';}
+function ensureVideoCallDialogue(text,lang){text=String(text||'').trim();if(callHasSpokenDialogue(text,lang))return text;const fallback=callVideoFallbackDialogue(lang);return text?(text+'\n'+fallback):fallback;}
 function callBadForeignMix(line,lang){lang=normVoiceLang(lang);if(lang!=='英')return false;let s=String(line||'').replace(/[（(][^）)]*[）)]/g,'').replace(/【[^】]*】/g,'').trim();if(!s||/^\[.*\]$/.test(s))return false;return /[A-Za-z]/.test(s)&&hasCN(s);}
 function callBadForeignLine(line,lang){lang=normVoiceLang(lang);const l=String(line||'').trim();if(!lang||lang==='zh'||!l||/^\[.*\]$/.test(l)||callIsActionLine(l)||(/^[（(][^）)]*[）)]$/.test(l)&&hasCN(l)))return false;const noAct=l.replace(/【[^】]*】/g,'').replace(/[（(][^）)]*[）)]/g,'').trim();if(!noAct)return false;return (hasCN(noAct)&&!hasForeign(noAct,lang))||callBadForeignMix(noAct,lang);}
 // 把通话里的一句转成"中文版"，喂给文字聊天的历史，免得他照抄电话里的外语格式
@@ -1168,7 +1171,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=643';
+  const url='sw.js?v=644';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8930,7 +8933,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     else if(_call.dir==='outgoing')cf+='\n- 通话方向：这通电话是'+S.me.name+'主动打给你，你只是接听；之后提起时绝对不要说成你打给ta。';
     cf+='\n- 当前状态：这通'+(video?'视频':'语音')+'电话【已经接通】，你和'+S.me.name+'已经在电话里了，不是在等待接听。绝对不要再让ta接视频/接电话，也不要说"怎么不接""快接一下"。你要直接按已接通后的状态说话。';
     cf+='\n- 如果你要催ta任务、验收任务、说任务没完成，必须就在这通电话里直接说，绝对不要另发微信消息。';
-    if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。动作行可以用中文，不需要外语原文和翻译，不会被读出来；但说出口的话仍必须遵守语言格式。【每一轮回复都必须至少有1行动作】，无论这一轮说1句还是很多句；每轮写1到2行动作，别把动作和台词写在同一行。';
+    if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。动作行可以用中文，不需要外语原文和翻译，不会被读出来；但说出口的话仍必须遵守语言格式。【每一轮都必须至少说1句真正会被听见的台词，同时至少有1行动作】，无论这一轮说1句还是很多句；每轮写1到2行动作，别把动作和台词写在同一行。动作不能替代台词，绝不允许只输出动作、神态或控制标签。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句的中文翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 外语原文行绝对不能夹中文称谓。英文里叫宝贝就写 baby/babe/darling，下一行中文翻译必须写“宝贝/亲爱的”，不能写成“baby”。英文里自称或回应时不要写“先生/哥哥/主人”等中文，直接说 I/me 或自然英文；禁止出现 Answer先生 这种中英混写。\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
     cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
@@ -8951,6 +8954,12 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(_call&&_call.session===sess&&_call.state==='active'&&callUnansweredMistake(content)){
       const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：电话已经接通了，'+S.me.name+'已经在这通'+(video?'视频':'语音')+'电话里。你刚才误以为ta还没接听。请重说一版：不要再说接视频、接电话、怎么不接、快接一下，直接说接通后该说的话。]'}],_md);
       if(_call&&_call.session===sess&&fix&&!callUnansweredMistake(fix))content=fix;
+    }
+    if(video&&_call&&_call.session===sess&&_call.state==='active'&&!callHasSpokenDialogue(content,_lang)){
+      let fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：上一版只有动作、神态或控制标签，没有任何真正说出口的台词，不能作为视频通话回复。请重新回答用户刚才的话：至少说一句自然对白，同时保留1到2行【动作】；不要解释这次纠正。]'},{role:'system',content:personaPin(c)}],_md);
+      if(fix)fix=fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');
+      if(_call&&_call.session===sess&&fix&&!isRefusal(fix)&&!callUnansweredMistake(fix)&&(!_langN||!callDrifted(fix,_lang))&&callHasSpokenDialogue(fix,_lang))content=fix;
+      if(!callHasSpokenDialogue(content,_lang))content=ensureVideoCallDialogue(content,_lang);
     }
     const _callCueTag=(content.match(/[\[【]\s*通话语气\s*[|｜:：]\s*([^\]】]+)[\]】]/)||[])[1]||'';
     content=content.replace(/[\[【]\s*通话语气\s*[|｜:：]\s*[^\]】]+[\]】]/g,'');
