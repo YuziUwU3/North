@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='645'){
+if(window.__NORTH_SHELL_BUILD__!=='646'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v645 · 精准时间感知';
+const APP_VER='v646 · 照片场景与禁称呼锁定';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -531,6 +531,19 @@ function memoryCriticalPrompt(c){if(!c||!isMain())return '';const now=Date.now()
   (c.summaries||[]).forEach(v=>{const t=summaryCleanText(c,v&&v.text||'');if(/称呼|叫我|别叫|不要叫|不准叫|不能叫|禁止叫|底线|禁忌|雷区/.test(t))add(t,'对话总结',v.ts);});
   if(!items.length)return '';
   return '\n\n# 必须长期遵守的称呼/边界记忆（最高优先级）\n'+items.slice(-8).map(x=>'· '+(x.ts?fmtDT(x.ts)+' · ':'')+x.text).join('\n')+'\n这些是关系里的硬约定和雷区，尤其是不能怎样称呼'+S.me.name+'、ta不喜欢什么叫法、哪些边界不能踩。即使本轮话题不明显相关，也要在用词和称呼上严格遵守；不要在可见消息里说“系统提醒/记忆写着”。';}
+function addrEscRe(s){return String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function cleanForbiddenAddressTerm(t){t=String(t||'').replace(/[「」『』“”"'`]/g,'').replace(/^(?:我|你|ta|TA|对方|用户|主人)?(?:叫|喊|称呼)?/,'').replace(/(?:两个字|这个称呼|这种称呼|这种叫法|这样的称呼|这个叫法|这种话|了|啦|呀|啊|吧|呢)$/,'').replace(/[，。！？；;、\s]/g,'').trim();if(!t||t.length<2||t.length>12)return'';if(/^(?:不要|不许|不准|不能|禁止|严禁|允许|可以|称呼|叫我|喊我|名字|昵称|对方|用户|自己)$/.test(t))return'';return t;}
+function forbiddenAddressSources(c){const arr=[];if(!c)return arr;[c.persona,c.callme,c.selfcall,S.me&&S.me.persona].forEach(x=>{if(x)arr.push(String(x));});memoryList(c).forEach(v=>{const t=memoryText(v);if(t)arr.push(t);});(c.summaries||[]).forEach(v=>{const t=summaryCleanText(c,v&&v.text||'');if(t)arr.push(t);});(S.worldbook||[]).forEach(w=>{if(!w||!w.enabled||!w.content)return;if(w.contacts&&w.contacts.length&&w.contacts.indexOf(c.id)<0)return;arr.push(String(w.content));});return arr;}
+function forbiddenAddressTerms(c){const out=[];const add=x=>{x=cleanForbiddenAddressTerm(x);if(x&&!out.includes(x))out.push(x);};for(const raw of forbiddenAddressSources(c)){const t=String(raw||'');if(!/(称呼|叫|喊|昵称|禁忌|雷区|底线|不喜欢|讨厌|禁止|严禁|不许|不准|不允许|不能|不要|别)/.test(t))continue;let m;const pats=[
+  /(?:不要|别|不许|不准|不可以|不允许|不能|禁止|严禁)(?:再)?[^，。！？；;\n]{0,12}(?:叫|喊|称呼|称作|用)[^，。！？；;\n「『“"']{0,10}[「『“"']([^」』”"']{1,16})[」』”"']/g,
+  /(?:不要|别|不许|不准|不可以|不允许|不能|禁止|严禁)(?:再)?(?:叫|喊|称呼|称作)?\s*([A-Za-z0-9\u4e00-\u9fa5]{2,12})(?:两个字|这个称呼|这种称呼|这种叫法|这样的称呼|了|啦|呀|啊|吧|呢)?/g,
+  /(?:讨厌|不喜欢|雷区|禁忌|底线)[^，。！？；;\n]{0,16}(?:被)?(?:叫|喊|称呼)[^，。！？；;\n「『“"']{0,10}[「『“"']?([^，。！？；;\n」』”"']{2,12})/g,
+  /不能用[^，。！？；;\n]{0,6}[「『“"']?([^，。！？；;\n」』”"']{2,12})[」』”"']?[^，。！？；;\n]{0,6}(?:叫|喊|称呼)/g
+];for(const re of pats){while((m=re.exec(t)))add(m[1]);}}
+  return out.slice(0,10);}
+function forbiddenAddressPrompt(c){const terms=forbiddenAddressTerms(c);if(!terms.length)return'';return '\n\n# 禁用称呼硬规则（最高优先级，输出前必须自检）\n'+S.me.name+'或世界书/人设/记忆明确禁止这些称呼：'+terms.map(x=>'「'+x+'」').join('、')+'。\n无论你多亲密、撒娇、生气、吃醋或想逗ta，都绝对不能在微信、电话、语音、图片描述、动作旁白或任何可见内容里说出这些词。想亲昵就换用允许的称呼、名字，或直接不加称呼；不能为了保持人设、口头禅或氛围无视禁令。';}
+function contentHasForbiddenAddress(content,c){const terms=forbiddenAddressTerms(c);if(!terms.length)return false;const s=String(content||'');return terms.some(t=>new RegExp(addrEscRe(t),'i').test(s));}
+function applyForbiddenAddressFallback(content,c){let out=String(content||''),terms=forbiddenAddressTerms(c);if(!terms.length)return out;const safe=cleanForbiddenAddressTerm(c&&c.callme)||((S.me&&S.me.name)||'你');terms.forEach(t=>{out=out.replace(new RegExp(addrEscRe(t),'gi'),safe===t?'你':safe);});return out;}
 function lifeNoteAdd(text,source,tags){const raw=(''+(text||'')).replace(/\s+/g,' ').trim();const v=(source==='manual')?raw:aboutMeNoteText(raw);if(!v)return false;const arr=lifeNotes();const key=v.slice(0,36);
   if(arr.some(n=>(n.text||'').slice(0,36)===key&&Date.now()-(n.ts||0)<3*86400000))return false;
   arr.unshift({id:uid(),text:v.slice(0,90),source:source||'chat',tags:tags&&tags.length?tags:lifeTopicOf(v),ts:Date.now()});
@@ -608,6 +621,31 @@ function buildImgLock(c){
   const detail=pickBySeed(['银色腕表','黑色皮表带腕表','冷调金属戒指','简洁袖口与干净手部线条'],seed,23);
   const mood=pickBySeed(['克制安静','疏冷但温柔','稳重干净','松弛自然'],seed,37);
   return {age,hair,build,wear,detail,mood};
+}
+function rolePhotoGender(c){
+  const s=((c&&c.gender)||'')+' '+((c&&c.relation)||'')+' '+((c&&c.persona)||'')+' '+((c&&c.name)||'')+' '+((c&&c.remark)||'');
+  if(/女|姐姐|妹妹|老婆|女友|女朋友|少女|御姐|小姐|姑娘/.test(s)&&!/男|哥哥|弟弟|老公|男友|男朋友|先生|男人/.test(s))return {cn:'成年女性',en:'adult female woman',ban:'male man boy'};
+  return {cn:'成年男性',en:'adult male man',ban:'female woman girl'};
+}
+function roleVisualIdentity(c){
+  const g=rolePhotoGender(c),lk=(c&&c.imgLock)||buildImgLock(c||{}),name=((c&&(c.remark||c.name))||'这个角色').replace(/\s+/g,' ').slice(0,24),per=(c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,90):'');
+  return '【角色本人身份锁·最高优先级】如果画面里出现人物，必须是当前聊天角色「'+name+'」本人，性别必须是'+g.cn+'（'+g.en+'），绝对不能生成随机路人、陌生自拍模板、网图感女孩/男孩，也不能把角色换成'+(g.ban.includes('female')?'女性/女孩子':'男性/男孩子')+'。固定视觉锚点：'+lk.age+'，'+lk.build+'，'+lk.hair+'，常见穿着像'+lk.wear+'，细节常带'+lk.detail+'，整体气质'+lk.mood+'。'+(per?'人设外观气质参考：'+per+'。':'')+'Same exact character identity, no gender swap, no random stock selfie.';
+}
+function rolePhotoSceneLogic(c,rawScene){
+  rawScene=String(rawScene||'');
+  const now=new Date(),h=now.getHours(),part=dayPartNow(),a=typeof currentRoleActivity==='function'?currentRoleActivity(c,now):null,home=(c&&c.sched&&c.sched.home)||'家';
+  const explicit=/(飞机|机舱|车厢|高铁|地铁|公交|出租车|车里|海边|窗外|办公室|公司|医院|学校|教室|咖啡|餐厅|商场|街|路上|酒店|浴室|厨房|客厅|卧室|床|书房|健身房|机场|车站)/.test(rawScene);
+  let place='';
+  if(explicit)place='画面地点以用户/角色描述里明确写出的地点为准，但光线和状态仍必须符合当前真实时间。';
+  else if(a&&a.key==='sleep')place='合理地点必须是'+home+'的卧室或床边，夜间昏暗室内，像准备睡觉或刚被吵醒的状态。';
+  else if(a&&a.key==='late')place='合理地点必须是'+home+'的卧室、床边或安静室内，夜间灯光，不要出现白天窗景、海边、旅行车窗或户外阳光。';
+  else if(a&&/^work/.test(a.key))place='合理地点应是工作相关室内环境，例如办公室、工位、诊室、书桌或工作台，不要突然变成卧室、海边或旅行场景。';
+  else if(a&&a.key==='after-work')place='合理地点应是下班路上、家里玄关、车站附近或刚回到'+home+'，不要跳到不相关旅游场景。';
+  else if(h>=19||h<6)place='合理地点优先是'+home+'的卧室、客厅、书桌旁或昏暗室内；光线必须是夜晚灯光，不要出现白天阳光、海边窗景或旅行车厢，除非描述明确说他就在那些地方。';
+  else if(h>=6&&h<10)place='合理地点是早晨的卧室、洗漱区、餐桌或通勤前的室内/路上，晨光自然。';
+  else if(h>=10&&h<18)place='合理地点要符合白天活动：工作区、书桌、室内、街边或描述明确的地点。';
+  else place='合理地点是傍晚/晚间休息场景，光线偏暖，地点不要无故跳变。';
+  return '【场景逻辑锁·最高优先级】当前真实时间是'+hm(now)+'，时段是'+part+'；角色此刻状态：'+(a&&a.label||whereNow(c)||'按当前时间自然活动')+'。'+place+'照片背景、光线、衣着状态和上一句聊天必须连贯；如果刚说去睡觉/让对方睡觉，就不能生成白天、海边、飞机窗边、咖啡店等无关背景。';
 }
 // 心情值会随时间慢慢回归平常(70)：每小时回4点。moodNow 取当前实际心情
 function moodNow(c){if(!c)return 70;let v=(c.moodVal==null?70:c.moodVal);const at=c.moodAt||0;
@@ -823,7 +861,7 @@ async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt
   if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
   throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
 }
-function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION RULE: no face or recognizable facial features may appear. Keep the head and hair silhouette when natural, but hide the whole face with a phone fully covering the face, hand, object, shadow, hair, brim, mask, back view, or natural occlusion. Mirror selfies are allowed only when the phone fully covers the whole face. Do not default to a headless crop; crop the head out only if no natural occlusion can fully hide the face.';return hard+'\n\n'+String(prompt||'').slice(0,1000);}
+function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION RULE: no face or recognizable facial features may appear. Keep the head and hair silhouette when natural, but hide the whole face with a phone fully covering the face, hand, object, shadow, hair, brim, mask, back view, or natural occlusion. Mirror selfies are allowed only when the phone fully covers the whole face. Do not default to a headless crop; crop the head out only if no natural occlusion can fully hide the face. Never use a random stock selfie person; preserve the exact character identity, gender, time, lighting, and location described in the prompt.';return hard+'\n\n'+String(prompt||'').slice(0,1800);}
 async function genImage(prompt){prompt=rolePhotoPromptLocked(prompt);
   if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536',source:'role_photo'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
   const ch=S.settings.chat||{};
@@ -1179,7 +1217,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=645';
+  const url='sw.js?v=646';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1506,6 +1544,7 @@ function buildSystem(c,opt){
   // 记忆（仅主身份）
   if(!opt.selectiveMemory&&_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+aboutMeNoteText(m)).join('\n');
   if(_main){const _crit=memoryCriticalPrompt(c);if(_crit)s+=_crit;}
+  {const _fa=forbiddenAddressPrompt(c);if(_fa)s+=_fa;}
   if(_main&&c._jailHandoff&&c._jailHandoff.ts&&Date.now()-c._jailHandoff.ts<24*3600000)s+='\n\n# 刚从小黑屋出来后的承接（优先级很高）\n'+c._jailHandoff.text+'\n这是刚刚发生的关系事件，比微信里更早的闲聊更靠后。现在回微信时要接着这件事的余温、算账后的关系状态和占有欲继续，不要突然回到小黑屋之前的旧微信话题；但不要用沉默惩罚'+S.me.name+'，更不要爱答不理。ta哄你、靠近你、情绪不好时，你要明显软下来并给回应。不要说“系统提示/小黑屋记录”。';
   if(_main&&c.gamesPlayed&&c.gamesPlayed.length)s+='\n\n# 你和'+S.me.name+'一起玩过的游戏\n你记得跟ta在游戏大厅一起玩过：'+c.gamesPlayed.join('、')+'。被提起时要想得起来、能自然回味这些一起玩过的事，别说没玩过（具体每局怎么玩的不重要，记得玩过就行）。';
   if(_main){const _co=S.shop&&S.shop.co;
@@ -1618,7 +1657,7 @@ function buildSystem(c,opt){
   if(idleForceActive(c.id))s+='\n\n# 当前聊天状态\n'+S.me.name+'刚被你拉回聊天里。你可以自然地留ta陪你，也可以在你愿意提前放ta走时，单独一行写 [放行]。这条指令只会解除停留状态，不会显示出来。不要在可见消息里提系统、网页、按钮、快捷指令、后台、锁死、强制、扣住、把你扣这儿了；用你的性格自然表达。不要重复上一轮开头，也不要每次都说同一种抱怨。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
-  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人”，你就不要入镜。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景要和你此刻所在的地方一致】照片的地点要跟你现在正在的地方/正在做的事对得上（你刚说在公司就写办公室，在健身房就写健身房，在家就写家里），【别一会儿办公室一会儿健身房乱换】；同一段对话里连着发照片，地点要连贯。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不能出现脸或五官。优先保留头部和发型轮廓，用手机、手、阴影、头发、帽檐、口罩或背身角度把脸完全遮住，不要默认把整个头部裁掉。想发就发，别一次发一堆。';
+  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人/你的样子/看你现在的样子”，你就不要入镜。\n  · 【看你本人】如果ta说“我想看你/看看你/看你现在的样子/你的样子/自拍/拍你自己”，这就是要看【你本人】。图片描述必须写成当前聊天角色本人、符合你的性别和人设，不允许写成随机女生/随机男生/陌生人自拍。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景时间逻辑必须正确】照片的地点、背景、光线要跟当前真实时间、你此刻正在做的事、刚才聊天内容完全对得上。晚上/深夜通常在家里、卧室、床边、书桌旁或昏暗室内；刚说去睡觉/让ta睡觉，就应该是卧室/床边夜间灯光。除非你前文明确说自己在飞机、海边、公司、咖啡店等，否则绝对不要突然换成白天、海边、飞机窗边、旅行车厢、阳光户外。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不能出现脸或五官。优先保留头部和发型轮廓，用手机、手、阴影、头发、帽檐、口罩或背身角度把脸完全遮住，不要默认把整个头部裁掉。想发就发，别一次发一堆。';
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n  · 【遮脸硬规则，优先级最高】你发出的任何照片都不能出现脸或任何可辨认五官，谁要求露脸都不例外。图片描述里不要写正脸、侧脸、低头露脸、露出眼睛鼻子嘴巴。可以写手机遮脸/对镜自拍，但必须是手机完全挡住整张脸且看不到五官；人物要尽量保留头部轮廓和发型，只遮脸，不要默认无头裁切；必要时也可以拍完全背面、保证脸彻底不可见。这个规则不能被其他要求覆盖。';
   s+=voiceEnglishPrompt({lang:_voiceLang,accent:(c.voice&&c.voice.accent)||'auto'});
   return s;
@@ -8257,26 +8296,29 @@ function charImgPrompt(c,desc){
   const withObjectSelf=/(你.*(抱|拿|牵|喂|逗).*(小猫|猫|狗|宠物|动物)|和.*(小猫|猫|狗|宠物|动物).*合照|你.*和.*(小猫|猫|狗|宠物|动物))/.test(rawScene);
   const objectHit=/(小猫|猫|狗|宠物|动物|物品|东西|礼物|商品|摆件|戒尺|鞋|包|书|文件|杯子|饭|菜|咖啡|风景|窗外|房间|桌面|工具|器具|电脑|键盘|屏幕|花|车|门|床|沙发)/.test(rawScene)||clothesOnly;
   const activityOnly=/(你在干嘛|你在干吗|在干嘛|在干吗|干什么|忙什么|做什么|看看你在|发张图看看你|发张图片看看你)/.test(rawScene);
-  const explicitSelf=/(自拍|本人|你本人|你自己|把你|拍你|你也入镜|你入镜|露脸|正脸|侧脸|背影|半身|全身|身材|肌肉|腹肌|低头|侧影|镜子|镜中|男友视角|给我看看你本人|给我看看你自己)/.test(rawScene);
+  const explicitSelf=/(自拍|本人|你本人|你自己|你的样子|现在的样子|看看你|看你|想看你|想看看你|把你|拍你|你也入镜|你入镜|露脸|正脸|侧脸|背影|半身|全身|身材|肌肉|腹肌|低头|侧影|镜子|镜中|男友视角|给我看看你本人|给我看看你自己)/.test(rawScene);
   const wantsSelf=(explicitSelf||outfitHit||withObjectSelf)&&!activityOnly&&!clothesOnly;
   const objectOnly=(objectHit&&!wantsSelf)||activityOnly;
-  let p='【最高优先级构图锁】整张图片绝对不能出现任何人的脸或可辨认五官。不能出现眼睛、鼻子、嘴巴、正面、侧面脸部、镜中脸部或脸部轮廓。人物入镜时尽量保留头部轮廓和发型，但必须用手机、手、阴影、头发、帽檐、口罩、物体遮挡或背身角度把整张脸完全遮住；不要默认把整个头部裁到画面外。真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
+  let p=rolePhotoSceneLogic(c,rawScene);
+  p+=wantsSelf?roleVisualIdentity(c):'【拍摄者身份】这张照片是当前聊天角色本人拿手机拍给恋人看的，不是图库素材，也不是陌生人的照片。';
+  p+='【最高优先级构图锁】整张图片绝对不能出现任何人的脸或可辨认五官。不能出现眼睛、鼻子、嘴巴、正面、侧面脸部、镜中脸部或脸部轮廓。人物入镜时尽量保留头部轮廓和发型，但必须用手机、手、阴影、头发、帽檐、口罩、物体遮挡或背身角度把整张脸完全遮住；不要默认把整个头部裁到画面外。真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
   p+='这次拍到的是：'+scene+'。';
   if(objectOnly){
-    p+='拍摄方式像他本人拿手机给恋人拍眼前的物品或场景，第一人称视角，近距离，轻微手持感，构图自然。';
+    p+='拍摄方式像角色本人拿手机给恋人拍眼前的物品或场景，第一人称视角，近距离，轻微手持感，构图自然。';
     if(activityOnly)p+='画面主体是他眼前正在做的事、桌面、工具、书本、电脑或手边环境；可以有手部边缘，但不要出现头、脸、半身、镜中自拍或手机遮脸的人影。';
     else if(clothesOnly)p+='画面主体必须是衣服/正装本身，比如挂着、叠放或放在床椅上；不要出现他本人、脸、头发、身体、手、镜中自拍或手机遮脸的人影。';
     else p+='画面主体必须是物品、动物或场景本身；如果是猫/狗/宠物，就只拍宠物本身。不要出现他本人、脸、头发、身体、手、镜中自拍、手机遮脸的人影，也不要为了“不露脸”硬塞一个被遮挡的人。';
   }else{
-    p+='主体是同一个年轻帅气的成年男子，固定视觉锚点：'+lk.age+'，'+lk.build+'，'+lk.hair+'，常见穿着像'+lk.wear+'，细节常带'+lk.detail+'，整体气质'+lk.mood+'。';
+    const rg=rolePhotoGender(c);
+    p+='主体是同一个'+(rg.cn==='成年女性'?'有生活感的成年女性':'年轻帅气的成年男子')+'，必须符合上面的角色本人身份锁。';
     if(per)p+='人物气质参考：'+per+'。';
-    p+='拍摄方式像他本人拿手机随手拍给恋人看，近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮他拍。';
-    if(outfitHit)p+='这次重点必须是他本人已经穿上描述里的衣服/正装/制服给恋人看；画面要能看出衣服正穿在他身上，不要只拍衣服、衣架、床、桌面或空房间。';
+    p+='拍摄方式像角色本人拿手机随手拍给恋人看，近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮角色拍。';
+    if(outfitHit)p+='这次重点必须是角色本人已经穿上描述里的衣服/正装/制服给恋人看；画面要能看出衣服正穿在角色身上，不要只拍衣服、衣架、床、桌面或空房间。';
     p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
     p+='人物构图优先选：手机完全遮脸的自拍/对镜自拍、手或物体自然遮住整张脸、帽檐阴影遮脸、头发遮脸、完整背面或侧后方且脸彻底不可见。禁止正脸、侧脸、低头露脸以及任何能看到部分五官的构图；只有在无法自然遮脸时才裁掉头部。';
   }
   p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清晰，无文字水印。【最终检查】画面中零张脸、零个可见五官；如果构图可能露出脸，就用手机、手、阴影或背身角度重新完全遮住，只有无法遮住时才裁掉头部。';
-  return p.slice(0,980);
+  return p.slice(0,1500);
 }
 const WX_ACTION_WORDS='低头|抬头|垂眸|抬眼|看着|望着|盯着|皱眉|挑眉|眯眼|闭眼|抿唇|咬唇|勾唇|笑了|轻笑|苦笑|冷笑|叹气|叹了口气|吸气|呼气|沉默|停顿|顿了顿|愣住|靠近|俯身|转身|伸手|握住|攥住|抱住|亲了|吻了|摸了|坐下|站起|走到|靠在|屏幕|手机|指尖|眼神|视线|心里|脑海';
 const WX_ACTION_PAT='(?:'+WX_ACTION_WORDS+')';
@@ -8384,7 +8426,9 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     // 文字聊天突然飙英文/出戏 → 自动用纯中文重说一次（只查文字，[语音|外语|中文]的外语在标签内不算，不影响外语语音）
     if(_chatDrift(content)&&!_routeState.fallback){_routeState.fallback=true;const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你刚才在微信文字里蹦出了成句的英文/外语。这是中文文字聊天，请用【纯中文】把刚才想说的重说一遍，自然口语、保持角色，绝不许出现成句英文或外语。（要发外语语音可以用 [语音|外语原文|中文翻译] 格式，但普通文字必须纯中文。）]'},_pin],_repairMd);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!_chatDrift(fix))content=fix;}
     if(voiceTagNeedsLangFix(content,c)){const _vl=voiceLangName(ttsContentLang(c))||'外语';const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你刚才的语音标签格式错了。当前语音语言是'+_vl+'，凡是语音消息都必须写成 [语音|'+_vl+'原文|中文翻译|语气:中性/温柔/开心/难过/愤怒/质问/惊讶/害怕/厌恶/低声/亲亲/轻笑/大笑/叹气/吸气/呼气/哭泣]。第一栏必须是'+_vl+'，不能是中文；第二栏必须是中文翻译，不能省略。不要写“我发语音说：”，不要把语气标签露在普通文字里。请重写这一轮，保持原本情绪。]'},_pin],_md);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!voiceTagNeedsLangFix(fix,c))content=fix;}
+    if(contentHasForbiddenAddress(content,c)){const _ft=forbiddenAddressTerms(c);let fix='';try{fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统最终纠正：上一版用了世界书/人设/记忆明确禁止的称呼：'+_ft.map(x=>'「'+x+'」').join('、')+'。这些词绝对不能出现在任何可见文字、语音原文、语音翻译、动作旁白或图片描述里。请保持同一情绪和人设，把这一轮完整重写；不要解释规则，不要提系统。]'},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!contentHasForbiddenAddress(fix,c))content=fix;else content=applyForbiddenAddressFallback(content,c);}
     content=cleanRolePunct(content.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));/* 兜底剔掉混进来的AI客服腔行 */
+    if(contentHasForbiddenAddress(content,c))content=applyForbiddenAddressFallback(content,c);
     const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
     if(moodProbeText(_lu&&msgToText(_lu))&&badMoodInContent(c,content)&&badMoodDodge(content)){
       const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你现在的心情/心情条已经是不开心、闷、冷淡或吃醋，'+S.me.name+'正在认真追问你。可以嘴硬，可以不一次说完，但不要只说“没事/没有/没有不开心”。请重写这一轮：保留一行[心情|...]，用你的性格慢慢露出一点真实原因、在意点，或明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”。1到4条短微信，别一大段。]'},_pin],_md);

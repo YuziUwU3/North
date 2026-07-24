@@ -60,11 +60,12 @@ const IMAGE_GUARD = `Photo rules for this phone app:
 - The image must look like a casual first-person phone photo taken by the character, not a third-person staged photo.
 - Never show a clear face. If the character is explicitly requested, keep the head/hair silhouette when possible, but hide the whole face with a phone, hand, object, shadow, hair, brim, mask, back view, or natural occlusion.
 - If the user asks for a cat, pet, object, food, room, desk, document, scenery, gift, or any specific item, the subject must be only that thing. Do not include the character, face, hair, body, hands, mirror selfie, phone-covering person, or any human figure.
-- Clothing/outfit requests are different from object requests. If the request says the character should wear, put on, change into, show himself wearing, suit, formal wear, shirt, uniform, coat, or "what are you wearing", the image must include the same young male character wearing that outfit. Do not output only clothes, a hanger, a bed, a desk, or an empty room.
+- Clothing/outfit requests are different from object requests. If the request says the character should wear, put on, change into, show the character wearing, suit, formal wear, shirt, uniform, coat, or "what are you wearing", the image must include the same current character with the exact gender and identity described in the request wearing that outfit. Do not output only clothes, a hanger, a bed, a desk, or an empty room.
 - Only treat clothing as an object when the request clearly asks for the clothing itself, such as clothes on a hanger, folded clothes, or "just the clothes".
 - If the user asks what the character is doing, show the character's point of view: desk, tools, book, computer, work surface, or surroundings. Do not show face or half-body.
-- Only include the character himself when the user clearly asks for selfie, the character in frame, outfit, body, back view, side view, or a photo of him.
-- When the character is included, he is a young handsome adult male, visually consistent with previous photos.`;
+- Only include the current character when the user clearly asks for selfie, the character in frame, outfit, body, back view, side view, or a photo of the character.
+- When the character is included, preserve the exact character identity, gender, age impression, body type, hair, outfit style, and personality described in the request. Do not substitute a random stock selfie person, random girl, random boy, influencer, or unrelated stranger.
+- The background, lighting, and location must follow the time and scene logic in the request. If the request says it is night, late night, bedtime, bedroom, or resting at home, use a dark indoor bedroom/bedside/home setting. Do not switch to daytime, beach, airplane/train window, cafe, travel scenery, or outdoor sunlight unless the request explicitly says the character is there.`;
 
 const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:
 - NO FACE MAY APPEAR ANYWHERE IN THE IMAGE. Zero visible eyes, noses, mouths, facial profiles, facial reflections, or recognizable facial features.
@@ -85,7 +86,7 @@ function guardedChatImagePrompt(prompt: unknown, size: string, rolePhoto = false
   return `Generate exactly one realistic casual phone photo for this request:
 ${request}
 
-Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same young adult male character wearing it. Size: ${size}. Return the image only.${roleLock}`;
+Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same current character with the exact gender and identity described in the request wearing it. Keep the scene time, background, and lighting logically consistent with the request. Size: ${size}. Return the image only.${roleLock}`;
 }
 
 const PLANS = [
