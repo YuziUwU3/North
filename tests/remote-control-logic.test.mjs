@@ -12,9 +12,20 @@ test("restore-all remote sessions deterministically enable every closed couple p
   assert.match(app, /function phoneInspectionRestoreAllPermissionsIntent\(text\)/);
   assert.match(app, /restore_all_permissions/);
   assert.match(app, /purpose==='restore_all_permissions'/);
-  assert.match(app, /filter\(x=>!x\.enabled\)\.map\(x=>\(\{app:'couple',op:'enable_couple_permission'/);
+  assert.match(app, /filter\(x=>!x\.enabled\)\.sort\(\(a,b\)=>remoteControlPermissionPageOrder\(a\)-remoteControlPermissionPageOrder\(b\)\)\.map\(x=>\(\{app:'couple',op:'enable_couple_permission'/);
   assert.match(app, /角色已把情侣空间关闭的权限全部重新开启/);
   assert.match(app, /ctl\.purpose==='restore_all_permissions'\?\[\]/);
+});
+
+test("restore-all sessions skip per-toggle role reactions and continue with context-driven inspection", () => {
+  assert.match(app, /function remoteControlRunRestoreAll\(c\)/);
+  assert.match(app, /function remoteControlAfterRestorePlan\(c\)/);
+  assert.match(app, /remoteControlAfterRestorePlan\(c\)/);
+  assert.match(app, /权限开回来了。现在我看我在意的地方。/);
+  assert.match(app, /function remoteControlContextCandidates\(c\)/);
+  assert.match(app, /异性\|男人\|男的/);
+  assert.match(app, /targetType:'wechatList'/);
+  assert.match(app, /if\(a\.targetType==='wechatList'\)[\s\S]*?remoteControlWechatChoicePlan\(c\)/);
 });
 
 test("remote control keeps the triggering chat context and uses it to prioritize named WeChat targets", () => {

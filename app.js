@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='649'){
+if(window.__NORTH_SHELL_BUILD__!=='650'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v649 · 权限恢复优先';
+const APP_VER='v650 · 权限恢复提速';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1217,7 +1217,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=649';
+  const url='sw.js?v=650';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -7942,10 +7942,20 @@ async function remoteControlDmChoicePlan(c,app){const list=remoteControlDmCandid
 function phoneInspectionRestoreAllPermissionsIntent(text){text=String(text||'');return /权限/.test(text)&&/(全部|所有|全都|都|每个|一个不漏|不能漏|别漏|漏掉)/.test(text)&&/(开回来|打开|开启|恢复|重开|开回去|开回来|拿回来)/.test(text)||/(有本事|你敢|敢不敢)[^。！？!?\n]{0,32}(权限|开回来|打开|开启|恢复)/.test(text);}
 function remoteControlIntentContext(c){const ctl=_remoteCtl&&_remoteCtl.cid===(c&&c.id)?_remoteCtl:null,fromCtl=ctl?String(ctl.intentContext||''):'',recent=(msgs(c&&c.id)||[]).slice(-10).map(m=>factStamp(m.time||Date.now())+' '+(m.role==='user'?S.me.name:(c.remark||c.name))+'：'+msgToText(m)).join('\n');return (fromCtl+'\n'+recent).slice(-2600);}
 function remoteControlMentionedWechatTargets(c){const ctx=remoteControlIntentContext(c),plain=ctx.replace(/\s+/g,''),rows=[];(S.contacts||[]).filter(x=>!x.deleted&&x.id!==(c&&c.id)).forEach(x=>{const ns=[x.remark,x.name,x.wxid].filter(Boolean).map(String);let hit=-1;ns.forEach(n=>{if(!n)return;const i=plain.lastIndexOf(n.replace(/\s+/g,''));if(i>hit)hit=i;});if(hit>=0)rows.push({c:x,hit});});return rows.sort((a,b)=>b.hit-a.hit).slice(0,3).map(x=>({app:'wechat',op:'view',targetId:x.c.id,targetName:x.c.remark||x.c.name,targetType:'role',fromWechatList:true,contextMentioned:true}));}
+function remoteControlPermissionPageOrder(x){const sectionOrder={cou_grant:1,cou_gag_auth:2,cou_wallet:3,cou_jail:4,cou_wxlogin:5,cou_remote:6,cou_escalate:7};return (sectionOrder[x&&x.section]||99)*1000+String(x&&x.key||'').split('').reduce((n,ch)=>n+ch.charCodeAt(0),0);}
+function remoteControlContextWantsBroad(ctx){return /(全部|所有|全都|查个遍|全部检查|挨个查|逐个查|每个软件|整个手机)/.test(String(ctx||''));}
+function remoteControlContextCandidates(c){const ctx=remoteControlIntentContext(c),out=[],seen=new Set(),add=a=>{const key=(a.app||'')+'|'+(a.targetType||'')+'|'+(a.targetId||'')+'|'+(a.targetName||'');if(!seen.has(key)){seen.add(key);out.push(a);}};remoteControlMentionedWechatTargets(c).forEach(add);if(/异性|男人|男的|男生|男孩|男朋友|女的|女生|女人|暧昧|吃醋|微信|聊天|联系人|加微信|夏语|别人|那个角色|某个角色/.test(ctx)||out.some(x=>x.app==='wechat'))add({app:'wechat',op:'view',targetName:'微信好友与聊天列表',targetType:'wechatList',contextReason:'jealousy'});
+  if(/电话|通话|联系人|通讯录|陌生|短信|号码|来电|信息/.test(ctx)){if(/电话|通话|来电|号码|陌生/.test(ctx))add({app:'phoneapp',op:'view',targetName:'最近通话',targetType:'phoneCalls'});if(/短信|信息|陌生/.test(ctx))add({app:'phoneapp',op:'view',targetName:'短信',targetType:'phoneSms'});add({app:'phoneapp',op:'view',targetName:'通讯录',targetType:'phoneContacts'});}
+  if(/朋友圈|动态|宣示/.test(ctx))add({app:'moments',op:'view',targetName:'朋友圈',targetType:'momentList'});if(/抖音|斗音|短视频/.test(ctx)){add({app:'douyin',op:'view',targetName:'抖音私信会话列表',targetType:'dyDmList'});add({app:'douyin',op:'view',targetName:'抖音搜索记录',targetType:'dySearchHistory'});add({app:'douyin',op:'view',targetName:'抖音首页',targetType:'dyHome'});}if(/微博|推特|X|私信/.test(ctx)){add({app:'x',op:'view',targetName:'微博私信会话列表',targetType:'xDmList'});add({app:'x',op:'view',targetName:'微博动态',targetType:'xPostList'});}if(/浏览器|搜索记录|网页/.test(ctx))add({app:'browser',op:'view',targetName:'浏览器搜索记录',targetType:'browserHistory'});if(/购物|订单|买了什么/.test(ctx))add({app:'shop',op:'view',targetName:'购物订单'});if(/外卖|吃了什么/.test(ctx))add({app:'food',op:'view',targetName:'外卖订单'});if(/机票|航班|云程|行程/.test(ctx))add({app:'travel',op:'view',targetName:'云程机票'});return out;}
+async function remoteControlAfterRestorePlan(c){
+  const ctl=_remoteCtl,ctx=remoteControlIntentContext(c);if(!ctl)return[];if(remoteControlContextWantsBroad(ctx)){const old=ctl.purpose;ctl.purpose='inspect_phone';let all=remoteControlRequiredPlan(c);ctl.purpose=old;return remoteControlOrderPlan(c,all);}
+  const candidates=remoteControlContextCandidates(c);if(!candidates.length)return[];const listed=candidates.map((a,i)=>({key:'k'+i,app:a.app,targetName:a.targetName,targetType:a.targetType,reason:a.contextReason||''}));
+  const fallback=()=>{const wechat=candidates.filter(a=>a.app==='wechat'),rest=candidates.filter(a=>a.app!=='wechat');return wechat.concat(rest).slice(0,6);};
+  try{const rules='你刚把'+S.me.name+'情侣空间里被关掉的权限都重新打开了。现在不要机械全查；请根据刚才吵架/微信上下文，作为'+(c.remark||c.name)+'本人，选择接下来你最在意、最符合逻辑的几个地方亲手查看。若上下文提到异性、某个角色或微信聊天，通常应先看微信列表/对应聊天；若你真的想查个遍，可以多选。最多8个，key必须照抄，只输出JSON：{"keys":["k0"]}。\n【触发上下文】\n'+ctx+'\n【可选检查点】\n'+JSON.stringify(listed);const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:rules}],{max:900,complete:true,temp:.75,aux:false}),o=parseObj(r),keys=Array.isArray(o&&o.keys)?o.keys.map(String):[],picked=keys.map(k=>{const m=k.match(/^k(\d+)$/);return m?candidates[+m[1]]:null;}).filter(Boolean);return picked.length?picked.slice(0,8):fallback();}catch(e){return fallback();}}
 function remoteControlRequiredPlan(c){
   const snap=remoteControlSnapshot(c),groups={},add=(app,targetName,extra)=>{groups[app]=groups[app]||[];groups[app].push(Object.assign({app,op:'view',targetName},extra||{}));};
   if(_remoteCtl&&_remoteCtl.purpose==='restore_wx')return[{app:'couple',op:'view',targetId:'wxLoginAuth',targetName:'微信登录权限（当前关闭）',targetType:'couplePermission',section:'cou_wxlogin'}];
-  if(_remoteCtl&&_remoteCtl.purpose==='restore_all_permissions')return(snap.couplePermissions||[]).filter(x=>!x.enabled).map(x=>({app:'couple',op:'enable_couple_permission',targetId:x.key,targetName:x.name+'（当前关闭）',targetType:'couplePermission',section:x.section}));
+  if(_remoteCtl&&_remoteCtl.purpose==='restore_all_permissions')return(snap.couplePermissions||[]).filter(x=>!x.enabled).sort((a,b)=>remoteControlPermissionPageOrder(a)-remoteControlPermissionPageOrder(b)).map(x=>({app:'couple',op:'enable_couple_permission',targetId:x.key,targetName:x.name+'（当前关闭）',targetType:'couplePermission',section:x.section,restoreAll:true}));
   const mentionedWechat=remoteControlMentionedWechatTargets(c);
   add('wechat','微信好友与聊天列表',{targetType:'wechatList'});
   mentionedWechat.forEach(x=>add('wechat',x.targetName,x));
@@ -8105,8 +8115,31 @@ function remoteControlDesktopPage(key){appLayoutInit();for(let i=0;i<S.me.appLay
 async function remoteControlOpenApp(a,c){const ctl=_remoteCtl,app=a.op==='lock_app'||a.op==='unlock_app'?'home':(a.app||remoteControlAppKey(a.targetName));if(!ctl||!ctl.active||app==='home'||ctl.currentApp===app)return;const key=remoteControlDesktopKey(app),name=REMOTE_APP_NAMES[app]||a.targetName||'这个软件';remoteControlSetPage('home');const lab=$('#remoteAppName');if(lab)lab.textContent='主屏幕 · 正在查找'+name;await sleep(1200);if(!remoteControlActive()||ctl.cancelled)return;const pg=remoteControlDesktopPage(key),sw=$('#appswipe');if(sw&&pg>0){if(lab)lab.textContent='主屏幕第'+(pg+1)+'页 · 正在查找'+name;try{sw.scrollTo({left:sw.clientWidth*pg,behavior:'smooth'});}catch(_){sw.scrollLeft=sw.clientWidth*pg;}homePgScroll(sw);remoteControlPointer('78%','52%');await sleep(1900);}if(!remoteControlActive()||ctl.cancelled)return;const cell=key&&document.querySelector('.app[data-k="'+key+'"]'),layer=$('#remoteControlLayer');if(cell&&layer){const cr=cell.getBoundingClientRect(),lr=layer.getBoundingClientRect();remoteControlPointer(cr.left-lr.left+cr.width*.55,cr.top-lr.top+cr.height*.45);}else remoteControlPointer('62%','52%');if(lab)lab.textContent='正在打开'+name+' · LIVE';await sleep(1500);ctl.currentApp=app;}
 function remoteControlScene(r,say,i,total,a){if(!(a&&a.noNavigate))remoteControlNavigate(a||{},r||{});const app=$('#remoteAppName'),cap=$('#remoteCaption'),curp=$('#remotePointer');if(app)app.textContent=(r.label||REMOTE_APP_NAMES[r.app]||'小手机')+' · LIVE';if(cap&&say)remoteControlCaption(say);if(curp){const pts=[[72,34],[28,49],[66,62],[38,72],[78,53],[48,39]],pt=pts[Math.abs(i||0)%pts.length];curp.style.setProperty('--tap-x',pt[0]+'%');curp.style.setProperty('--tap-y',pt[1]+'%');curp.classList.remove('tap');void curp.offsetWidth;curp.classList.add('tap');}}
 async function remoteControlFocusViewedTarget(a){if(!remoteControlActive()||!a||a.app!=='douyin'||!['dyHome','dyVideo'].includes(a.targetType))return;await sleep(500);if(!remoteControlActive())return;let cards=[];if(a.targetType==='dyHome')cards=Array.from(document.querySelectorAll('[data-dy-video-id]')).slice(0,4);else{const card=Array.from(document.querySelectorAll('[data-dy-video-id]')).find(x=>x.dataset.dyVideoId===a.targetId);if(card)cards=[card];}const layer=$('#remoteControlLayer');for(const card of cards){if(!remoteControlActive())return;try{card.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){card.scrollIntoView();}await sleep(650);if(layer){const cr=card.getBoundingClientRect(),lr=layer.getBoundingClientRect();remoteControlPointer(cr.left-lr.left+cr.width*.52,cr.top-lr.top+cr.height*.58);}await sleep(1200);}}
+async function remoteControlRunRestoreAll(c){
+  const ctl=_remoteCtl;if(!ctl||!ctl.active)return;let required=remoteControlRequiredPlan(c);if(!required.length){await remoteControlFinish('情侣空间没有需要恢复的关闭权限');return;}
+  await remoteControlOpenApp({app:'couple',op:'view',targetName:'情侣空间管控授权'},c);if(!remoteControlActive()||ctl.cancelled)return;
+  for(let i=0;i<required.length;i++){
+    if(!remoteControlActive()||ctl.cancelled)break;const a=required[i],hint='正在从上往下恢复权限：'+(i+1)+'/'+required.length+' · '+String(a.targetName||'这个权限').replace(/（当前关闭）$/,'');remoteControlScene({app:'couple',label:'情侣空间',detail:hint},hint,i,required.length,a);await sleep(1250);if(!remoteControlActive()||ctl.cancelled)break;
+    const r=await remoteControlExecute(a,c);if(r.ok){ctl.actions.push({app:r.app,op:a.op,targetId:a.targetId||'',targetName:a.targetName||'',targetType:a.targetType||'',detail:r.detail,memory:r.memory,ts:Date.now()});save();}
+    remoteControlScene(r,'已开启：'+String(a.targetName||'这个权限').replace(/（当前关闭）$/,''),i,required.length,a);await sleep(900);
+  }
+  if(!remoteControlActive()||ctl.cancelled)return;let follow=await remoteControlAfterRestorePlan(c);follow=Array.isArray(follow)?follow:[];if(follow.length)remoteControlCaption('权限开回来了。现在我看我在意的地方。');
+  for(let j=0;j<follow.length;j++){
+    if(!remoteControlActive()||ctl.cancelled)break;const a=follow[j];await remoteControlOpenApp(a,c);if(!remoteControlActive()||ctl.cancelled)break;
+    if(a.fromWechatList)await remoteControlWechatEnterFromList(a);else if(a.fromDmList)await remoteControlDmEnterFromList(a);if(!remoteControlActive()||ctl.cancelled)break;
+    const r=await remoteControlExecute(a,c);remoteControlScene(r,'',j,follow.length,a);await remoteControlFocusViewedTarget(a);let entry=null;if(r.ok){entry={app:r.app,op:a.op,targetId:a.targetId||'',targetName:a.targetName||'',targetType:a.targetType||'',detail:r.detail,memory:r.memory,ts:Date.now()};ctl.actions.push(entry);save();}
+    await sleep(900);const reaction=await remoteControlRoleReaction(c,a,r);if(entry){entry.roleLines=reaction.lines||[];entry.reactionDelete=!!reaction.deleteIntent;entry.reactionDeleteIndex=reaction.messageIndex;save();}await remoteControlShowRoleLines(reaction.lines);
+    const reactionAction=remoteControlReactionDeleteAction(entry,reaction,c);if(reactionAction&&remoteControlActive()&&!ctl.cancelled){const visibleDelete=await remoteControlPrepareVisibleDelete(reactionAction);if(remoteControlActive()&&!ctl.cancelled){const dr=await remoteControlExecute(reactionAction,c);if(dr.ok){ctl.actions.push({app:dr.app,op:reactionAction.op,targetId:reactionAction.targetId||'',targetName:reactionAction.targetName||'',targetType:reactionAction.targetType||'',detail:dr.detail,memory:dr.memory,ts:Date.now()});save();if(visibleDelete)await remoteControlShowVisibleDeleteResult(reactionAction);}remoteControlScene(dr,'',j,follow.length,visibleDelete?Object.assign({},reactionAction,{noNavigate:true}):reactionAction);}}
+    if(a.targetType==='wechatList'){const choices=await remoteControlWechatChoicePlan(c);if(choices.length)follow.splice(j+1,0,...choices);}
+    else if(a.targetType==='xDmList'||a.targetType==='dyDmList'){const choices=await remoteControlDmChoicePlan(c,a.app);if(choices.length)follow.splice(j+1,0,...choices);}
+    else if(a.fromWechatList)await remoteControlWechatExitToList();
+    else if(a.fromDmList)await remoteControlDmExitToList(a.app);
+  }
+  if(remoteControlActive()&&!ctl.cancelled&&follow.length){const decisions=await remoteControlDecisionPlan(c,ctl.actions);for(let i=0;i<decisions.length;i++){if(!remoteControlActive()||ctl.cancelled)break;const a=decisions[i];await remoteControlOpenApp(a,c);if(!remoteControlActive()||ctl.cancelled)break;const visibleDelete=await remoteControlPrepareVisibleDelete(a);if(!remoteControlActive()||ctl.cancelled)break;const r=await remoteControlExecute(a,c);if(r.ok){ctl.actions.push({app:r.app,op:a.op,targetId:a.targetId||'',targetType:a.targetType||'',detail:r.detail,memory:r.memory,ts:Date.now()});save();}if(visibleDelete&&r.ok)await remoteControlShowVisibleDeleteResult(a);remoteControlScene(r,'',i,decisions.length,visibleDelete?Object.assign({},a,{noNavigate:true}):a);await remoteControlShowRoleLines(await remoteControlRoleLines(c,a,r));}}
+  if(remoteControlActive()&&!ctl.cancelled)await remoteControlFinish('角色已把情侣空间关闭的权限全部重新开启');
+}
 async function remoteControlRun(c){
-  const ctl=_remoteCtl;if(!ctl||!ctl.active)return;let required=remoteControlRequiredPlan(c);required=await remoteControlOrderPlan(c,required);
+  const ctl=_remoteCtl;if(!ctl||!ctl.active)return;if(ctl.purpose==='restore_all_permissions')return remoteControlRunRestoreAll(c);let required=remoteControlRequiredPlan(c);required=await remoteControlOrderPlan(c,required);
   for(let i=0;i<required.length;i++){
     if(!remoteControlActive()||ctl.cancelled)break;const a=required[i];await remoteControlOpenApp(a,c);if(!remoteControlActive()||ctl.cancelled)break;
     if(a.fromWechatList)await remoteControlWechatEnterFromList(a);else if(a.fromDmList)await remoteControlDmEnterFromList(a);if(!remoteControlActive()||ctl.cancelled)break;
