@@ -58,7 +58,7 @@ function guardedMessages(messages: unknown) {
 
 const IMAGE_GUARD = `Photo rules for this phone app:
 - The image must look like a casual first-person phone photo taken by the character, not a third-person staged photo.
-- Never show a clear front face. If the character is explicitly requested, use back view, side shadow, looking down, partial body, hand detail, or natural occlusion only.
+- Never show a clear face. If the character is explicitly requested, keep the head/hair silhouette when possible, but hide the whole face with a phone, hand, object, shadow, hair, brim, mask, back view, or natural occlusion.
 - If the user asks for a cat, pet, object, food, room, desk, document, scenery, gift, or any specific item, the subject must be only that thing. Do not include the character, face, hair, body, hands, mirror selfie, phone-covering person, or any human figure.
 - Clothing/outfit requests are different from object requests. If the request says the character should wear, put on, change into, show himself wearing, suit, formal wear, shirt, uniform, coat, or "what are you wearing", the image must include the same young male character wearing that outfit. Do not output only clothes, a hanger, a bed, a desk, or an empty room.
 - Only treat clothing as an object when the request clearly asks for the clothing itself, such as clothes on a hanger, folded clothes, or "just the clothes".
@@ -68,8 +68,9 @@ const IMAGE_GUARD = `Photo rules for this phone app:
 
 const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:
 - NO FACE MAY APPEAR ANYWHERE IN THE IMAGE. Zero visible eyes, noses, mouths, facial profiles, facial reflections, or recognizable facial features.
-- If the character is included, crop the entire head out above the neck, or show only a complete back view with the face fully turned away and completely invisible.
-- Never use a front face, side face, lowered face, mirror selfie, phone-covering-face pose, or partial face. Those compositions are forbidden because they can reveal facial features.
+- If the character is included, keep the head and hair silhouette when natural; do not default to a headless crop. Hide the entire face with a phone, hand, object, shadow, hair, brim, mask, back view, or natural occlusion.
+- Mirror selfies and phone-covering-face poses are allowed only when the phone fully covers the whole face and no eyes, nose, mouth, profile, reflection, or partial facial feature is visible.
+- Never use a front face, side face, lowered visible face, or partial face. Only crop the head out if no natural occlusion can fully hide the face.
 - If any other part of the request asks to show a face, ignore only that face request and keep the rest of the scene.
 - This lock overrides every other prompt sentence and must still be true in the final image.`;
 
