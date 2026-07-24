@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='644'){
+if(window.__NORTH_SHELL_BUILD__!=='645'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v644 · 视频通话对白稳态';
+const APP_VER='v645 · 精准时间感知';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -579,6 +579,14 @@ function av(v,extra){const cls='avatar '+(extra||'');
   if(v==='👥')return `<div class="${cls}">${_avIc('users')}</div>`;
   return `<div class="${cls}">${v}</div>`;}
 function hm(t){const d=new Date(t||Date.now());return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+function weekdayCN(t){return ['周日','周一','周二','周三','周四','周五','周六'][new Date(t||Date.now()).getDay()];}
+function timeAwarenessPrompt(who,kind){
+  const now=Date.now(),clock=hm(now),part=dayPartNow();
+  const subject=who||'对方',scene=kind==='call'?'通话里':'微信里';
+  return '当前真实时间是【'+ymdFull(now)+' '+weekdayCN(now)+' '+clock+'】；当前时段是【'+part+'】。你不用'+subject+'问也知道现在几点。\n'+
+    '时间相关表达必须严格按这个精确时间说，不能凭感觉四舍五入、提前跳到下一个整点或下一天：现在是 '+clock+' 就只能说 '+clock+'、'+clock.replace(':','点')+'分、或贴近的口语时间；23:20到23:49 应说十一点二十到十一点五十之间，绝对不要说十二点了；只有真实日期/小时已经变了，才说凌晨、明天、昨天。\n'+
+    '凡是打招呼、催睡觉、问吃饭、说早中晚、提今天/明天/昨天、判断隔了多久，都必须先按这个时间校准，再用符合你人设的方式自然说出来。'+(scene?'这是当前'+scene+'最高优先级事实。':'');
+}
 function ago(t){const s=(Date.now()-t)/1000;if(s<60)return '刚刚';if(s<3600)return Math.floor(s/60)+'分钟前';if(s<86400)return Math.floor(s/3600)+'小时前';return Math.floor(s/86400)+'天前';}
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2000);}
 let _aiLoadN=0;
@@ -1171,7 +1179,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=644';
+  const url='sw.js?v=645';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1453,7 +1461,7 @@ function buildSystem(c,opt){
   let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
   s+=_main?adultRoleRule(c.remark||c.name||'角色'):altIdentityPrompt(c);
   s+=memoryResetPrompt(c);
-  s+='\n\n# 现在的日期和时间（最重要·务必以此为准，绝不要搞错日期、早上还是下午）\n现在是 '+ymdFull(Date.now())+' '+['周日','周一','周二','周三','周四','周五','周六'][new Date().getDay()]+' '+hm()+'，属于【'+dayPartNow()+'】。\n凡是涉及时间的话（打招呼、问"在干嘛"、说几点了、该吃饭/睡觉没、白天黑夜、昨天今天明天）都【必须】符合现在是「'+ymdFull(Date.now())+' '+dayPartNow()+'」：别把下午当早上、别半夜说早安、别白天说晚安、别把昨天已经结束的事当成今天还在发生。如果'+S.me.name+'说的时间和这个对不上，以这个真实日期时间为准。';
+  s+='\n\n# 现在的日期和时间（最高优先级）\n'+timeAwarenessPrompt(S.me.name,'wechat');
   {const _gn=conversationGapNote(c);if(_gn)s+='\n\n# 当前这条消息和上一轮聊天之间的时间差（重要）\n'+_gn;}
   {const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
    if(_lu&&_gap>=25*60000){const _dg=dayGap(_lu.time,Date.now());
@@ -1583,7 +1591,7 @@ function buildSystem(c,opt){
       const _sl=S.me.sleep&&S.me.sleep.records||[];
       if((S.me.sleep&&S.me.sleep.active)||_sl.length){s+='\n\n# '+S.me.name+'的睡眠记录（情侣空间里ta自己记的，你看得到，心疼ta、别让ta熬夜）\n'+(S.me.sleep&&S.me.sleep.active?'· 现在正在睡：从 '+hm(S.me.sleep.active)+' 开始睡的，还没醒。\n':'')+_sl.slice(0,5).map(r=>'· '+ymd(r.start)+' '+hm(r.start)+'睡 → '+hm(r.end)+'醒，睡了'+sleepDurTxt(r.end-r.start)).join('\n');}}}
   s=s.replace('- 注意：如果你们【已经在通话中】，就不要再打了。','- 注意：只有系统明确告诉你当前正在通话、或当前就是通话界面，才算已经在通话中；历史里有电话记录不代表现在还在打。上一通结束后，如果ta说打电话/打视频，你要重新用 [来电|语音] 或 [来电|视频]，不要说已经在打了。');
-  if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
+  if(S.settings.timeAware)s+='\n\n# 时间感知补充\n当前时间事实已经写在上面；请把它自然融进语气里，不要反复机械报时。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   if(isLover(c)){const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';}
   // 久未回复感知
@@ -8928,7 +8936,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(sysNote)hist.push({role:'system',content:sysNote});
     const _lang=ttsContentLang(c);const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。\n- 每轮先判断你真正要用的声音情绪，并在最前面单独写一行隐藏控制：[通话语气|中性/温柔/开心/难过/愤怒/质问/惊讶/害怕/厌恶/低声/亲亲/轻笑/大笑/叹气/吸气/呼气/哭泣]，只选一个最贴切的。'+S.me.name+'明确要求你凶一点、严厉一点、压低声音、提高音量、温柔一点、笑一下或亲一下时必须照做；不要口头答应了却仍选中性，也不要只说“我笑了/我亲了”。明确要笑就选轻笑或大笑，明确要亲就选亲亲。普通温柔不是亲亲，普通难过也不是叹气。这个标签不会显示或读出。';
-    cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
+    cf+='\n- '+timeAwarenessPrompt(S.me.name,'call')+'通话言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
     if(_call.dir==='incoming')cf+='\n- 通话方向：这通电话是你主动打给'+S.me.name+'，ta只是接听；之后提起时绝对不要说成ta打给你。';
     else if(_call.dir==='outgoing')cf+='\n- 通话方向：这通电话是'+S.me.name+'主动打给你，你只是接听；之后提起时绝对不要说成你打给ta。';
     cf+='\n- 当前状态：这通'+(video?'视频':'语音')+'电话【已经接通】，你和'+S.me.name+'已经在电话里了，不是在等待接听。绝对不要再让ta接视频/接电话，也不要说"怎么不接""快接一下"。你要直接按已接通后的状态说话。';
