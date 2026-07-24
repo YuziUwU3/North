@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='647';</script>
+<script>window.__NORTH_SHELL_BUILD__='648';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,15 +29,15 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-647';
+  var key='north-sw-reloaded-648';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       if(window.__northBootReady)return;
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','647');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','648');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=647';
+  var url='sw.js?v=648';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -570,8 +570,12 @@ body{background:#000;padding:0;}
 .remote-caption{min-height:42px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:7px;}
 .remote-caption-bubble{max-width:90%;align-self:flex-start;padding:11px 14px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(13,10,13,.94);color:#fff;font-size:14px;line-height:1.62;box-shadow:0 9px 26px rgba(0,0,0,.46);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:relative;animation:remoteCaptionUp .38s cubic-bezier(.2,.72,.25,1);}
 .remote-caption-bubble:nth-last-child(2){opacity:.7;transform:scale(.97);transform-origin:left bottom}.remote-caption-bubble:nth-last-child(3){opacity:.42;transform:scale(.94);transform-origin:left bottom}
+.remote-exit-notice{position:absolute;left:50%;top:72px;z-index:545;display:none;align-items:center;gap:8px;transform:translateX(-50%);max-width:86%;padding:9px 13px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(16,16,20,.92);color:#e8e8ee;font-size:12px;letter-spacing:.2px;box-shadow:0 10px 26px rgba(0,0,0,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+.remote-exit-notice.show{display:flex;animation:remoteExitIn .28s ease-out;}
+.remote-exit-dot{width:7px;height:7px;border-radius:50%;background:#8f929b;box-shadow:0 0 8px rgba(180,184,196,.45);}
 @keyframes remoteLayerIn{from{opacity:0}to{opacity:1}}
 @keyframes remoteCaptionUp{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes remoteExitIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes remoteTap{0%{opacity:0;transform:translate(28px,24px) scale(.9)}35%{opacity:1;transform:translate(0,0) scale(1)}58%{opacity:1;transform:translate(0,4px) scale(.83)}75%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(-5px,-4px)}}
 .msgbanner{position:absolute;top:8px;left:10px;right:10px;z-index:440;background:rgba(40,40,46,.97);border:1px solid #3a3a40;border-radius:14px;padding:10px 12px;display:none;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.5);cursor:pointer;}
 .msgbanner.show{display:flex;animation:slided .25s ease;}
@@ -830,6 +834,7 @@ body{background:#000;padding:0;}
   <button class="lockpull" id="lockPull" onclick="lockShow(true)" aria-label="回到锁屏"></button>
   <div class="msgbanner" id="msgBanner"></div>
   <div class="msgbanner" id="callBanner"></div>
+  <div class="remote-exit-notice" id="remoteControlExitNotice"></div>
   <div class="spybanner" id="spyBanner"></div>
   <div class="callscreen" id="callLayer"></div>
   <div class="remote-control-layer" id="remoteControlLayer">
@@ -867,8 +872,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=647" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=647" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=647"></script>
+<script src="license-gate.js?v=648" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=648" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=648"></script>
 </body>
 </html>
