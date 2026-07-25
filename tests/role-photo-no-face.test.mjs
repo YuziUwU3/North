@@ -21,16 +21,17 @@ assert.doesNotMatch(sanitized, /露脸|正脸|侧脸|看镜头|五官|面部|脸
 assert.match(sanitized, /手机完全遮住脸/);
 
 const locked = context.rolePhotoPromptLocked("character wearing a suit");
-assert.equal((locked.match(/ABSOLUTE COMPOSITION RULE:/g) || []).length, 1);
+assert.equal((locked.match(/ABSOLUTE COMPOSITION AND GENDER RULE:/g) || []).length, 1);
 assert.match(locked, /phone fully covering the face/i);
 assert.match(locked, /keep the head/i);
 assert.match(locked, /no face or recognizable facial features may appear/i);
 assert.match(locked, /Never use a random stock selfie person/i);
-assert.match(locked, /preserve the exact character identity, gender, time, lighting, and location/i);
+assert.match(locked, /preserve the exact character identity, biological sex, time, lighting, and location/i);
+assert.match(locked, /zero women, girls, female bodies, female hands/i);
 
-assert.match(app, /aiRelay\('image',\{prompt,size:'1024x1536',source:'role_photo'\}\)/);
+assert.match(app, /aiRelay\('image',\{prompt:rawPrompt,size:'1024x1536',source:'role_photo'\}\)/);
 assert.match(app, /function roleVisualIdentity\(c\)/);
-assert.match(app, /Same exact character identity, no gender swap, no random stock selfie/);
+assert.match(app, /Same exact character identity and biological sex, no gender swap, no random stock selfie/);
 assert.match(app, /function rolePhotoSceneLogic\(c,rawScene\)/);
 assert.match(app, /当前真实时间是/);
 assert.match(app, /照片背景、光线、衣着状态和上一句聊天必须连贯/);

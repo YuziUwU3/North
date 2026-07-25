@@ -65,6 +65,9 @@ const IMAGE_GUARD = `Photo rules for this phone app:
 - If the user asks what the character is doing, show the character's point of view: desk, tools, book, computer, work surface, or surroundings. Do not show face or half-body.
 - Only include the current character when the user clearly asks for selfie, the character in frame, outfit, body, back view, side view, or a photo of the character.
 - When the character is included, preserve the exact character identity, gender, age impression, body type, hair, outfit style, and personality described in the request. Do not substitute a random stock selfie person, random girl, random boy, influencer, or unrelated stranger.
+- If the current character is identified as male, he must remain an unmistakably adult man. Unless the request explicitly names a woman, the final image must contain ZERO women, girls, female bodies, female hands, female silhouettes, female reflections, and female bystanders.
+- Words such as lover, partner, user, recipient, chat partner, or "me" do not imply a woman and never authorize adding one. The recipient stays outside the frame unless the request explicitly asks for both people; for a hand-holding request, prefer the user's first-person viewpoint or a neutral hand/forearm without inventing a female person.
+- Obey the exact people list in the request. Never add a companion, girlfriend, wife, female passerby, female photographer, or background crowd just to make the scene look natural.
 - The background, lighting, and location must follow the time and scene logic in the request. If the request says it is night, late night, bedtime, bedroom, or resting at home, use a dark indoor bedroom/bedside/home setting. Do not switch to daytime, beach, airplane/train window, cafe, travel scenery, or outdoor sunlight unless the request explicitly says the character is there.`;
 
 const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:
@@ -72,16 +75,18 @@ const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:
 - If the character is included, keep the head and hair silhouette when natural; do not default to a headless crop. Hide the entire face with a phone, hand, object, shadow, hair, brim, mask, back view, or natural occlusion.
 - Mirror selfies and phone-covering-face poses are allowed only when the phone fully covers the whole face and no eyes, nose, mouth, profile, reflection, or partial facial feature is visible.
 - Never use a front face, side face, lowered visible face, or partial face. Only crop the head out if no natural occlusion can fully hide the face.
+- Preserve biological sex exactly. A male character must never be rendered as a woman, girl, feminine female model, or female selfie template. Unless a woman is explicitly named in the request, no female person or female body part may appear anywhere.
+- "Lover", "partner", "user", "recipient", and "me" are not permission to add a woman. Do not invent female companions or bystanders.
 - If any other part of the request asks to show a face, ignore only that face request and keep the rest of the scene.
 - This lock overrides every other prompt sentence and must still be true in the final image.`;
 
 function guardedImagePrompt(prompt: unknown, rolePhoto = false) {
   const lock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
-  return `${IMAGE_GUARD}${lock}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 1800)}`;
+  return `${IMAGE_GUARD}${lock}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 3600)}`;
 }
 
 function guardedChatImagePrompt(prompt: unknown, size: string, rolePhoto = false) {
-  const request = String(prompt || "casual phone photo").slice(0, 1800);
+  const request = String(prompt || "casual phone photo").slice(0, 3600);
   const roleLock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
   return `Generate exactly one realistic casual phone photo for this request:
 ${request}
@@ -613,7 +618,9 @@ function shouldRetrySameImageRoute(reason: string) {
 async function generateImageThroughRoute(route: OpenAIRoute, rawPrompt: unknown, size: string, rolePhoto: boolean) {
   const model = route.model || "gpt-image-2";
   const chatTimeout = route.timeoutMs || 90000;
-  const prompt = guardedImagePrompt(rawPrompt, rolePhoto).slice(0, 4200);
+  // IMAGE_GUARD + role-photo guard are intentionally detailed. Keep enough room
+  // for the actual character identity and scene instead of truncating them away.
+  const prompt = guardedImagePrompt(rawPrompt, rolePhoto).slice(0, 7600);
   const chatBody = {
     model,
     messages: [{ role: "user", content: guardedChatImagePrompt(rawPrompt, size, rolePhoto) }],

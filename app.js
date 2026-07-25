@@ -623,13 +623,38 @@ function buildImgLock(c){
   return {age,hair,build,wear,detail,mood};
 }
 function rolePhotoGender(c){
-  const s=((c&&c.gender)||'')+' '+((c&&c.relation)||'')+' '+((c&&c.persona)||'')+' '+((c&&c.name)||'')+' '+((c&&c.remark)||'');
+  const explicit=String((c&&c.gender)||'').trim();
+  if(explicit==='男')return {cn:'成年男性',en:'adult male man',ban:'female woman girl'};
+  if(explicit==='女')return {cn:'成年女性',en:'adult female woman',ban:'male man boy'};
+  const s=((c&&c.relation)||'')+' '+((c&&c.persona)||'')+' '+((c&&c.name)||'')+' '+((c&&c.remark)||'');
   if(/女|姐姐|妹妹|老婆|女友|女朋友|少女|御姐|小姐|姑娘/.test(s)&&!/男|哥哥|弟弟|老公|男友|男朋友|先生|男人/.test(s))return {cn:'成年女性',en:'adult female woman',ban:'male man boy'};
   return {cn:'成年男性',en:'adult male man',ban:'female woman girl'};
 }
+function rolePhotoExplicitFemale(rawScene){
+  return /女性|女人|女生|女孩|女孩子|少女|女士|姐姐|妹妹|妈妈|母亲|老婆|妻子|女友|女朋友|闺蜜|女同事|女路人|母女|姐妹/.test(String(rawScene||''));
+}
+function rolePhotoPairWithUser(rawScene){
+  const s=String(rawScene||'');
+  return /(我和你|你和我|我们俩|咱们俩|我们两个|咱们两个|你跟我|我跟你).{0,16}(牵手|拉手|握手|合照|合影|同框|拥抱|抱着|背影|影子|手|约会)|(牵手|拉手|握手|合照|合影|同框|拥抱|抱着|背影|影子).{0,16}(我和你|你和我|我们俩|咱们俩|我们两个|咱们两个|你跟我|我跟你)/.test(s);
+}
+function rolePhotoLatestUserImageRequest(c){
+  try{
+    const arr=c&&c.id&&typeof msgs==='function'?msgs(c.id):[];
+    for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'){const t=String((typeof msgToText==='function'&&msgToText(m))||m.content||'').trim();return /(图|照片|拍|自拍|合照|合影|牵手|同框|看看|看你|发张)/.test(t)?t:'';}}
+  }catch(_){}
+  return '';
+}
+function rolePhotoPeoplePolicy(c,rawScene,userRequest){
+  const direct=String(userRequest||''),g=rolePhotoGender(c),femaleAsked=rolePhotoExplicitFemale(direct),pair=rolePhotoPairWithUser(direct),name=((c&&(c.remark||c.name))||'当前角色').replace(/\s+/g,' ').slice(0,24);
+  if(g.cn==='成年男性'&&!femaleAsked){
+    return '【男性角色与人物名单锁·不可违背】当前角色「'+name+'」是成年男性，男性身份不能改变。画面中女性人数必须为0：禁止女人、女生、女孩、女性身体、女性手部、女性背影、女性倒影、女性剪影、女性路人和女性自拍模板。woman, women, female, girl, feminine body, female hand: STRICT NEGATIVE. 只有用户亲口提出的要求可以授权女性入镜，AI自己写在画面描述里的女性词无效。“恋人、对象、用户、我、聊天对象、收照片的人”绝不代表女性。'+(pair?'用户亲口要求两人互动：只表现当前男性角色与用户本人；用户优先只以镜头后的第一人称视角、中性手部或手臂边缘出现，不推断用户性别，不添加第二个完整人物。':'用户和接收照片的人必须在镜头外；画面中最多只能有当前男性角色一人。');
+  }
+  if(g.cn==='成年男性'&&femaleAsked)return '【人物名单锁】当前角色「'+name+'」始终是成年男性，绝不能变成女性。只有描述中被明确点名的女性可以出现，不能再添加其他女性、路人或陌生自拍人物。';
+  return '【人物名单锁】当前角色「'+name+'」的女性身份来自已明确设置，只允许她本人以及描述中明确点名的人物入镜；禁止额外添加陌生女性、女性路人或随机女性自拍模板。';
+}
 function roleVisualIdentity(c){
   const g=rolePhotoGender(c),lk=(c&&c.imgLock)||buildImgLock(c||{}),name=((c&&(c.remark||c.name))||'这个角色').replace(/\s+/g,' ').slice(0,24),per=(c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,90):'');
-  return '【角色本人身份锁·最高优先级】如果画面里出现人物，必须是当前聊天角色「'+name+'」本人，性别必须是'+g.cn+'（'+g.en+'），绝对不能生成随机路人、陌生自拍模板、网图感女孩/男孩，也不能把角色换成'+(g.ban.includes('female')?'女性/女孩子':'男性/男孩子')+'。固定视觉锚点：'+lk.age+'，'+lk.build+'，'+lk.hair+'，常见穿着像'+lk.wear+'，细节常带'+lk.detail+'，整体气质'+lk.mood+'。'+(per?'人设外观气质参考：'+per+'。':'')+'Same exact character identity, no gender swap, no random stock selfie.';
+  return '【角色本人身份锁·最高优先级】如果画面里出现人物，必须是当前聊天角色「'+name+'」本人，性别必须是'+g.cn+'（'+g.en+'），绝对不能生成随机路人、陌生自拍模板、网图感女孩/男孩，也不能把角色换成'+(g.ban.includes('female')?'女性/女孩子':'男性/男孩子')+'。固定视觉锚点：'+lk.age+'，'+lk.build+'，'+lk.hair+'，常见穿着像'+lk.wear+'，细节常带'+lk.detail+'，整体气质'+lk.mood+'。'+(per?'人设外观气质参考：'+per+'。':'')+'Same exact character identity and biological sex, no gender swap, no random stock selfie. '+(g.cn==='成年男性'?'The main character is an unmistakably adult man, never a woman or feminine girl.':'The main character is an adult woman as explicitly configured.');
 }
 function rolePhotoSceneLogic(c,rawScene){
   rawScene=String(rawScene||'');
@@ -850,7 +875,7 @@ function imageResultURL(d){const direct=d&&d.data&&d.data[0];if(direct&&(direct.
   return '';
 }
 async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000),ct=(res.headers.get('content-type')||'').toLowerCase();const txt=await res.text(),html=/html/.test(ct)||/^\s*<!doctype\s+html|^\s*<html[\s>]/i.test(txt);let d=null;try{d=txt&&!html?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(html)d={message:'接口返回网页HTML，不是API JSON；已继续尝试 /v1 路径',html:true};if(res.ok&&!html)return {res,d,url};last={res,d,url};if(!html&&![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
-async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt||'一张生活照').slice(0,600),target=size||'1024x1536';
+async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt||'一张生活照').slice(0,3200),target=size||'1024x1536';
   const geminiImage=/gemini.*image/i.test(model),rich=geminiImage?{model,prompt:p,n:1,size:target,response_format:'b64_json'}:{model,prompt:p,n:1,size:target,quality:'medium',output_format:'jpeg',output_compression:88,response_format:'url'};
   let out=await imagePostCompat(base,key,'/images/generations',rich,180000),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
   if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
@@ -861,9 +886,10 @@ async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt
   if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
   throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
 }
-function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION RULE: no face or recognizable facial features may appear. Keep the head and hair silhouette when natural, but hide the whole face with a phone fully covering the face, hand, object, shadow, hair, brim, mask, back view, or natural occlusion. Mirror selfies are allowed only when the phone fully covers the whole face. Do not default to a headless crop; crop the head out only if no natural occlusion can fully hide the face. Never use a random stock selfie person; preserve the exact character identity, gender, time, lighting, and location described in the prompt.';return hard+'\n\n'+String(prompt||'').slice(0,1800);}
-async function genImage(prompt){prompt=rolePhotoPromptLocked(prompt);
-  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536',source:'role_photo'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
+function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION AND GENDER RULE: no face or recognizable facial features may appear. Keep the head and hair silhouette when natural, but hide the whole face with a phone fully covering the face, hand, object, shadow, hair, brim, mask, back view, or natural occlusion. Mirror selfies are allowed only when the phone fully covers the whole face. Do not default to a headless crop; crop the head out only if no natural occlusion can fully hide the face. Never use a random stock selfie person; preserve the exact character identity, biological sex, time, lighting, and location described in the prompt. If the current character is described as male, he must remain an unmistakably adult man and the image must contain zero women, girls, female bodies, female hands, female silhouettes, female reflections, or female bystanders unless the request explicitly names a woman. Words such as lover, partner, user, recipient, or me never authorize adding a woman.';return hard+'\n\n'+String(prompt||'').slice(0,1800);}
+async function genImage(prompt){const rawPrompt=String(prompt||'');
+  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt:rawPrompt,size:'1024x1536',source:'role_photo'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
+  prompt=rolePhotoPromptLocked(rawPrompt);
   const ch=S.settings.chat||{};
   const base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,'');
   const key=(S.settings.imgKey||ch.key)||'';
@@ -1657,8 +1683,9 @@ function buildSystem(c,opt){
   if(idleForceActive(c.id))s+='\n\n# 当前聊天状态\n'+S.me.name+'刚被你拉回聊天里。你可以自然地留ta陪你，也可以在你愿意提前放ta走时，单独一行写 [放行]。这条指令只会解除停留状态，不会显示出来。不要在可见消息里提系统、网页、按钮、快捷指令、后台、锁死、强制、扣住、把你扣这儿了；用你的性格自然表达。不要重复上一轮开头，也不要每次都说同一种抱怨。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
-  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人/你的样子/看你现在的样子”，你就不要入镜。\n  · 【看你本人】如果ta说“我想看你/看看你/看你现在的样子/你的样子/自拍/拍你自己”，这就是要看【你本人】。图片描述必须写成当前聊天角色本人、符合你的性别和人设，不允许写成随机女生/随机男生/陌生人自拍。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景时间逻辑必须正确】照片的地点、背景、光线要跟当前真实时间、你此刻正在做的事、刚才聊天内容完全对得上。晚上/深夜通常在家里、卧室、床边、书桌旁或昏暗室内；刚说去睡觉/让ta睡觉，就应该是卧室/床边夜间灯光。除非你前文明确说自己在飞机、海边、公司、咖啡店等，否则绝对不要突然换成白天、海边、飞机窗边、旅行车厢、阳光户外。\n  · 【必须像你自己拿手机拍给ta看的】照片是第一人称随手拍/男友视角，不要像第三人站远处替你拍，也不要像监控、路人抓拍、摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不能出现脸或五官。优先保留头部和发型轮廓，用手机、手、阴影、头发、帽檐、口罩或背身角度把脸完全遮住，不要默认把整个头部裁掉。想发就发，别一次发一堆。';
+  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人/你的样子/看你现在的样子”，你就不要入镜。\n  · 【看你本人】如果ta说“我想看你/看看你/看你现在的样子/你的样子/自拍/拍你自己”，这就是要看【你本人】。图片描述必须写成当前聊天角色本人、符合你的性别和人设，不允许写成随机女生/随机男生/陌生人自拍。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景时间逻辑必须正确】照片的地点、背景、光线要跟当前真实时间、你此刻正在做的事、刚才聊天内容完全对得上。晚上/深夜通常在家里、卧室、床边、书桌旁或昏暗室内；刚说去睡觉/让ta睡觉，就应该是卧室/床边夜间灯光。除非你前文明确说自己在飞机、海边、公司、咖啡店等，否则绝对不要突然换成白天、海边、飞机窗边、旅行车厢、阳光户外。\n  · 【必须像你自己拍给ta看的】照片是当前角色自己的第一人称手机随手拍，不要把“男友视角”理解成拍一个女性，也不要像第三人站远处替你拍、监控、路人抓拍或摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不能出现脸或五官。优先保留头部和发型轮廓，用手机、手、阴影、头发、帽檐、口罩或背身角度把脸完全遮住，不要默认把整个头部裁掉。想发就发，别一次发一堆。';
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n  · 【遮脸硬规则，优先级最高】你发出的任何照片都不能出现脸或任何可辨认五官，谁要求露脸都不例外。图片描述里不要写正脸、侧脸、低头露脸、露出眼睛鼻子嘴巴。可以写手机遮脸/对镜自拍，但必须是手机完全挡住整张脸且看不到五官；人物要尽量保留头部轮廓和发型，只遮脸，不要默认无头裁切；必要时也可以拍完全背面、保证脸彻底不可见。这个规则不能被其他要求覆盖。';
+  if(S.settings.imgGen&&imageGenerationAvailable()&&rolePhotoGender(c).cn==='成年男性')s+='\n  · 【男性照片铁律，优先级最高】你是男性，任何包含你本人的图片描述都必须明确写“同一个成年男性角色本人”，绝对不能把自己写成女人、女生、女孩、女性身体、女性手部或女模自拍。除非'+S.me.name+'在本轮亲口明确要求某位女性入镜，否则图片描述中的女性人数必须是0；你自己不能擅自补女友、妻子、女性路人或女性摄影者。“恋人、对象、用户、我、收照片的人”都不等于女性。若ta要“你和我牵手/合照”，优先写成ta的第一人称镜头、你这个男性的手牵住镜头前中性手部，或只拍手、影子和背身，不推断ta的性别。';
   s+=voiceEnglishPrompt({lang:_voiceLang,accent:(c.voice&&c.voice.accent)||'auto'});
   return s;
 }
@@ -8355,20 +8382,22 @@ function charImgPrompt(c,desc){
   const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,80):'';
   const lk=(c&&c.imgLock)||buildImgLock(c||{});
   const rawScene=(desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180),scene=sanitizeRolePhotoScene(rawScene);
+  const directUserRequest=rolePhotoLatestUserImageRequest(c),pairWithUser=rolePhotoPairWithUser(directUserRequest);
   const outfitHit=/(穿|穿上|换上|穿着|正装|西装|西服|衬衫|衬衣|领带|马甲|制服|白大褂|医生服|老师装|校服|礼服|外套|风衣|大衣|今天穿|你穿什么|看看你穿)/.test(rawScene);
   const clothesOnly=/(衣服本身|只拍衣服|单拍衣服|挂着的衣服|衣架|这件衣服|那件衣服|这套衣服|给我看看衣服|拍衣服|拍一下衣服|拍一张衣服)/.test(rawScene)&&!/(你穿|穿上|换上|穿着|穿给我看|穿了)/.test(rawScene);
   const withObjectSelf=/(你.*(抱|拿|牵|喂|逗).*(小猫|猫|狗|宠物|动物)|和.*(小猫|猫|狗|宠物|动物).*合照|你.*和.*(小猫|猫|狗|宠物|动物))/.test(rawScene);
   const objectHit=/(小猫|猫|狗|宠物|动物|物品|东西|礼物|商品|摆件|戒尺|鞋|包|书|文件|杯子|饭|菜|咖啡|风景|窗外|房间|桌面|工具|器具|电脑|键盘|屏幕|花|车|门|床|沙发)/.test(rawScene)||clothesOnly;
   const activityOnly=/(你在干嘛|你在干吗|在干嘛|在干吗|干什么|忙什么|做什么|看看你在|发张图看看你|发张图片看看你)/.test(rawScene);
   const explicitSelf=/(自拍|本人|你本人|你自己|你的样子|现在的样子|看看你|看你|想看你|想看看你|把你|拍你|你也入镜|你入镜|露脸|正脸|侧脸|背影|半身|全身|身材|肌肉|腹肌|低头|侧影|镜子|镜中|男友视角|给我看看你本人|给我看看你自己)/.test(rawScene);
-  const wantsSelf=(explicitSelf||outfitHit||withObjectSelf)&&!activityOnly&&!clothesOnly;
+  const wantsSelf=(explicitSelf||outfitHit||withObjectSelf||pairWithUser)&&!activityOnly&&!clothesOnly;
   const objectOnly=(objectHit&&!wantsSelf)||activityOnly;
   let p=rolePhotoSceneLogic(c,rawScene);
-  p+=wantsSelf?roleVisualIdentity(c):'【拍摄者身份】这张照片是当前聊天角色本人拿手机拍给恋人看的，不是图库素材，也不是陌生人的照片。';
+  p+=rolePhotoPeoplePolicy(c,rawScene,directUserRequest);
+  p+=wantsSelf?roleVisualIdentity(c):'【拍摄者身份】这张照片是当前聊天角色本人拿手机拍给用户看的，用户和接收照片的人默认在镜头外；不是图库素材，也不是陌生人的照片。';
   p+='【最高优先级构图锁】整张图片绝对不能出现任何人的脸或可辨认五官。不能出现眼睛、鼻子、嘴巴、正面、侧面脸部、镜中脸部或脸部轮廓。人物入镜时尽量保留头部轮廓和发型，但必须用手机、手、阴影、头发、帽檐、口罩、物体遮挡或背身角度把整张脸完全遮住；不要默认把整个头部裁到画面外。真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
   p+='这次拍到的是：'+scene+'。';
   if(objectOnly){
-    p+='拍摄方式像角色本人拿手机给恋人拍眼前的物品或场景，第一人称视角，近距离，轻微手持感，构图自然。';
+    p+='拍摄方式像角色本人拿手机给用户拍眼前的物品或场景；用户和接收照片的人在镜头外。第一人称视角，近距离，轻微手持感，构图自然。';
     if(activityOnly)p+='画面主体是他眼前正在做的事、桌面、工具、书本、电脑或手边环境；可以有手部边缘，但不要出现头、脸、半身、镜中自拍或手机遮脸的人影。';
     else if(clothesOnly)p+='画面主体必须是衣服/正装本身，比如挂着、叠放或放在床椅上；不要出现他本人、脸、头发、身体、手、镜中自拍或手机遮脸的人影。';
     else p+='画面主体必须是物品、动物或场景本身；如果是猫/狗/宠物，就只拍宠物本身。不要出现他本人、脸、头发、身体、手、镜中自拍、手机遮脸的人影，也不要为了“不露脸”硬塞一个被遮挡的人。';
@@ -8376,13 +8405,14 @@ function charImgPrompt(c,desc){
     const rg=rolePhotoGender(c);
     p+='主体是同一个'+(rg.cn==='成年女性'?'有生活感的成年女性':'年轻帅气的成年男子')+'，必须符合上面的角色本人身份锁。';
     if(per)p+='人物气质参考：'+per+'。';
-    p+='拍摄方式像角色本人拿手机随手拍给恋人看，近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮角色拍。';
-    if(outfitHit)p+='这次重点必须是角色本人已经穿上描述里的衣服/正装/制服给恋人看；画面要能看出衣服正穿在角色身上，不要只拍衣服、衣架、床、桌面或空房间。';
+    if(pairWithUser)p+='这是用户亲口要求的两人互动照。优先采用用户的第一人称镜头：当前男性角色的手牵住镜头前用户的中性手部，或只拍两人的手、手臂边缘、影子与背身轮廓；不显示用户完整身体，不推断用户是女性，不增加女性。';
+    else p+='拍摄方式像角色本人拿手机随手拍给用户看；“用户/聊天对象/收照片的人”默认在镜头外，不能因此自动增加女性。近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮角色拍。';
+    if(outfitHit)p+='这次重点必须是角色本人已经穿上描述里的衣服/正装/制服给用户看；画面要能看出衣服正穿在角色身上，不要只拍衣服、衣架、床、桌面或空房间。';
     p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
     p+='人物构图优先选：手机完全遮脸的自拍/对镜自拍、手或物体自然遮住整张脸、帽檐阴影遮脸、头发遮脸、完整背面或侧后方且脸彻底不可见。禁止正脸、侧脸、低头露脸以及任何能看到部分五官的构图；只有在无法自然遮脸时才裁掉头部。';
   }
   p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清晰，无文字水印。【最终检查】画面中零张脸、零个可见五官；如果构图可能露出脸，就用手机、手、阴影或背身角度重新完全遮住，只有无法遮住时才裁掉头部。';
-  return p.slice(0,1500);
+  return p.slice(0,2200);
 }
 const WX_ACTION_WORDS='低头|抬头|垂眸|抬眼|看着|望着|盯着|皱眉|挑眉|眯眼|闭眼|抿唇|咬唇|勾唇|笑了|轻笑|苦笑|冷笑|叹气|叹了口气|吸气|呼气|沉默|停顿|顿了顿|愣住|靠近|俯身|转身|伸手|握住|攥住|抱住|亲了|吻了|摸了|坐下|站起|走到|靠在|屏幕|手机|指尖|眼神|视线|心里|脑海';
 const WX_ACTION_PAT='(?:'+WX_ACTION_WORDS+')';
