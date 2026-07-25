@@ -190,6 +190,7 @@ function renderLicenseUsers() {
         <div><b>最近使用</b>${esc(user.last_seen_at ? fmtDateTime(user.last_seen_at) : '尚无记录')}</div>
         <div><b>小手机 ID</b>${esc(user.phone_friend_id || '旧版本尚未补齐')}</div>
         <div><b>AI 用户 ID</b>${esc(user.ai_user_id || '尚未绑定')}</div>
+        <div><b>使用邀请码</b>${esc(user.invite_code_hint || '旧记录未保存')}</div>
         ${user.last_admin_action ? `<div><b>最近管理操作</b>${esc(operatorLabel(user.last_admin_operator))} · ${user.last_admin_action === 'block' ? '移出' : '放回'} · ${esc(fmtDateTime(user.last_admin_action_at))}</div>` : ''}
       </div>
       <div class="actions">
@@ -594,7 +595,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=630', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=631', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -690,6 +691,6 @@ async function restoreSavedLogin() {
   showAuth('请重新进入');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=630', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=631', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();
