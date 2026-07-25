@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='651'){
+if(window.__NORTH_SHELL_BUILD__!=='652'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v651 · 生图性别锁定';
+const APP_VER='v652 · 跨天日期显示修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
 const DEFAULT_TTS_VOICE='male-qn-qingse';
@@ -1243,7 +1243,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=651';
+  const url='sw.js?v=652';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2487,8 +2487,8 @@ function dayKey(t){const d=new Date(t||Date.now());return d.getFullYear()+'-'+(d
 function dayRelText(t){const diff=Math.round((dayStartMs(Date.now())-dayStartMs(t||Date.now()))/86400000);return diff===0?'今天':diff===1?'昨天':diff>1?(diff+'天前'):'未来日期';}
 function factStamp(t){return fmtDT(t||Date.now())+'（'+dayRelText(t||Date.now())+'）';}
 function chatDateLabel(t){const d=new Date(t||Date.now()),n=new Date();return (d.getFullYear()!==n.getFullYear()?d.getFullYear()+'年':'')+(d.getMonth()+1)+'月'+d.getDate()+'日 '+weekdayCN(t||Date.now());}
-function chatDateStampHTML(t){return `<div class="tstamp datestamp"><span>${esc(chatDateLabel(t))}</span></div>`;}
-function chatBoundaryHTML(prev,m){if(!m||m._silent)return'';const t=m.time||Date.now(),pt=prev&&(prev.time||0),newDay=!prev||dayKey(pt)!==dayKey(t);let html='';if(newDay)html+=chatDateStampHTML(t);if(newDay||!prev||t-pt>300000)html+=`<div class="tstamp"><span>${hm(t)}</span></div>`;return html;}
+function chatDateStampHTML(t,withTime){return `<div class="tstamp datestamp"><span>${esc(chatDateLabel(t)+(withTime?' '+hm(t):''))}</span></div>`;}
+function chatBoundaryHTML(prev,m){if(!m||m._silent)return'';const t=m.time||Date.now(),pt=prev&&(prev.time||0),newDay=!prev||dayKey(pt)!==dayKey(t);if(newDay)return chatDateStampHTML(t,true);if(t-pt>300000)return`<div class="tstamp"><span>${hm(t)}</span></div>`;return'';}
 function chatPrevVisibleBefore(id,m){const a=msgs(id).filter(x=>x&&!x._call&&!x._silent),idx=a.indexOf(m);if(idx>0)return a[idx-1];for(let i=a.length-1;i>=0;i--){if(a[i]!==m)return a[i];}return null;}
 function chatHistoryDateNote(t){return '【日期分隔：'+ymdFull(t)+' '+weekdayCN(t)+'，这是'+dayRelText(t)+'；下面的聊天从这一天开始。角色必须据此分清今天、昨天、前几天和新的一天，不能把跨天前的话说成刚刚发生。】';}
 function chatHistoryWithDateBoundaries(arr,mapFn){const out=[];let last='';(arr||[]).forEach(m=>{if(!m||m._silent)return;const item=mapFn?mapFn(m):{role:m.role,content:msgToText(m)};if(!item||item.content==null)return;const t=m.time||Date.now(),k=dayKey(t);if(k!==last){out.push({role:'system',content:chatHistoryDateNote(t)});last=k;}out.push(item);});return out;}
@@ -7369,7 +7369,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   const skipped=Math.max(0,all.length-renderLimit);
   const list=skipped?all.slice(skipped):all;
   let body=skipped?`<div class="tstamp"><span onclick="showOlderChat('${id}')" style="cursor:pointer">加载更早 ${Math.min(CHAT_RENDER_LIMIT,skipped)} 条 · 还剩 ${skipped} 条</span></div>`:'';
-  let prevVisible=all.slice(0,skipped).reverse().find(m=>m&&!m._call&&!m._silent)||null;
+  let prevVisible=null;
   list.forEach(m=>{if(m._silent)return;body+=chatBoundaryHTML(prevVisible,m);body+=bubbleRow(c,m);prevVisible=m;});
   const mood=S.settings.showMoodTag!==false&&c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#9a9b9f')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
   const visionBusy=hasPendingVision(id);

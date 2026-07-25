@@ -37,6 +37,8 @@ const code = [
   functionSource("dayRelText"),
   functionSource("factStamp"),
   functionSource("chatDateLabel"),
+  functionSource("chatDateStampHTML"),
+  functionSource("chatBoundaryHTML"),
   functionSource("chatHistoryDateNote"),
   functionSource("chatHistoryWithDateBoundaries")
 ].join("\n");
@@ -44,6 +46,7 @@ const code = [
 const ctx = {
   console,
   Date,
+  esc: s => String(s),
   hm: t => new Date(t || Date.now()).getHours().toString().padStart(2, "0") + ":" + new Date(t || Date.now()).getMinutes().toString().padStart(2, "0"),
   weekdayCN: t => "周测",
   msgToText: m => m.content || ""
@@ -57,6 +60,13 @@ assert.match(ctx.factStamp(lastYear), /\d{4}年12月31日 .*（\d+天前）/);
 
 const a = new Date(2026, 6, 24, 23, 55).getTime();
 const b = new Date(2026, 6, 25, 0, 5).getTime();
+const boundary = ctx.chatBoundaryHTML({ time: a }, { time: b });
+assert.match(boundary, /datestamp/);
+assert.match(boundary, /7.*25.*00:05/);
+assert.equal((boundary.match(/<div/g) || []).length, 1, "cross-day date and time should be one visible divider");
+const sameDayGap = ctx.chatBoundaryHTML({ time: b }, { time: b + 6 * 60 * 1000 });
+assert.doesNotMatch(sameDayGap, /datestamp/);
+assert.match(sameDayGap, /00:11/);
 const hist = ctx.chatHistoryWithDateBoundaries([
   { role: "user", content: "昨天的话", time: a },
   { role: "assistant", content: "今天的话", time: b }
@@ -67,8 +77,10 @@ assert.match(hist[0].content, /角色必须据此分清今天、昨天、前几�
 
 assert.match(source, /function chatBoundaryHTML\(prev,m\)/);
 assert.match(source, /function appendChatMessageHTML\(id,c,m,opt\)/);
+assert.match(source, /function renderGroup\(id\)[\s\S]*chatBoundaryHTML\(/);
 assert.match(source, /renderPhoneFriendChat[\s\S]*chatBoundaryHTML\(prev,m\)/);
 assert.match(source, /renderPhoneFriendGroup[\s\S]*chatBoundaryHTML\(prev,m\)/);
+assert.match(source, /function renderChat\(id\)[\s\S]*let prevVisible=null/);
 assert.match(source, /function pfSpyLine\(m,peer\)[\s\S]*factStamp/);
 assert.match(source, /function remoteControlHistoryPrompt\(c\)[\s\S]*factStamp/);
 assert.match(source, /function remoteControlWechatCandidates\(c\)[\s\S]*factStamp/);
