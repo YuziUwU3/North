@@ -29,6 +29,7 @@ const TTS_MAX_CHARS = 300;
 const DEFAULT_TTS_VOICE = "male-qn-qingse";
 const LICENSE_EPOCH = Number(Deno.env.get("LICENSE_EPOCH") || 4);
 const PUBLIC_TTS_VOICES = [
+  { id: "xiayizhou20260725", name: "夏以昼", clone: true, preset: true },
   { id: "phonevoice20260709b", name: "月岛萤", clone: true, preset: true },
   { id: "phonevoice20260709a", name: "御叔", clone: true, preset: true },
   { id: DEFAULT_TTS_VOICE, name: "系统默认", clone: false, preset: true },

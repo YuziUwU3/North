@@ -44,8 +44,10 @@ assert.match(backend, /if \(data\.user_id !== userId\) throw new Error\("tts-pri
 assert.match(backend, /const available = await minimaxVoices\(\)/);
 assert.match(backend, /async function minimaxVoices\(force = false\)/);
 assert.match(backend, /await minimaxVoices\(true\)/);
+assert.match(backend, /\{ id: "xiayizhou20260725", name: "夏以昼", clone: true, preset: true \}/);
 
 assert.match(account, /onclick="aiPullVoices\(\)"/);
+assert.match(account, /\{id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true\}/);
 assert.match(account, /系统免费音色和尚未绑定的克隆音色/);
 assert.match(account, /未绑定克隆/);
 assert.match(account, /管理员会直接绑定到这里/);

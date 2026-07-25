@@ -2775,6 +2775,7 @@ async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(i
 // 拉取海螺账号下的可用音色（系统音色 + 你克隆的），点一下填入「默认音色」
 let _voiceList=[],_voiceQ='';
 const VOICE_PRESETS=[
+  {id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true},
   {id:'phonevoice20260709b',name:'月岛萤',clone:true,preset:true},
   {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
 ];
