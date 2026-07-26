@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v661 · 主动照片动机修复'/);
+assert.match(source, /APP_VER='v662 · 放映室点击与上下文修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -117,6 +117,8 @@ assert.match(source, /function cinemaSessionContext/);
 assert.match(source, /function cinemaClearSessionContext/);
 assert.match(source, /_cinemaSessionId/);
 assert.match(source, /function cinemaRemoveWechatContext/);
+assert.match(source, /function cinemaRenderKeepScroll/);
+assert.match(source, /slice\(-\(cinemaContextRounds\(\)\*2\)\)/);
 assert.match(source, /Object\.keys\(S\.messages\|\|\{\}\)/);
 assert.match(source, /accountId:actId\(\)/);
 assert.match(source, /msgsForAccount\(s\.cid,s\.accountId\|\|actId\(\)\)/);
@@ -170,7 +172,38 @@ assert.match(watch, /cinTopReveal/);
 assert.match(watch, /cinemaEnd\(\)/);
 assert.doesNotMatch(watch, /id="cinLog"/);
 assert.doesNotMatch(watch, /cin-context/);
+assert.doesNotMatch(watch, /event\.stopPropagation/);
 assert.doesNotMatch(source, /把故事留在/);
+
+const toolsHtmlContext = vm.createContext({
+  _cin: { cues: [] },
+  cinemaInit: () => ({ settings: { barrageFx: "cinema", transcribe: false } }),
+  cinemaRole: () => ({}),
+  cinemaVoiceLangLabel: () => "中文",
+  cinemaVisionIntervalLabel: () => "画面 按需",
+  svgIc: () => "",
+});
+vm.runInContext(functionSource("cinemaStageTools") + ";globalThis.html=cinemaStageTools();", toolsHtmlContext);
+assert.match(toolsHtmlContext.html, /onclick="cinemaSubtitleMenu\(\)"/);
+assert.match(toolsHtmlContext.html, /onclick="cinemaExtractSubtitles\(\)"/);
+assert.match(toolsHtmlContext.html, /onclick="cinemaToggleTranscribe\(\)"/);
+assert.match(toolsHtmlContext.html, /cinemaAnalyzeFrame\(\{currentTarget:this\},false\)/);
+assert.doesNotMatch(toolsHtmlContext.html, /event\.stopPropagation/);
+
+const contextRounds = vm.createContext({ S: { settings: { hist: 17 } } });
+vm.runInContext(lineFunctionSource("cinemaContextRounds") + ";globalThis.rounds=cinemaContextRounds();", contextRounds);
+assert.equal(contextRounds.rounds, 17);
+
+const scrollBoxes = [{ scrollTop: 326 }, { scrollTop: 0 }];
+let scrollRead = 0, renderCount = 0;
+const scrollBehavior = vm.createContext({
+  $: () => scrollBoxes[Math.min(scrollRead++, 1)],
+  render: () => { renderCount++; },
+  requestAnimationFrame: (fn) => fn(),
+});
+vm.runInContext(lineFunctionSource("cinemaRenderKeepScroll") + ";cinemaRenderKeepScroll();", scrollBehavior);
+assert.equal(renderCount, 1);
+assert.equal(scrollBoxes[1].scrollTop, 326);
 
 assert.match(source, /cinema:_MI\(/);
 assert.match(source, /HOMEAPPS=[\s\S]*?\['cinema','','放映室'\]/);
@@ -185,6 +218,6 @@ assert.match(html, /\.cin-voice-sub\.show/);
 assert.match(html, /\.cin-invite-card/);
 assert.match(html, /\.cin-memory-scroll/);
 assert.match(html, /原创深色影院界面/);
-assert.match(html, /app\.js\?v=661/);
+assert.match(html, /app\.js\?v=662/);
 
 console.log("cinema room tests passed");
