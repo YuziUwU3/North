@@ -31,7 +31,7 @@ function functionSource(name) {
 }
 
 test('large core state migrates to IndexedDB before localStorage reaches its browser quota', () => {
-  assert.match(app, /const CORE_IDB_KEY='__core_state',CORE_INLINE_LIMIT=3\.5\*1024\*1024/);
+  assert.match(app, /const CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state',CORE_INLINE_LIMIT=3\.5\*1024\*1024/);
   assert.match(app, /bytes>CORE_INLINE_LIMIT/);
   assert.match(app, /queueCoreMirror\(json,savedAt,true\)/);
   assert.match(app, /imgPut\(CORE_IDB_KEY,\{ver:1,savedAt:job\.savedAt,json:job\.json\}\)/);
@@ -68,7 +68,7 @@ test('storage meter distinguishes the compact core index from browser-wide capac
 test('storage details separate core, chats, images, voice cache and music', () => {
   assert.match(app, /function scanIDBStoreBytes\(openDB,storeName,classify\)/);
   assert.match(app, /function appStorageBreakdown\(\)/);
-  assert.match(app, /k===CORE_IDB_KEY\?'core'/);
+  assert.match(app, /k===CORE_IDB_KEY\|\|k===RECOVERY_IDB_KEY\?'core'/);
   assert.match(app, /\^__\(\?:messages\|pf_messages\|pf_group_messages\)/);
   assert.match(app, /k\.indexOf\('__audio_'\)===0\?'voice'/);
   assert.match(app, /scanIDBStoreBytes\(mIDB,'audio',\(\)=> 'music'\)/);
@@ -107,6 +107,7 @@ test('real save flow keeps only the newest queued large snapshot and restores it
       db.set(key, value);
     },
     imgGet: async key => db.get(key) ?? null,
+    queueRecoverySnapshot: () => Promise.resolve(true),
     storageSaveFailure: error => { throw error; },
     toast: () => {},
   });

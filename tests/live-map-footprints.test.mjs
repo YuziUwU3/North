@@ -59,6 +59,6 @@ assert.match(html, /\.lmcity\{/);
 assert.match(html, /\.lmtrail b,\.lmtrail small\{display:block/);
 assert.match(html, /\.lmfoot\{[^}]*max-height:none/);
 assert.match(html, /\.livemap\.lmdense \.lmtrail/);
-assert.match(html, /app\.js\?v=662/);
+assert.match(html, /app\.js\?v=663/);
 
 console.log('live map footprint tests passed');
