@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v669 · 音频字幕与语音输入'/);
+assert.match(source, /APP_VER='v670 · 竖屏双显示模式'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -118,8 +118,16 @@ assert.match(source, /visionOnAsk/);
 assert.match(source, /visionByRole/);
 assert.match(source, /cinemaQuestionNeedsVision/);
 assert.match(source, /识别中…/);
-assert.match(source, /cinemaShowVoiceSubtitle\(spoken,translation\)/);
-assert.match(source, /speak\(spoken,c\)/);
+assert.match(source, /function cinemaShowDialogueSubtitle/);
+assert.doesNotMatch(source, /function cinemaShowVoiceSubtitle/);
+assert.match(source, /speak\(outs\.map/);
+assert.match(source, /commentDisplay:'barrage'/);
+assert.match(source, /function cinemaCommentDisplay/);
+assert.match(source, /function cinemaCommentDisplaySave/);
+assert.match(source, /弹幕模式/);
+assert.match(source, /底部字幕模式/);
+assert.doesNotMatch(source, /角色已读到当前字幕/);
+assert.doesNotMatch(source, /当前画面已理解/);
 assert.match(source, /voiceLang:'role'/);
 assert.match(source, /bookVoice:false/);
 assert.match(source, /chatPanelHeight:104/);
@@ -133,10 +141,12 @@ assert.match(source, /document\.addEventListener\('pointermove',move\)/);
 assert.match(source, /function cinemaControlTap/);
 assert.match(source, /function cinemaControlPointerUp/);
 assert.match(source, /function cinemaControlClick/);
+assert.match(source, /function cinemaControlPointerDown/);
 assert.match(source, /b\.addEventListener\('pointerup',cinemaControlPointerUp\)/);
 assert.match(source, /b\.addEventListener\('click',cinemaControlClick\)/);
+assert.match(source, /Math\.hypot\(p\.x-start\.x,p\.y-start\.y\)>12/);
 assert.doesNotMatch(functionSource("cinemaBindControls"), /touchend/);
-assert.match(source, /function cinemaIsIOS/);
+assert.doesNotMatch(source, /function cinemaIsIOS/);
 assert.match(source, /id="cinMediaControls" class="cin-media-controls/);
 assert.match(source, /webkit-playsinline disablepictureinpicture/);
 assert.doesNotMatch(source, /id="cinVideo"[^>]* controls/);
@@ -243,6 +253,7 @@ const toolsHtmlContext = vm.createContext({
   cinemaReplyCount: () => 1,
   cinemaVoiceLangLabel: () => "中文",
   cinemaVisionIntervalLabel: () => "画面 按需",
+  cinemaCommentDisplay: () => "barrage",
   svgIc: () => "",
 });
 vm.runInContext(functionSource("cinemaStageTools") + ";globalThis.html=cinemaStageTools();", toolsHtmlContext);
@@ -250,6 +261,8 @@ assert.match(toolsHtmlContext.html, /data-cin-action="subtitle"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="extract"/);
 assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="transcribe"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="frame"/);
+assert.match(toolsHtmlContext.html, /显示 · 弹幕/);
+assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="fullscreen"/);
 assert.doesNotMatch(toolsHtmlContext.html, /event\.stopPropagation/);
 
 let tappedAction = "", prevented = false, stopped = false;
@@ -273,6 +286,27 @@ vm.runInContext(functionSource("cinemaEventPoint") + "\n" + functionSource("cine
 assert.equal(tappedAction, "chat-open");
 assert.equal(prevented, true);
 assert.equal(stopped, true);
+
+let pointerTapCount = 0;
+const pointerButton = { disabled: false };
+const pointerBehavior = vm.createContext({
+  Math,
+  Date,
+  cinemaControlTap: () => { pointerTapCount++; },
+});
+vm.runInContext(
+  functionSource("cinemaEventPoint") + "\n" +
+  functionSource("cinemaControlPointerDown") + "\n" +
+  functionSource("cinemaControlPointerUp") +
+  ";globalThis.down=cinemaControlPointerDown;globalThis.up=cinemaControlPointerUp;",
+  pointerBehavior,
+);
+pointerBehavior.down({ currentTarget: pointerButton, clientX: 10, clientY: 10 });
+pointerBehavior.up({ currentTarget: pointerButton, clientX: 40, clientY: 10, preventDefault() {}, stopPropagation() {} });
+assert.equal(pointerTapCount, 0, "horizontal toolbar swipes must not trigger a button");
+pointerBehavior.down({ currentTarget: pointerButton, clientX: 10, clientY: 10 });
+pointerBehavior.up({ currentTarget: pointerButton, clientX: 12, clientY: 11, preventDefault() {}, stopPropagation() {} });
+assert.equal(pointerTapCount, 1, "a steady tap must still trigger immediately");
 
 const resizeListeners = {};
 let resizedTo = 0, resizeSaved = 0;
@@ -355,7 +389,11 @@ assert.match(source, /function cinemaMicToggle/);
 assert.match(source, /stopRec\(false,m=>/);
 assert.match(source, /inp\.value=text/);
 assert.match(source, /cinemaSend\(kind\)/);
+assert.match(functionSource("cinemaAddItem"), /cinemaShoot\(who,opt&&opt\.shootText\|\|item\.text\)/);
+assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.spoken/);
 assert.match(html, /\.cin-mic\.recording/);
-assert.match(html, /app\.js\?v=669/);
+assert.match(html, /\.cin-voice-sub\.mine b/);
+assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
+assert.match(html, /app\.js\?v=670/);
 
 console.log("cinema room tests passed");
