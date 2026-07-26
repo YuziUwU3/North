@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='654'){
+if(window.__NORTH_SHELL_BUILD__!=='655'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v654 · 体验细节修复';
+const APP_VER='v655 · 放映室';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -377,6 +377,7 @@ function defState(){return{
   spy:{},
   offline:{},
   offlineFocus:null,
+  cinema:{selectedCid:'',settings:{danmaku:true,autoComment:true},sessions:[],progress:{}},
   shop:{cart:[],results:[],q:'',orders:[],cs:{msgs:[]},co:{on:false,cid:null,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0}},
   food:{cart:[],results:[],q:''},
   calendar:[],
@@ -1245,7 +1246,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=654';
+  const url='sw.js?v=655';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1724,6 +1725,9 @@ function render(){
   let html='';
   if(c.p==='home')html=renderHome();
   else if(c.p==='music')html=renderMusic();
+  else if(c.p==='cinema')html=renderCinema();
+  else if(c.p==='cinemawatch')html=renderCinemaWatch();
+  else if(c.p==='cinemaread')html=renderCinemaRead();
   else if(c.p==='settings')html=renderSettings();
   else if(c.p==='aiaccount')html=renderAIAccount();
   else if(c.p==='worldbook')html=renderWorldbook();
@@ -1777,6 +1781,8 @@ function render(){
   app.innerHTML='<div class="page'+_wxL+'">'+html+'</div>';
   renderLockScreen();renderLockPull();
   if(c.p==='chat'){afterChat(c.id);}
+  if(c.p==='cinemawatch')cinemaAfterVideoRender();
+  if(c.p==='cinemaread')cinemaAfterReaderRender();
   restoreRenderScroll(c,_scrollState);
   if((c.p==='tale'&&S.tale&&S.tale.active)||(c.p==='dread'&&S.dread&&S.dread.active)){setTimeout(jailAmbientStart,40);}
   else if(c.p!=='jail'){jailAmbientStop();}
@@ -1785,6 +1791,86 @@ function render(){
 }
 
 /* ---------- 主屏幕 ---------- */
+/* ---------- 放映室：单角色陪看 / 陪读 ---------- */
+let _cin={videoUrl:'',videoFile:null,bookText:'',bookPages:[],cues:[],subtitleName:'',sessionId:'',mediaKey:'',busy:false,token:0,lastSaveAt:0,lane:0,wantPlay:false};
+function cinemaInit(){
+  if(!S.cinema||typeof S.cinema!=='object')S.cinema={};
+  const x=S.cinema;x.settings=Object.assign({danmaku:true,autoComment:true},x.settings||{});x.sessions=Array.isArray(x.sessions)?x.sessions:[];x.progress=x.progress||{};
+  const roles=(S.contacts||[]).filter(c=>c&&!c.deleted&&!c.blocked);
+  if(!roles.some(c=>c.id===x.selectedCid))x.selectedCid=roles[0]?roles[0].id:'';
+  return x;
+}
+function cinemaRole(){cinemaInit();return getC(S.cinema.selectedCid);}
+function cinemaSession(){cinemaInit();return S.cinema.sessions.find(x=>x&&x.id===_cin.sessionId)||null;}
+function cinemaRoleName(c){return c?esc(c.remark||c.name):'未选择';}
+function cinemaFmt(sec){sec=Math.max(0,Math.floor(+sec||0));return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');}
+function cinemaDate(ts){const d=new Date(ts||Date.now());return (d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function cinemaProgressText(s){if(!s)return'';if(s.kind==='book')return '读到 '+Math.min((s.page||0)+1,s.totalPages||1)+' / '+(s.totalPages||1)+' 页';return (s.status==='finished'?'看至 ':'进度 ')+cinemaFmt(s.progress||0)+(s.duration?' / '+cinemaFmt(s.duration):'');}
+function cinemaHistoryHTML(){const rows=(cinemaInit().sessions||[]).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,8);if(!rows.length)return '<div class="cin-empty">第一次放映，会从你们按下播放的那一刻开始记住。</div>';
+  return rows.map(s=>{const c=getC(s.cid),live=s.id===_cin.sessionId&&s.status!=='finished'&&((s.kind==='video'&&_cin.videoUrl)||(s.kind==='book'&&_cin.bookPages.length));return `<div class="cin-history ${live?'live':''}" ${live?`onclick="cinemaResume('${s.id}')"`:''}><div class="cin-history-icon">${s.kind==='book'?svgIc('book',19,'#e9e7f4'):svgIc('video',19,'#e9e7f4')}</div><div class="cin-history-main"><b>${esc(s.title||'未命名')}</b><span>${cinemaRoleName(c)} · ${cinemaProgressText(s)}</span></div><em>${live?'继续本场':s.status==='finished'?'已收进记忆':'上次离场'}</em></div>`;}).join('');}
+function renderCinema(){const x=cinemaInit(),roles=(S.contacts||[]).filter(c=>c&&!c.deleted&&!c.blocked),chosen=cinemaRole();
+  const roleStrip=roles.length?roles.map(c=>`<button class="cin-role ${c.id===x.selectedCid?'on':''}" onclick="cinemaChooseRole('${c.id}')">${av(c.avatar,'sm')}<span>${esc(c.remark||c.name)}</span>${c.id===x.selectedCid?'<i>本场陪同</i>':''}</button>`).join(''):'<div class="cin-empty">还没有可邀请的角色，先去微信创建一名角色。</div>';
+  return `<div class="cinema-home"><div class="cin-nav"><button onclick="back()">‹</button><div><b>放映室</b><span>PRIVATE SCREENING ROOM</span></div><i>${svgIc('video',21,'#ddd9ef')}</i></div>
+    <div class="cin-home-scroll"><section class="cin-hero"><div class="cin-orbit"></div><span class="cin-kicker">TONIGHT · ONE SEAT RESERVED</span><h1>把故事留在<br>你们之间</h1><p>本地内容只在这台设备播放。字幕与已读正文会成为角色理解剧情的依据，不偷看后文。</p><div class="cin-hero-role">${chosen?av(chosen.avatar,'sm'):'<div class="avatar sm">+</div>'}<span>${chosen?'今晚和 '+cinemaRoleName(chosen):'先选择陪同角色'}</span></div></section>
+      <section class="cin-section"><div class="cin-section-head"><b>选择陪同角色</b><span>仅一名</span></div><div class="cin-role-strip">${roleStrip}</div></section>
+      <section class="cin-start-grid"><button onclick="cinemaPickVideo()"><i>${svgIc('video',26,'#fff')}</i><b>一起看剧</b><span>MP4 · WebM · M4V</span><em>导入本地视频</em></button><button onclick="cinemaPickBook()"><i>${svgIc('book',26,'#fff')}</i><b>一起读</b><span>TXT · MD · EPUB 检测</span><em>打开本地作品</em></button></section>
+      <section class="cin-truth"><i>${svgIc('shield',18,'#aea8c5')}</i><div><b>角色怎样知道剧情？</b><p>优先读取你导入的字幕或当前已读页面；没有字幕时，只依据片名和你主动识别的当前画面，不会假装知道。</p></div></section>
+      <section class="cin-section"><div class="cin-section-head"><b>你们的片单记忆</b><span>${x.sessions.length} 场</span></div>${cinemaHistoryHTML()}</section>
+    </div></div>`;}
+function cinemaChooseRole(cid){const c=getC(cid);if(!c||c.deleted||c.blocked)return;cinemaInit().selectedCid=cid;save();render();}
+function cinemaResume(id){const s=(cinemaInit().sessions||[]).find(x=>x&&x.id===id);if(!s||s.id!==_cin.sessionId)return toast('本地源文件已失效，请重新导入');if(s.kind==='video'&&_cin.videoUrl)go('cinemawatch');else if(s.kind==='book'&&_cin.bookPages.length)go('cinemaread');else toast('本地源文件已失效，请重新导入');}
+function cinemaRequireRole(){const c=cinemaRole();if(!c){toast('先选择一名陪同角色');return null;}return c;}
+function cinemaReleaseMedia(){try{if(_cin.videoUrl)URL.revokeObjectURL(_cin.videoUrl);}catch(_){}_cin.videoUrl='';_cin.videoFile=null;_cin.bookText='';_cin.bookPages=[];_cin.cues=[];_cin.subtitleName='';_cin.mediaKey='';}
+function cinemaMediaKey(f,kind){return kind+'|'+(f.name||'')+'|'+(+f.size||0)+'|'+(+f.lastModified||0);}
+function cinemaNewSession(kind,title,key){const c=cinemaRequireRole();if(!c)return null;cinemaInit();const old=S.cinema.progress[key]||{},now=Date.now(),s={id:uid(),cid:c.id,kind,title:(title||'未命名').slice(0,120),mediaKey:key,startedAt:now,updatedAt:now,status:'active',progress:kind==='video'?(+old.progress||0):0,duration:+old.duration||0,page:kind==='book'?(+old.page||0):0,totalPages:0,items:[],autoCount:0,lastAuto:0,summary:'',sceneDesc:'',sceneAt:0};S.cinema.sessions.push(s);if(S.cinema.sessions.length>30)S.cinema.sessions=S.cinema.sessions.slice(-30);_cin.sessionId=s.id;_cin.mediaKey=key;_cin.token++;save();return s;}
+function cinemaPickVideo(){if(!cinemaRequireRole())return;pickFile('video/mp4,video/webm,video/quicktime,.mp4,.webm,.m4v',f=>cinemaOpenVideo(f));}
+function cinemaOpenVideo(f){if(!f)return;cinemaReleaseMedia();const key=cinemaMediaKey(f,'video'),title=(f.name||'未命名影片').replace(/\.[^.]+$/,'');_cin.videoFile=f;_cin.videoUrl=URL.createObjectURL(f);const s=cinemaNewSession('video',title,key);if(!s){cinemaReleaseMedia();return;}go('cinemawatch');}
+function cinemaDecodeText(buf){let t='';try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf);}catch(_){try{t=new TextDecoder('gb18030').decode(buf);}catch(__){t=new TextDecoder().decode(buf);}}return t.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();}
+function cinemaPaginate(text,limit){text=String(text||'').replace(/\r\n?/g,'\n').trim();limit=Math.max(500,+limit||1150);if(!text)return[];const paras=text.split(/\n{2,}/),pages=[];let page='';const push=()=>{if(page.trim())pages.push(page.trim());page='';};paras.forEach(p=>{p=p.trim();if(!p)return;while(p.length>limit){const room=Math.max(180,limit-page.length-2),part=p.slice(0,room),cut=Math.max(part.lastIndexOf('。'),part.lastIndexOf('！'),part.lastIndexOf('？'),part.lastIndexOf('\n'));const n=cut>room*.55?cut+1:room;page+=(page?'\n\n':'')+p.slice(0,n);push();p=p.slice(n).trim();}if(page&&page.length+p.length+2>limit)push();page+=(page?'\n\n':'')+p;});push();return pages;}
+async function cinemaDecodeEpub(f){if(!window.JSZip)throw new Error('当前设备未启用 EPUB 解析组件，请先转为 TXT 再导入');const zip=await window.JSZip.loadAsync(await f.arrayBuffer()),container=await zip.file('META-INF/container.xml').async('text'),doc=new DOMParser().parseFromString(container,'application/xml'),root=doc.querySelector('rootfile');if(!root)throw new Error('EPUB 目录无效');const opfPath=root.getAttribute('full-path'),opf=await zip.file(opfPath).async('text'),od=new DOMParser().parseFromString(opf,'application/xml'),base=opfPath.includes('/')?opfPath.slice(0,opfPath.lastIndexOf('/')+1):'',manifest={};od.querySelectorAll('manifest item').forEach(x=>manifest[x.getAttribute('id')]={href:x.getAttribute('href'),type:x.getAttribute('media-type')});const parts=[];for(const ref of od.querySelectorAll('spine itemref')){const it=manifest[ref.getAttribute('idref')];if(!it)continue;const file=zip.file(base+decodeURIComponent(it.href||''));if(!file)continue;const html=await file.async('text'),hd=new DOMParser().parseFromString(html,'text/html'),tx=(hd.body&&hd.body.innerText||hd.documentElement.textContent||'').replace(/\n{3,}/g,'\n\n').trim();if(tx)parts.push(tx);}if(!parts.length)throw new Error('没有读到 EPUB 正文');return parts.join('\n\n');}
+function cinemaPickBook(){if(!cinemaRequireRole())return;pickFile('.txt,.md,.epub,text/plain,text/markdown,application/epub+zip',async f=>{try{const isEpub=/\.epub$/i.test(f.name||''),text=isEpub?await cinemaDecodeEpub(f):cinemaDecodeText(await f.arrayBuffer()),pages=cinemaPaginate(text,1150);if(!pages.length)throw new Error('文件里没有可阅读的正文');cinemaReleaseMedia();_cin.bookText=text;_cin.bookPages=pages;const key=cinemaMediaKey(f,'book'),title=(f.name||'未命名作品').replace(/\.[^.]+$/,''),s=cinemaNewSession('book',title,key);if(!s)return;s.totalPages=pages.length;const old=S.cinema.progress[key]||{};s.page=Math.min(Math.max(0,+old.page||0),pages.length-1);save();go('cinemaread');}catch(e){toast((e&&e.message)||'作品读取失败');}});}
+function cinemaParseTime(v){const p=String(v||'').trim().replace(',','.').split(':').map(Number);if(p.some(n=>!Number.isFinite(n)))return NaN;return p.length===3?p[0]*3600+p[1]*60+p[2]:p.length===2?p[0]*60+p[1]:NaN;}
+function cinemaParseSubtitles(raw){raw=String(raw||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').replace(/^WEBVTT[^\n]*\n+/i,'');const out=[];raw.split(/\n{2,}/).forEach(block=>{let lines=block.split('\n').map(x=>x.trim()).filter(Boolean);if(!lines.length)return;if(/^\d+$/.test(lines[0]))lines.shift();const ti=lines.findIndex(x=>x.includes('-->'));if(ti<0)return;const m=lines[ti].match(/(\d{1,2}:)?\d{1,2}:\d{2}[,.]\d{3}\s*-->\s*(\d{1,2}:)?\d{1,2}:\d{2}[,.]\d{3}/);if(!m)return;const sides=lines[ti].split('-->'),start=cinemaParseTime(sides[0]),end=cinemaParseTime(sides[1].trim().split(/\s+/)[0]),text=lines.slice(ti+1).join(' ').replace(/<[^>]+>/g,'').replace(/\{\\[^}]+\}/g,'').trim();if(Number.isFinite(start)&&Number.isFinite(end)&&end>start&&text)out.push({start,end,text:text.slice(0,500)});});return out.sort((a,b)=>a.start-b.start);}
+function cinemaCueAt(t){let hit=null;for(const cue of _cin.cues){if(cue.start>t)break;if(t<=cue.end)hit=cue;}return hit;}
+function cinemaSubtitleContext(t){return _cin.cues.filter(x=>x.start<=t&&x.end>=Math.max(0,t-48)).slice(-12).map(x=>'['+cinemaFmt(x.start)+'] '+x.text).join('\n');}
+function cinemaPickSubtitle(){pickFile('.srt,.vtt,text/vtt,application/x-subrip,text/plain',async f=>{try{const cues=cinemaParseSubtitles(cinemaDecodeText(await f.arrayBuffer()));if(!cues.length)throw new Error('没有识别到有效字幕时间轴');_cin.cues=cues;_cin.subtitleName=f.name||'字幕';const s=cinemaSession();if(s){s.subtitleName=_cin.subtitleName;s.updatedAt=Date.now();save();}cinemaUpdateSubtitle();const lab=$('#cinSubState');if(lab)lab.textContent='字幕已就绪 · '+cues.length+' 条';toast('字幕已导入，角色现在能跟上剧情');}catch(e){toast((e&&e.message)||'字幕读取失败');}});}
+function cinemaLogHTML(s){const c=getC(s&&s.cid),items=(s&&s.items||[]).slice(-60);if(!items.length)return '<div class="cin-chat-empty"><b>同屏对话</b><span>开始播放后，直接和 '+cinemaRoleName(c)+' 聊这一幕。</span></div>';return items.map(m=>`<div class="cin-log ${m.who==='me'?'mine':'role'}"><span>${m.who==='me'?'我':cinemaRoleName(c)}</span><p>${esc(m.text)}</p><time>${s.kind==='video'?cinemaFmt(m.at||0):'第 '+((m.page||0)+1)+' 页'}</time></div>`).join('');}
+function cinemaStageTools(s){const x=cinemaInit();return `<div class="cin-tools"><button onclick="cinemaPickSubtitle()">${svgIc('file',15)}<span id="cinSubState">${_cin.cues.length?'字幕已就绪 · '+_cin.cues.length+' 条':'导入字幕'}</span></button><button onclick="cinemaAnalyzeFrame(event)">${svgIc('image',15)}识别画面</button><button id="cinAutoBtn" class="${x.settings.autoComment?'on':''}" onclick="cinemaToggleAuto()">主动弹幕</button><button id="cinDmBtn" class="${x.settings.danmaku?'on':''}" onclick="cinemaToggleDanmaku()">弹幕</button></div>`;}
+function renderCinemaWatch(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c||!_cin.videoUrl)return `<div class="cinema-home">${nav('放映室')}<div class="cin-empty" style="margin:auto;padding:30px">视频源已失效，请回到放映室重新选择本地视频。<button class="btn p" style="margin-top:16px" onclick="back()">返回放映室</button></div></div>`;
+  return `<div class="cin-watch"><div class="cin-watch-nav"><button onclick="cinemaVideoBack()">‹</button><div><b>${esc(s.title)}</b><span>${cinemaRoleName(c)} 正在陪你看</span></div><button class="cin-end" onclick="cinemaEnd()">结束</button></div>
+    <div id="cinStage" class="cin-stage"><div class="cin-screen"><video id="cinVideo" src="${esc(_cin.videoUrl)}" controls playsinline preload="metadata"></video><div id="cinDanmaku" class="cin-danmaku"></div><div id="cinSub" class="cin-sub"></div><button id="cinTheaterBtn" class="cin-theater-btn" onclick="cinemaToggleTheater()">${svgIc('expand',17,'#fff')}</button></div>
+      <div class="cin-stage-chat"><textarea id="cinInput" rows="1" maxlength="160" placeholder="以弹幕和 ${cinemaRoleName(c)} 聊这一幕…"></textarea><button onclick="cinemaSend('video')">发送</button></div></div>
+    ${cinemaStageTools(s)}<div class="cin-context"><div><i class="cin-live"></i><b>剧情上下文</b><span id="cinContext">${_cin.cues.length?'等待播放字幕':'未导入字幕 · 角色不会假装知道剧情'}</span></div>${s.sceneDesc?`<p id="cinSceneDesc">画面识别：${esc(s.sceneDesc)}</p>`:'<p id="cinSceneDesc" style="display:none"></p>'}</div>
+    <div id="cinLog" class="cin-logbox">${cinemaLogHTML(s)}</div></div>`;}
+function cinemaAfterVideoRender(){const v=$('#cinVideo'),s=cinemaSession();if(!v||!s)return;v.addEventListener('loadedmetadata',()=>{s.duration=Number.isFinite(v.duration)?v.duration:0;if(s.progress>0&&s.progress<Math.max(0,v.duration-2))try{v.currentTime=s.progress;}catch(_){}cinemaSaveProgress(true);if(_cin.wantPlay){_cin.wantPlay=false;v.play().catch(()=>{});}});v.addEventListener('timeupdate',cinemaVideoTick);v.addEventListener('ended',()=>cinemaSaveProgress(true));v.addEventListener('seeked',()=>{s.lastAuto=v.currentTime;cinemaUpdateSubtitle();});v.addEventListener('error',()=>toast('视频无法播放，可能是编码不受当前浏览器支持'));const inp=$('#cinInput');if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();cinemaSend('video');}});if(!_cin.fullscreenBound){_cin.fullscreenBound=true;document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement){const stage=$('#cinStage');if(stage)stage.classList.remove('cin-theater');document.body.classList.remove('cin-theater-open');}});}cinemaUpdateSubtitle();}
+function cinemaVideoTick(){const v=$('#cinVideo'),s=cinemaSession();if(!v||!s)return;s.progress=v.currentTime||0;s.duration=Number.isFinite(v.duration)?v.duration:s.duration;s.updatedAt=Date.now();cinemaUpdateSubtitle();if(Date.now()-_cin.lastSaveAt>5000)cinemaSaveProgress(false);const cue=cinemaCueAt(v.currentTime||0),set=cinemaInit().settings;if(set.autoComment&&cue&&!v.paused&&!_cin.busy&&(v.currentTime||0)>20&&(v.currentTime-(s.lastAuto||0)>90)&&(s.autoCount||0)<8){s.lastAuto=v.currentTime;s.autoCount=(s.autoCount||0)+1;save();cinemaRoleReply('你可以针对当前刚看到的情节主动发一条很短的弹幕，不要提问，不要剧透。',true);}}
+function cinemaSaveProgress(force){const s=cinemaSession();if(!s)return;_cin.lastSaveAt=Date.now();cinemaInit().progress[s.mediaKey]={kind:s.kind,title:s.title,progress:s.progress||0,duration:s.duration||0,page:s.page||0,updatedAt:Date.now()};save(force?0:500);}
+function cinemaUpdateSubtitle(){const v=$('#cinVideo'),sub=$('#cinSub'),ctx=$('#cinContext');if(!v)return;const cue=cinemaCueAt(v.currentTime||0);if(sub){sub.textContent=cue?cue.text:'';sub.classList.toggle('show',!!cue);}if(ctx)ctx.textContent=cue?cue.text:(_cin.cues.length?'这一刻没有对白':'未导入字幕 · 角色不会假装知道剧情');}
+function cinemaShoot(who,text){if(!cinemaInit().settings.danmaku)return;const box=$('#cinDanmaku');if(!box)return;const d=document.createElement('div');d.className='cin-barrage '+(who==='me'?'mine':'role');d.textContent=text;const lane=_cin.lane++%5;d.style.top=(9+lane*16)+'%';d.style.animationDuration=(7+Math.min(5,text.length/12))+'s';box.appendChild(d);setTimeout(()=>d.remove(),12500);}
+function cinemaAppendLog(item){const s=cinemaSession(),box=$('#cinLog');if(!s||!box)return;const empty=box.querySelector('.cin-chat-empty');if(empty)empty.remove();const c=getC(s.cid),d=document.createElement('div');d.className='cin-log '+(item.who==='me'?'mine':'role');d.innerHTML='<span>'+(item.who==='me'?'我':cinemaRoleName(c))+'</span><p>'+esc(item.text)+'</p><time>'+(s.kind==='video'?cinemaFmt(item.at||0):'第 '+((item.page||0)+1)+' 页')+'</time>';box.appendChild(d);box.scrollTop=box.scrollHeight;}
+function cinemaAddItem(who,text){const s=cinemaSession();if(!s||!text)return null;const v=$('#cinVideo'),item={who,text:String(text).slice(0,240),time:Date.now(),at:s.kind==='video'?(v?v.currentTime:s.progress||0):0,page:s.page||0};s.items=s.items||[];s.items.push(item);if(s.items.length>140)s.items=s.items.slice(-140);s.updatedAt=Date.now();save();cinemaAppendLog(item);cinemaShoot(who,item.text);return item;}
+function cinemaRoleContext(s){if(s.kind==='book'){const i=Math.max(0,Math.min(s.page||0,_cin.bookPages.length-1)),prev=i?_cin.bookPages[i-1].slice(-360):'';return '当前读到第'+(i+1)+'/'+_cin.bookPages.length+'页。\n'+(prev?'上一页结尾：'+prev+'\n':'')+'当前页正文：'+(_cin.bookPages[i]||'').slice(0,1800);}const v=$('#cinVideo'),t=v?v.currentTime:(s.progress||0),subs=cinemaSubtitleContext(t);return '当前播放时间 '+cinemaFmt(t)+' / '+cinemaFmt(s.duration||0)+'。\n'+(subs?'截至此刻已经出现的字幕（绝对不要使用更晚内容）：\n'+subs:'目前没有可用字幕，只知道片名；不要假装知道具体剧情。')+(s.sceneDesc&&Math.abs(t-(s.sceneAt||0))<150?'\n用户刚刚主动识别的当前画面：'+s.sceneDesc:'');}
+function cinemaRoleSystem(c,s){const past=topSummaries(c.summaries||[],8).map(x=>'· '+summaryCleanText(c,x.text)).join('\n');return personaPin(c)+'\n角色核心设定：'+(c.persona||'按既有性格自然相处')+'\n性格与关系状态：'+traitDesc(c)+(past?'\n你们已有的长期记忆：\n'+past:'')+'\n\n# 放映室同屏陪伴\n你正和'+summaryUserLabel(c)+'在“放映室”一起'+(s.kind==='book'?'读':'看')+'《'+s.title+'》。只允许依据给你的【已看到/已读到】内容回应，严禁引用后面的剧情、常识里的结局或假装看到未提供的画面。像真人同屏时发弹幕一样自然回应：通常1句，最多2句、总长不超过55个中文字。保持角色自己的性格与称呼。只能输出你要说的话；不要动作描写、第三人称叙述、括号舞台说明、心情标签、分析过程或“作为AI”。';}
+function cinemaCleanRoleText(raw){let t=cleanReply(raw).replace(/^[\s「『“"]+|[」』”"]+$/g,'').replace(/^\s*[\*（(【\[].{0,32}[\*）)】\]]\s*/,'').replace(/\n+/g,' ').trim();return Array.from(t).slice(0,90).join('');}
+async function cinemaRoleReply(reason,automatic){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c||_cin.busy)return;_cin.busy=true;const token=_cin.token,inp=$('#cinInput'),send=inp&&inp.nextElementSibling;if(send)send.disabled=true;try{const recent=(s.items||[]).slice(-12).map(x=>(x.who==='me'?summaryUserLabel(c):c.name)+'：'+x.text).join('\n'),prompt=cinemaRoleContext(s)+'\n\n最近同屏对话：\n'+(recent||'（还没有）')+'\n\n现在的要求：'+reason,raw=await chatAPI([{role:'system',content:cinemaRoleSystem(c,s)},{role:'user',content:prompt}],{max:150,temp:.68});if(token!==_cin.token||cinemaSession()!==s)return;const text=cinemaCleanRoleText(raw);if(text)cinemaAddItem('role',text);}catch(e){if(!automatic)toast((e&&e.message)||'角色暂时没有接上话');}finally{if(token===_cin.token)_cin.busy=false;if(send&&send.isConnected)send.disabled=false;}}
+function cinemaSend(kind){const id=kind==='book'?'cinBookInput':'cinInput',inp=$('#'+id),text=inp&&inp.value.trim();if(!text||_cin.busy)return;inp.value='';cinemaAddItem('me',text);cinemaRoleReply('回应'+summaryUserLabel(cinemaRole())+'刚发的这句话。若对方问剧情，只依据当前上下文回答；不知道就自然承认此刻还看不出来。',false);}
+function cinemaToggleDanmaku(){const x=cinemaInit();x.settings.danmaku=!x.settings.danmaku;const b=$('#cinDmBtn');if(b)b.classList.toggle('on',x.settings.danmaku);const d=$('#cinDanmaku');if(d)d.style.display=x.settings.danmaku?'block':'none';save();}
+function cinemaToggleAuto(){const x=cinemaInit();x.settings.autoComment=!x.settings.autoComment;const b=$('#cinAutoBtn');if(b)b.classList.toggle('on',x.settings.autoComment);save();toast(x.settings.autoComment?'角色会偶尔主动发弹幕':'已关闭主动弹幕');}
+function cinemaVideoBack(){const v=$('#cinVideo');if(v){v.pause();const s=cinemaSession();if(s){s.progress=v.currentTime||s.progress;cinemaSaveProgress(true);}}back();}
+async function cinemaToggleTheater(){const stage=$('#cinStage');if(!stage)return;const entering=!stage.classList.contains('cin-theater');stage.classList.toggle('cin-theater',entering);document.body.classList.toggle('cin-theater-open',entering);if(entering){try{if(stage.requestFullscreen)await stage.requestFullscreen();}catch(_){}try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape');}catch(_){}}else{try{if(document.fullscreenElement)await document.exitFullscreen();}catch(_){}try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(_){}}}
+async function cinemaAnalyzeFrame(ev){const v=$('#cinVideo'),s=cinemaSession();if(!v||!s||!v.videoWidth){toast('先播放到想识别的画面');return;}const b=ev&&ev.currentTarget;if(b)b.disabled=true;try{const max=960,scale=Math.min(1,max/v.videoWidth),cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(v.videoWidth*scale));cv.height=Math.max(1,Math.round(v.videoHeight*scale));cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);const desc=cleanReply(await visionAPI(cv.toDataURL('image/jpeg',.78),'只描述这个影视画面此刻可直接看见的内容、人物和环境，中文1到2句。不要猜后续、不要识别人名、不要评价，不要提图片。',{max:180})).replace(/\n+/g,' ').slice(0,220);if(!desc)throw new Error('没有识别到画面');s.sceneDesc=desc;s.sceneAt=v.currentTime||0;s.updatedAt=Date.now();save();const p=$('#cinSceneDesc');if(p){p.style.display='block';p.textContent='画面识别：'+desc;}toast('这一幕已交给角色');}catch(e){toast((e&&e.message)||'画面识别失败');}finally{if(b&&b.isConnected)b.disabled=false;}}
+function renderCinemaRead(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c||!_cin.bookPages.length)return `<div class="cinema-home">${nav('放映室')}<div class="cin-empty" style="margin:auto;padding:30px">作品源已失效，请回到放映室重新导入。<button class="btn p" style="margin-top:16px" onclick="back()">返回放映室</button></div></div>`;const i=Math.max(0,Math.min(s.page||0,_cin.bookPages.length-1)),pct=Math.round((i+1)/_cin.bookPages.length*100);
+  return `<div class="cin-reader"><div class="cin-reader-nav"><button onclick="cinemaReaderBack()">‹</button><div><b>${esc(s.title)}</b><span>${cinemaRoleName(c)} 陪读 · ${pct}%</span></div><button onclick="cinemaEnd()">结束</button></div><div class="cin-paper-wrap"><article class="cin-paper"><div class="cin-page-no">${String(i+1).padStart(2,'0')} / ${String(_cin.bookPages.length).padStart(2,'0')}</div><div class="cin-prose">${esc(_cin.bookPages[i]).replace(/\n/g,'<br>')}</div><div class="cin-page-end">— ${pct}% —</div></article></div>
+    <div class="cin-reader-actions"><button onclick="cinemaBookPage(-1)" ${i<=0?'disabled':''}>上一页</button><button class="comment" onclick="cinemaBookComment()">问问 ${cinemaRoleName(c)}</button><button onclick="cinemaBookPage(1)" ${i>=_cin.bookPages.length-1?'disabled':''}>下一页</button></div><div id="cinLog" class="cin-logbox reader">${cinemaLogHTML(s)}</div><div class="cin-book-input"><textarea id="cinBookInput" rows="1" maxlength="160" placeholder="聊聊刚读到的这一页…"></textarea><button onclick="cinemaSend('book')">发送</button></div></div>`;}
+function cinemaAfterReaderRender(){const inp=$('#cinBookInput');if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();cinemaSend('book');}});}
+function cinemaBookPage(step){const s=cinemaSession();if(!s)return;s.page=Math.max(0,Math.min(_cin.bookPages.length-1,(s.page||0)+step));s.progress=(s.page+1)/_cin.bookPages.length;s.updatedAt=Date.now();cinemaSaveProgress(true);render();}
+function cinemaBookComment(){if(_cin.busy)return;cinemaRoleReply('针对当前这一页，主动说一句符合你性格的真实感受或观察。不要概括没读到的后文。',true);}
+function cinemaReaderBack(){cinemaSaveProgress(true);back();}
+function cinemaWatchedHighlights(s){if(s.kind==='video'){const seen=_cin.cues.filter(x=>x.start<=s.progress);if(!seen.length)return'';const step=Math.max(1,Math.ceil(seen.length/12));return seen.filter((_,i)=>i%step===0).slice(-12).map(x=>'['+cinemaFmt(x.start)+'] '+x.text).join('\n');}const end=Math.min(_cin.bookPages.length,(s.page||0)+1);if(!end)return'';const ids=[0,Math.floor((end-1)/2),end-1].filter((x,i,a)=>a.indexOf(x)===i);return ids.map(i=>'第'+(i+1)+'页：'+(_cin.bookPages[i]||'').slice(0,420)).join('\n');}
+function cinemaTranscript(s,c){const items=(s.items||[]).slice(-80).map(x=>(x.who==='me'?summaryUserLabel(c):c.name)+'：'+x.text).join('\n'),high=cinemaWatchedHighlights(s);return '作品：《'+s.title+'》\n形式：'+(s.kind==='book'?'一起阅读':'一起看剧')+'\n实际进度：'+cinemaProgressText(s)+(high?'\n已经看到的内容线索：\n'+high:'')+'\n同屏聊天：\n'+(items||'没有额外聊天');}
+function cinemaFallbackMemory(s,c){const call=summaryUserLabel(c),act=s.kind==='book'?'一起读了':'一起看了';let t='我和'+call+'在放映室'+act+'《'+s.title+'》，'+cinemaProgressText(s)+'。';const mine=(s.items||[]).filter(x=>x.who==='me').slice(-3).map(x=>x.text);if(mine.length)t+=call+'当时和我聊到：'+mine.join('；')+'。';return trimSentence(t,320);}
+async function cinemaEnd(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c)return;if(!await uiConfirm('结束这次'+(s.kind==='book'?'共读':'放映')+'？\n结束后会整理成角色长期记忆。'))return;const v=$('#cinVideo');if(v){v.pause();s.progress=v.currentTime||s.progress;s.duration=Number.isFinite(v.duration)?v.duration:s.duration;}s.status='finished';s.updatedAt=Date.now();_cin.token++;_cin.busy=false;cinemaSaveProgress(true);toast('正在把这次内容收进记忆…');let memory=cinemaFallbackMemory(s,c);const configured=!!(S.settings&&S.settings.chat&&S.settings.chat.base&&S.settings.chat.key);if(configured&&(s.items||[]).length){try{const raw=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。把下面这次放映室经历写成一段第一人称长期记忆：只写实际进度、双方真正聊过的内容和你的真实感受；用“我”指自己，用“'+summaryUserLabel(c)+'”称呼一起观看的人。不补完没看到的剧情，不编造事件。90到180个中文字，一整段，不要标题、列表、括号动作或重要度标记。'+perspRule(c)},{role:'user',content:cinemaTranscript(s,c)}],{max:360,temp:.28});const t=trimSentence(cinemaCleanRoleText(raw),360);if(t.length>=45)memory=t;}catch(_){}}s.summary=memory;addSummary(c,memory,4,'【放映室】');save();try{if(document.fullscreenElement)await document.exitFullscreen();}catch(_){}document.body.classList.remove('cin-theater-open');cinemaReleaseMedia();back();toast('已结束，'+(c.remark||c.name)+'会记得这一次');}
+
 /* ---------- 🎵 一起听音乐 ---------- */
 let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=false;
 let _mBub={l:null,r:null};// 一起听字幕气泡：l=她(左) r=他(右)，说完一句自动消失
@@ -2090,11 +2176,11 @@ const APPDEFS={
   tasks:{e:'📋',c:'#f59e0b',t:'任务便签'},games:{e:'🎮',c:'#6c5ce7',t:'游戏大厅',lk:1},mail:{e:'',c:'#3a3a3f',t:'信箱',lk:1,badge:1},
   offline:{e:'🌹',c:'#e84d6f',t:'线下约会',lk:1},music:{e:'🎵',c:'linear-gradient(135deg,#ff8fab,#b8a4e3)',t:'音乐',lk:1},roleplay:{e:'',c:'linear-gradient(135deg,#1b2330,#55657d)',t:'角色扮演',icon:'roleplay',lk:1},
   tale:{e:'🕯️',c:'linear-gradient(135deg,#3a0010,#1a1a1f)',t:'规则怪谈',lk:1},dread:{e:'🩸',c:'linear-gradient(135deg,#5a0012,#23000a)',t:'惊悚抉择',lk:1},
-  travel:{e:'✈',c:'linear-gradient(135deg,#26324a,#5a6b8c)',t:'云程',lk:1},
+  travel:{e:'✈',c:'linear-gradient(135deg,#26324a,#5a6b8c)',t:'云程',lk:1},cinema:{e:'',c:'linear-gradient(145deg,#17131d,#75546a)',t:'放映室',icon:'video',lk:1},
   aiaccount:{e:'AI',c:'linear-gradient(135deg,#1e293b,#4f46e5)',t:'AI账户',icon:'aiaccount'}};
-const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openApp('music'),roleplay:()=>openApp('roleplay'),tale:()=>openApp('tale'),dread:()=>openApp('dread'),travel:()=>openApp('travel'),aiaccount:()=>openAIAccount()};
+const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openApp('music'),cinema:()=>openApp('cinema'),roleplay:()=>openApp('roleplay'),tale:()=>openApp('tale'),dread:()=>openApp('dread'),travel:()=>openApp('travel'),aiaccount:()=>openAIAccount()};
 const APP_PAGES=3;
-const APP_DEFLAYOUT=[['wechat','phoneapp','settings','aiaccount','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','tale','dread'],[]];
+const APP_DEFLAYOUT=[['wechat','phoneapp','settings','aiaccount','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','cinema','tale','dread'],[]];
 function appLayoutInit(){let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
@@ -2424,21 +2510,21 @@ const ICONS={
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
-const HOMEAPPS=[['wechat','💬','微信'],['phoneapp','☎','电话'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['douyin','🎵','抖音'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','','信箱'],['offline','🌹','线下约会'],['music','🎵','音乐'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['phoneapp','☎','电话'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['douyin','🎵','抖音'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','','信箱'],['offline','🌹','线下约会'],['music','🎵','音乐'],['cinema','','放映室'],['roleplay','','角色扮演'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
-const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',travel:'云程'};
+const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',cinema:'放映室',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
-  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:()=>{musicInit();go('music');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
+  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:()=>{musicInit();go('music');},cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
 function curAppKey(){const p=cur().p;
-  const map={browser:'browser',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gs:'games',uc:'games',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
+  const map={browser:'browser',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gs:'games',uc:'games',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
   if(map[p])return map[p];
   if(p==='wechat'&&wxTab==='moments')return 'moments';
   return null;}
@@ -7134,6 +7220,7 @@ function clearContactMemoryData(c,id){const now=Date.now();c._memoryResetAt=now;
   c.mood='';c.moodVal=70;c.moodAt=now;c.coldUntil=0;c._esc={stage:0};
   if(S.offline&&S.offline[id])delete S.offline[id];if(S.offlineFocus&&(S.offlineFocus===id||S.offlineFocus.cid===id))S.offlineFocus=null;
   if(S.music&&S.music.chat)S.music.chat=S.music.chat.filter(m=>m.cid!==id);
+  if(S.cinema){S.cinema.sessions=(S.cinema.sessions||[]).filter(x=>x&&x.cid!==id);if(S.cinema.selectedCid===id)S.cinema.selectedCid='';}
   if(S.alter)Object.keys(S.alter).forEach(k=>{if(k.split('@').indexOf(id)>=0)delete S.alter[k];});
   if(S.alterMeta)Object.keys(S.alterMeta).forEach(k=>{if(k.split('@').indexOf(id)>=0)delete S.alterMeta[k];});
   clearContactRoleplayMemory(id);clearContactPhoneMemory(c,id);
@@ -7148,7 +7235,7 @@ function clearContactMemoryData(c,id){const now=Date.now();c._memoryResetAt=now;
   if(S._personaOutput)Object.keys(S._personaOutput).forEach(k=>{if(Array.isArray(S._personaOutput[k]))S._personaOutput[k]=S._personaOutput[k].filter(x=>x&&x.cid!==id);});
 }
 async function wipeContact(id){const c=getC(id);if(!c||!isMain())return;
-  if(!await uiConfirm('彻底清空和「'+(c.remark||c.name)+'」的【全部】记忆？\n\n包括：主号/小号聊天、长期记忆、对话总结、小事簿读取、记仇与情绪旧账、任务、线下约会、角色扮演、一起听、电话短信与语音留言、ta手机隐藏内容、关系小账本及记忆缓存。\n\n保留：角色人设、头像、关系设定、语音、API和美化。清空后无法恢复（建议先在 设置里导出备份）。'))return;
+  if(!await uiConfirm('彻底清空和「'+(c.remark||c.name)+'」的【全部】记忆？\n\n包括：主号/小号聊天、长期记忆、对话总结、小事簿读取、记仇与情绪旧账、任务、线下约会、角色扮演、一起听、放映室、电话短信与语音留言、ta手机隐藏内容、关系小账本及记忆缓存。\n\n保留：角色人设、头像、关系设定、语音、API和美化。清空后无法恢复（建议先在 设置里导出备份）。'))return;
   clearContactMemoryData(c,id);saveNow();render();toast('已彻底清空和「'+(c.remark||c.name)+'」的全部记忆');}
 function setRemark(id){const c=getC(id);openModal(`<h3>备注</h3><div class="field"><input id="rmk" value="${esc(c.remark)}" placeholder="给ta起个备注名"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="getC('${id}').remark=$('#rmk').value.trim();save();closeModal();render()">保存</button></div>`);}
