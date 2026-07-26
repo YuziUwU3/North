@@ -63,10 +63,10 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v670 shell and service worker are aligned',()=>{
+test('v671 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v670 · 竖屏双显示模式'/);
-  assert.match(html,/app\.js\?v=670/);
-  assert.match(sw,/BUILD='670'/);
+  assert.match(app,/APP_VER='v671 · 锁屏与影院修复'/);
+  assert.match(html,/app\.js\?v=671/);
+  assert.match(sw,/BUILD='671'/);
 });

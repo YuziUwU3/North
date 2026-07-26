@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='670'){
+if(window.__NORTH_SHELL_BUILD__!=='671'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v670 · 竖屏双显示模式';
+const APP_VER='v671 · 锁屏与影院修复';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -392,7 +392,7 @@ function defState(){return{
 const CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state',CORE_INLINE_LIMIT=3.5*1024*1024;
 let _coreBootRef=null,_coreOverflowMode=false,_coreMirrorWrite=Promise.resolve(true),_coreQueuedSave=null,_coreLogicalBytes=0,_coreSavePending=false,_coreFailureAt=0,_appBootFinished=false,_recoverySnapshotAt=0,_recoverySnapshotWrite=Promise.resolve(true);
 let S=load();
-function normalizeLoadedState(){try{S.me=S.me||{};S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
+function normalizeLoadedState(){try{S.me=S.me||{};if(typeof S.me.locked!=='boolean')S.me.locked=false;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
   try{S.settings=S.settings||{};if(!S.settings.initiativeSchedulerV2){(S.contacts||[]).forEach(c=>{if(c)delete c._initiative;});S._proactiveCount={};S.settings.initiativeSchedulerV2=1;}}catch(_){}
   try{S.settings=S.settings||{};if(!S.settings.initiativeSchedulerV3){(S.contacts||[]).forEach(c=>{if(c)delete c._initiative;});S._proactiveCount={};S.settings.initiativeSchedulerV3=1;}}catch(_){}
   // 把旧的默认绘图模型切到更适合日常照片的新默认；如果用户自己填了别的名字，就尊重原设置
@@ -1253,7 +1253,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=670';
+  const url='sw.js?v=671';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1420,13 +1420,13 @@ let _rec=null;
 function sttLangCode(lang){lang=String(lang||'').trim().toLowerCase();if(/^(?:英|en|en-|english)/.test(lang))return lang==='en-gb'?'en-GB':'en-US';if(/^(?:日|ja|jp|japanese)/.test(lang))return'ja-JP';if(/^(?:韩|ko|kr|korean)/.test(lang))return'ko-KR';return'zh-CN';}
 function sttApiLang(lang){return {'zh-CN':'zh','en-US':'en','en-GB':'en','ja-JP':'ja','ko-KR':'ko'}[sttLangCode(lang)]||'zh';}
 function makeSR(lang){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;try{const r=new SR();r.lang=sttLangCode(lang||((S.settings.stt||{}).lang));r.interimResults=true;r.continuous=true;return r;}catch(e){return null;}}
-async function startRec(cb){if(_rec)return;
+async function startRec(cb,opt){if(_rec)return;opt=opt||{};
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     const mr=new MediaRecorder(stream);const chunks=[];mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
     const sr=makeSR();let srText='';if(sr){sr.onresult=ev=>{srText='';for(let i=0;i<ev.results.length;i++)srText+=ev.results[i][0].transcript;};try{sr.start();}catch(e){}}
     _rec={mr,chunks,stream,sr,start:Date.now(),getText:()=>srText};mr.start();
-    _rec.limitTimer=setTimeout(()=>{if(_rec&&_rec.mr===mr)toast('已到60秒，请松开发送');},60000);
-    toast('松开发送，上滑取消（最长60秒）');if(cb)cb();
+    _rec.limitTimer=setTimeout(()=>{if(_rec&&_rec.mr===mr){if(typeof opt.onLimit==='function')opt.onLimit();else toast('已到60秒，请松开发送');}},60000);
+    toast(opt.hint||'松开发送，上滑取消（最长60秒）');if(cb)cb();
   }catch(e){toast('用不了麦克风（需允许权限/用https打开）');}}
 function stopRec(cancel,cb){if(!_rec)return;const R=_rec;_rec=null;
   clearTimeout(R.limitTimer);
@@ -1436,10 +1436,10 @@ function stopRec(cancel,cb){if(!_rec)return;const R=_rec;_rec=null;
     const dur=Math.max(1,Math.round((Date.now()-R.start)/1000));
     if(dur>VOICE_MAX_SECONDS){toast('语音不能超过60秒，请重新录制');if(cb)cb(null);return;}
     const blob=new Blob(R.chunks,{type:R.mr.mimeType||'audio/webm'});
-    let content=(R.getText()||'').trim();
-    if(!content&&S.settings.stt&&S.settings.stt.base&&S.settings.stt.key){try{content=await sttTranscribe(blob);}catch(e){}}
+    let content=(R.getText()||'').trim(),error='';
+    if(!content&&S.settings.stt&&S.settings.stt.base&&S.settings.stt.key){try{content=await sttTranscribe(blob);}catch(e){error=(e&&e.message)||'语音转文字失败';}}
     const b64=await blobB64(blob);
-    if(cb)cb({audio:b64,content:content,dur});};
+    if(cb)cb({audio:b64,content:content,dur,error});};
   try{R.mr.stop();}catch(e){R.stream&&R.stream.getTracks().forEach(t=>t.stop());if(cb)cb(null);}}
 function blobB64(blob){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(blob);});}
 function sttUploadName(blob,name){name=String(name||'').trim();if(name)return name.replace(/[^\w.\-\u4e00-\u9fff]/g,'_').slice(-120);const type=String(blob&&blob.type||'').toLowerCase(),ext=/mp4|m4v/.test(type)?'mp4':/mpeg|mp3/.test(type)?'mp3':/wav/.test(type)?'wav':/ogg/.test(type)?'ogg':'webm';return 'audio.'+ext;}
@@ -1932,7 +1932,7 @@ function cinemaAfterVideoRender(){const v=$('#cinVideo'),s=cinemaSession();if(!v
 function cinemaVideoTick(){const v=$('#cinVideo'),s=cinemaSession();if(!v||!s)return;s.progress=v.currentTime||0;s.duration=Number.isFinite(v.duration)?v.duration:s.duration;s.updatedAt=Date.now();cinemaUpdateSubtitle();cinemaSyncMediaControls();if(Date.now()-_cin.lastSaveAt>5000)cinemaSaveProgress(false);const cue=cinemaCueAt(v.currentTime||0),set=cinemaInit().settings,hasContext=!!cue||!!(s.sceneDesc&&Math.abs(v.currentTime-(s.sceneAt||0))<150),vi=Math.max(30,+set.visionInterval||150);if(set.autoVision&&!v.paused&&!_cin.visionBusy&&v.currentTime>Math.min(15,vi/2)&&v.currentTime-(s.lastVision||0)>=vi)cinemaAnalyzeFrame(null,true,{interval:true});if(set.autoComment&&hasContext&&!v.paused&&!_cin.busy&&(v.currentTime||0)>20&&(v.currentTime-(s.lastAuto||0)>180)&&(s.autoCount||0)<4){s.lastAuto=v.currentTime;s.autoCount=(s.autoCount||0)+1;save();cinemaRoleReply('针对当前刚看到的情节，只发一条很短的弹幕，不提问，不剧透。',true);}}
 function cinemaSaveProgress(force){const s=cinemaSession();if(!s)return;_cin.lastSaveAt=Date.now();cinemaInit().progress[s.mediaKey]={kind:s.kind,title:s.title,progress:s.progress||0,duration:s.duration||0,page:s.page||0,updatedAt:Date.now()};save(force?0:500);}
 function cinemaUpdateSubtitle(){const v=$('#cinVideo'),sub=$('#cinSub'),status=$('#cinContextStatus');if(!v)return;const cue=cinemaCueAt(v.currentTime||0);if(sub){sub.textContent=cue&&cue.source!=='speech'?cue.text:'';sub.classList.toggle('show',!!(cue&&cue.source!=='speech'));}if(status&&!_cin.extracting){status.classList.toggle('working',!!_cin.visionBusy);status.classList.remove('ready','error');status.textContent=_cin.visionBusy?'正在理解当前画面…':(_cin.cues.length||(cinemaSession()&&cinemaSession().sceneDesc))?'':'尚未理解画面 · 可提取字幕或识图';}}
-function cinemaShoot(who,text){const set=cinemaInit().settings;if(cinemaCommentDisplay()==='subtitle'){cinemaShowDialogueSubtitle(who,text);return;}const box=$('#cinDanmaku');if(!box)return;while(box.children.length>=3)box.firstElementChild.remove();const d=document.createElement('div'),fx=set.barrageFx||'cinema',variant=fx==='vivid'?['glide','float','glow'][_cin.lane%3]:fx==='clean'?'glide':['glide','float'][_cin.lane%2];d.className='cin-barrage '+(who==='me'?'mine':'role')+' '+variant;d.textContent=String(text||'').trim();const lanes=3,lane=_cin.lane++%lanes;d.style.top=(18+lane*18)+'%';d.style.setProperty('--cin-drift',((lane%3)-1)*12+'px');d.style.animationDuration=(variant==='float'?5.2:6.4+Math.min(2,text.length/18))+'s';box.appendChild(d);setTimeout(()=>d.remove(),9000);}
+function cinemaShoot(who,text){const set=cinemaInit().settings;if(cinemaCommentDisplay()==='subtitle'){cinemaShowDialogueSubtitle(who,text);return;}const box=$('#cinDanmaku');if(!box)return;while(box.children.length>=3)box.firstElementChild.remove();const d=document.createElement('div'),fx=set.barrageFx||'cinema',variant=fx==='vivid'?['glide','float','glow'][_cin.lane%3]:fx==='clean'?'glide':['glide','float'][_cin.lane%2];d.className='cin-barrage '+(who==='me'?'mine':'role')+' '+variant;d.textContent=String(text||'').trim();const lanes=2,lane=_cin.lane++%lanes;d.style.top=(24+lane*12)+'%';d.style.setProperty('--cin-drift',(lane?6:-6)+'px');d.style.animationDuration=(variant==='float'?5.2:6.4+Math.min(2,text.length/18))+'s';box.appendChild(d);setTimeout(()=>d.remove(),9000);}
 function cinemaAppendLog(item){const s=cinemaSession(),box=$('#cinLog');if(!s||!box)return;const empty=box.querySelector('.cin-chat-empty');if(empty)empty.remove();const c=getC(s.cid),d=document.createElement('div');d.className='cin-log '+(item.who==='me'?'mine':'role');d.innerHTML='<span>'+(item.who==='me'?'我':cinemaRoleName(c))+'</span><p>'+esc(item.text).replace(/\n/g,'<br>')+'</p><time>'+(s.kind==='video'?cinemaFmt(item.at||0):'第 '+((item.page||0)+1)+' 页')+'</time>';box.appendChild(d);box.scrollTop=box.scrollHeight;}
 function cinemaMirrorToWechat(s,who,text){if(!s||!s.cid||!text)return;const c=getC(s.cid),at=s.kind==='video'?cinemaFmt((($('#cinVideo')||{}).currentTime)||s.progress||0):'第 '+((s.page||0)+1)+' 页';cinemaWechatMessages(s).push({role:who==='me'?'user':'assistant',type:'sys',content:'🎬 放映室《'+s.title+'》 '+at+' · '+(who==='me'?S.me.name:(c&&c.name||'角色'))+'：'+String(text).replace(/\s+/g,' ').slice(0,240),time:Date.now(),id:uid(),_silent:true,_cinemaCtx:true,_cinemaSessionId:s.id});}
 function cinemaAddItem(who,text,opt){const s=cinemaSession();if(!s||!text)return null;const v=$('#cinVideo'),item={who,text:String(text).slice(0,240),time:Date.now(),at:s.kind==='video'?(v?v.currentTime:s.progress||0):0,page:s.page||0};s.items=s.items||[];s.items.push(item);if(s.items.length>140)s.items=s.items.slice(-140);s.updatedAt=Date.now();cinemaMirrorToWechat(s,who,item.text);save();cinemaAppendLog(item);cinemaShoot(who,opt&&opt.shootText||item.text);return item;}
@@ -1947,9 +1947,10 @@ async function cinemaRoleReply(reason,automatic){const s=cinemaSession(),c=s&&ge
 function cinemaQuestionNeedsVision(text){return /[?？]|(?:谁|什么|怎么|怎样|为什么|哪里|哪儿|哪个|这是谁|这是|画面|屏幕|长什么|在干嘛|发生了什么|看见|看到)/.test(String(text||''));}
 async function cinemaSend(kind){const id=kind==='book'?'cinBookInput':'cinInput',inp=$('#'+id),text=inp&&inp.value.trim();if(!text||_cin.busy)return;inp.value='';cinemaAddItem('me',text);if(kind==='video'&&cinemaInit().settings.visionOnAsk&&cinemaQuestionNeedsVision(text)&&cinemaVisionConfigured())await cinemaAnalyzeFrame(null,true,{silentReply:true});cinemaRoleReply('回应'+summaryUserLabel(cinemaRole())+'刚发的这句话。若对方问剧情，只依据当前上下文回答；不知道就自然承认此刻还看不出来。',false);}
 function cinemaMicButton(kind){return $(kind==='book'?'#cinBookMic':'#cinVideoMic');}
-function cinemaMicPaint(kind,state){const b=cinemaMicButton(kind);if(!b)return;b.classList.toggle('recording',state==='recording');b.classList.toggle('busy',state==='busy');b.disabled=state==='busy';b.setAttribute('aria-label',state==='recording'?'点一下停止录音并发送':state==='busy'?'正在转成文字':'点一下开始说话');b.innerHTML=svgIc('mic',17);}
-async function cinemaMicToggle(kind){kind=kind==='book'?'book':'video';if(_cin.micBusy)return toast('正在处理刚才的录音');if(_cin.micKind){if(_cin.micKind!==kind)return toast('请先结束当前录音');_cin.micBusy=true;cinemaMicPaint(kind,'busy');if(kind==='video')cinemaSetStatus('正在把语音转成文字…','working');stopRec(false,m=>{_cin.micKind='';_cin.micBusy=false;cinemaMicPaint(kind,'idle');const text=String(m&&m.content||'').trim(),inp=$(kind==='book'?'#cinBookInput':'#cinInput');if(!text){if(kind==='video')cinemaSetStatus('没有识别到文字 · 请重试或检查转写配置','error');return toast('没有识别到文字，请说清楚一点或检查语音转文字配置');}if(!inp)return;inp.value=text;if(kind==='video')cinemaSetStatus('语音已识别并发送','ready');cinemaSend(kind);});return;}if(_rec)return toast('另一个录音正在使用麦克风');if(!cinemaSttConfigured()&&!window.SpeechRecognition&&!window.webkitSpeechRecognition)return cinemaExtractHelp();const request=(_cin.micToken||0)+1;_cin.micToken=request;_cin.micBusy=true;cinemaMicPaint(kind,'busy');await startRec(()=>{if(request!==_cin.micToken){stopRec(true,()=>{});return;}_cin.micKind=kind;_cin.micBusy=false;cinemaMicPaint(kind,'recording');if(kind==='video')cinemaSetStatus('正在录音 · 再点话筒发送','working');});if(!_cin.micKind&&request===_cin.micToken){_cin.micBusy=false;cinemaMicPaint(kind,'idle');}}
-function cinemaMicCancel(){const kind=_cin.micKind;_cin.micToken=(_cin.micToken||0)+1;_cin.micKind='';_cin.micBusy=false;if(kind&&_rec)stopRec(true,()=>{});if(kind)cinemaMicPaint(kind,'idle');}
+function cinemaMicPaint(kind,state){const b=cinemaMicButton(kind);if(!b)return;b.classList.toggle('recording',state==='recording');b.classList.toggle('busy',state==='busy');b.disabled=state==='busy';b.setAttribute('aria-label',state==='recording'?'再点一下，停止录音并发送':state==='busy'?'正在转成文字':'点一下开始说话');b.innerHTML=svgIc('mic',17);}
+function cinemaMicResumeVideo(){const resume=!!_cin.micResumeVideo,v=$('#cinVideo');_cin.micResumeVideo=false;if(resume&&v&&v.isConnected)v.play().catch(()=>{});}
+async function cinemaMicToggle(kind){kind=kind==='book'?'book':'video';if(_cin.micBusy)return toast('正在处理刚才的录音');if(_cin.micKind){if(_cin.micKind!==kind)return toast('请先结束当前录音');_cin.micBusy=true;cinemaMicPaint(kind,'busy');if(kind==='video')cinemaSetStatus('正在把语音转成文字…','working');stopRec(false,m=>{_cin.micKind='';_cin.micBusy=false;cinemaMicPaint(kind,'idle');cinemaMicResumeVideo();const text=String(m&&m.content||'').trim(),inp=$(kind==='book'?'#cinBookInput':'#cinInput');if(!text){const err=String(m&&m.error||'').trim();if(kind==='video')cinemaSetStatus(err?'语音识别失败':'没有识别到文字 · 请重试或检查转写配置','error');return toast(err||'没有识别到文字，请说清楚一点或检查语音转文字配置');}if(!inp)return;inp.value=text;if(kind==='video')cinemaSetStatus('语音已识别并发送','ready');cinemaSend(kind);});return;}if(_rec)return toast('另一个录音正在使用麦克风');if(!cinemaSttConfigured()&&!window.SpeechRecognition&&!window.webkitSpeechRecognition)return cinemaExtractHelp();const request=(_cin.micToken||0)+1;_cin.micToken=request;_cin.micBusy=true;cinemaMicPaint(kind,'busy');await startRec(()=>{if(request!==_cin.micToken){stopRec(true,()=>{});return;}_cin.micKind=kind;_cin.micBusy=false;if(kind==='video'){const v=$('#cinVideo');_cin.micResumeVideo=!!(v&&!v.paused);if(v&&!v.paused)v.pause();}cinemaMicPaint(kind,'recording');if(kind==='video')cinemaSetStatus('正在录音 · 再点话筒发送','working');},{hint:'正在录音，再点一次话筒发送（最长60秒）',onLimit:()=>{if(_cin.micKind===kind&&!_cin.micBusy)cinemaMicToggle(kind);}});if(!_cin.micKind&&request===_cin.micToken){_cin.micBusy=false;cinemaMicPaint(kind,'idle');}}
+function cinemaMicCancel(){const kind=_cin.micKind;_cin.micToken=(_cin.micToken||0)+1;_cin.micKind='';_cin.micBusy=false;_cin.micResumeVideo=false;if(kind&&_rec)stopRec(true,()=>{});if(kind)cinemaMicPaint(kind,'idle');}
 function cinemaToggleDanmaku(){const mode=cinemaCommentDisplay();openModal(`<h3>角色文字显示方式</h3><div class="hint">两种方式只会开启一种。你的打字和话筒识别文字也会用同一种方式显示。</div><div class="btns"><button class="btn ${mode==='barrage'?'p':'g'}" onclick="cinemaCommentDisplaySave('barrage')">弹幕模式</button><button class="btn ${mode==='subtitle'?'p':'g'}" onclick="cinemaCommentDisplaySave('subtitle')">底部字幕模式</button></div>`);}
 function cinemaCommentDisplaySave(mode){mode=mode==='subtitle'?'subtitle':'barrage';const x=cinemaInit();x.settings.commentDisplay=mode;x.settings.danmaku=mode==='barrage';clearTimeout(_cin.voiceSubTimer);const dm=$('#cinDanmaku'),sub=$('#cinVoiceSub');if(dm)dm.innerHTML='';if(sub)sub.classList.remove('show','mine','role');save();closeModal();const b=$('#cinDmBtn span');if(b)b.textContent='显示 · '+(mode==='barrage'?'弹幕':'底部字幕');toast(mode==='barrage'?'已切换为弹幕模式':'已切换为底部字幕模式');}
 function cinemaToggleAuto(){const x=cinemaInit();x.settings.autoComment=!x.settings.autoComment;const b=$('#cinAutoBtn');if(b)b.classList.toggle('on',x.settings.autoComment);save();toast(x.settings.autoComment?'角色会偶尔主动说一句':'已关闭主动说话');}

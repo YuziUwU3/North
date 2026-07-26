@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const start = source.indexOf('function normalizeLoadedState()');
+const end = source.indexOf('\nnormalizeLoadedState();', start);
+
+assert.ok(start >= 0 && end > start, 'normalizeLoadedState should exist');
+const functionSource = source.slice(start, end);
+
+function normalize(me) {
+  const context = vm.createContext({
+    S: {
+      me: { ...me },
+      contacts: [],
+      settings: {
+        initiativeSchedulerV2: 1,
+        initiativeSchedulerV3: 1,
+        imgModelV3: 1,
+      },
+    },
+  });
+  vm.runInContext(`${functionSource}; normalizeLoadedState(); normalizeLoadedState();`, context);
+  return context.S.me;
+}
+
+assert.equal(normalize({ locked: false }).locked, false, 'reopening must preserve an unlocked phone');
+assert.equal(normalize({ locked: true }).locked, true, 'an explicitly locked phone must stay locked');
+assert.equal(normalize({}).locked, false, 'legacy saved data without a lock flag should not open the screensaver');
+
+assert.match(source, /function lockOpen\(\)\{S\.me\.locked=false;save\(\)/);
+assert.match(source, /function lockShow\(drop\)[\s\S]*?S\.me\.locked=true;save\(\)/);
+
+console.log('lockscreen resume tests passed');

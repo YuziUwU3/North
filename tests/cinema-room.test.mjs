@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v670 · 竖屏双显示模式'/);
+assert.match(source, /APP_VER='v671 · 锁屏与影院修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -357,6 +357,9 @@ assert.match(source, /function setAppIcon\(key\)[\s\S]*?S\.me\.appIcons\[key\]=a
 assert.match(html, /\.cin-barrage\{[^}]*background:transparent!important/);
 assert.match(html, /\.cin-barrage\.mine\{color:#ff91bd/);
 assert.match(html, /\.cin-barrage\.role\{color:#79caff/);
+assert.match(html, /\.cin-barrage\{width:min\(76vw,520px\);max-width:none;white-space:pre-line!important/);
+assert.match(functionSource("cinemaShoot"), /const lanes=2/);
+assert.match(functionSource("cinemaShoot"), /d\.style\.top=\(24\+lane\*12\)\+'%'/);
 assert.match(html, /\.cin-stage,\.cin-stage\.cin-theater\{position:fixed;inset:0;z-index:9999/);
 assert.match(html, /\.cin-overlay-top\.collapsed/);
 assert.match(html, /\.cin-chat-dock\.open/);
@@ -386,6 +389,11 @@ assert.match(functionSource("incomingCall"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("aiReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("initiativeMaybeSend"), /cinemaRoleOccupied\(c\.id\)/);
 assert.match(source, /function cinemaMicToggle/);
+assert.match(source, /function cinemaMicResumeVideo/);
+assert.match(source, /正在录音，再点一次话筒发送（最长60秒）/);
+assert.match(source, /onLimit:\(\)=>\{if\(_cin\.micKind===kind&&!_cin\.micBusy\)cinemaMicToggle\(kind\)/);
+assert.match(source, /_cin\.micResumeVideo=!!\(v&&!v\.paused\);if\(v&&!v\.paused\)v\.pause\(\)/);
+assert.match(source, /const err=String\(m&&m\.error\|\|''\)\.trim\(\)/);
 assert.match(source, /stopRec\(false,m=>/);
 assert.match(source, /inp\.value=text/);
 assert.match(source, /cinemaSend\(kind\)/);
@@ -394,6 +402,6 @@ assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
-assert.match(html, /app\.js\?v=670/);
+assert.match(html, /app\.js\?v=671/);
 
 console.log("cinema room tests passed");
