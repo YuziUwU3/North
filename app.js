@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='667'){
+if(window.__NORTH_SHELL_BUILD__!=='668'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v667 · 放映室随机回复与进度隐藏';
+const APP_VER='v668 · 设置三页按需加载';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1253,7 +1253,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=667';
+  const url='sw.js?v=668';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2713,14 +2713,34 @@ setInterval(scanAutoPost,240000);setTimeout(scanAutoPost,8000);
 
 /* ---------- 设置 ---------- */
 let _setTab=1;
-function setTab(n){_setTab=n;const p1=$('#setpage1'),p2=$('#setpage2'),t1=$('#settab1'),t2=$('#settab2');if(!p1||!p2)return;
-  p1.style.display=n===2?'none':'block';p2.style.display=n===2?'block':'none';
-  if(t1){t1.style.background=n===2?'#2c2c2e':'#07c160';t1.style.color=n===2?'#ccc':'#fff';}
-  if(t2){t2.style.background=n===2?'#07c160':'#2c2c2e';t2.style.color=n===2?'#fff':'#ccc';}}
+function setTab(n){n=Math.max(1,Math.min(3,+n||1));_setTab=n;const pages=[1,2,3].map(i=>$('#setpage'+i)),tabs=[1,2,3].map(i=>$('#settab'+i));if(pages.some(x=>!x))return;
+  if(n===3&&!pages[2].dataset.loaded){pages[2].innerHTML=settingsDataToolsHTML();pages[2].dataset.loaded='1';}
+  pages.forEach((p,i)=>p.style.display=n===i+1?'block':'none');tabs.forEach((t,i)=>{if(!t)return;const on=n===i+1;t.style.background=on?'#07c160':'#2c2c2e';t.style.color=on?'#fff':'#ccc';});
+  const saveBtn=$('#setSaveButton');if(saveBtn)saveBtn.style.display=n===3?'none':'block';const sc=$('#settingsscroll');if(sc)sc.scrollTop=0;}
 function jumpToSection(id){const el=document.getElementById(id);if(!el)return;try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){el.scrollIntoView(true);}}
 function settingsJump(tab,id){setTab(tab);setTimeout(()=>jumpToSection(id),60);}
 function coupleJump(tab,id){couTab(tab);setTimeout(()=>jumpToSection(id),60);}
 function quickJumpBar(items){return `<div class="section" style="margin:0 0 10px;border-radius:12px;overflow:hidden"><div style="padding:10px 12px"><div style="font-size:12px;color:#888;margin-bottom:7px">快捷入口</div><div style="display:flex;flex-wrap:wrap;gap:6px">${items.map(x=>`<button class="minibtn" style="background:#24242a;color:#ddd;border:1px solid rgba(255,255,255,.08)" onclick="${x[1]}">${x[0]}</button>`).join('')}</div></div></div>`;}
+function settingsDataToolsHTML(){return `${quickJumpBar([['手机授权',"settingsJump(3,'set_license')"],['桌面布局',"settingsJump(3,'set_layout')"],['备份',"settingsJump(3,'set_backup')"],['存储',"settingsJump(3,'set_storage')"]])}
+    ${licenseStatusSection()}
+    ${storageMeter()}
+    <div class="btns" id="set_layout" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
+    <div id="set_backup">
+    <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
+    <div class="btns" style="margin-top:8px"><button class="btn p" style="background:linear-gradient(135deg,#e69650,#d35f67)" onclick="emergencyRestoreAll()">恢复所有数据（扫描本机存档）</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px;color:#d7a47d">优先寻找本机遗留的完整核心存档、安全快照和长聊天库；恢复前会显示可找回的数量，不会凭空生成数据。</div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">导出美化</button><button class="btn g" onclick="importBeautyData()">导入美化</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">美化包只恢复壁纸、图标、头像、气泡和音乐背景，不覆盖聊天、人设、API或真人好友数据。</div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="clearRoleCacheKeepBeauty()">清理缓存垃圾</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">只清聊天记录里的图片/语音缓存和失效旧图；不删角色、记忆、文字聊天、真人好友/群聊、壁纸、美化图和音乐背景。</div>
+    <div class="btns" style="margin-top:8px"><button class="btn d" onclick="clearAllChatRecords()">一键清空所有聊天记录</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">清空角色微信聊天、小手机真人好友私聊和真人群聊；不删角色、好友、群成员、记忆、人设和美化。</div>
+    </div>
+    <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">清除聊天/记忆/朋友圈/动态/钱包/约会等痕迹；<b>保留</b>全部美化、真人好友和群关系、音乐库。真人私聊/群聊及一起听聊天会清空。清空后无法恢复，建议先导出备份。</div>
+    <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
+    <div style="height:20px"></div>`;}
 const CHAT_ROUTE_NAMES=['路线一','路线二','路线三','路线四'];
 function chatRouteCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),temp:x.temp==null?0.8:x.temp,maxTokens:x.maxTokens==null?900:x.maxTokens};}
 function chatRoutesInit(){S.settings=S.settings||{};let raw=S.settings.chatRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[chatRouteCopy(S.settings.chat||{})]:raw.slice(0,CHAT_ROUTE_NAMES.length).map(chatRouteCopy);
@@ -2736,10 +2756,11 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
   <div class="scroll" id="settingsscroll" style="padding:12px;background:#000">
     <div class="section" style="border:1px solid rgba(255,143,171,.5);background:linear-gradient(135deg,rgba(255,143,171,.18),rgba(108,92,231,.14));margin-bottom:10px" onclick="showManual()"><div class="it" style="background:transparent"><span><b style="color:#ffd0df;font-size:15px">📖 使用说明书 · 常见报错</b><br><small style="color:#aaa">404、501、密钥、模型、安卓黑屏等问题都在这里</small></span><span class="v" style="color:#ff8fab">随时查看 ›</span></div></div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button class="minibtn" id="settab1" style="flex:1;${_setTab===2?'background:#2c2c2e;color:#ccc':'background:#07c160;color:#fff'}" onclick="setTab(1)">接口·模型</button>
-      <button class="minibtn" id="settab2" style="flex:1;${_setTab===2?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(2)">偏好·工具</button></div>
-    ${quickJumpBar([['聊天',"settingsJump(1,'set_chat')"],['辅助',"settingsJump(1,'set_aux')"],['联网',"settingsJump(1,'set_search')"],['识图',"settingsJump(1,'set_vision')"],['语音',"settingsJump(1,'set_tts')"],['偏好',"settingsJump(2,'set_prefs')"],['外观',"settingsJump(2,'set_look')"],['表情/语音',"settingsJump(2,'set_media')"],['AI真图',"settingsJump(2,'set_image')"],['手机授权',"settingsJump(2,'set_license')"],['桌面布局',"settingsJump(2,'set_layout')"],['备份',"settingsJump(2,'set_backup')"],['存储',"settingsJump(2,'set_storage')"]])}
-    <div id="setpage1" style="display:${_setTab===2?'none':'block'}">
+      <button class="minibtn" id="settab1" style="flex:1;${_setTab===1?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(1)">接口·模型</button>
+      <button class="minibtn" id="settab2" style="flex:1;${_setTab===2?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(2)">偏好·工具</button>
+      <button class="minibtn" id="settab3" style="flex:1;${_setTab===3?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(3)">授权·数据</button></div>
+    <div id="setpage1" style="display:${_setTab===1?'block':'none'}">
+    ${quickJumpBar([['聊天',"settingsJump(1,'set_chat')"],['辅助',"settingsJump(1,'set_aux')"],['联网',"settingsJump(1,'set_search')"],['识图',"settingsJump(1,'set_vision')"],['语音',"settingsJump(1,'set_tts')"],['AI真图',"settingsJump(1,'set_image')"]])}
     <div class="hint">聊天和识图可以用不同模型。地址已经预填好了，填上 Key 就能用。</div>
     <div class="section" id="set_chat"><div style="padding:12px 14px;font-weight:600;color:#07c160">聊天模型</div>
       <div style="padding:0 14px 10px"><div style="font-size:12px;color:#aaa;margin-bottom:7px">API 路线 · 点击即可保存当前路线并一键回填</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">${routes.map((r,i)=>`<button type="button" data-chat-route="${i}" onclick="chatRouteSwitch(${i})" style="min-width:0;border:1px solid ${i===routeActive?'#07c160':'rgba(255,255,255,.1)'};border-radius:8px;padding:8px 9px;background:${i===routeActive?'#07c160':'#24242a'};color:${i===routeActive?'#fff':'#ddd'};text-align:left;cursor:pointer"><b style="display:block;font-size:13px">${CHAT_ROUTE_NAMES[i]}</b><small style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`).join('')}</div><div style="font-size:11px;color:#777;line-height:1.5;margin-top:7px">每条路线独立保存接口地址、Key、模型、随机度和回复长度。切换后可直接测试或使用。</div></div>
@@ -2793,8 +2814,19 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="field" style="padding:0 14px 8px"><label>识别语言（只转写，不翻译）</label><select id="s_slang"><option value="zh-CN" ${sttLangCode((S.settings.stt||{}).lang)==='zh-CN'?'selected':''}>中文 → 中文文字</option><option value="en-US" ${sttLangCode((S.settings.stt||{}).lang)==='en-US'?'selected':''}>英文 → 英文文字</option><option value="ja-JP" ${sttLangCode((S.settings.stt||{}).lang)==='ja-JP'?'selected':''}>日文 → 日文文字</option><option value="ko-KR" ${sttLangCode((S.settings.stt||{}).lang)==='ko-KR'?'selected':''}>韩文 → 韩文文字</option></select><small style="display:block;color:#888;margin-top:4px">这里选什么语言，就按什么语言识别；不会自动翻成微信中文。</small></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testSTT()">录音 5 秒并测试语音转文字</button></div><div id="testS" style="font-size:12px;text-align:center;min-height:14px;padding:0 14px 10px"></div>
     </div>
+    <div class="section" id="set_image">
+      <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
+      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时生成图片；AI账户里开启中转站图片时每张20点，外置接口则按对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
+      <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
+      <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
+      <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
+      <div style="padding:0 14px 6px">${[['gpt-image-2','image-2·推荐(日常感更强)'],['gpt-4o-image','4o图·兼容备选'],['gemini-3.1-flash-image-preview','banana2·快'],['gemini-3-pro-image-preview','banana pro·质感']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
+      <div class="btns" style="padding:0 14px 4px"><button class="btn g" onclick="testImg()">测试出图（真生成一张·约半分钟）</button></div><div id="testImgO" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
+      <div class="hint" style="padding:0 14px 12px">优先走 <b>/images/generations</b>，地址没写 /v1 时会自动补试；若接口不支持图片路径，会改走 <b>/chat/completions</b> 解析图片。<b>先点「测试出图」</b>确认模型能用。</div>
+    </div>
     </div>
     <div id="setpage2" style="display:${_setTab===2?'block':'none'}">
+    ${quickJumpBar([['偏好',"settingsJump(2,'set_prefs')"],['外观',"settingsJump(2,'set_look')"],['表情/语音',"settingsJump(2,'set_media')"]])}
     <div class="section" id="set_prefs">
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
@@ -2837,38 +2869,10 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>角色发表情频率</span><span class="v"><select id="s_stkfreq" onchange="S.settings.stkFreq=+this.value;save()" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px">${[[0,'关闭'],[1,'偶尔'],[2,'适中'],[3,'经常']].map(o=>`<option value="${o[0]}" ${(S.settings.stkFreq==null?2:S.settings.stkFreq)===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></span></div>
       <div class="it"><span>角色发语音频率</span><span class="v"><select id="s_voicefreq" onchange="S.settings.voiceFreq=+this.value;save()" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px">${[[0,'关闭'],[1,'偶尔'],[2,'经常'],[3,'总是']].map(o=>`<option value="${o[0]}" ${(S.settings.voiceFreq==null?1:S.settings.voiceFreq)===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></span></div>
     </div>
-    <div class="section" id="set_image">
-      <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
-      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时生成图片；AI账户里开启中转站图片时每张20点，外置接口则按对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
-      <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
-      <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
-      <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
-      <div style="padding:0 14px 6px">${[['gpt-image-2','image-2·推荐(日常感更强)'],['gpt-4o-image','4o图·兼容备选'],['gemini-3.1-flash-image-preview','banana2·快'],['gemini-3-pro-image-preview','banana pro·质感']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
-      <div class="btns" style="padding:0 14px 4px"><button class="btn g" onclick="testImg()">测试出图（真生成一张·约半分钟）</button></div><div id="testImgO" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
-      <div class="hint" style="padding:0 14px 12px">优先走 <b>/images/generations</b>，地址没写 /v1 时会自动补试；若接口不支持图片路径，会改走 <b>/chat/completions</b> 解析图片。<b>先点「测试出图」</b>确认模型能用。</div>
-    </div>
     </div>
     <div id="testOut" style="display:none"></div>
-    <button class="btn p" onclick="saveSettings()">保存设置</button>
-    ${licenseStatusSection()}
-    ${storageMeter()}
-    <div class="btns" id="set_layout" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
-    <div id="set_backup">
-    <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
-    <div class="btns" style="margin-top:8px"><button class="btn p" style="background:linear-gradient(135deg,#e69650,#d35f67)" onclick="emergencyRestoreAll()">恢复所有数据（扫描本机存档）</button></div>
-    <div class="hint" style="text-align:center;padding:2px 14px;color:#d7a47d">优先寻找本机遗留的完整核心存档、安全快照和长聊天库；恢复前会显示可找回的数量，不会凭空生成数据。</div>
-    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
-    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">导出美化</button><button class="btn g" onclick="importBeautyData()">导入美化</button></div>
-    <div class="hint" style="text-align:center;padding:2px 14px">美化包只恢复壁纸、图标、头像、气泡和音乐背景，不覆盖聊天、人设、API或真人好友数据。</div>
-    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="clearRoleCacheKeepBeauty()">清理缓存垃圾</button></div>
-    <div class="hint" style="text-align:center;padding:2px 14px">只清聊天记录里的图片/语音缓存和失效旧图；不删角色、记忆、文字聊天、真人好友/群聊、壁纸、美化图和音乐背景。</div>
-    <div class="btns" style="margin-top:8px"><button class="btn d" onclick="clearAllChatRecords()">一键清空所有聊天记录</button></div>
-    <div class="hint" style="text-align:center;padding:2px 14px">清空角色微信聊天、小手机真人好友私聊和真人群聊；不删角色、好友、群成员、记忆、人设和美化。</div>
-    </div>
-    <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
-    <div class="hint" style="text-align:center;padding:2px 14px">清除聊天/记忆/朋友圈/动态/钱包/约会等痕迹；<b>保留</b>全部美化、真人好友和群关系、音乐库。真人私聊/群聊及一起听聊天会清空。清空后无法恢复，建议先导出备份。</div>
-    <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
-    <div style="height:20px"></div>
+    <button class="btn p" id="setSaveButton" style="display:${_setTab===3?'none':'block'}" onclick="saveSettings()">保存设置</button>
+    <div id="setpage3" data-loaded="${_setTab===3?'1':''}" style="display:${_setTab===3?'block':'none'}">${_setTab===3?settingsDataToolsHTML():''}</div>
   </div>`;
 }
 function saveSettings(){const g=id=>$('#'+id).value.trim();

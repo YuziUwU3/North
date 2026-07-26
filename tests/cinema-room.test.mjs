@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v667 · 放映室随机回复与进度隐藏'/);
+assert.match(source, /APP_VER='v668 · 设置三页按需加载'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -331,6 +331,6 @@ assert.match(functionSource("scheduleReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("incomingCall"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("aiReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("initiativeMaybeSend"), /cinemaRoleOccupied\(c\.id\)/);
-assert.match(html, /app\.js\?v=667/);
+assert.match(html, /app\.js\?v=668/);
 
 console.log("cinema room tests passed");
