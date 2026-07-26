@@ -32,8 +32,8 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v658 · 活人感链路修复'/);
-assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'video',lk:1\}/);
+assert.match(source, /APP_VER='v659 · 放映室陪看升级'/);
+assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
 assert.match(source, /cinemawatch:'cinema',cinemaread:'cinema'/);
@@ -96,11 +96,72 @@ assert.match(source, /截至此刻的语音转写/);
 assert.match(source, /function cinemaStartTranscribe/);
 assert.match(source, /captureStream\|\|v\.mozCaptureStream/);
 assert.match(source, /sttTranscribe\(blob\)/);
+assert.match(source, /function cinemaExtractSubtitles/);
+assert.match(source, /sttTranscribeTimed\(f/);
+assert.match(source, /timestamp_granularities\[\]/);
+assert.match(source, /接口没有返回分段时间戳/);
 assert.match(source, /function cinemaAnalyzeFrame/);
 assert.match(source, /visionAPI\(data/);
-assert.match(source, /settings\.voiceComment\)speak\(text,c\)/);
+assert.match(source, /visionInterval/);
+assert.match(source, /visionOnAsk/);
+assert.match(source, /visionByRole/);
+assert.match(source, /cinemaQuestionNeedsVision/);
+assert.match(source, /识别中…/);
+assert.match(source, /cinemaShowVoiceSubtitle\(out\.spoken,out\.translation\)/);
+assert.match(source, /speak\(out\.spoken,c\)/);
+assert.match(source, /voiceLang:'role'/);
 assert.match(source, /addSummary\(c,memory,4,'【放映室】'\)/);
+assert.match(source, /cinemaSessionId=s\.id/);
 assert.match(source, /S\.cinema\.sessions=\(S\.cinema\.sessions\|\|\[\]\)\.filter\(x=>x&&x\.cid!==id\)/);
+assert.match(source, /function cinemaSessionContext/);
+assert.match(source, /function cinemaClearSessionContext/);
+assert.match(source, /_cinemaSessionId/);
+assert.match(source, /function cinemaRemoveWechatContext/);
+assert.match(source, /Object\.keys\(S\.messages\|\|\{\}\)/);
+assert.match(source, /accountId:actId\(\)/);
+assert.match(source, /msgsForAccount\(s\.cid,s\.accountId\|\|actId\(\)\)/);
+assert.match(source, /function cinemaMirrorLifecycle/);
+assert.match(source, /function cinemaInviteLibrary/);
+assert.match(source, /type:'cinemainvite'/);
+assert.match(source, /\[放映邀请\|/);
+assert.match(source, /\[同意放映\]/);
+assert.match(source, /\[拒绝放映\]/);
+
+const behavior = vm.createContext({
+  cinemaVoiceLang: () => "en",
+  cleanReply: (value) => String(value || "").trim(),
+  hasForeign: (value) => /[A-Za-z]/.test(value),
+});
+vm.runInContext(
+  lineFunctionSource("cinemaQuestionNeedsVision") + "\n" +
+  lineFunctionSource("cinemaParseRolePayload") +
+  ";globalThis.needsVision=cinemaQuestionNeedsVision;globalThis.parseRole=cinemaParseRolePayload;",
+  behavior,
+);
+assert.equal(behavior.needsVision("画面里这个人是谁？"), true);
+assert.equal(behavior.needsVision("我很喜欢这段音乐"), false);
+const bilingual = behavior.parseRole("That was a beautiful scene.\n（这一幕很美。）", {});
+assert.equal(bilingual.spoken, "That was a beautiful scene.");
+assert.equal(bilingual.translation, "这一幕很美。");
+assert.equal(bilingual.valid, true);
+
+const memoryState = {
+  messages: {
+    "role-a#account-a": [
+      { id: "keep-a" },
+      { id: "remove-a", _cinemaSessionId: "session-1" },
+    ],
+    "role-a#account-b": [
+      { id: "remove-b", _cinemaSessionId: "session-1" },
+      { id: "keep-b", _cinemaSessionId: "session-2" },
+    ],
+    __idb: "messages",
+  },
+};
+const memoryBehavior = vm.createContext({ S: memoryState });
+vm.runInContext(lineFunctionSource("cinemaRemoveWechatContext") + ";cinemaRemoveWechatContext('session-1');", memoryBehavior);
+assert.deepEqual(memoryState.messages["role-a#account-a"].map((m) => m.id), ["keep-a"]);
+assert.deepEqual(memoryState.messages["role-a#account-b"].map((m) => m.id), ["keep-b"]);
 
 const watch = functionSource("renderCinemaWatch");
 assert.match(watch, /cin-overlay-top/);
@@ -120,7 +181,10 @@ assert.match(html, /\.cin-barrage\.role\{color:#79caff/);
 assert.match(html, /\.cin-stage,\.cin-stage\.cin-theater\{position:fixed;inset:0;z-index:9999/);
 assert.match(html, /\.cin-overlay-top\.collapsed/);
 assert.match(html, /\.cin-chat-dock\.open/);
+assert.match(html, /\.cin-voice-sub\.show/);
+assert.match(html, /\.cin-invite-card/);
+assert.match(html, /\.cin-memory-scroll/);
 assert.match(html, /原创深色影院界面/);
-assert.match(html, /app\.js\?v=658/);
+assert.match(html, /app\.js\?v=659/);
 
 console.log("cinema room tests passed");
