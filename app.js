@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='655'){
+if(window.__NORTH_SHELL_BUILD__!=='656'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v655 · 放映室';
+const APP_VER='v656 · 主动联系修复';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -393,6 +393,7 @@ const CORE_IDB_KEY='__core_state',CORE_INLINE_LIMIT=3.5*1024*1024;
 let _coreBootRef=null,_coreOverflowMode=false,_coreMirrorWrite=Promise.resolve(true),_coreQueuedSave=null,_coreLogicalBytes=0,_coreSavePending=false,_coreFailureAt=0,_appBootFinished=false;
 let S=load();
 function normalizeLoadedState(){try{S.me=S.me||{};S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
+  try{S.settings=S.settings||{};if(!S.settings.initiativeSchedulerV2){(S.contacts||[]).forEach(c=>{if(c)delete c._initiative;});S._proactiveCount={};S.settings.initiativeSchedulerV2=1;}}catch(_){}
   // 把旧的默认绘图模型切到更适合日常照片的新默认；如果用户自己填了别的名字，就尊重原设置
   try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}}
 normalizeLoadedState();
@@ -1246,7 +1247,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=655';
+  const url='sw.js?v=656';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2696,7 +2697,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
       <div class="it"><span>通用活人感增强<br><small style="color:#888">理解上下文、按性格决定策略和消息节奏，并减少复述与重复模板</small></span><span class="sw ${S.settings.humanLike!==false?'on':''}" onclick="S.settings.humanLike=(S.settings.humanLike===false);save();render()"></span></div>
-      <div class="it"><span>低频主动与自然回访<br><small style="color:#888">按角色主动度、当前状态和近期话题决定是否主动，不会到点机械催消息</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
+      <div class="it"><span>主动消息与自然回访<br><small style="color:#888">按你设定的间隔和每日次数主动联系，并轮换想念、生活分享、照片、位置和近期话题</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
@@ -2706,7 +2707,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>微信自动总结模型<br><small style="color:#888">只影响聊天记忆总结，不改变角色平时回复模型</small></span><select id="s_summarymodel" onchange="S.settings.summaryModel=this.value;save();toast(this.value==='aux'?'微信总结改用副模型':'微信总结改用主模型')" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px"><option value="main" ${S.settings.summaryModel!=='aux'?'selected':''}>主模型</option><option value="aux" ${S.settings.summaryModel==='aux'?'selected':''}>副模型</option></select></div>
       <div class="it"><span>线下约会总结模型<br><small style="color:#888">自动总结和“重新总结”都使用这里选择的模型</small></span><select id="s_offsummarymodel" onchange="S.settings.offSummaryModel=this.value;save();toast(this.value==='aux'?'线下总结改用副模型':'线下总结改用主模型')" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px"><option value="main" ${S.settings.offSummaryModel!=='aux'?'selected':''}>主模型</option><option value="aux" ${S.settings.offSummaryModel==='aux'?'selected':''}>副模型</option></select></div>
-      <div class="it">主动消息间隔(分钟)<input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it"><span>主动联系间隔(分钟)<br><small style="color:#888">按这里的分钟数执行，不再额外强制延长到15分钟</small></span><input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>主动找你时打电话几率<br><small style="color:#888">0=只发消息；越高他越爱直接打来(语音/视频)</small></span><input id="s_callprob" type="number" min="0" max="100" value="${S.settings.callProb==null?35:S.settings.callProb}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话静默多久他来问你(分钟)<br><small style="color:#888">通话中你没出声，过这么久他会轻声问你在不在；填 0 = 关闭，全程不打扰</small></span><input id="s_callsilent" type="number" min="0" max="60" value="${S.settings.callSilentMin==null?3:S.settings.callSilentMin}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it" style="flex-wrap:wrap"><span>通话句间衔接 <b style="color:#07c160">${Math.round(callPaceRate()*100)}%</b><small style="color:#888;display:block">同时调电话App和微信语音/视频：只缩短每句话说完后的等待，不改变声音和音调；推荐130%–160%</small></span><input id="s_callpace" type="range" min="80" max="200" step="5" value="${Math.round(callPaceRate()*100)}" style="width:100%;margin-top:6px" oninput="S.settings.callPace=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'"></div>
@@ -2776,7 +2777,9 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel'),lang:sttLangCode(($('#s_slang')&&$('#s_slang').value)||((S.settings.stt||{}).lang))};
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
-  S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' ✅');}
+  const oldInitiativeMin=Math.max(1,Number(S.settings.proactiveIdleMin)||20);
+  S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.proactiveIdleMin=Math.max(1,+$('#s_pidle').value||20);S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));
+  if(oldInitiativeMin!==S.settings.proactiveIdleMin)initiativeArmAll();save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' ✅');}
 function clearPhoneFriendChatsKeepPeople(p,now){p=p||{};now=+now||Date.now();p.messages={};p.groupMessages={};p.friendRead={};p.groupRead={};p.clearBefore=p.clearBefore||{};p.groupClearBefore=p.groupClearBefore||{};
   (p.friends||[]).forEach(f=>{const id=(''+(f&&((f.phone_id||f.id))||'')).toUpperCase();if(id)p.clearBefore[id]=now;});
   (p.groups||[]).forEach(g=>{const id=g&&(g.group_id||g.id);if(id)p.groupClearBefore[id]=now;});
@@ -7419,13 +7422,13 @@ async function doClear(id,mode){const list=msgs(id);let keep,tip='';
     const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>{const t=msgClearTime(m);return m._call||!t||t<t0||t>t1;});tip='删除 '+a+' 到 '+b+' 的文字聊天？没有日期的旧消息和通话记录会保留。';}
   const n=list.length-keep.length;if(n<=0){toast('没有可删除的文字聊天');return;}if(!await uiConfirm(tip+'\n\n预计删除 '+n+' 条。'))return;
   S.messages[mkey(id)]=keep;save();closeModal();render();toast('已删除 '+n+' 条文字聊天（通话记录保留）');}
-function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
+function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;if(c.proactive.enabled)initiativeArm(c);save();render();}
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}
 function hhmmOf(v,def){if(typeof v==='number')return String(v).padStart(2,'0')+':00';if(typeof v==='string'&&/^\d{1,2}:\d{2}/.test(v))return v;return def||'09:00';}
 function hourOf(v,def){if(typeof v==='number')return v;if(typeof v==='string'&&v.includes(':'))return parseInt(v.split(':')[0],10)||0;return def;}
 function toMin(v){if(typeof v==='number')return v*60;if(typeof v==='string'&&v.includes(':')){const[a,b]=v.split(':');return (+a)*60+(+b);}return 0;}
-function savePa(id){const c=getC(id);let s=parseInt(($('#pa_s')||{}).value,10),e=parseInt(($('#pa_e')||{}).value,10);if(isNaN(s))s=9;if(isNaN(e))e=23;c.proactive.start=Math.max(0,Math.min(23,s));c.proactive.end=Math.max(0,Math.min(23,e));c.proactive.times=+($('#pa_n')||{}).value||1;save();render();toast('已保存 ✓ '+c.proactive.start+'点-'+c.proactive.end+'点');}
+function savePa(id){const c=getC(id);let s=parseInt(($('#pa_s')||{}).value,10),e=parseInt(($('#pa_e')||{}).value,10);if(isNaN(s))s=9;if(isNaN(e))e=23;c.proactive.start=Math.max(0,Math.min(23,s));c.proactive.end=Math.max(0,Math.min(23,e));c.proactive.times=Math.max(1,Math.min(99,+($('#pa_n')||{}).value||1));if(c.proactive.enabled)initiativeArm(c);save();render();toast('已保存 ✓ '+c.proactive.start+'点-'+c.proactive.end+'点');}
 
 /* ---------- 多选转发 ---------- */
 let _sel=null,_gmsel=null,_gfwd=null;
@@ -8811,15 +8814,15 @@ function replyAccountChanged(id,note,token,aid,typingEl){if(actId()===aid)return
 function resumeAccountReplies(aid){Object.keys(_replyDeferred).forEach(k=>{const d=_replyDeferred[k];if(!d||d.aid!==aid||replyStale(d.id,d.token,d.aid))return;delete _replyDeferred[k];clearTimeout(_replyTimers[k]);_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];aiReply(d.id,d.note,d.token,d.aid);},120);});}
 function delayedAccountReply(id,note,delay,aid){aid=aid||actId();const token=replyEpoch(id,aid);setTimeout(()=>{if(replyStale(id,token,aid))return;if(actId()!==aid){deferAccountReply(id,note,token,aid);return;}aiReply(id,note,token,aid);},Math.max(0,+delay||0));}
 function scheduleReply(id,note){
-  if(offlineFocusActive())return;
-  if(wxLoginBlockReply(id,note))return;
+  if(offlineFocusActive())return false;
+  if(wxLoginBlockReply(id,note))return false;
   if(note&&_call&&_call.state==='active'&&_call.id===id&&/任务|便签|没完成|未完成|完成|验收|奖励|惩罚|罚/.test(note)){
     callAI(String(note).replace(/\]\s*$/,'\n【重要·此刻正在通话中】你们正在通话，这件事必须在电话里直接说，绝对不要另发微信消息。]'));
-    return;
+    return true;
   }
   // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
-  if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();return;}
-  const aid=actId(),k=replyStateKey(id,aid),token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);delete _replyDeferred[k];_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);return;}aiReply(id,note,token,aid);},(Number(S.settings.replyDelay)||0)*1000);}
+  if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();return false;}
+  const aid=actId(),k=replyStateKey(id,aid),token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);delete _replyDeferred[k];_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);return;}aiReply(id,note,token,aid);},(Number(S.settings.replyDelay)||0)*1000);return true;}
 function manualReply(id){if(offlineFocusActive()){toast('线下约会进行中，微信消息已暂停');return;}if(_replying)return;if(hasPendingVision(id)){toast('图片还在识别，看到“已看清”后再点');return;}const c=getC(id);if(!c||c.blocked)return;_replying=id;if(cur().p==='chat'&&cur().id===id)render();
   // 判断最后一条真实对话是谁发的：若是他自己发的，这次「让ta回复」=继续多说，要明确告诉他别把自己的话当成对方说的
   let _note;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){const mm=_ms[i];if(mm.type==='sys'||mm._call)continue;if(mm.role==='user')break;if(mm.role==='assistant'){_note='[系统：'+S.me.name+'这会儿还没开口、还没回你。请你接着自己刚才的话【再自然地多说几句】（补充、延续你上面说的，或换个角度再聊两句），不要重复已经说过的内容。注意：上面那几条都是【你自己】说的，不是'+S.me.name+'说的，千万别把自己说过的话当成ta说的去回应。]';break;}}}
@@ -9428,39 +9431,44 @@ function proCall(id){const c=getC(id);if(!c||c.blocked||_call)return false;if(S.
 async function maybeProactive(id){if(!isMain()||offlineFocusActive())return;if(_call)return;/* 通话中不发微信消息(点外卖/送礼走通话内指令) */const c=getC(id);if(!c||!c.proactive||!c.proactive.enabled||c.blocked)return;
   return initiativeMaybeSend(c);}
 
-function initiativeState(c){c._initiative=c._initiative||{};const k=memoryScopeKey();c._initiative[k]=c._initiative[k]||{nextAt:0,lastAt:0,lastKind:'',lastMemory:''};return c._initiative[k];}
+function initiativeState(c){c._initiative=c._initiative||{};const k=memoryScopeKey();c._initiative[k]=c._initiative[k]||{nextAt:0,lastAt:0,lastKind:'',lastMemory:'',turn:0};return c._initiative[k];}
 function initiativeWindow(c,now){const p=c&&c.proactive;if(!p||!p.enabled)return false;const n=now.getHours()*60+now.getMinutes(),s=toMin(p.start==null?9:p.start),e=toMin(p.end==null?23:p.end);return s<=e?(n>=s&&n<e):(n>=s||n<e);}
-function initiativeDelayMs(c){const base=Math.max(1,Number(S.settings.proactiveIdleMin)||20),active=c&&c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c&&c.traits&&c.traits.cling!=null?+c.traits.cling:50,factor=Math.max(.65,Math.min(1.8,1.45-(active*.006+cling*.0025))),jitter=.85+Math.random()*.45;return base*60000*factor*jitter;}
+function initiativeDelayMs(){return Math.max(1,Number(S.settings.proactiveIdleMin)||20)*60000;}
+function initiativeArm(c){if(!c)return;initiativeState(c).nextAt=Date.now()+initiativeDelayMs(c);}
+function initiativeArmAll(){(S.contacts||[]).forEach(c=>{if(c&&c.proactive&&c.proactive.enabled)initiativeArm(c);});}
 function initiativeRecentUser(c){const arr=msgs(c.id);for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'&&m.type!=='sys'){const t=msgToText(m);if(t)return{text:t,time:m.time||0};}}return null;}
 function initiativeMemory(c,a,st){const lu=initiativeRecentUser(c),q=(lu&&lu.text||'')+' '+(a&&a.label||'');const ctx=selectRelevantMemory(c,q,2),pick=(ctx.items||[]).find(x=>x.score>=4.4&&memoryNorm(x.text)!==st.lastMemory);return pick||null;}
-function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50;let kind;
-  if(mem&&Math.random()<(active>=65?.48:.32))kind='callback';
-  else if(a&&a.busy<=1&&Math.random()<.18)kind='photo';
+function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50,canPhoto=!!(S.settings.imgGen&&imageGenerationAvailable()),slot=(+st.turn||0)%6;let kind;
+  if(slot===1&&canPhoto)kind='photo';
+  else if(slot===3)kind='location';
+  else if(mem&&Math.random()<(active>=65?.48:.32))kind='callback';
   else if(a&&a.busy<=1&&Math.random()<.5)kind='share';
   else if(active>=60&&Math.random()<.55)kind='self';
   else kind='reconnect';
-  if(kind===st.lastKind){const choices=['callback','photo','share','self','reconnect'].filter(x=>x!==kind&&(x!=='callback'||mem)&&((x!=='share'&&x!=='photo')||(a&&a.busy<=1)));if(choices.length)kind=choices[activityHash(c.id+'|'+Date.now())%choices.length];}
+  if(kind===st.lastKind){const choices=['callback','share','self','reconnect'].filter(x=>x!==kind&&(x!=='callback'||mem));if(choices.length)kind=choices[activityHash(c.id+'|'+Date.now())%choices.length];}
   let goal='';if(kind==='callback')goal='自然想起并回访这件事：「'+mem.text+'」。只问一个具体落点，不要背诵旧记录，也不要说“我还记得数据库里写着”。';
-  else if(kind==='photo')goal='像真实生活里突然想给ta看一样，分享一个当下画面、随手拍、桌面/窗外/路边/正在做的事；如果图片功能可用，可以单独发一行 [图片|生活感随手拍描述]，再配一句短话。';
+  else if(kind==='photo')goal='像真实生活里突然想给ta看一样，分享一个和此刻状态一致的当下画面、桌面、窗外、路边或正在做的事。这一轮图片功能可用，必须单独发一行 [图片|具体的生活感随手拍描述]，并配一句自然短话；不要只用文字声称发了照片。';
+  else if(kind==='location'){const loc=roleLiveLoc(c),ln=String(loc.name||loc.city||a.label||'当前位置').replace(/[|｜\]】]/g,' '),la=String(loc.address||a.label||'').replace(/[|｜\]】]/g,' ');goal='主动分享你此刻的真实位置，让ta知道你在哪里、正在做什么。这一轮必须单独发一行 [位置|'+ln+'|'+la+']，并配一句符合人设的短话；不得另编一个与当前活动不一致的地点。';}
   else if(kind==='share')goal='从你此刻“'+a.label+'”这个真实状态出发，分享一个很小的当下感受或念头；可以说刚忙完、正休息、准备做什么，但不要编造具体公司、人名、餐厅、商品、天气或已经发生的外部事件。';
   else if(kind==='self')goal='主动表达一个符合你人设的真实想法、偏好或此刻心情，让对方更了解你；要和近期聊天有一点自然联系，不要突然发表人生演讲。';
   else goal='自然重新开启对话。主动度或黏人度高可以直接表达想念、想听ta说话；低则淡淡抛出一个具体话头。不要机械质问“为什么不回”，也不要查岗。';
-  return{kind,memory:mem,goal,note:'[系统：这是一次【低频主动消息】，不是对方刚发来新话。现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常生活小片段、突然想到ta、碎碎念、想分享的画面、轻微吃醋/撒娇/关心都可以按人设轮换。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。]'};}
+  return{kind,memory:mem,goal,note:'[系统：这是一次【主动消息】，不是对方刚发来新话。现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常生活小片段、突然想到ta、碎碎念、想分享的照片或位置、轻微吃醋/撒娇/关心都要按人设轮换。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。]'};}
 let _initiativeBusy={};
-function initiativeMaybeSend(c){if(!humanLikeOn()||S.settings.initiative===false||!isMain()||!c||c.deleted||c.blocked||!c.proactive||!c.proactive.enabled||_call||_initiativeBusy[c.id])return false;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active||memoryPending(c))return false;const now=new Date();if(!initiativeWindow(c,now))return false;
-  const st=initiativeState(c),ts=Date.now(),lm=lastMsg(c.id),delay=initiativeDelayMs(c);if(S.settings.manualReply&&lm&&lm.role==='user')return false;if(typeof _replying!=='undefined'&&_replying===c.id)return false;
+function initiativeMaybeSend(c){if(!humanLikeOn()||S.settings.initiative===false||!isMain()||!c||c.deleted||c.blocked||!c.proactive||!c.proactive.enabled||_call||_initiativeBusy[c.id])return false;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active)return false;const now=new Date();if(!initiativeWindow(c,now))return false;
+  const st=initiativeState(c),ts=Date.now(),lm=lastMsg(c.id),delay=initiativeDelayMs(c);if(typeof _replying!=='undefined'&&_replying===c.id)return false;
   if((c.followups||[]).some(x=>!x.asked&&x.due<=ts&&ts-x.due<48*3600000))return false;
   {const _lut=typeof lastUserTs==='function'?lastUserTs(c.id):0;if(_lut&&S.couple&&S.couple.escalate&&typeof escContact==='function'&&escContact()===c&&ts-_lut>=_IGT[0]*60000)return false;}
   if(!st.nextAt)st.nextAt=Math.max(ts,(lm&&lm.time||ts)+delay);if(ts<st.nextAt)return false;
   S._proactiveCount=S._proactiveCount||{};const today=now.toDateString(),pc=S._proactiveCount[c.id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}if(pc.n>=(c.proactive.times||1))return false;
-  const a=currentRoleActivity(c,now);if(!a)return false;if(a.key==='sleep'){st.nextAt=Math.max(a.until,ts+delay);return false;}const active=c.traits&&c.traits.active!=null?+c.traits.active:50;if(a.busy>=3&&active<70){st.nextAt=Math.min(a.until,ts+Math.max(20*60000,delay*.6));return false;}
-  if(lm&&lm.role==='assistant'&&ts-(lm.time||0)<Math.max(15*60000,delay*1.8)){st.nextAt=(lm.time||ts)+Math.max(15*60000,delay*1.8);return false;}
-  const plan=initiativePlan(c,a,st);st.lastAt=ts;st.lastKind=plan.kind;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=ts+initiativeDelayMs(c);c._initiativeLast={time:ts,kind:plan.kind,activity:a.label,memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[c.id]=pc;save();
-  const cp=effCallProb(c);if(plan.kind==='reconnect'&&cp>0&&Math.random()*100<cp&&proCall(c.id))return true;
-  _initiativeBusy[c.id]=1;try{scheduleReply(c.id,plan.note);}finally{setTimeout(()=>{delete _initiativeBusy[c.id];},Math.max(10000,(Number(S.settings.replyDelay)||0)*1000+5000));}return true;}
+  const a=currentRoleActivity(c,now);if(!a)return false;if(a.key==='sleep'){st.nextAt=Math.max(a.until,ts+delay);return false;}
+  if(lm&&lm.role==='assistant'&&ts-(lm.time||0)<delay){st.nextAt=(lm.time||ts)+delay;return false;}
+  const plan=initiativePlan(c,a,st),record=()=>{st.lastAt=ts;st.lastKind=plan.kind;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=ts+initiativeDelayMs(c);st.turn=(+st.turn||0)+1;c._initiativeLast={time:ts,kind:plan.kind,activity:a.label,memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[c.id]=pc;save();};
+  const cp=effCallProb(c),callEligible=plan.kind!=='photo'&&plan.kind!=='location';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
+  _initiativeBusy[c.id]=1;const queued=scheduleReply(c.id,plan.note);if(!queued){delete _initiativeBusy[c.id];st.nextAt=ts+15000;return false;}record();setTimeout(()=>{delete _initiativeBusy[c.id];},Math.max(10000,(Number(S.settings.replyDelay)||0)*1000+5000));return true;}
 let _initiativeCursor=0;
 function checkInitiative(){if(!isMain()||!humanLikeOn()||S.settings.initiative===false)return;const cs=S.contacts||[];for(let i=0;i<cs.length;i++){const idx=(_initiativeCursor+i)%cs.length;if(initiativeMaybeSend(cs[idx])){_initiativeCursor=(idx+1)%Math.max(1,cs.length);break;}}}
-setInterval(checkInitiative,90000);setTimeout(checkInitiative,25000);
+function initiativeWakeCheck(){if(typeof document!=='undefined'&&document.visibilityState==='hidden')return;setTimeout(checkInitiative,200);}
+setInterval(checkInitiative,15000);setTimeout(checkInitiative,5000);document.addEventListener('visibilitychange',initiativeWakeCheck);window.addEventListener('pageshow',initiativeWakeCheck);window.addEventListener('focus',initiativeWakeCheck);
 
 /* ---------- 查岗（他看我的手机）---------- */
 function replyDedupNorm(t){return String(t||'').toLowerCase().replace(/\[[^\]]*\]/g,'').replace(/[\s，。！？、,.!?~～：:；;“”"'（）()【】]/g,'');}

@@ -1,0 +1,118 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const source = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+
+function functionSource(name) {
+  const start = source.indexOf(`function ${name}`);
+  assert.ok(start >= 0, `missing ${name}`);
+  const brace = source.indexOf('{', start);
+  let depth = 0, quote = '', escaped = false;
+  for (let i = brace; i < source.length; i++) {
+    const ch = source[i];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === quote) quote = '';
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
+    if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
+  }
+  throw new Error(`unterminated ${name}`);
+}
+
+const maybeSource = functionSource('initiativeMaybeSend');
+assert.doesNotMatch(maybeSource, /manualReply/, 'manual reply mode must not suppress proactive contact');
+assert.doesNotMatch(maybeSource, /memoryPending/, 'a pending memory confirmation must not suppress proactive contact forever');
+assert.doesNotMatch(maybeSource, /15\s*\*\s*60000/, 'the configured interval must not be replaced by a 15-minute floor');
+assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]/);
+assert.match(source, /setInterval\(checkInitiative,15000\)/);
+assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
+assert.match(source, /pageshow['"],initiativeWakeCheck/);
+assert.match(source, /focus['"],initiativeWakeCheck/);
+assert.match(source, /主动内容要多样：日常生活小片段[\s\S]*想分享的照片或位置/);
+
+const delayContext = vm.createContext({S: {settings: {proactiveIdleMin: 1}}});
+vm.runInContext(functionSource('initiativeDelayMs') + ';globalThis.delay=initiativeDelayMs();', delayContext);
+assert.equal(delayContext.delay, 60000, 'one minute in settings must mean one real minute');
+
+const planContext = vm.createContext({
+  S: {settings: {imgGen: true}},
+  initiativeMemory: () => null,
+  imageGenerationAvailable: () => true,
+  roleLiveLoc: () => ({name: '公司', address: '办公区'}),
+  activityHash: () => 0,
+  memoryNorm: (v) => String(v),
+  hm: () => '12:00',
+  Math,
+});
+vm.runInContext(functionSource('initiativePlan') + ';globalThis.plan=initiativePlan;', planContext);
+const role = {id: 'r1', traits: {active: 50, cling: 60}};
+const activity = {label: '在公司工作', busy: 4};
+const photoPlan = planContext.plan(role, activity, {turn: 1, lastKind: '', lastMemory: ''});
+assert.equal(photoPlan.kind, 'photo');
+assert.match(photoPlan.note, /必须单独发一行 \[图片\|/);
+const locationPlan = planContext.plan(role, activity, {turn: 3, lastKind: '', lastMemory: ''});
+assert.equal(locationPlan.kind, 'location');
+assert.match(locationPlan.note, /\[位置\|公司\|办公区\]/);
+
+function schedulerContext({planKind = 'share', callProb = 0, queue = true} = {}) {
+  const now = Date.now();
+  const state = {nextAt: now - 1, lastAt: 0, lastKind: '', lastMemory: '', turn: 0};
+  const c = {id: 'r1', proactive: {enabled: true, start: 0, end: 23, times: 10}, followups: []};
+  const calls = {queued: 0, called: 0, saved: 0};
+  const sandboxMath = Object.create(Math);
+  sandboxMath.random = () => 0;
+  const context = vm.createContext({
+    S: {
+      settings: {manualReply: true, initiative: true, replyDelay: 0, proactiveIdleMin: 1},
+      _proactiveCount: {}, couple: null,
+      jail: {active: false}, me: {sleep: {active: null}, report: {active: null}},
+    },
+    _call: null,
+    _initiativeBusy: {},
+    _replying: null,
+    _IGT: [30],
+    humanLikeOn: () => true,
+    isMain: () => true,
+    initiativeWindow: () => true,
+    initiativeState: () => state,
+    initiativeDelayMs: () => 60000,
+    lastMsg: () => ({role: 'user', time: now - 120000}),
+    lastUserTs: () => 0,
+    currentRoleActivity: () => ({key: 'work', label: '正在忙工作', busy: 4}),
+    initiativePlan: () => ({kind: planKind, memory: null, note: '[系统：主动联系]'}),
+    effCallProb: () => callProb,
+    proCall: () => { calls.called++; return true; },
+    scheduleReply: () => { calls.queued++; return queue; },
+    memoryNorm: (v) => String(v),
+    save: () => { calls.saved++; },
+    setTimeout: () => 1,
+    Date,
+    Math: sandboxMath,
+  });
+  vm.runInContext(maybeSource + ';globalThis.run=initiativeMaybeSend;', context);
+  return {result: context.run(c), state, c, calls, S: context.S};
+}
+
+const message = schedulerContext();
+assert.equal(message.result, true);
+assert.equal(message.calls.queued, 1, 'manual reply mode and a busy activity must still allow proactive messages');
+assert.equal(message.S._proactiveCount.r1.n, 1);
+
+const failedQueue = schedulerContext({queue: false});
+assert.equal(failedQueue.result, false);
+assert.equal(failedQueue.S._proactiveCount.r1, undefined, 'a blocked queue must not consume the daily quota');
+
+const call = schedulerContext({callProb: 100});
+assert.equal(call.calls.called, 1, 'high call probability must be checked on ordinary proactive opportunities');
+assert.equal(call.calls.queued, 0);
+
+const location = schedulerContext({planKind: 'location', callProb: 100});
+assert.equal(location.calls.called, 0, 'location sharing must not be replaced by a call');
+assert.equal(location.calls.queued, 1);
+
+console.log('proactive contact tests passed');
