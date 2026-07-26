@@ -1,6 +1,7 @@
 /* ---------- AI账户 / 内置AI ---------- */
 let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false,_aiImageBusy=false,_aiImageStatus='',_aiImageResult='',_aiLowBalanceTimer=0,_aiAccountPollTimer=0,_aiArrivalTimer=0;
 const AI_VOICE_PRESETS=[
+  {id:'qingshouyin20260726',name:'青受音',clone:true,preset:true},
   {id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true},
   {id:'phonevoice20260709b',name:'月岛萤',clone:true,preset:true},
   {id:'phonevoice20260709a',name:'御叔',clone:true,preset:true}
