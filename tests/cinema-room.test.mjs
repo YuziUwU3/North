@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v663 · 全数据应急恢复'/);
+assert.match(source, /APP_VER='v664 · 放映室交互与陪读输入修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -110,6 +110,15 @@ assert.match(source, /识别中…/);
 assert.match(source, /cinemaShowVoiceSubtitle\(out\.spoken,out\.translation\)/);
 assert.match(source, /speak\(out\.spoken,c\)/);
 assert.match(source, /voiceLang:'role'/);
+assert.match(source, /bookVoice:false/);
+assert.match(source, /chatPanelHeight:104/);
+assert.match(source, /bookInputHeight:108/);
+assert.match(source, /function cinemaToggleBookVoice/);
+assert.match(source, /s\.kind==='book'\?set\.bookVoice:set\.voiceComment/);
+assert.match(source, /function cinemaComposerResizeStart/);
+assert.match(source, /document\.addEventListener\('pointermove',move\)/);
+assert.match(source, /function cinemaControlTap/);
+assert.match(source, /stage\.addEventListener\('click',cinemaControlTap,true\)/);
 assert.match(source, /addSummary\(c,memory,4,'【放映室】'\)/);
 assert.match(source, /cinemaSessionId=s\.id/);
 assert.match(source, /S\.cinema\.sessions=\(S\.cinema\.sessions\|\|\[\]\)\.filter\(x=>x&&x\.cid!==id\)/);
@@ -168,8 +177,11 @@ assert.deepEqual(memoryState.messages["role-a#account-b"].map((m) => m.id), ["ke
 const watch = functionSource("renderCinemaWatch");
 assert.match(watch, /cin-overlay-top/);
 assert.match(watch, /cin-chat-dock/);
+assert.match(watch, /data-cin-action="chat-open"/);
+assert.match(watch, /data-cin-resize="video"/);
+assert.match(watch, /--cin-chat-h:/);
 assert.match(watch, /cinTopReveal/);
-assert.match(watch, /cinemaEnd\(\)/);
+assert.match(watch, /data-cin-action="end"/);
 assert.doesNotMatch(watch, /id="cinLog"/);
 assert.doesNotMatch(watch, /cin-context/);
 assert.doesNotMatch(watch, /event\.stopPropagation/);
@@ -184,11 +196,56 @@ const toolsHtmlContext = vm.createContext({
   svgIc: () => "",
 });
 vm.runInContext(functionSource("cinemaStageTools") + ";globalThis.html=cinemaStageTools();", toolsHtmlContext);
-assert.match(toolsHtmlContext.html, /onclick="cinemaSubtitleMenu\(\)"/);
-assert.match(toolsHtmlContext.html, /onclick="cinemaExtractSubtitles\(\)"/);
-assert.match(toolsHtmlContext.html, /onclick="cinemaToggleTranscribe\(\)"/);
-assert.match(toolsHtmlContext.html, /cinemaAnalyzeFrame\(\{currentTarget:this\},false\)/);
+assert.match(toolsHtmlContext.html, /data-cin-action="subtitle"/);
+assert.match(toolsHtmlContext.html, /data-cin-action="extract"/);
+assert.match(toolsHtmlContext.html, /data-cin-action="transcribe"/);
+assert.match(toolsHtmlContext.html, /data-cin-action="frame"/);
 assert.doesNotMatch(toolsHtmlContext.html, /event\.stopPropagation/);
+
+let tappedAction = "", prevented = false, stopped = false;
+const fakeControl = {
+  disabled: false,
+  dataset: { cinAction: "chat-open" },
+  classList: { add() {}, remove() {} },
+  isConnected: true,
+};
+const controlBehavior = vm.createContext({
+  setTimeout: (fn) => fn(),
+  cinemaChatToggle: (open) => { tappedAction = open ? "chat-open" : "chat-close"; },
+  controlEvent: {
+    target: { closest: () => fakeControl },
+    preventDefault: () => { prevented = true; },
+    stopPropagation: () => { stopped = true; },
+  },
+});
+vm.runInContext(functionSource("cinemaControlTap") + ";cinemaControlTap(controlEvent);", controlBehavior);
+assert.equal(tappedAction, "chat-open");
+assert.equal(prevented, true);
+assert.equal(stopped, true);
+
+const resizeListeners = {};
+let resizedTo = 0, resizeSaved = 0;
+const resizeBehavior = vm.createContext({
+  $: () => ({ getBoundingClientRect: () => ({ height: 100 }) }),
+  cinemaApplyComposerHeight: (_kind, height) => { resizedTo = height; },
+  save: () => { resizeSaved++; },
+  document: {
+    addEventListener: (name, fn) => { resizeListeners[name] = fn; },
+    removeEventListener: () => {},
+  },
+  resizeEvent: { clientY: 120, preventDefault() {} },
+});
+vm.runInContext(functionSource("cinemaComposerResizeStart") + ";cinemaComposerResizeStart(resizeEvent,'video');", resizeBehavior);
+resizeListeners.pointermove({ clientY: 70 });
+assert.equal(resizedTo, 150);
+resizeListeners.pointerup();
+assert.equal(resizeSaved, 1);
+
+const reader = functionSource("renderCinemaRead");
+assert.match(reader, /id="cinBookVoiceBtn"/);
+assert.match(reader, /data-cin-action="book-voice"/);
+assert.match(reader, /data-cin-resize="book"/);
+assert.match(reader, /cinemaComposerHeight\('book'\)/);
 
 const contextRounds = vm.createContext({ S: { settings: { hist: 17 } } });
 vm.runInContext(lineFunctionSource("cinemaContextRounds") + ";globalThis.rounds=cinemaContextRounds();", contextRounds);
@@ -214,10 +271,13 @@ assert.match(html, /\.cin-barrage\.role\{color:#79caff/);
 assert.match(html, /\.cin-stage,\.cin-stage\.cin-theater\{position:fixed;inset:0;z-index:9999/);
 assert.match(html, /\.cin-overlay-top\.collapsed/);
 assert.match(html, /\.cin-chat-dock\.open/);
+assert.match(html, /\.cin-chat-grip/);
+assert.match(html, /\.cin-reader-nav \.cin-reader-voice/);
+assert.match(html, /--cin-chat-h/);
 assert.match(html, /\.cin-voice-sub\.show/);
 assert.match(html, /\.cin-invite-card/);
 assert.match(html, /\.cin-memory-scroll/);
 assert.match(html, /原创深色影院界面/);
-assert.match(html, /app\.js\?v=663/);
+assert.match(html, /app\.js\?v=664/);
 
 console.log("cinema room tests passed");

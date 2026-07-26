@@ -63,10 +63,10 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v663 shell and service worker are aligned',()=>{
+test('v664 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v663 · 全数据应急恢复'/);
-  assert.match(html,/app\.js\?v=663/);
-  assert.match(sw,/BUILD='663'/);
+  assert.match(app,/APP_VER='v664 · 放映室交互与陪读输入修复'/);
+  assert.match(html,/app\.js\?v=664/);
+  assert.match(sw,/BUILD='664'/);
 });

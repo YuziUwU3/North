@@ -23,6 +23,8 @@ assert.match(sw, new RegExp(`const BUILD='${version}'`));
 assert.match(sw, /validShellText/);
 assert.match(sw, /incomplete/);
 assert.match(sw, /cache:'no-store'/);
+assert.match(sw, /self\.clients\.matchAll\(\{type:'window',includeUncontrolled:true\}\)/);
+assert.match(sw, /client\.navigate\(u\.href\)/);
 assert.match(index, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(repair, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 
