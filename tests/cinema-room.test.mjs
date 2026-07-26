@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v671 · 锁屏与影院修复'/);
+assert.match(source, /APP_VER='v672 · 设置与影院字幕修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -120,7 +120,8 @@ assert.match(source, /cinemaQuestionNeedsVision/);
 assert.match(source, /识别中…/);
 assert.match(source, /function cinemaShowDialogueSubtitle/);
 assert.doesNotMatch(source, /function cinemaShowVoiceSubtitle/);
-assert.match(source, /speak\(outs\.map/);
+assert.doesNotMatch(source, /speak\(outs\.map/);
+assert.match(functionSource("cinemaRoleReply"), /speakText:voiceOn\?out\.spoken:''/);
 assert.match(source, /commentDisplay:'barrage'/);
 assert.match(source, /function cinemaCommentDisplay/);
 assert.match(source, /function cinemaCommentDisplaySave/);
@@ -357,9 +358,28 @@ assert.match(source, /function setAppIcon\(key\)[\s\S]*?S\.me\.appIcons\[key\]=a
 assert.match(html, /\.cin-barrage\{[^}]*background:transparent!important/);
 assert.match(html, /\.cin-barrage\.mine\{color:#ff91bd/);
 assert.match(html, /\.cin-barrage\.role\{color:#79caff/);
-assert.match(html, /\.cin-barrage\{width:min\(76vw,520px\);max-width:none;white-space:pre-line!important/);
-assert.match(functionSource("cinemaShoot"), /const lanes=2/);
-assert.match(functionSource("cinemaShoot"), /d\.style\.top=\(24\+lane\*12\)\+'%'/);
+assert.match(html, /\.cin-barrage\{width:76vw;max-width:520px;white-space:pre-line!important/);
+assert.match(functionSource("cinemaShoot"), /_cin\.shootQueue\.push/);
+assert.match(functionSource("cinemaShowShot"), /box\.innerHTML=''/);
+assert.match(functionSource("cinemaShowShot"), /d\.style\.top='28%'/);
+assert.match(functionSource("cinemaShotMs"), /Math\.max\(10500,Math\.min\(18000/);
+assert.match(functionSource("cinemaShootNext"), /await speakWait\(item\.speakText,item\.speaker,\{onAudioStart:show\}\)/);
+const shotOrder=[],shotResolvers=[];
+const shotQueueContext=vm.createContext({
+  _cin:{shootQueue:[],shootBusy:false,token:9,shootEpoch:0},
+  cinemaShowShot:(who,text)=>{shotOrder.push(who+':'+text);return new Promise(resolve=>shotResolvers.push(resolve));},
+  speakWait:async()=>{},
+  sleep:async()=>{},
+});
+vm.runInContext('async '+functionSource("cinemaShootNext")+'\n'+functionSource("cinemaShoot")+';globalThis.shoot=cinemaShoot;',shotQueueContext);
+shotQueueContext.shoot('me','recognized speech');
+shotQueueContext.shoot('role','reply');
+assert.deepEqual(shotOrder,['me:recognized speech'],'recognized user speech must be shown before the role reply');
+assert.equal(shotQueueContext._cin.shootQueue.length,1,'the next barrage must wait in the queue');
+shotResolvers.shift()();
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.deepEqual(shotOrder,['me:recognized speech','role:reply'],'queued barrages must appear one at a time and in order');
+shotResolvers.shift()();
 assert.match(html, /\.cin-stage,\.cin-stage\.cin-theater\{position:fixed;inset:0;z-index:9999/);
 assert.match(html, /\.cin-overlay-top\.collapsed/);
 assert.match(html, /\.cin-chat-dock\.open/);
@@ -397,11 +417,13 @@ assert.match(source, /const err=String\(m&&m\.error\|\|''\)\.trim\(\)/);
 assert.match(source, /stopRec\(false,m=>/);
 assert.match(source, /inp\.value=text/);
 assert.match(source, /cinemaSend\(kind\)/);
-assert.match(functionSource("cinemaAddItem"), /cinemaShoot\(who,opt&&opt\.shootText\|\|item\.text\)/);
+const cinemaSendSource=functionSource("cinemaSend");
+assert.ok(cinemaSendSource.indexOf("cinemaAddItem('me',text)")<cinemaSendSource.indexOf("cinemaRoleReply("),'typed or recognized user text must be added before generating the role reply');
+assert.match(functionSource("cinemaAddItem"), /cinemaShoot\(who,opt&&opt\.shootText\|\|item\.text,opt\)/);
 assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.spoken/);
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
-assert.match(html, /app\.js\?v=671/);
+assert.match(html, /app\.js\?v=672/);
 
 console.log("cinema room tests passed");
