@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v664 · 放映室交互与陪读输入修复'/);
+assert.match(source, /APP_VER='v665 · 放映室横屏与字幕交互修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -90,13 +90,13 @@ assert.doesNotMatch(contextSandbox.ctx, /未来剧透/);
 
 assert.match(source, /严禁引用后面的剧情/);
 assert.match(source, /不要动作描写、第三人称叙述、括号舞台说明、心情标签/);
-assert.match(source, /没有可用字幕或语音转写，只知道片名；不要假装知道具体剧情/);
+assert.match(source, /没有可用字幕，只知道片名；不要假装知道具体剧情/);
 assert.match(source, /当前屏幕字幕/);
-assert.match(source, /截至此刻的语音转写/);
-assert.match(source, /function cinemaStartTranscribe/);
-assert.match(source, /captureStream\|\|v\.mozCaptureStream/);
-assert.match(source, /sttTranscribe\(blob\)/);
+assert.doesNotMatch(source, /播放时转写/);
+assert.doesNotMatch(source, /function cinemaStartTranscribe/);
+assert.doesNotMatch(source, /function cinemaToggleTranscribe/);
 assert.match(source, /function cinemaExtractSubtitles/);
+assert.match(source, /function cinemaExtractHelp/);
 assert.match(source, /sttTranscribeTimed\(f/);
 assert.match(source, /timestamp_granularities\[\]/);
 assert.match(source, /接口没有返回分段时间戳/);
@@ -118,7 +118,8 @@ assert.match(source, /s\.kind==='book'\?set\.bookVoice:set\.voiceComment/);
 assert.match(source, /function cinemaComposerResizeStart/);
 assert.match(source, /document\.addEventListener\('pointermove',move\)/);
 assert.match(source, /function cinemaControlTap/);
-assert.match(source, /stage\.addEventListener\('click',cinemaControlTap,true\)/);
+assert.match(source, /root\.addEventListener\('pointerup',cinemaControlTap,true\)/);
+assert.match(source, /root\.addEventListener\('click',cinemaControlTap,true\)/);
 assert.match(source, /addSummary\(c,memory,4,'【放映室】'\)/);
 assert.match(source, /cinemaSessionId=s\.id/);
 assert.match(source, /S\.cinema\.sessions=\(S\.cinema\.sessions\|\|\[\]\)\.filter\(x=>x&&x\.cid!==id\)/);
@@ -145,6 +146,7 @@ const behavior = vm.createContext({
 });
 vm.runInContext(
   lineFunctionSource("cinemaQuestionNeedsVision") + "\n" +
+  lineFunctionSource("cinemaOneSentence") + "\n" +
   lineFunctionSource("cinemaParseRolePayload") +
   ";globalThis.needsVision=cinemaQuestionNeedsVision;globalThis.parseRole=cinemaParseRolePayload;",
   behavior,
@@ -155,6 +157,9 @@ const bilingual = behavior.parseRole("That was a beautiful scene.\n（这一幕�
 assert.equal(bilingual.spoken, "That was a beautiful scene.");
 assert.equal(bilingual.translation, "这一幕很美。");
 assert.equal(bilingual.valid, true);
+const oneSentence = behavior.parseRole("I love this part. I also know the ending.\n（我喜欢这里。后面我也知道。）", {});
+assert.equal(oneSentence.spoken, "I love this part.");
+assert.equal(oneSentence.translation, "我喜欢这里。");
 
 const memoryState = {
   messages: {
@@ -189,7 +194,7 @@ assert.doesNotMatch(source, /把故事留在/);
 
 const toolsHtmlContext = vm.createContext({
   _cin: { cues: [] },
-  cinemaInit: () => ({ settings: { barrageFx: "cinema", transcribe: false } }),
+  cinemaInit: () => ({ settings: { barrageFx: "cinema" } }),
   cinemaRole: () => ({}),
   cinemaVoiceLangLabel: () => "中文",
   cinemaVisionIntervalLabel: () => "画面 按需",
@@ -198,7 +203,7 @@ const toolsHtmlContext = vm.createContext({
 vm.runInContext(functionSource("cinemaStageTools") + ";globalThis.html=cinemaStageTools();", toolsHtmlContext);
 assert.match(toolsHtmlContext.html, /data-cin-action="subtitle"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="extract"/);
-assert.match(toolsHtmlContext.html, /data-cin-action="transcribe"/);
+assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="transcribe"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="frame"/);
 assert.doesNotMatch(toolsHtmlContext.html, /event\.stopPropagation/);
 
@@ -272,12 +277,30 @@ assert.match(html, /\.cin-stage,\.cin-stage\.cin-theater\{position:fixed;inset:0
 assert.match(html, /\.cin-overlay-top\.collapsed/);
 assert.match(html, /\.cin-chat-dock\.open/);
 assert.match(html, /\.cin-chat-grip/);
+assert.match(html, /\.cin-theater-open \.modal\{position:fixed;z-index:10050\}/);
+assert.match(html, /\.cin-theater-open \.toast\{position:fixed;z-index:10080\}/);
+assert.match(html, /\.cin-chat-reveal\{left:auto;right:max\(14px,env\(safe-area-inset-right\)\);bottom:max\(62px/);
 assert.match(html, /\.cin-reader-nav \.cin-reader-voice/);
 assert.match(html, /--cin-chat-h/);
 assert.match(html, /\.cin-voice-sub\.show/);
 assert.match(html, /\.cin-invite-card/);
 assert.match(html, /\.cin-memory-scroll/);
 assert.match(html, /原创深色影院界面/);
-assert.match(html, /app\.js\?v=664/);
+assert.match(source, /function cinemaRoleOccupied/);
+const occupiedState = { page: "cinemawatch", session: { cid: "role-a", status: "active" } };
+const occupiedBehavior = vm.createContext({
+  cur: () => ({ p: occupiedState.page }),
+  cinemaSession: () => occupiedState.session,
+});
+vm.runInContext(lineFunctionSource("cinemaRoleOccupied") + ";globalThis.occupied=cinemaRoleOccupied;", occupiedBehavior);
+assert.equal(occupiedBehavior.occupied("role-a"), true);
+assert.equal(occupiedBehavior.occupied("role-b"), false);
+occupiedState.page = "chat";
+assert.equal(occupiedBehavior.occupied("role-a"), false);
+assert.match(functionSource("scheduleReply"), /cinemaRoleOccupied\(id\)/);
+assert.match(functionSource("incomingCall"), /cinemaRoleOccupied\(id\)/);
+assert.match(functionSource("aiReply"), /cinemaRoleOccupied\(id\)/);
+assert.match(functionSource("initiativeMaybeSend"), /cinemaRoleOccupied\(c\.id\)/);
+assert.match(html, /app\.js\?v=665/);
 
 console.log("cinema room tests passed");
