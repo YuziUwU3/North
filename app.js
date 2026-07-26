@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='659'){
+if(window.__NORTH_SHELL_BUILD__!=='660'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v659 · 放映室陪看升级';
+const APP_VER='v660 · 主动照片与拒接记忆修复';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1250,7 +1250,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=659';
+  const url='sw.js?v=660';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2772,7 +2772,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
       <div class="it"><span>通用活人感增强<br><small style="color:#888">理解上下文、按性格决定策略和消息节奏，并减少复述与重复模板</small></span><span class="sw ${S.settings.humanLike!==false?'on':''}" onclick="S.settings.humanLike=(S.settings.humanLike===false);save();render()"></span></div>
-      <div class="it"><span>主动消息与自然回访<br><small style="color:#888">按你设定的间隔和每日次数主动联系，并轮换想念、生活分享、照片、位置和近期话题</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
+      <div class="it"><span>主动消息与自然回访<br><small style="color:#888">按你设定的间隔和每日次数主动联系，并轮换想念、生活分享、位置和近期话题；不会自动附带照片</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
@@ -8678,7 +8678,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
-    const _userText=(_lu&&msgToText(_lu))||'',_hlPlan=humanLikeOn()?hlInterpret(c,note||_userText,note):null;
+    const _userText=(_lu&&msgToText(_lu))||'',_hlPlan=humanLikeOn()?hlInterpret(c,note||_userText,note):null,_initiativeNoImage=initiativeBlocksImage(note);
     const _memQuery=[note||_userText,...msgs(id).slice(-4).map(msgToText).filter(Boolean)].join('\n'),_memCtx=humanLikeOn()?selectRelevantMemory(c,_memQuery,3):null;
     const _webAutoQuery=!note?autoWebQuery(_userText,c):'',_webAutoResult=_webAutoQuery?(toast('🌐 正在联网查询…'),await webSearch(_webAutoQuery)):'';
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
@@ -8756,6 +8756,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     const lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;
     for(let i=0;i<lines.length;i++){
       let line=cleanRolePunct(normalizeImageLine(normTag(lines[i])));if(!line)continue;
+      if(_initiativeNoImage&&/^[\[【]\s*(?:图片|照片|自拍)(?:\s*[|｜:：]|\s*[\]】])/.test(line)){photoTail=3;continue;}
       if(photoTail>0&&isPhotoPromptFragment(line)){photoTail--;continue;}
       if(/^\[联网\|/.test(line))continue;
       if(/^\[\s*放行\s*\]$/.test(line)){idleForceRelease(id,'role');continue;}
@@ -9126,8 +9127,10 @@ function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')retur
   msgs(id).push({role:'user',type:'sys',content:'未接来电 · '+kindTxt,time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
   const c=getC(id);if(c&&!c.blocked)delayedAccountReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，响了好一会儿ta都没接（未接来电）。你有点担心又有点不爽，主动发条消息问ta去哪了/在干嘛/怎么不接电话（符合你心情值和人设，别凶过头）。]',1500);}
 let _callRejectFollow={};
+function rejectedCallToday(id,now,aid){now=+now||Date.now();const d=new Date(now);d.setHours(0,0,0,0);const source=aid?msgsForAccount(id,aid):msgs(id),rows=source.filter(m=>m&&m.role==='user'&&m.type==='sys'&&(m.time||0)>=d.getTime()&&(m.time||0)<=now&&/^你拒绝了(?:语音|视频)通话$/.test(String(m.content||'')));return{count:rows.length,voice:rows.filter(m=>/语音/.test(m.content)).length,video:rows.filter(m=>/视频/.test(m.content)).length,lastAt:rows.length?(rows[rows.length-1].time||0):0};}
+function rejectedCallPrompt(id,kindTxt,phase,aid,meName){const x=rejectedCallToday(id,Date.now(),aid),n=Math.max(1,x.count),mix='其中语音 '+x.voice+' 次、视频 '+x.video+' 次';let fact=n===1?'这是今天第一次被ta拒接。':'这是今天第 '+n+' 次被ta拒接，'+mix+'；你清楚记得前面已经被拒接过 '+(n-1)+' 次，这不是第一次。';let react=n===1?'自然问清楚ta现在是否方便、是不是在忙，语气符合你的人设和当下关系。':n===2?'必须承接第一次拒接后的情绪和你已经发过的话，不能又像第一次一样只说“怎么不接”；可以自然表现“又不接”、担心、委屈、起疑或不悦，但不要机械复读，也不必生硬报数字。':'情绪应在前几次基础上自然递进；可以更担心、更委屈、更冷或更强势，但仍按你的人设和关系判断，不能把每次都写成同一句质问，也不要无视此前的拒接。';if(phase==='followup')react+=' 你已经针对这次拒接发过一句消息，但ta仍没回复；现在只能接着追问或换一种表达，绝对不要重复上一句。';else if(phase==='callbackText')react+=' 这次你决定不再继续回拨，改发一条微信承接这几次拒接。';else react+=' 现在主动发一条微信回应这次'+kindTxt+'被拒接。';return '[系统：你打'+kindTxt+'给'+(meName||S.me.name)+'，ta明确点了拒接。'+fact+react+' 只生成符合当前事实的自然回复，不要写系统说明。]';}
 function scheduleRejectedCallFollowup(id,since,kindTxt){const aid=actId(),meName=S.me.name;clearTimeout(_callRejectFollow[id]);_callRejectFollow[id]=setTimeout(()=>{const c=getC(id);if(!c||c.blocked||_call)return;const replied=msgsForAccount(id,aid).some(m=>m.role==='user'&&m.type!=='sys'&&!m._call&&(m.time||0)>since);if(replied)return;
-  delayedAccountReply(id,'[系统：一分钟前'+meName+'拒接了你的'+kindTxt+'，你已经发过一句消息，但ta到现在还没回。再追问一句，别重复上一句：可以担心、委屈、别扭或有点急，符合你人设；如果察觉ta可能不开心，先哄，不要晾着ta。]',0,aid);
+  delayedAccountReply(id,rejectedCallPrompt(id,kindTxt,'followup',aid,meName),0,aid);
 },65000);}
 function placeCall(id,kind){const c=getC(id);if(!c)return;audioUnlock();_call={id,kind,state:'outgoing',dir:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
   blip(600,.15);setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
@@ -9144,8 +9147,8 @@ function declineCall(){if(!_call)return;ringStop();endCallTimers();hideCallBanne
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
   _call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();if(cur().p==='chat')render();
   const c=getC(id);if(wasIn&&c&&!c.blocked){
-    if(wasCb)maybeCallBack(id,_kind,false);// 她连回拨都不接，是不是还追，看他心情
-    else {delayedAccountReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，ta拒接了。你察觉到了，主动发消息问ta为什么不接、在干嘛（符合你心情值和人设）。]',2500);scheduleRejectedCallFollowup(id,Date.now(),kindTxt);}}}
+    if(wasCb)maybeCallBack(id,_kind,false,true);// 连回拨也拒接：后续无论再拨或改文字，都能承接当天拒接次数
+    else {delayedAccountReply(id,rejectedCallPrompt(id,kindTxt,'initial'),2500);scheduleRejectedCallFollowup(id,Date.now(),kindTxt);}}}
 function hangupCall(byAI,reason){if(!_call)return;blip(300,.3);endCallTimers();hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
   const endText=byAI?(reason==='wxlogin'?'角色为了登录你的微信主动挂断':reason==='remotecontrol'?'角色为了申请远程操控主动挂断':'角色主动挂断'):'你主动挂断';
@@ -9163,7 +9166,7 @@ function hangupCall(byAI,reason){if(!_call)return;blip(300,.3);endCallTimers();h
 // 有效打电话几率：设置里的几率 × 这个角色的黏人度/主动度（黏人主动的更爱打、高冷独立的很少打）
 function effCallProb(c){const cp=(S.settings.callProb==null?35:+S.settings.callProb);const t=(c&&c.traits)||{};const cl=(t.cling!=null?+t.cling:50),ac=(t.active!=null?+t.active:50);return Math.max(0,Math.min(100,Math.round(cp*(1+(((cl+ac)/2-50)/50)*0.8))));}
 // 她挂电话逃避 → 角色回拨。回拨强度由「有效打电话几率」决定：几率低就不再打、改用文字；几率高才追着回拨(最多3次)
-function maybeCallBack(id,kind,forced){const c=getC(id);if(!c||c.blocked)return;if(S.jail&&S.jail.active)return;const _replyAid=actId(),_replyMe=S.me.name;
+function maybeCallBack(id,kind,forced,rejected){const c=getC(id);if(!c||c.blocked)return;if(S.jail&&S.jail.active)return;const _replyAid=actId(),_replyMe=S.me.name;
   const eff=effCallProb(c);const tries=c._cbTries||0;if(tries>=3)return;kind=kind==='video'?'video':'voice';
   const mv=(c.moodVal==null?70:c.moodVal);
   let p;if(forced&&tries===0)p=eff/100;else{p=(0.55-(tries-1)*0.2)*(eff/45);if(mv<40)p+=0.12;else if(mv>82)p+=0.05;}
@@ -9173,7 +9176,7 @@ function maybeCallBack(id,kind,forced){const c=getC(id);if(!c||c.blocked)return;
     setTimeout(()=>{const cc=getC(id);if(actId()!==_replyAid||_call||!cc||cc.blocked||(S.jail&&S.jail.active))return;
       msgs(id).push({role:'user',type:'sys',content:(cc.remark||cc.name)+'又拨过来了…',time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
       incomingCall(id,kind);if(_call)_call._cb=true;},delay);
-  }else setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked)return;delayedAccountReply(id,'[系统：'+_replyMe+'刚挂了你电话，你这次没再回拨，改发条文字消息找ta（委屈/担心/或有点气地问怎么了，符合你的心情值和人设）。]',0,_replyAid);},2600);}
+  }else setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked)return;const note=rejected?rejectedCallPrompt(id,kind==='video'?'视频通话':'语音通话','callbackText',_replyAid,_replyMe):'[系统：'+_replyMe+'刚挂了你电话，你这次没再回拨，改发条文字消息找ta（委屈/担心/或有点气地问怎么了，符合你的心情值和人设）。]';delayedAccountReply(id,note,0,_replyAid);},2600);}
 function renderCallTime(){if(!_call||_call.state!=='active')return;const s=$('#callStat');if(s){const d=Math.floor((Date.now()-_call.start)/1000);s.textContent=Math.floor(d/60)+':'+(d%60).toString().padStart(2,'0');}}
 // 通话里你突然不说话的升级：3分钟问→10分钟再问→20分钟挂断重拨（重拨15秒没接就发消息）。睡觉/报备/哄睡/说了等下回来都不催。
 function checkCallSilence(){if(!_call||_call.state!=='active')return;
@@ -9522,21 +9525,20 @@ function initiativeArm(c){if(!c)return;initiativeState(c).nextAt=Date.now()+init
 function initiativeArmAll(){(S.contacts||[]).forEach(c=>{if(c&&c.proactive&&c.proactive.enabled)initiativeArm(c);});}
 function initiativeRecentUser(c){const arr=msgs(c.id);for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'&&m.type!=='sys'){const t=msgToText(m);if(t)return{text:t,time:m.time||0};}}return null;}
 function initiativeMemory(c,a,st){const lu=initiativeRecentUser(c),q=(lu&&lu.text||'')+' '+(a&&a.label||'');const ctx=selectRelevantMemory(c,q,2),pick=(ctx.items||[]).find(x=>x.score>=4.4&&memoryNorm(x.text)!==st.lastMemory);return pick||null;}
-function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50,canPhoto=!!(S.settings.imgGen&&imageGenerationAvailable()),slot=(+st.turn||0)%6;let kind;
-  if(slot===1&&canPhoto)kind='photo';
-  else if(slot===3)kind='location';
+function initiativeBlocksImage(note){return !!(note&&/这是一次【主动消息】/.test(note));}
+function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50,slot=(+st.turn||0)%6;let kind;
+  if(slot===3)kind='location';
   else if(mem&&Math.random()<(active>=65?.48:.32))kind='callback';
   else if(a&&a.busy<=1&&Math.random()<.5)kind='share';
   else if(active>=60&&Math.random()<.55)kind='self';
   else kind='reconnect';
   if(kind===st.lastKind){const choices=['callback','share','self','reconnect'].filter(x=>x!==kind&&(x!=='callback'||mem));if(choices.length)kind=choices[activityHash(c.id+'|'+Date.now())%choices.length];}
   let goal='';if(kind==='callback')goal='自然想起并回访这件事：「'+mem.text+'」。只问一个具体落点，不要背诵旧记录，也不要说“我还记得数据库里写着”。';
-  else if(kind==='photo')goal='像真实生活里突然想给ta看一样，分享一个和此刻状态一致的当下画面、桌面、窗外、路边或正在做的事。这一轮图片功能可用，必须单独发一行 [图片|具体的生活感随手拍描述]，并配一句自然短话；不要只用文字声称发了照片。';
   else if(kind==='location'){const loc=roleLiveLoc(c),ln=String(loc.name||loc.city||a.label||'当前位置').replace(/[|｜\]】]/g,' '),la=String(loc.address||a.label||'').replace(/[|｜\]】]/g,' ');goal='主动分享你此刻的真实位置，让ta知道你在哪里、正在做什么。这一轮必须单独发一行 [位置|'+ln+'|'+la+']，并配一句符合人设的短话；不得另编一个与当前活动不一致的地点。';}
   else if(kind==='share')goal='从你此刻“'+a.label+'”这个真实状态出发，分享一个很小的当下感受或念头；可以说刚忙完、正休息、准备做什么，但不要编造具体公司、人名、餐厅、商品、天气或已经发生的外部事件。';
   else if(kind==='self')goal='主动表达一个符合你人设的真实想法、偏好或此刻心情，让对方更了解你；要和近期聊天有一点自然联系，不要突然发表人生演讲。';
   else goal='自然重新开启对话。主动度或黏人度高可以直接表达想念、想听ta说话；低则淡淡抛出一个具体话头。不要机械质问“为什么不回”，也不要查岗。';
-  return{kind,memory:mem,goal,note:'[系统：这是一次【主动消息】，不是对方刚发来新话。现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常生活小片段、突然想到ta、碎碎念、想分享的照片或位置、轻微吃醋/撒娇/关心都要按人设轮换。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。]'};}
+  return{kind,memory:mem,goal,note:'[系统：这是一次【主动消息】，不是对方刚发来新话。现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常生活小片段、突然想到ta、碎碎念、位置、轻微吃醋/撒娇/关心都要按人设轮换。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。主动消息禁止自动附带照片、自拍或 [图片] 标签；只有对方在真实聊天中明确索要照片时才发。]'};}
 let _initiativeBusy={};
 function initiativeRunKey(c){return memoryScopeKey()+'|'+c.id;}
 function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.settings.initiative===false||!c||c.deleted||c.blocked||!c.proactive||!c.proactive.enabled||_call||_initiativeBusy[runKey])return false;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active)return false;const now=new Date();if(!initiativeWindow(c,now))return false;
@@ -9548,7 +9550,7 @@ function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.setting
   const a=currentRoleActivity(c,now);if(!a)return false;/* 用户明确设置的主动时段优先：即使推断活动是睡觉，也不能悄悄把一分钟间隔拖到早晨 */
   if(lm&&lm.role==='assistant'&&ts-(lm.time||0)<delay){st.nextAt=(lm.time||ts)+delay;return false;}
   const plan=initiativePlan(c,a,st),record=()=>{const doneAt=Date.now();st.lastAt=doneAt;st.lastKind=plan.kind;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=doneAt+initiativeDelayMs(c);st.turn=(+st.turn||0)+1;c._initiativeLast={time:doneAt,kind:plan.kind,activity:a.label,memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[countKey]=pc;save();};
-  const cp=effCallProb(c),callEligible=plan.kind!=='photo'&&plan.kind!=='location';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
+  const cp=effCallProb(c),callEligible=plan.kind!=='location';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
   _initiativeBusy[runKey]=1;const queued=scheduleReply(c.id,plan.note,ok=>{delete _initiativeBusy[runKey];if(ok)record();else{st.nextAt=Date.now()+15000;save();}});if(!queued){delete _initiativeBusy[runKey];st.nextAt=ts+15000;return false;}setTimeout(()=>{if(_initiativeBusy[runKey]){delete _initiativeBusy[runKey];st.nextAt=Date.now()+15000;}},300000);return true;}
 let _initiativeCursor=0;
 function checkInitiative(){if(S.settings.initiative===false)return;const cs=S.contacts||[];for(let i=0;i<cs.length;i++){const idx=(_initiativeCursor+i)%cs.length;if(initiativeMaybeSend(cs[idx])){_initiativeCursor=(idx+1)%Math.max(1,cs.length);break;}}}
