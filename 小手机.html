@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='653';</script>
+<script>window.__NORTH_SHELL_BUILD__='654';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,15 +29,15 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-653';
+  var key='north-sw-reloaded-654';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       if(window.__northBootReady)return;
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','653');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','654');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=653';
+  var url='sw.js?v=654';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -153,6 +153,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .livemap{height:calc(100vh - 44px);height:calc(100dvh - 44px);background:#07090d;color:#f5f7fa;position:relative;overflow:hidden;}.lmnav{background:#111418!important;border-bottom:1px solid rgba(255,255,255,.06)!important;}.lmhead{position:absolute;z-index:5;top:12px;left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(17,20,27,.72);backdrop-filter:blur(14px);box-shadow:0 10px 30px rgba(0,0,0,.22);}.lmhead small{display:block;color:#8d97a8;font-size:11px;margin-bottom:3px;}.lmhead b{display:block;font-size:14px;line-height:1.3;}.lmhead button,.lmtools button{border:0;border-radius:999px;background:rgba(255,255,255,.12);color:#eaf0f7;padding:8px 10px;font-size:12px;}.lmview{position:absolute;inset:0;overflow:hidden;touch-action:none;background:radial-gradient(circle at 52% 45%,#18202a 0,#0b0d12 60%,#050609 100%);}.lmlayer{position:absolute;left:0;top:0;width:1000px;height:640px;transform-origin:0 0;transition:transform .16s ease-out;}.lmcountry{position:absolute;border:1px solid rgba(255,255,255,.12);background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025));color:rgba(255,255,255,.22);font-size:22px;font-weight:800;letter-spacing:5px;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 40px rgba(255,255,255,.035);}.lmcountry.usa{left:42px;top:205px;width:190px;height:210px;border-radius:44% 50% 42% 48%;}.lmcountry.china{left:315px;top:206px;width:255px;height:300px;border-radius:42% 48% 46% 44%;}.lmcountry.korea{left:608px;top:248px;width:75px;height:118px;border-radius:48%;font-size:13px;letter-spacing:2px;}.lmcountry.japan{left:708px;top:215px;width:95px;height:185px;border-radius:48%;font-size:14px;letter-spacing:3px;transform:rotate(14deg);}.lmriver,.lmroad{position:absolute;pointer-events:none;opacity:.52}.lmriver{height:3px;border-radius:999px;background:linear-gradient(90deg,transparent,#6fb6ff,transparent);filter:blur(.1px);}.lmriver.r1{left:332px;top:376px;width:230px;transform:rotate(-18deg);}.lmriver.r2{left:82px;top:338px;width:142px;transform:rotate(8deg);}.lmroad{border-top:1px solid rgba(255,255,255,.16);}.lmroad.a{left:345px;top:316px;width:230px;transform:rotate(28deg);}.lmroad.b{left:604px;top:314px;width:95px;transform:rotate(70deg);}.lmroad.c{left:78px;top:326px;width:150px;transform:rotate(-18deg);}.lmsvg{position:absolute;inset:0;width:1000px;height:640px;overflow:visible;pointer-events:none;filter:drop-shadow(0 0 8px rgba(255,255,255,.12));}.lmlabel{position:absolute;transform:translate(-50%,-160%);font-style:normal;color:rgba(230,238,248,.66);font-size:11px;text-shadow:0 1px 8px #000;}.lmmarker{position:absolute;z-index:3;transform:translate(-50%,-100%);min-width:120px;text-align:center;pointer-events:none;}.lmmarker span{display:block;margin:0 auto 7px;width:18px;height:18px;border-radius:50%;background:#1b74e8;box-shadow:0 0 0 7px rgba(27,116,232,.18),0 0 0 16px rgba(27,116,232,.08);animation:lmpulse 2s ease-out infinite;}.lmmarker.me span{background:#34c759;box-shadow:0 0 0 7px rgba(52,199,89,.18),0 0 0 16px rgba(52,199,89,.08);}.lmmarker b{display:block;color:#fff;font-size:13px;text-shadow:0 2px 8px #000;}.lmmarker small{display:block;margin-top:3px;color:#b6c0cf;font-size:10px;white-space:nowrap;text-shadow:0 2px 8px #000;}.lmtrail{position:absolute;z-index:2;transform:translate(-50%,-50%);display:flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:rgba(20,24,31,.78);border:1px solid rgba(255,255,255,.11);box-shadow:0 7px 18px rgba(0,0,0,.22);}.lmtrail i{font-style:normal;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#d8dde5;color:#151922;font-size:10px;font-weight:800;}.lmtrail b{font-size:10px;color:#eef2f7;}.lmtrail small{font-size:10px;color:#8994a5;}.lmtools{position:absolute;z-index:6;right:14px;bottom:156px;display:grid;gap:8px;}.lmtools button{min-width:42px;height:36px;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.25);}.lmfoot{position:absolute;z-index:5;left:14px;right:14px;bottom:14px;max-height:124px;overflow:auto;padding:12px;border-radius:18px;background:rgba(17,20,27,.76);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);}.lmfoot>b{display:block;font-size:13px;margin-bottom:7px;}.lmfoot div{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid rgba(255,255,255,.06);}.lmfoot span{color:#8d97a8;font-size:11px;}.lmfoot strong{font-size:12px;font-weight:600;}.lmfoot small{color:#697589;font-size:11px;}@keyframes lmpulse{0%{transform:translate(-50%,-50%) scale(.72);opacity:.9}100%{transform:translate(-50%,-50%) scale(1.25);opacity:0}}.lmmarker span{animation-name:lmpulseDot}@keyframes lmpulseDot{0%{transform:scale(.82);opacity:1}100%{transform:scale(1.28);opacity:.72}}
 .cfile{background:#fff;display:flex;align-items:center;padding:11px;gap:10px;}.cfile .ic{font-size:32px;}.cfile .n{font-size:13px;word-break:break-all;}.cfile .s{font-size:11px;color:#999;}
 /* 输入栏 */
+.lmview{background-color:#080b11;background-image:radial-gradient(circle at 52% 42%,rgba(43,63,84,.62),transparent 34%),linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:auto,28px 28px,28px 28px}.lmview.dragging .lmlayer{transition:none}.lmlayer{transition:transform .12s cubic-bezier(.2,.7,.2,1);will-change:transform}.lmcountry{backdrop-filter:blur(2px)}.lmcountry.europe{left:270px;top:180px;width:112px;height:190px;border-radius:44% 55% 48% 42%;font-size:12px;letter-spacing:2px}.lmtrail{width:26px;height:26px;padding:0;border-radius:50%;justify-content:center;gap:0;background:rgba(18,23,31,.88);border-color:rgba(255,255,255,.24)}.lmtrail i{width:20px;height:20px}.lmtrail b,.lmtrail small{display:none}.lmfoot{box-shadow:0 18px 50px rgba(0,0,0,.38)}.lmhead{box-shadow:0 14px 38px rgba(0,0,0,.34)}.lmtools button{backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08)}
 .inputbar{flex:0 0 auto;display:flex;align-items:flex-end;gap:7px;padding:7px 9px;background:#f7f7f7;border-top:.5px solid #ddd;}
 .inputbar .plus{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#e7e7e9;cursor:pointer;background:linear-gradient(145deg,#45474c,#292b2f);border:1px solid rgba(255,255,255,.12);box-shadow:0 3px 9px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .15s;}
 .inputbar .plus:active{transform:scale(.9) rotate(90deg);}
@@ -200,6 +201,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .wallet{margin:14px;border-radius:18px;background:linear-gradient(145deg,#2bb36a,#0a9c52);padding:22px;color:#fff;}
 .wallet .lb{font-size:13px;opacity:.85;}.wallet .ba{font-size:34px;font-family:Georgia,serif;margin:8px 0;}
 .bill{display:flex;justify-content:space-between;padding:12px 16px;border-bottom:.5px solid #f0f0f0;background:#fff;font-size:14px;}
+.orderrow{align-items:flex-start;gap:12px}.orderinfo{flex:1;min-width:0;line-height:1.45;word-break:break-word}.orderinfo small{line-height:1.55}.orderactions{flex:0 0 118px;display:flex;justify-content:flex-end;align-items:center;align-content:flex-start;gap:6px;flex-wrap:wrap}.orderactions .minibtn{margin:0;white-space:nowrap}@media(max-width:430px){.orderrow{display:grid;grid-template-columns:minmax(0,1fr);gap:9px}.orderactions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}.orderactions .minibtn{width:100%;padding:7px 5px;text-align:center}}
 .bill small{display:block;color:#aaa;margin-top:3px;font-size:11px;}
 .bill .pos{color:#19a463;}.bill .neg{color:#333;}
 /* 表单/弹窗 */
@@ -639,7 +641,7 @@ body{background:#000;padding:0;}
 .voiceb .vwave{height:18px;display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;}
 .voiceb .vwave i{width:3px;height:8px;border-radius:3px;background:currentColor;opacity:.72;transform-origin:center;animation:vwidle 1.35s ease-in-out infinite;}
 .voiceb .vwave i:nth-child(2){height:14px;animation-delay:.12s}.voiceb .vwave i:nth-child(3){height:10px;animation-delay:.24s}.voiceb .vwave i:nth-child(4){height:16px;animation-delay:.36s}
-.voiceb.loading{background:#343438!important;color:#aaaab2!important;cursor:pointer;box-shadow:none;opacity:.92;}
+.voiceb.loading{cursor:pointer;}
 .voiceb.loading .vwave i{animation:vwbirth .72s ease-in-out infinite;opacity:.9;}
 .voiceb.queued{box-shadow:0 0 0 1px rgba(255,255,255,.1),0 0 18px rgba(255,150,190,.22)!important;}
 .voiceb.queued:after{content:'';position:absolute;inset:-12px;border-radius:inherit;background:radial-gradient(circle,rgba(255,180,210,.28),transparent 58%);animation:vwripple 1.1s ease-out infinite;pointer-events:none;}
@@ -872,8 +874,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=653" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=653" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=653"></script>
+<script src="license-gate.js?v=654" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=654" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=654"></script>
 </body>
 </html>

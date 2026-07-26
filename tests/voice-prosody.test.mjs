@@ -200,6 +200,6 @@ assert.match(source, /u\.rate=\(\+v\.rate\|\|1\)\*vp\.speed/);
 assert.match(source, /await sleep\(callPaceMs\(360,220\)\)/);
 assert.match(source, /if\(video\)content=ensureVideoCallAction\(content,_callCueTag\)/);
 assert.match(source, /function phReleaseSimSub\(callId,line\)/);
-assert.match(source, /const off=phPhoneVoiceOffset\(\);if\(off<0\)preT=setTimeout\(show,Math.max\(0,600\+off\)\)/);
+assert.match(source, /const off=phPhoneVoiceOffset\(\);if\(video&&followedAction\)show\(\);else if\(off<0\)preT=setTimeout\(show,Math.max\(0,600\+off\)\)/);
 
 console.log("voice prosody tests passed");
