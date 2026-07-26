@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='666';</script>
+<script>window.__NORTH_SHELL_BUILD__='667';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,14 +29,14 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-666';
+  var key='north-sw-reloaded-667';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','666');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','667');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=666';
+  var url='sw.js?v=667';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -853,6 +853,7 @@ body{background:#000;padding:0;}
 @media (orientation:landscape) and (max-height:520px){.cin-overlay-top{padding-top:max(7px,env(safe-area-inset-top))}.cin-overlay-head{height:36px}.cin-edge-btn,.cin-collapse-btn{width:32px;height:32px}.cin-tool-shelf{padding-top:4px}.cin-tool-shelf button{height:26px}.cin-chat-reveal{left:auto;right:max(14px,env(safe-area-inset-right));bottom:max(62px,calc(env(safe-area-inset-bottom) + 54px));height:38px;transform:none;z-index:30}.cin-chat-dock{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px));width:min(610px,76vw);max-height:38vh;z-index:30}.cin-status-chip{bottom:max(60px,calc(env(safe-area-inset-bottom) + 52px));max-width:24vw}.cin-stage.chat-open .cin-status-chip{bottom:calc(var(--cin-chat-h) + max(66px,env(safe-area-inset-bottom)))}.cin-sub,.cin-stage.cin-theater .cin-sub{bottom:max(18px,5vh)}}
 .cin-screen video{pointer-events:none}.cin-media-controls{position:absolute;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));z-index:26;height:40px;display:flex;align-items:center;gap:9px;padding:0 10px;border:1px solid rgba(255,255,255,.12);border-radius:13px;background:rgba(8,8,11,.66);box-sizing:border-box;backdrop-filter:blur(18px);pointer-events:auto;touch-action:manipulation}.cin-media-controls button{width:31px;height:31px;flex:none;border:0;border-radius:9px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;touch-action:manipulation}.cin-media-controls input{flex:1;min-width:55px;accent-color:#dc86ae;touch-action:pan-x}.cin-media-controls span{flex:none;color:#c7c1c9;font-size:9px;font-variant-numeric:tabular-nums}.cin-chat-reveal{bottom:max(56px,calc(env(safe-area-inset-bottom) + 48px))}.cin-chat-dock{bottom:max(56px,calc(env(safe-area-inset-bottom) + 48px))}.cin-status-chip{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px))}.cin-stage.chat-open .cin-status-chip{bottom:calc(var(--cin-chat-h) + max(66px,env(safe-area-inset-bottom)))}.cin-reader-divider{position:relative;flex:0 0 18px;width:100%;height:18px;padding:0;border:0;border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06);background:#0d0d11;touch-action:none;cursor:ns-resize}.cin-reader-divider span{display:block;width:44px;height:4px;margin:auto;border-radius:99px;background:rgba(226,216,227,.36)}.cin-paper-wrap{flex:0 0 auto}.cin-logbox.reader{flex:1 1 105px;min-height:72px}.cin-book-input{height:82px!important;min-height:82px!important;max-height:82px!important;padding:8px 10px 10px!important;align-items:stretch}.cin-book-input textarea{height:100%;max-height:none;box-sizing:border-box;overflow-y:auto}.cin-book-input>button{align-self:center}.cin-media-controls button.tap{background:rgba(112,55,83,.92);color:#fff;transform:scale(.96)}
 @media (orientation:landscape) and (max-height:520px){.cin-media-controls{left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));height:42px;z-index:40}.cin-screen video{pointer-events:none}.cin-overlay-top,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock{z-index:42}.cin-chat-reveal{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px))}.cin-chat-dock{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px))}}
+.cin-media-controls{transition:opacity .18s ease,transform .2s ease}.cin-media-controls.hidden{opacity:0;transform:translateY(calc(100% + 18px));pointer-events:none}.cin-media-controls .cin-media-hide{width:30px;color:#c7c1c9;font-size:18px}.cin-stage:not(.media-hidden):not(.chat-open) .cin-sub,.cin-stage.cin-theater:not(.media-hidden):not(.chat-open) .cin-sub{bottom:max(64px,calc(env(safe-area-inset-bottom) + 56px))}.cin-stage.media-hidden:not(.chat-open) .cin-sub,.cin-stage.cin-theater.media-hidden:not(.chat-open) .cin-sub{bottom:max(18px,5vh)}.cin-stage.chat-open .cin-sub{bottom:calc(var(--cin-chat-h) + 66px)}.cin-stage.media-hidden .cin-chat-reveal,.cin-stage.media-hidden .cin-chat-dock{bottom:max(12px,env(safe-area-inset-bottom))}.cin-stage.media-hidden .cin-status-chip{bottom:max(12px,env(safe-area-inset-bottom))}.cin-stage.media-hidden.chat-open .cin-status-chip{bottom:calc(var(--cin-chat-h) + max(20px,env(safe-area-inset-bottom)))}
 @media (prefers-reduced-motion:reduce){.cin-barrage{animation-duration:.01ms!important}}
 </style>
 <style>
@@ -907,8 +908,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=666" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=666" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=666"></script>
+<script src="license-gate.js?v=667" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=667" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=667"></script>
 </body>
 </html>

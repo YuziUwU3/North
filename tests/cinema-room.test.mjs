@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v666 · 放映室横屏控制与陪伴修复'/);
+assert.match(source, /APP_VER='v667 · 放映室随机回复与进度隐藏'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -123,14 +123,19 @@ assert.match(source, /function cinemaControlTap/);
 assert.match(source, /root\.addEventListener\('pointerup',cinemaControlTap,true\)/);
 assert.match(source, /root\.addEventListener\('touchend',cinemaControlTap/);
 assert.match(source, /root\.addEventListener\('click',cinemaControlTap,true\)/);
-assert.match(source, /class="cin-media-controls"/);
+assert.match(source, /id="cinMediaControls" class="cin-media-controls/);
 assert.match(source, /webkit-playsinline disablepictureinpicture/);
 assert.doesNotMatch(source, /id="cinVideo"[^>]* controls/);
 assert.match(source, /data-cin-resize="reader"/);
 assert.doesNotMatch(source, /data-cin-resize="book"/);
 assert.ok(source.indexOf('class="cin-reader-divider"') < source.indexOf('class="cin-reader-actions"'));
 assert.match(source, /function cinemaReplyCountMenu/);
-assert.match(source, /automatic\?1:cinemaReplyCount\(\)/);
+assert.match(source, /automatic\?1:cinemaRandomReplyCount\(\)/);
+assert.match(source, /function cinemaRandomReplyCount/);
+assert.match(source, /1\+Math\.floor\(Math\.random\(\)\*limit\)/);
+assert.match(source, /data-cin-action="media-hide"/);
+assert.match(source, /轻点影片画面可重新显示/);
+assert.match(source, /_cin\.mediaOpen===false\)cinemaMediaToggle\(true\)/);
 assert.match(source, /!opt\.silentReply&&!_cin\.busy/);
 assert.match(source, /addSummary\(c,memory,4,'【放映室】'\)/);
 assert.match(source, /cinemaSessionId=s\.id/);
@@ -177,6 +182,10 @@ const bilingualMany = behavior.parseRoles("I like this scene.\n（我喜欢这�
 assert.equal(bilingualMany.length, 2);
 assert.equal(bilingualMany[1].spoken, "That was unexpected.");
 
+const randomReply = vm.createContext({ cinemaReplyCount: () => 5, Math: { floor: Math.floor, random: () => 0.99 } });
+vm.runInContext(lineFunctionSource("cinemaRandomReplyCount") + ";globalThis.count=cinemaRandomReplyCount();", randomReply);
+assert.equal(randomReply.count, 5);
+
 const memoryState = {
   messages: {
     "role-a#account-a": [
@@ -199,6 +208,8 @@ const watch = functionSource("renderCinemaWatch");
 assert.match(watch, /cin-overlay-top/);
 assert.match(watch, /cin-chat-dock/);
 assert.match(watch, /data-cin-action="chat-open"/);
+assert.match(watch, /id="cinMediaControls"/);
+assert.match(watch, /aria-label="隐藏播放进度"/);
 assert.match(watch, /data-cin-resize="video"/);
 assert.match(watch, /--cin-chat-h:/);
 assert.match(watch, /cinTopReveal/);
@@ -320,6 +331,6 @@ assert.match(functionSource("scheduleReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("incomingCall"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("aiReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("initiativeMaybeSend"), /cinemaRoleOccupied\(c\.id\)/);
-assert.match(html, /app\.js\?v=666/);
+assert.match(html, /app\.js\?v=667/);
 
 console.log("cinema room tests passed");
