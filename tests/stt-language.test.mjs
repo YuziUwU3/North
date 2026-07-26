@@ -28,6 +28,12 @@ assert.equal(context.sttApiLang("ja-JP"), "ja");
 assert.equal(context.sttApiLang("ko-KR"), "ko");
 
 assert.match(source, /id="s_slang"/);
+assert.match(source, /fetchModels\('s_sbase','s_skey','s_smodel'\)/);
+assert.match(source, /onclick="testSTT\(\)"/);
+assert.match(source, /async function testSTT/);
+assert.match(source, /getUserMedia\(\{audio:true\}\)/);
+assert.match(source, /await sttRequest\(blob,\{timestamps:true,lang\}\)/);
+assert.match(source, /影片“一键提取字幕”不可用/);
 assert.match(source, /识别语言（只转写，不翻译）/);
 assert.match(source, /英文 → 英文文字/);
 assert.match(source, /fd\.append\('language',sttApiLang\(opt\.lang\|\|a\.lang\)\)/);
