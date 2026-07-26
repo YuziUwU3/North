@@ -27,7 +27,11 @@ function functionSource(name) {
 const maybeSource = functionSource('initiativeMaybeSend');
 assert.doesNotMatch(maybeSource, /manualReply/, 'manual reply mode must not suppress proactive contact');
 assert.doesNotMatch(maybeSource, /memoryPending/, 'a pending memory confirmation must not suppress proactive contact forever');
+assert.doesNotMatch(maybeSource, /humanLikeOn/, 'the dedicated proactive switch must not depend on the general human-likeness switch');
+assert.doesNotMatch(maybeSource, /isMain\(/, 'proactive contact must work for the currently active identity too');
 assert.doesNotMatch(maybeSource, /15\s*\*\s*60000/, 'the configured interval must not be replaced by a 15-minute floor');
+assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep activity must not override an explicitly configured proactive window');
+assert.match(maybeSource, /affNow\(c\)>=35/, 'ignore escalation may suppress ordinary initiative only when escalation is actually eligible');
 assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]/);
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
@@ -59,7 +63,7 @@ const locationPlan = planContext.plan(role, activity, {turn: 3, lastKind: '', la
 assert.equal(locationPlan.kind, 'location');
 assert.match(locationPlan.note, /\[位置\|公司\|办公区\]/);
 
-function schedulerContext({planKind = 'share', callProb = 0, queue = true} = {}) {
+function schedulerContext({planKind = 'share', callProb = 0, queue = true, delivered = queue, activityKey = 'work'} = {}) {
   const now = Date.now();
   const state = {nextAt: now - 1, lastAt: 0, lastKind: '', lastMemory: '', turn: 0};
   const c = {id: 'r1', proactive: {enabled: true, start: 0, end: 23, times: 10}, followups: []};
@@ -75,26 +79,27 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true} = {})
     _call: null,
     _initiativeBusy: {},
     _replying: null,
+    _replyTimers: {},
     _IGT: [30],
-    humanLikeOn: () => true,
-    isMain: () => true,
+    memoryScopeKey: () => 'main',
+    replyStateKey: (id) => id,
     initiativeWindow: () => true,
     initiativeState: () => state,
     initiativeDelayMs: () => 60000,
     lastMsg: () => ({role: 'user', time: now - 120000}),
     lastUserTs: () => 0,
-    currentRoleActivity: () => ({key: 'work', label: '正在忙工作', busy: 4}),
+    currentRoleActivity: () => ({key: activityKey, label: activityKey === 'sleep' ? '在睡觉或休息' : '正在忙工作', busy: 4, until: now + 21600000}),
     initiativePlan: () => ({kind: planKind, memory: null, note: '[系统：主动联系]'}),
     effCallProb: () => callProb,
     proCall: () => { calls.called++; return true; },
-    scheduleReply: () => { calls.queued++; return queue; },
+    scheduleReply: (id, note, done) => { calls.queued++; if (done) done(delivered); return queue; },
     memoryNorm: (v) => String(v),
     save: () => { calls.saved++; },
     setTimeout: () => 1,
     Date,
     Math: sandboxMath,
   });
-  vm.runInContext(maybeSource + ';globalThis.run=initiativeMaybeSend;', context);
+  vm.runInContext(functionSource('initiativeRunKey') + ';' + maybeSource + ';globalThis.run=initiativeMaybeSend;', context);
   return {result: context.run(c), state, c, calls, S: context.S};
 }
 
@@ -103,9 +108,17 @@ assert.equal(message.result, true);
 assert.equal(message.calls.queued, 1, 'manual reply mode and a busy activity must still allow proactive messages');
 assert.equal(message.S._proactiveCount.r1.n, 1);
 
+const lateNight = schedulerContext({activityKey: 'sleep'});
+assert.equal(lateNight.result, true, 'an explicit active window must still honor the one-minute interval at night');
+assert.equal(lateNight.calls.queued, 1);
+
 const failedQueue = schedulerContext({queue: false});
 assert.equal(failedQueue.result, false);
 assert.equal(failedQueue.S._proactiveCount.r1, undefined, 'a blocked queue must not consume the daily quota');
+
+const failedDelivery = schedulerContext({queue: true, delivered: false});
+assert.equal(failedDelivery.result, true);
+assert.equal(failedDelivery.S._proactiveCount.r1, undefined, 'an AI failure after queuing must not consume the daily quota');
 
 const call = schedulerContext({callProb: 100});
 assert.equal(call.calls.called, 1, 'high call probability must be checked on ordinary proactive opportunities');

@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v656 · 主动联系修复'/);
+assert.match(source, /APP_VER='v658 · 活人感链路修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'video',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -45,6 +45,18 @@ assert.match(source, /\.srt,\.vtt,text\/vtt/);
 assert.match(source, /\.txt,\.md,\.epub/);
 assert.match(source, /URL\.createObjectURL\(f\)/);
 assert.doesNotMatch(source, /S\.cinema\.(?:videoFile|bookText)\s*=/);
+assert.match(source, /cinemaOpenOnlineModal/);
+assert.match(source, /cinemaOpenOnline\(\)[\s\S]*?https\?:/);
+assert.match(source, /function cinemaRenameSave/);
+assert.match(source, /function cinemaLibraryPlay/);
+assert.doesNotMatch(functionSource("cinemaLibraryHTML"), /slice\(0,\s*12\)/, "video box and bookshelf must not hide older saved items");
+assert.match(source, /从头开始/);
+assert.match(source, /cinemaStoreKey\('video'/);
+assert.match(source, /indexedDB\.open\('yibeiCinema',1\)/);
+assert.match(source, /await cinPut\(key,f\)/);
+assert.match(source, /scanIDBStoreBytes\(cinDB,'media'/);
+assert.match(source, /视频盒/);
+assert.match(source, /书架/);
 
 const helperContext = vm.createContext({});
 vm.runInContext(
@@ -65,6 +77,7 @@ const contextSandbox = vm.createContext({
   _cin: { cues: [
     { start: 5, end: 7, text: "过去" },
     { start: 18, end: 22, text: "当前" },
+    { start: 19, end: 20, text: "语音转写", source: "speech" },
     { start: 30, end: 33, text: "未来剧透" },
   ] },
   cinemaFmt: (n) => String(n),
@@ -72,18 +85,42 @@ const contextSandbox = vm.createContext({
 vm.runInContext(lineFunctionSource("cinemaSubtitleContext") + ";globalThis.ctx=cinemaSubtitleContext(20);", contextSandbox);
 assert.match(contextSandbox.ctx, /过去/);
 assert.match(contextSandbox.ctx, /当前/);
+assert.doesNotMatch(contextSandbox.ctx, /语音转写/);
 assert.doesNotMatch(contextSandbox.ctx, /未来剧透/);
 
 assert.match(source, /严禁引用后面的剧情/);
 assert.match(source, /不要动作描写、第三人称叙述、括号舞台说明、心情标签/);
-assert.match(source, /没有可用字幕，只知道片名；不要假装知道具体剧情/);
+assert.match(source, /没有可用字幕或语音转写，只知道片名；不要假装知道具体剧情/);
+assert.match(source, /当前屏幕字幕/);
+assert.match(source, /截至此刻的语音转写/);
+assert.match(source, /function cinemaStartTranscribe/);
+assert.match(source, /captureStream\|\|v\.mozCaptureStream/);
+assert.match(source, /sttTranscribe\(blob\)/);
+assert.match(source, /function cinemaAnalyzeFrame/);
+assert.match(source, /visionAPI\(data/);
+assert.match(source, /settings\.voiceComment\)speak\(text,c\)/);
 assert.match(source, /addSummary\(c,memory,4,'【放映室】'\)/);
 assert.match(source, /S\.cinema\.sessions=\(S\.cinema\.sessions\|\|\[\]\)\.filter\(x=>x&&x\.cid!==id\)/);
 
-assert.match(html, /\.cin-barrage\.mine\{color:#ff8fbe/);
+const watch = functionSource("renderCinemaWatch");
+assert.match(watch, /cin-overlay-top/);
+assert.match(watch, /cin-chat-dock/);
+assert.match(watch, /cinTopReveal/);
+assert.match(watch, /cinemaEnd\(\)/);
+assert.doesNotMatch(watch, /id="cinLog"/);
+assert.doesNotMatch(watch, /cin-context/);
+assert.doesNotMatch(source, /把故事留在/);
+
+assert.match(source, /cinema:_MI\(/);
+assert.match(source, /HOMEAPPS=[\s\S]*?\['cinema','','放映室'\]/);
+assert.match(source, /function setAppIcon\(key\)[\s\S]*?S\.me\.appIcons\[key\]=await compress/);
+assert.match(html, /\.cin-barrage\{[^}]*background:transparent!important/);
+assert.match(html, /\.cin-barrage\.mine\{color:#ff91bd/);
 assert.match(html, /\.cin-barrage\.role\{color:#79caff/);
-assert.match(html, /\.cin-stage\.cin-theater\{position:fixed;inset:0;z-index:9999/);
+assert.match(html, /\.cin-stage,\.cin-stage\.cin-theater\{position:fixed;inset:0;z-index:9999/);
+assert.match(html, /\.cin-overlay-top\.collapsed/);
+assert.match(html, /\.cin-chat-dock\.open/);
 assert.match(html, /原创深色影院界面/);
-assert.match(html, /app\.js\?v=656/);
+assert.match(html, /app\.js\?v=658/);
 
 console.log("cinema room tests passed");
