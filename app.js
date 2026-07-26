@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v662 · 放映室点击与上下文修复';
+const APP_VER='v662 · 共享地图与放映室修复';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -5507,10 +5507,9 @@ function liveLocForMsg(c,m,me){
   if(m&&m.loc&&Number.isFinite(+m.loc.x)&&Number.isFinite(+m.loc.y))return Object.assign({},m.loc,{name:m.name||m.loc.name,address:m.address||m.loc.address});
   return me?meLiveLoc():roleLiveLoc(c,(m&&((m.name||'')+' '+(m.address||'')))||'');
 }
-function liveLocTrail(c){
-  const base=roleLiveLoc(c),seed=(c&&c.id||'role')+'|trail|'+todayStr(),names={中国:['住处附近','早餐店','工作地点','午后咖啡','晚间散步'],日本:['公寓附近','车站','工作地点','便利店','夜间街口'],韩国:['住处附近','地铁站','工作地点','咖啡店','汉江步道'],美国:['apartment','coffee stop','workplace','downtown','evening walk'],英国:['住处附近','地铁站','工作地点','街角咖啡','晚间散步'],法国:['住处附近','地铁站','工作地点','街角咖啡','河岸散步'],意大利:['住处附近','车站','工作地点','街角咖啡','老城散步']}[base.country]||['住处附近','路上','工作地点','咖啡店','晚间散步'],times=['08:10','10:35','14:20','18:40','21:05'];
-  return names.map((n,i)=>{const p=liveLocJitter(base,seed+'|'+i,34+i*4);return Object.assign({label:n,time:times[i]||hm(),city:base.city,country:base.country,address:base.country+' · '+base.city+' · '+n},p);});
-}
+function liveLocTrail(c){if(!c||!c.id)return[];const now=Date.now(),d=new Date(now);d.setHours(0,0,0,0);const start=d.getTime(),seen=new Set();return msgs(c.id).filter(m=>m&&m.role==='assistant'&&m.type==='location'&&(m.time||0)>=start&&(m.time||0)<=now).sort((a,b)=>(a.time||0)-(b.time||0)).map(m=>{const loc=liveLocForMsg(c,m,false),key=m.id||((m.time||0)+'|'+(m.name||'')+'|'+(m.address||''));if(seen.has(key))return null;seen.add(key);const p=liveLocJitter(loc,(c.id||'role')+'|shared-trail|'+key,26),addr=m.address||loc.address||'',label=(m.name||addr.split(' · ').pop()||loc.name||'位置分享').trim();return Object.assign({},loc,p,{id:key,ts:m.time||now,time:hm(m.time||now),label,city:loc.city||'',country:loc.country||'',address:addr,source:'位置分享'});}).filter(Boolean).slice(-5);}
+function liveMapCityLabels(roleLoc,myLoc){const dist=(p,q)=>Math.hypot((p.x||0)-(q.x||0),(p.y||0)-(q.y||0)),out=[],seen=new Set(),add=p=>{if(p&&!seen.has(p.n)){seen.add(p.n);out.push(p);}};[roleLoc,myLoc].forEach(loc=>LIVE_LOC_CITIES.slice().sort((a,b)=>dist(a,loc)-dist(b,loc)).slice(0,6).forEach(add));['纽约','伦敦','巴黎','北京','上海','首尔','东京'].forEach(n=>add(LIVE_LOC_CITIES.find(x=>x.n===n)));return out.slice(0,16);}
+function liveMapRegionSVG(){return `<svg class="lmcarto" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="lmLand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#26384b"/><stop offset="1" stop-color="#111a25"/></linearGradient><filter id="lmGlow"><feGaussianBlur stdDeviation="7"/></filter></defs><g class="lmmeridians"><path d="M0 160H1000M0 320H1000M0 480H1000M200 0V640M400 0V640M600 0V640M800 0V640"/></g><g class="lmlands"><path d="M30 208C66 170 142 158 208 192s58 106 17 160-119 74-172 29-67-126-23-173Z"/><path d="M269 190c25-42 74-55 112-21 31 28 24 74-5 105-30 31-22 70-56 89-45 25-76-25-65-68 9-37-7-69 14-105Z"/><path d="M383 188c70-41 163-33 213 19 45 47 34 139-14 202-49 65-147 98-213 53-55-38-61-127-28-190 16-30 12-67 42-84Z"/><path d="M612 244c21-23 49-14 57 15 8 31-1 75-23 99-21 22-47 7-48-26-1-31-8-65 14-88Z"/><path d="M707 205c26-17 54 12 57 53 4 45 28 86 5 126-20 34-57 22-60-19-3-43-28-72-20-111 4-22 5-40 18-49Z"/></g><g class="lmregionlines"><path d="M78 270c42 5 83 28 119 67M304 229c24 35 43 76 51 119M420 230c57 37 103 94 132 161M624 271c13 22 20 48 21 76M722 241c17 39 25 80 26 124"/></g><g class="lmregionnames"><text x="128" y="250">北美洲 · NORTH AMERICA</text><text x="319" y="218">欧洲 · EUROPE</text><text x="462" y="270">中国 · CHINA</text><text x="635" y="280">韩国</text><text x="730" y="280">日本</text></g></svg>`;}
 let _liveMap=null,_liveMapGeoBusy=false;
 function liveMapInit(key,focus){if(!_liveMap||_liveMap.key!==key){_liveMap={key,z:.86,x:190-(focus.x*.86),y:265-(focus.y*.86),down:false,pointers:new Map(),raf:0};}if(!_liveMap.pointers)_liveMap.pointers=new Map();return _liveMap;}
 function liveMapTransform(){const s=_liveMap||{x:0,y:0,z:1};return 'translate('+s.x+'px,'+s.y+'px) scale('+s.z+')';}
@@ -5529,24 +5528,23 @@ function liveLocCardHTML(c,m,me){
   return `<div class="card cloc loccard" onclick="event.stopPropagation();go('livemap',{id:'${rid}',mid:'${mid}'})"><div class="locmini"><div class="locgrid"></div><i class="locroute"></i><span class="locpin">${svgIc('location',18,'#fff')}</span><span class="locpulse"></span><b>${esc(loc.city||'共享位置')}</b></div><div class="info"><div class="n">${esc(nm||'共享位置')}</div><div class="a">${esc(addr||'点击查看实时位置和今日足迹')}</div><div class="locmeta">共享位置 · 今日足迹</div></div></div>`;
 }
 function renderLiveMap(id,mid){
-  const c=getC(id)||{},arr=msgs(id),m=arr.find(x=>x.id===mid)||{},me=m.role==='user',shared=liveLocForMsg(c,m,me),roleLoc=me?roleLiveLoc(c):shared,myLoc=me?shared:meLiveLoc(),focus=me?myLoc:roleLoc,state=liveMapInit(id+'|'+(mid||'latest'),focus),trail=liveLocTrail(c),pts=trail.concat([roleLoc]).map(p=>p.x+','+p.y).join(' '),labels=['伦敦','纽约','北京','苏州','首尔','东京'].map(n=>LIVE_LOC_CITIES.find(x=>x.n===n)).filter(Boolean),addrShort=((roleLoc.address||'').split(' · ').pop()||roleLoc.address||'当前位置');setTimeout(()=>liveMapLocateMe(false),30);
+  const c=getC(id)||{},arr=msgs(id),m=arr.find(x=>x.id===mid)||{},me=m.role==='user',shared=liveLocForMsg(c,m,me),roleLoc=me?roleLiveLoc(c):shared,myLoc=me?shared:meLiveLoc(),focus=me?myLoc:roleLoc,state=liveMapInit(id+'|'+(mid||'latest'),focus),trail=liveLocTrail(c),pts=trail.map(p=>p.x+','+p.y).join(' '),labels=liveMapCityLabels(roleLoc,myLoc),addrShort=((roleLoc.address||'').split(' · ').pop()||roleLoc.address||'当前位置');setTimeout(()=>liveMapLocateMe(false),30);
   const mark=(p,cls,title)=>`<div class="lmmarker ${cls}" data-x="${p.x}" data-y="${p.y}" style="left:${p.x}px;top:${p.y}px"><span></span><b>${esc(title)}</b><small>${esc(p.address||'')}</small></div>`;
   return `<div class="nav lmnav"><span class="l" onclick="back()">‹</span><span class="t">共享位置</span><span class="r" onclick="lmCenter('role')">${svgIc('location',18,'#e8edf5')}</span></div>
-  <div class="livemap">
-    <div class="lmhead"><div><small>${esc(c.remark||c.name||'TA')}</small><b>${esc(roleLoc.city)} · ${esc(addrShort)}</b></div><button onclick="lmCenter('me')">我的位置</button></div>
+  <div class="livemap${trail.length>3?' lmdense':''}" style="--lm-foot-h:${trail.length?72+trail.length*42:92}px">
+    <div class="lmhead"><div><small>${esc(c.remark||c.name||'TA')} · LIVE LOCATION</small><b>${esc(roleLoc.country)} · ${esc(roleLoc.city)}</b><p>${esc(addrShort)}</p></div><button onclick="lmCenter('me')">我的位置</button></div>
     <div id="livemap" class="lmview" onpointerdown="lmDown(event)" onpointermove="lmMove(event)" onpointerup="lmUp(event)" onpointercancel="lmUp(event)" onwheel="lmWheel(event)">
       <div id="lmLayer" class="lmlayer" style="transform:${liveMapTransform()}">
-        <div class="lmcountry usa">UNITED STATES</div><div class="lmcountry europe">EUROPE</div><div class="lmcountry china">CHINA</div><div class="lmcountry korea">KOREA</div><div class="lmcountry japan">JAPAN</div>
-        <i class="lmriver r1"></i><i class="lmriver r2"></i><i class="lmroad a"></i><i class="lmroad b"></i><i class="lmroad c"></i>
-        <svg class="lmsvg" viewBox="0 0 1000 640" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="rgba(255,255,255,.62)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 8"/></svg>
-        ${labels.map(p=>`<em class="lmlabel" style="left:${p.x}px;top:${p.y}px">${esc(p.n)}</em>`).join('')}
-        ${trail.map((p,i)=>`<div class="lmtrail" title="${esc(p.time+' · '+p.label)}" style="left:${p.x}px;top:${p.y}px"><i>${i+1}</i><b>${esc(p.time)}</b><small>${esc(p.label)}</small></div>`).join('')}
+        ${liveMapRegionSVG()}
+        ${trail.length>1?`<svg class="lmsvg" viewBox="0 0 1000 640" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="rgba(126,183,255,.82)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 7"/></svg>`:''}
+        ${labels.map(p=>`<div class="lmcity" style="left:${p.x}px;top:${p.y}px"><i></i><span>${esc(p.n)}</span><small>${esc(p.country)}</small></div>`).join('')}
+        ${trail.map((p,i)=>`<div class="lmtrail" title="${esc(p.time+' · '+p.label)}" style="left:${p.x}px;top:${p.y}px"><i>${i+1}</i><span><b>${esc(p.label)}</b><small>${esc(p.time)}</small></span></div>`).join('')}
         ${mark(myLoc,'me','我')}
         ${mark(roleLoc,'role',c.remark||c.name||'TA')}
       </div>
     </div>
     <div class="lmtools"><button onclick="lmZoom(.16)">＋</button><button onclick="lmZoom(-.16)">－</button><button onclick="lmCenter('role')">TA</button><button onclick="lmCenter('me');liveMapLocateMe(true)">我</button></div>
-    <div class="lmfoot"><b>今日足迹</b>${trail.map(p=>`<div><span>${esc(p.time)}</span><strong>${esc(p.label)}</strong><small>${esc(p.city)}</small></div>`).join('')}</div>
+    <div class="lmfoot"><header><div><b>今日足迹</b><small>地图标记与记录一一对应</small></div><span>${trail.length} 条</span></header>${trail.length?trail.map((p,i)=>`<div class="lmfootrow"><i>${i+1}</i><time>${esc(p.time)}</time><span><strong>${esc(p.label)}</strong><small>${esc(p.source)} · ${esc(p.country)} ${esc(p.city)}</small></span></div>`).join(''):'<div class="lmfootempty">今天还没有角色主动共享的位置记录</div>'}</div>
   </div>`;
 }
 function tvSameCity(a,b){return tvStampKey(a)===tvStampKey(b)&&!!tvStampKey(a);}
