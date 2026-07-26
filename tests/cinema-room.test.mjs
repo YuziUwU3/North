@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v672 · 设置与影院字幕修复'/);
+assert.match(source, /APP_VER='v673 · 极简弹幕与持续话筒'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -249,7 +249,7 @@ assert.doesNotMatch(source, /把故事留在/);
 
 const toolsHtmlContext = vm.createContext({
   _cin: { cues: [] },
-  cinemaInit: () => ({ settings: { barrageFx: "cinema" } }),
+  cinemaInit: () => ({ settings: {} }),
   cinemaRole: () => ({}),
   cinemaReplyCount: () => 1,
   cinemaVoiceLangLabel: () => "中文",
@@ -263,6 +263,7 @@ assert.match(toolsHtmlContext.html, /data-cin-action="extract"/);
 assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="transcribe"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="frame"/);
 assert.match(toolsHtmlContext.html, /显示 · 弹幕/);
+assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="fx"/);
 assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="fullscreen"/);
 assert.doesNotMatch(toolsHtmlContext.html, /event\.stopPropagation/);
 
@@ -359,17 +360,29 @@ assert.match(html, /\.cin-barrage\{[^}]*background:transparent!important/);
 assert.match(html, /\.cin-barrage\.mine\{color:#ff91bd/);
 assert.match(html, /\.cin-barrage\.role\{color:#79caff/);
 assert.match(html, /\.cin-barrage\{width:76vw;max-width:520px;white-space:pre-line!important/);
+assert.doesNotMatch(html, /\.cin-barrage\.float/);
+assert.doesNotMatch(html, /\.cin-barrage\.glow/);
+assert.doesNotMatch(html, /@keyframes cinfloat/);
+assert.doesNotMatch(html, /@keyframes cinglow/);
+assert.doesNotMatch(html, /\.cin-barrage\{[^}]*filter:/);
+assert.doesNotMatch(source, /function cinemaCycleFx/);
+assert.doesNotMatch(source, /data-cin-action="fx"/);
+assert.doesNotMatch(source, /barrageFx:'/);
+assert.match(source, /delete x\.settings\.barrageFx/);
 assert.match(functionSource("cinemaShoot"), /_cin\.shootQueue\.push/);
 assert.match(functionSource("cinemaShowShot"), /box\.innerHTML=''/);
 assert.match(functionSource("cinemaShowShot"), /d\.style\.top='28%'/);
-assert.match(functionSource("cinemaShotMs"), /Math\.max\(10500,Math\.min\(18000/);
+assert.match(functionSource("cinemaShowShot"), /\+' glide'/);
+assert.match(functionSource("cinemaShotMs"), /Math\.max\(5500,Math\.min\(9000/);
 assert.match(functionSource("cinemaShootNext"), /await speakWait\(item\.speakText,item\.speaker,\{onAudioStart:show\}\)/);
+assert.match(functionSource("cinemaShootNext"), /const end=_cin\.shootResolve;if\(end\)end\(\)/);
+assert.doesNotMatch(functionSource("cinemaShootNext"), /sleep\(/);
 const shotOrder=[],shotResolvers=[];
 const shotQueueContext=vm.createContext({
   _cin:{shootQueue:[],shootBusy:false,token:9,shootEpoch:0},
   cinemaShowShot:(who,text)=>{shotOrder.push(who+':'+text);return new Promise(resolve=>shotResolvers.push(resolve));},
   speakWait:async()=>{},
-  sleep:async()=>{},
+  cinemaMicResumeVideo:()=>{},
 });
 vm.runInContext('async '+functionSource("cinemaShootNext")+'\n'+functionSource("cinemaShoot")+';globalThis.shoot=cinemaShoot;',shotQueueContext);
 shotQueueContext.shoot('me','recognized speech');
@@ -410,13 +423,39 @@ assert.match(functionSource("aiReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("initiativeMaybeSend"), /cinemaRoleOccupied\(c\.id\)/);
 assert.match(source, /function cinemaMicToggle/);
 assert.match(source, /function cinemaMicResumeVideo/);
-assert.match(source, /正在录音，再点一次话筒发送（最长60秒）/);
-assert.match(source, /onLimit:\(\)=>\{if\(_cin\.micKind===kind&&!_cin\.micBusy\)cinemaMicToggle\(kind\)/);
-assert.match(source, /_cin\.micResumeVideo=!!\(v&&!v\.paused\);if\(v&&!v\.paused\)v\.pause\(\)/);
-assert.match(source, /const err=String\(m&&m\.error\|\|''\)\.trim\(\)/);
-assert.match(source, /stopRec\(false,m=>/);
+assert.match(source, /function cinemaMicRestart/);
+assert.match(source, /function cinemaMicStop/);
+assert.match(source, /function cinemaMicHeard/);
+assert.match(source, /持续话筒已开启，停顿后会自动发送/);
+assert.match(functionSource("cinemaMicToggle"), /const sr=makeSR\(\)/);
+assert.match(functionSource("cinemaMicToggle"), /sr\.onresult=/);
+assert.match(functionSource("cinemaMicToggle"), /if\(finalText\)cinemaMicHeard\(kind,finalText\)/);
+assert.doesNotMatch(functionSource("cinemaMicToggle"), /startRec|stopRec/);
+assert.match(functionSource("cinemaMicHeard"), /if\(v&&!v\.paused\)\{_cin\.micResumeVideo=true;v\.pause\(\);\}/);
 assert.match(source, /inp\.value=text/);
 assert.match(source, /cinemaSend\(kind\)/);
+let liveHeard='',liveStart=0,liveStop=0;
+const liveSr={start:()=>{liveStart++;},stop:()=>{liveStop++;}};
+const liveMicContext=vm.createContext({
+  _cin:{micKind:'',micBusy:false,micSR:null,micIgnoreUntil:0},
+  _rec:null,
+  makeSR:()=>liveSr,
+  cinemaMicPaint:()=>{},
+  cinemaMicResumeVideo:()=>{},
+  cinemaMicHeard:(kind,text)=>{liveHeard=kind+':'+text;},
+  cinemaSetStatus:()=>{},
+  toast:()=>{},
+  setTimeout:(fn)=>fn(),
+});
+vm.runInContext(functionSource("cinemaMicRestart")+'\n'+functionSource("cinemaMicStop")+'\n'+functionSource("cinemaMicToggle")+';globalThis.toggle=cinemaMicToggle;',liveMicContext);
+liveMicContext.toggle('video');
+assert.equal(liveMicContext._cin.micKind,'video');
+assert.equal(liveStart,1);
+liveSr.onresult({resultIndex:0,results:Object.assign([{0:{transcript:'我看到这里了'},isFinal:true}],{length:1})});
+assert.equal(liveHeard,'video:我看到这里了');
+liveMicContext.toggle('video');
+assert.equal(liveMicContext._cin.micKind,'');
+assert.equal(liveStop,1);
 const cinemaSendSource=functionSource("cinemaSend");
 assert.ok(cinemaSendSource.indexOf("cinemaAddItem('me',text)")<cinemaSendSource.indexOf("cinemaRoleReply("),'typed or recognized user text must be added before generating the role reply');
 assert.match(functionSource("cinemaAddItem"), /cinemaShoot\(who,opt&&opt\.shootText\|\|item\.text,opt\)/);
@@ -424,6 +463,6 @@ assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
-assert.match(html, /app\.js\?v=672/);
+assert.match(html, /app\.js\?v=673/);
 
 console.log("cinema room tests passed");

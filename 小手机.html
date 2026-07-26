@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='672';</script>
+<script>window.__NORTH_SHELL_BUILD__='673';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,14 +29,14 @@
 /* 主屏幕 WebApp 主动检查最新 SW；当前页面正常时不强制重开。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-672';
+  var key='north-sw-reloaded-673';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     setTimeout(function(){
       try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1');}catch(e){}
-      var u=new URL(location.href);u.searchParams.set('v','672');u.searchParams.set('sw',Date.now());location.replace(u.href);
+      var u=new URL(location.href);u.searchParams.set('v','673');u.searchParams.set('sw',Date.now());location.replace(u.href);
     },1400);
   });
-  var url='sw.js?v=672';
+  var url='sw.js?v=673';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -841,7 +841,7 @@ body{background:#000;padding:0;}
 .cin-reader{background:#0b0b0e}.cin-paper-wrap{flex:1;min-height:0;overflow-y:auto;padding:17px 14px 11px;background:radial-gradient(circle at 50% 0,rgba(118,104,143,.13),transparent 43%),#0a0a0d}.cin-paper{min-height:100%;padding:26px 23px 31px;border:1px solid rgba(255,255,255,.075);border-radius:3px;background:linear-gradient(115deg,rgba(255,255,255,.025),transparent 24%),#151419;box-shadow:0 16px 38px rgba(0,0,0,.35);color:#d9d3cb}.cin-page-no{margin-bottom:22px;color:#67616b;font-family:Georgia,serif;font-size:9px;letter-spacing:.17em}.cin-prose{font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:15px;line-height:2.05;letter-spacing:.035em;text-align:justify;word-break:break-word}.cin-page-end{margin-top:27px;color:#5d5861;font-family:Georgia,serif;font-size:9px;text-align:center;letter-spacing:.12em}.cin-reader-actions{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:6px;padding:7px 10px;border-top:1px solid rgba(255,255,255,.055);border-bottom:1px solid rgba(255,255,255,.055);background:#0e0e12}.cin-reader-actions button{height:31px;border:1px solid #29272f;border-radius:16px;background:#151419;color:#8c8790;font-size:9px}.cin-reader-actions button:disabled{opacity:.3}.cin-reader-actions .comment{border-color:#52424e;color:#d0aebe;background:#1d171d}.cin-logbox.reader{flex:0 0 105px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05)}.cin-logbox.reader .cin-log{margin-bottom:8px}.cin-logbox.reader .cin-log p{padding:6px 9px;font-size:10px}.cin-book-input{flex:0 0 auto;border-bottom:0;padding-bottom:10px}
 /* 放映室 v2：全屏沉浸播放器，所有控件悬浮且可收起 */
 .cin-history{gap:9px}.cin-rename{width:27px;height:27px;display:flex;align-items:center;justify-content:center;flex:none;border:1px solid #292731;border-radius:10px;background:#121117;color:#aaa;cursor:pointer}
-.cin-watch{position:fixed;inset:0;z-index:9998;background:#000}.cin-stage,.cin-stage.cin-theater{position:fixed;inset:0;z-index:9999;display:block;background:#000}.cin-screen,.cin-stage.cin-theater .cin-screen{position:absolute;inset:0;width:auto;height:auto;display:flex;align-items:center;justify-content:center;overflow:hidden;aspect-ratio:auto;background:#000}.cin-screen video{width:100%;height:100%;object-fit:contain;background:#000}.cin-danmaku{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}.cin-barrage{position:absolute;left:100%;max-width:72vw;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;font-size:clamp(13px,2.15vw,22px);font-weight:670;line-height:1.3;letter-spacing:.025em;white-space:nowrap;text-shadow:none;filter:drop-shadow(0 2px 2px #000) drop-shadow(0 0 7px #000);will-change:transform,opacity}.cin-barrage.mine{color:#ff91bd}.cin-barrage.role{color:#79caff}.cin-barrage.glide{animation:cinfly linear forwards}.cin-barrage.float{animation:cinfloat ease-out forwards}.cin-barrage.glow{animation:cinglow ease-in-out forwards;text-shadow:0 0 7px currentColor,0 0 18px rgba(255,255,255,.18)}@keyframes cinfly{0%{transform:translate3d(0,var(--cin-drift),0);opacity:0}5%{opacity:1}92%{opacity:1}100%{transform:translate3d(calc(-100vw - 100%),calc(var(--cin-drift) * -1),0);opacity:0}}@keyframes cinfloat{0%{transform:translate3d(0,var(--cin-drift),0);opacity:0}12%{opacity:1}58%{transform:translate3d(calc(-50vw - 50%),0,0);opacity:1}82%{transform:translate3d(calc(-55vw - 50%),0,0);opacity:1}100%{transform:translate3d(calc(-105vw - 100%),calc(var(--cin-drift) * -1),0);opacity:0}}@keyframes cinglow{0%{transform:translate3d(0,var(--cin-drift),0) scale(.96);opacity:0}10%{opacity:1}70%{opacity:1}100%{transform:translate3d(calc(-100vw - 100%),0,0) scale(1.04);opacity:0}}
+.cin-watch{position:fixed;inset:0;z-index:9998;background:#000}.cin-stage,.cin-stage.cin-theater{position:fixed;inset:0;z-index:9999;display:block;background:#000}.cin-screen,.cin-stage.cin-theater .cin-screen{position:absolute;inset:0;width:auto;height:auto;display:flex;align-items:center;justify-content:center;overflow:hidden;aspect-ratio:auto;background:#000}.cin-screen video{width:100%;height:100%;object-fit:contain;background:#000}.cin-danmaku{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}.cin-barrage{position:absolute;left:100%;max-width:72vw;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;font-size:clamp(13px,2.15vw,22px);font-weight:670;line-height:1.3;letter-spacing:.025em;white-space:nowrap;text-shadow:0 1px 3px #000;will-change:transform}.cin-barrage.mine{color:#ff91bd}.cin-barrage.role{color:#79caff}.cin-barrage.glide{animation:cinfly linear forwards}@keyframes cinfly{from{transform:translate3d(0,0,0)}to{transform:translate3d(calc(-100vw - 100%),0,0)}}
 .cin-sub,.cin-stage.cin-theater .cin-sub{position:absolute;left:12%;right:12%;bottom:max(28px,5vh);z-index:4;color:#fff;font-size:clamp(14px,2vw,21px);font-weight:620;line-height:1.45;text-align:center;text-shadow:0 2px 3px #000,0 0 9px #000;opacity:0;transition:opacity .16s,bottom .22s}.cin-sub.show{opacity:1}.cin-stage.chat-open .cin-sub{bottom:max(88px,15vh)}
 .cin-overlay-top{position:absolute;left:0;right:0;top:0;z-index:8;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 10px max(12px,env(safe-area-inset-left));background:linear-gradient(180deg,rgba(0,0,0,.88),rgba(0,0,0,.55) 58%,transparent);transition:transform .25s ease,opacity .2s ease}.cin-overlay-top.collapsed{transform:translateY(-112%);opacity:0;pointer-events:none}.cin-overlay-head{height:42px;display:flex;align-items:center;gap:8px}.cin-overlay-head button{border:0;color:#eee}.cin-edge-btn,.cin-collapse-btn{width:36px;height:36px;flex:none;border-radius:12px!important;background:rgba(22,22,25,.64)!important;backdrop-filter:blur(16px);font-size:26px!important;line-height:1}.cin-collapse-btn{font-size:18px!important;color:#aaa!important}.cin-watch-meta{flex:1;min-width:0;padding:0 5px;background:transparent;text-align:left}.cin-watch-meta b,.cin-watch-meta span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cin-watch-meta b{font-size:14px;letter-spacing:.03em}.cin-watch-meta span{margin-top:3px;color:#96919b;font-size:8px;letter-spacing:.05em}.cin-overlay-head .cin-end{height:34px;width:auto;flex:none;padding:0 14px;border:1px solid rgba(224,182,196,.25);border-radius:12px;background:rgba(75,42,53,.58);color:#f0c6d3;font-size:11px;backdrop-filter:blur(16px)}
 .cin-tool-shelf{display:flex;gap:6px;padding:7px 0 2px;overflow-x:auto;scrollbar-width:none}.cin-tool-shelf::-webkit-scrollbar{display:none}.cin-tool-shelf button{height:29px;display:inline-flex;align-items:center;gap:5px;flex:none;padding:0 10px;border:1px solid rgba(255,255,255,.11);border-radius:11px;background:rgba(16,16,20,.65);color:#a9a5ae;font-size:9px;white-space:nowrap;backdrop-filter:blur(16px)}.cin-tool-shelf button.on{border-color:rgba(216,166,193,.42);background:rgba(77,47,65,.72);color:#efd2e1}.cin-top-reveal{position:absolute;right:max(12px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));z-index:9;width:42px;height:31px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(12,12,15,.62);color:#ddd;letter-spacing:2px;backdrop-filter:blur(16px)}
@@ -909,8 +909,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=672" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=672" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=672"></script>
+<script src="license-gate.js?v=673" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=673" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=673"></script>
 </body>
 </html>
