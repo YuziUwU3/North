@@ -32,24 +32,34 @@ assert.doesNotMatch(maybeSource, /isMain\(/, 'proactive contact must work for th
 assert.doesNotMatch(maybeSource, /15\s*\*\s*60000/, 'the configured interval must not be replaced by a 15-minute floor');
 assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep activity must not override an explicitly configured proactive window');
 assert.match(maybeSource, /affNow\(c\)>=35/, 'ignore escalation may suppress ordinary initiative only when escalation is actually eligible');
-assert.match(maybeSource, /callEligible=plan\.kind!==['"]location['"]/);
+assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]/);
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);
 assert.match(source, /focus['"],initiativeWakeCheck/);
-assert.match(source, /主动消息禁止自动附带照片、自拍或 \[图片\] 标签/);
+assert.match(source, /【本轮允许主动照片】/);
+assert.match(source, /普通问候、催回复和关心消息绝对不能顺带附图/);
 assert.match(source, /_initiativeNoImage=initiativeBlocksImage\(note\)/);
 assert.match(source, /_initiativeNoImage&&[\s\S]*photoTail=3;continue/);
 
 const blockContext = vm.createContext({});
 vm.runInContext(functionSource('initiativeBlocksImage') + ';globalThis.block=initiativeBlocksImage;', blockContext);
 assert.equal(blockContext.block('[系统：这是一次【主动消息】，不是对方刚发来新话。]'), true);
+assert.equal(blockContext.block('[系统：这是一次【主动消息】。【本轮允许主动照片】]'), false);
 assert.equal(blockContext.block('给我发一张照片'), false, 'an explicit real chat request must still be allowed to produce a photo');
+
+const captionContext = vm.createContext({});
+vm.runInContext(functionSource('initiativePhotoCaptionOk') + ';globalThis.ok=initiativePhotoCaptionOk;', captionContext);
+const photoNote = '[系统：这是一次【主动消息】。【本轮允许主动照片】]';
+assert.equal(captionContext.ok(photoNote, '刚看到窗外的晚霞特别好看，拍给你。\n[图片|窗外粉紫色晚霞]'), true);
+assert.equal(captionContext.ok(photoNote, '醒了吗。\n[图片|桌面上的咖啡]'), false, 'an unrelated wake-up check must not carry a random photo');
 
 const delayContext = vm.createContext({S: {settings: {proactiveIdleMin: 1}}});
 vm.runInContext(functionSource('initiativeDelayMs') + ';globalThis.delay=initiativeDelayMs();', delayContext);
 assert.equal(delayContext.delay, 60000, 'one minute in settings must mean one real minute');
 
+const planMath = Object.create(Math);
+planMath.random = () => 0;
 const planContext = vm.createContext({
   S: {settings: {imgGen: true}},
   initiativeMemory: () => null,
@@ -58,14 +68,19 @@ const planContext = vm.createContext({
   activityHash: () => 0,
   memoryNorm: (v) => String(v),
   hm: () => '12:00',
-  Math,
+  Math: planMath,
 });
 vm.runInContext(functionSource('initiativePlan') + ';globalThis.plan=initiativePlan;', planContext);
 const role = {id: 'r1', traits: {active: 50, cling: 60}};
-const activity = {label: '在公司工作', busy: 4};
+const activity = {key: 'morning', label: '刚起床收拾', busy: 1};
 const ordinaryPlan = planContext.plan(role, activity, {turn: 1, lastKind: '', lastMemory: ''});
 assert.notEqual(ordinaryPlan.kind, 'photo');
 assert.doesNotMatch(ordinaryPlan.note, /\[图片\|/);
+const photoActivity = {label: '在路上散步', busy: 1};
+const photoPlan = planContext.plan(role, photoActivity, {turn: 1, lastKind: '', lastMemory: ''});
+assert.equal(photoPlan.kind, 'photo');
+assert.match(photoPlan.note, /【本轮允许主动照片】/);
+assert.match(photoPlan.note, /拍了什么、为什么想给ta看/);
 const locationPlan = planContext.plan(role, activity, {turn: 3, lastKind: '', lastMemory: ''});
 assert.equal(locationPlan.kind, 'location');
 assert.match(locationPlan.note, /\[位置\|公司\|办公区\]/);

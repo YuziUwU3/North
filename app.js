@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='660'){
+if(window.__NORTH_SHELL_BUILD__!=='661'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v660 · 主动照片与拒接记忆修复';
+const APP_VER='v661 · 主动照片动机修复';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1250,7 +1250,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=660';
+  const url='sw.js?v=661';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2772,7 +2772,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
       <div class="it"><span>通用活人感增强<br><small style="color:#888">理解上下文、按性格决定策略和消息节奏，并减少复述与重复模板</small></span><span class="sw ${S.settings.humanLike!==false?'on':''}" onclick="S.settings.humanLike=(S.settings.humanLike===false);save();render()"></span></div>
-      <div class="it"><span>主动消息与自然回访<br><small style="color:#888">按你设定的间隔和每日次数主动联系，并轮换想念、生活分享、位置和近期话题；不会自动附带照片</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
+      <div class="it"><span>主动消息与自然回访<br><small style="color:#888">按你设定的间隔和每日次数主动联系；偶尔会结合当下状态自然分享照片或位置，不会在普通问候后乱附图</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
@@ -8678,7 +8678,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
-    const _userText=(_lu&&msgToText(_lu))||'',_hlPlan=humanLikeOn()?hlInterpret(c,note||_userText,note):null,_initiativeNoImage=initiativeBlocksImage(note);
+    const _userText=(_lu&&msgToText(_lu))||'',_hlPlan=humanLikeOn()?hlInterpret(c,note||_userText,note):null;let _initiativeNoImage=initiativeBlocksImage(note);
     const _memQuery=[note||_userText,...msgs(id).slice(-4).map(msgToText).filter(Boolean)].join('\n'),_memCtx=humanLikeOn()?selectRelevantMemory(c,_memQuery,3):null;
     const _webAutoQuery=!note?autoWebQuery(_userText,c):'',_webAutoResult=_webAutoQuery?(toast('🌐 正在联网查询…'),await webSearch(_webAutoQuery)):'';
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
@@ -8753,6 +8753,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     let cap=Math.max(1,+c.msgMax||4);
     if(askedN)cap=Math.min(10,Math.max(cap,askedN));
     else if(comfortN)cap=Math.max(cap,Math.min(6,Math.max(3,+c.msgMax||4)));
+    if(!_initiativeNoImage&&note&&/【本轮允许主动照片】/.test(note)&&!initiativePhotoCaptionOk(note,content))_initiativeNoImage=true;
     const lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;
     for(let i=0;i<lines.length;i++){
       let line=cleanRolePunct(normalizeImageLine(normTag(lines[i])));if(!line)continue;
@@ -9525,20 +9526,23 @@ function initiativeArm(c){if(!c)return;initiativeState(c).nextAt=Date.now()+init
 function initiativeArmAll(){(S.contacts||[]).forEach(c=>{if(c&&c.proactive&&c.proactive.enabled)initiativeArm(c);});}
 function initiativeRecentUser(c){const arr=msgs(c.id);for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'&&m.type!=='sys'){const t=msgToText(m);if(t)return{text:t,time:m.time||0};}}return null;}
 function initiativeMemory(c,a,st){const lu=initiativeRecentUser(c),q=(lu&&lu.text||'')+' '+(a&&a.label||'');const ctx=selectRelevantMemory(c,q,2),pick=(ctx.items||[]).find(x=>x.score>=4.4&&memoryNorm(x.text)!==st.lastMemory);return pick||null;}
-function initiativeBlocksImage(note){return !!(note&&/这是一次【主动消息】/.test(note));}
-function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50,slot=(+st.turn||0)%6;let kind;
+function initiativeBlocksImage(note){return !!(note&&/这是一次【主动消息】/.test(note)&&!/【本轮允许主动照片】/.test(note));}
+function initiativePhotoCaptionOk(note,content){if(!note||!/【本轮允许主动照片】/.test(note))return false;const text=String(content||'').split(/\n+/).filter(x=>!/^\s*[\[【](?:图片|照片|自拍|心情|心情值)[|｜:：]/.test(x)).join(' ').replace(/\s+/g,' ').trim();if(!text)return false;const linked=/(给你看|拍给你|拍了|发给你|发来|报备|分享|刚看到|刚拍|路过|窗外|这边|眼前|这一幕|这个|好看|天气|晚霞|云|下雨|下雪|阳光|街景|路上|桌面|早餐|午饭|晚饭|咖啡|花|猫|狗|风景|现场)/.test(text),generic=/(醒了没|醒了吗|睡醒没|睡醒了吗|怎么不回|为什么不回|在干嘛|干什么|怎么不接)/.test(text);return linked&&!generic;}
+function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50,canPhoto=!!(S.settings.imgGen&&imageGenerationAvailable()),slot=(+st.turn||0)%6,photoReady=canPhoto&&a&&a.key!=='sleep'&&!/(睡觉|睡着|准备休息|准备睡|刚起床)/.test(a.label||'');let kind;
   if(slot===3)kind='location';
+  else if(photoReady&&Math.random()<.18)kind='photo';
   else if(mem&&Math.random()<(active>=65?.48:.32))kind='callback';
   else if(a&&a.busy<=1&&Math.random()<.5)kind='share';
   else if(active>=60&&Math.random()<.55)kind='self';
   else kind='reconnect';
   if(kind===st.lastKind){const choices=['callback','share','self','reconnect'].filter(x=>x!==kind&&(x!=='callback'||mem));if(choices.length)kind=choices[activityHash(c.id+'|'+Date.now())%choices.length];}
   let goal='';if(kind==='callback')goal='自然想起并回访这件事：「'+mem.text+'」。只问一个具体落点，不要背诵旧记录，也不要说“我还记得数据库里写着”。';
+  else if(kind==='photo')goal='从你此刻“'+a.label+'”这个真实状态出发，挑一个确实值得给ta看的具体画面，例如眼前的天气、光线、路上景色、桌面、食物、宠物或正在做的事。必须单独发一行 [图片|具体的生活感随手拍描述]，并配一句直接说明“拍了什么、为什么想给ta看”的自然短话。照片和文字必须讲同一件事；这一轮不要再问“醒了吗/在干嘛/怎么不回/怎么不接”等无关问题，也不要为了发图编造系统不知道的地点、人物或事件。';
   else if(kind==='location'){const loc=roleLiveLoc(c),ln=String(loc.name||loc.city||a.label||'当前位置').replace(/[|｜\]】]/g,' '),la=String(loc.address||a.label||'').replace(/[|｜\]】]/g,' ');goal='主动分享你此刻的真实位置，让ta知道你在哪里、正在做什么。这一轮必须单独发一行 [位置|'+ln+'|'+la+']，并配一句符合人设的短话；不得另编一个与当前活动不一致的地点。';}
   else if(kind==='share')goal='从你此刻“'+a.label+'”这个真实状态出发，分享一个很小的当下感受或念头；可以说刚忙完、正休息、准备做什么，但不要编造具体公司、人名、餐厅、商品、天气或已经发生的外部事件。';
   else if(kind==='self')goal='主动表达一个符合你人设的真实想法、偏好或此刻心情，让对方更了解你；要和近期聊天有一点自然联系，不要突然发表人生演讲。';
   else goal='自然重新开启对话。主动度或黏人度高可以直接表达想念、想听ta说话；低则淡淡抛出一个具体话头。不要机械质问“为什么不回”，也不要查岗。';
-  return{kind,memory:mem,goal,note:'[系统：这是一次【主动消息】，不是对方刚发来新话。现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常生活小片段、突然想到ta、碎碎念、位置、轻微吃醋/撒娇/关心都要按人设轮换。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。主动消息禁止自动附带照片、自拍或 [图片] 标签；只有对方在真实聊天中明确索要照片时才发。]'};}
+  return{kind,memory:mem,goal,note:'[系统：这是一次【主动消息】，不是对方刚发来新话。'+(kind==='photo'?'【本轮允许主动照片】':'【本轮不是照片分享，禁止附带图片或自拍】')+'现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常生活小片段、突然想到ta、碎碎念、偶尔分享照片或位置、轻微吃醋/撒娇/关心都要按人设轮换。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。只有本轮明确标记允许主动照片时才能发 [图片]；普通问候、催回复和关心消息绝对不能顺带附图。]'};}
 let _initiativeBusy={};
 function initiativeRunKey(c){return memoryScopeKey()+'|'+c.id;}
 function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.settings.initiative===false||!c||c.deleted||c.blocked||!c.proactive||!c.proactive.enabled||_call||_initiativeBusy[runKey])return false;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active)return false;const now=new Date();if(!initiativeWindow(c,now))return false;
@@ -9550,7 +9554,7 @@ function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.setting
   const a=currentRoleActivity(c,now);if(!a)return false;/* 用户明确设置的主动时段优先：即使推断活动是睡觉，也不能悄悄把一分钟间隔拖到早晨 */
   if(lm&&lm.role==='assistant'&&ts-(lm.time||0)<delay){st.nextAt=(lm.time||ts)+delay;return false;}
   const plan=initiativePlan(c,a,st),record=()=>{const doneAt=Date.now();st.lastAt=doneAt;st.lastKind=plan.kind;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=doneAt+initiativeDelayMs(c);st.turn=(+st.turn||0)+1;c._initiativeLast={time:doneAt,kind:plan.kind,activity:a.label,memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[countKey]=pc;save();};
-  const cp=effCallProb(c),callEligible=plan.kind!=='location';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
+  const cp=effCallProb(c),callEligible=plan.kind!=='photo'&&plan.kind!=='location';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
   _initiativeBusy[runKey]=1;const queued=scheduleReply(c.id,plan.note,ok=>{delete _initiativeBusy[runKey];if(ok)record();else{st.nextAt=Date.now()+15000;save();}});if(!queued){delete _initiativeBusy[runKey];st.nextAt=ts+15000;return false;}setTimeout(()=>{if(_initiativeBusy[runKey]){delete _initiativeBusy[runKey];st.nextAt=Date.now()+15000;}},300000);return true;}
 let _initiativeCursor=0;
 function checkInitiative(){if(S.settings.initiative===false)return;const cs=S.contacts||[];for(let i=0;i<cs.length;i++){const idx=(_initiativeCursor+i)%cs.length;if(initiativeMaybeSend(cs[idx])){_initiativeCursor=(idx+1)%Math.max(1,cs.length);break;}}}
