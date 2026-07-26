@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v668 · 设置三页按需加载'/);
+assert.match(source, /APP_VER='v669 · 音频字幕与语音输入'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -73,6 +73,10 @@ const pages = helperContext.paginate("第一段。".repeat(180) + "\n\n" + "第�
 assert.ok(pages.length >= 3);
 assert.ok(pages.every((page) => page.length <= 510));
 
+const timedOffsetContext = vm.createContext({});
+vm.runInContext(lineFunctionSource("sttTimedRows") + ";globalThis.rows=sttTimedRows({segments:[{start:1.5,end:3,text:'  hello   world  '}]},300);", timedOffsetContext);
+assert.deepEqual(JSON.parse(JSON.stringify(timedOffsetContext.rows)), [{ start:301.5, end:303, text:"hello world", source:"extract" }]);
+
 const contextSandbox = vm.createContext({
   _cin: { cues: [
     { start: 5, end: 7, text: "过去" },
@@ -96,8 +100,15 @@ assert.doesNotMatch(source, /播放时转写/);
 assert.doesNotMatch(source, /function cinemaStartTranscribe/);
 assert.doesNotMatch(source, /function cinemaToggleTranscribe/);
 assert.match(source, /function cinemaExtractSubtitles/);
+assert.match(source, /function cinemaExtractAudioSubtitles/);
+assert.match(source, /function cinemaAudioChunkWav/);
+assert.match(source, /function sttTimedRows/);
 assert.match(source, /function cinemaExtractHelp/);
 assert.match(source, /sttTranscribeTimed\(f/);
+assert.match(source, /chunkSec=300/);
+assert.match(source, /sttRequest\(wav,/);
+assert.match(source, /sttTimedRows\(j,start\)/);
+assert.match(source, /压缩音频后提取（推荐）/);
 assert.match(source, /timestamp_granularities\[\]/);
 assert.match(source, /接口没有返回分段时间戳/);
 assert.match(source, /function cinemaAnalyzeFrame/);
@@ -120,9 +131,12 @@ assert.match(source, /s\.kind==='book'\?set\.bookVoice:set\.voiceComment/);
 assert.match(source, /function cinemaComposerResizeStart/);
 assert.match(source, /document\.addEventListener\('pointermove',move\)/);
 assert.match(source, /function cinemaControlTap/);
-assert.match(source, /root\.addEventListener\('pointerup',cinemaControlTap,true\)/);
-assert.match(source, /root\.addEventListener\('touchend',cinemaControlTap/);
-assert.match(source, /root\.addEventListener\('click',cinemaControlTap,true\)/);
+assert.match(source, /function cinemaControlPointerUp/);
+assert.match(source, /function cinemaControlClick/);
+assert.match(source, /b\.addEventListener\('pointerup',cinemaControlPointerUp\)/);
+assert.match(source, /b\.addEventListener\('click',cinemaControlClick\)/);
+assert.doesNotMatch(functionSource("cinemaBindControls"), /touchend/);
+assert.match(source, /function cinemaIsIOS/);
 assert.match(source, /id="cinMediaControls" class="cin-media-controls/);
 assert.match(source, /webkit-playsinline disablepictureinpicture/);
 assert.doesNotMatch(source, /id="cinVideo"[^>]* controls/);
@@ -134,7 +148,7 @@ assert.match(source, /automatic\?1:cinemaRandomReplyCount\(\)/);
 assert.match(source, /function cinemaRandomReplyCount/);
 assert.match(source, /1\+Math\.floor\(Math\.random\(\)\*limit\)/);
 assert.match(source, /data-cin-action="media-hide"/);
-assert.match(source, /轻点影片画面可重新显示/);
+assert.doesNotMatch(functionSource("cinemaMediaToggle"), /toast\(/);
 assert.match(source, /_cin\.mediaOpen===false\)cinemaMediaToggle\(true\)/);
 assert.match(source, /!opt\.silentReply&&!_cin\.busy/);
 assert.match(source, /addSummary\(c,memory,4,'【放映室】'\)/);
@@ -211,6 +225,9 @@ assert.match(watch, /data-cin-action="chat-open"/);
 assert.match(watch, /id="cinMediaControls"/);
 assert.match(watch, /aria-label="隐藏播放进度"/);
 assert.match(watch, /data-cin-resize="video"/);
+assert.match(watch, /id="cinVideoMic"/);
+assert.match(watch, /data-cin-action="mic"/);
+assert.match(watch, /data-kind="video"/);
 assert.match(watch, /--cin-chat-h:/);
 assert.match(watch, /cinTopReveal/);
 assert.match(watch, /data-cin-action="end"/);
@@ -279,6 +296,9 @@ const reader = functionSource("renderCinemaRead");
 assert.match(reader, /id="cinBookVoiceBtn"/);
 assert.match(reader, /data-cin-action="book-voice"/);
 assert.match(reader, /data-cin-resize="reader"/);
+assert.match(reader, /id="cinBookMic"/);
+assert.match(reader, /data-cin-action="mic"/);
+assert.match(reader, /data-kind="book"/);
 assert.match(reader, /cinemaReaderPaneHeight\(\)/);
 assert.doesNotMatch(reader, /data-cin-resize="book"/);
 
@@ -331,6 +351,11 @@ assert.match(functionSource("scheduleReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("incomingCall"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("aiReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("initiativeMaybeSend"), /cinemaRoleOccupied\(c\.id\)/);
-assert.match(html, /app\.js\?v=668/);
+assert.match(source, /function cinemaMicToggle/);
+assert.match(source, /stopRec\(false,m=>/);
+assert.match(source, /inp\.value=text/);
+assert.match(source, /cinemaSend\(kind\)/);
+assert.match(html, /\.cin-mic\.recording/);
+assert.match(html, /app\.js\?v=669/);
 
 console.log("cinema room tests passed");
