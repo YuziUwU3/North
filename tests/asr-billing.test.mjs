@@ -36,6 +36,14 @@ test('cinema chunks send trusted actual duration and never upload video to built
   assert.match(app,/每 '\+sttRelaySecondsPerPoint\(\)\+' 秒 1 点计费/);
 });
 
+test('legacy cached cinema clients remain compatible without reopening generic voice ASR',()=>{
+  assert.match(edge,/const legacyCinemaPurpose = !requestedPurpose/);
+  assert.match(edge,/body\.timestamps === true/);
+  assert.match(edge,/\.wav\$\/i\.test\(String\(body\.filename/);
+  assert.match(edge,/data:audio\\\/\(\?:wav\|x-wav\);base64,/);
+  assert.match(edge,/requestedPurpose \|\| \(legacyCinemaPurpose \? "cinema_subtitles" : ""\)/);
+});
+
 test('server prices ASR by each started interval and attempts each configured route once',()=>{
   assert.match(edge,/asr_seconds_per_point:/);
   assert.match(edge,/Math\.ceil\(durationSeconds \/ ASR_SECONDS_PER_POINT\)/);

@@ -48,7 +48,10 @@ test('stored avatar references render safely and refresh incoming call UI', () =
 
 test('keyboard events can never resize or clip the global phone shell', () => {
   assert.doesNotMatch(html, /--north-app-height/);
-  assert.match(html, /\.phone\{width:100vw;height:100vh;height:100dvh;max-height:none/);
+  assert.match(html, /\.phone\{width:100%;height:100%;max-height:none/);
+  assert.match(html, /html,body\{width:100%;height:100%;min-height:0;overflow:hidden\}/);
+  assert.doesNotMatch(html, /@media \(pointer:coarse\)\{\.cin-watch,\.cin-stage\{height:100dvh/);
+  assert.match(html, /\.livemap\{flex:1;min-height:0;height:auto\}/);
   assert.doesNotMatch(app, /function syncAppViewport/);
   assert.doesNotMatch(app, /function appVisibleViewportHeight/);
   assert.doesNotMatch(app, /document\.documentElement\.style\.setProperty\(['"]--north-app-height/);

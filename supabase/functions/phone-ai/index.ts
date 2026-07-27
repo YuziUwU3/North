@@ -1692,7 +1692,12 @@ Deno.serve(async (req) => {
     }
 
     if (action === "asr") {
-      const purpose = String(body.purpose || "").trim();
+      const requestedPurpose = String(body.purpose || "").trim();
+      const legacyCinemaPurpose = !requestedPurpose
+        && body.timestamps === true
+        && /\.wav$/i.test(String(body.filename || ""))
+        && /^data:audio\/(?:wav|x-wav);base64,/i.test(String(body.audio || ""));
+      const purpose = requestedPurpose || (legacyCinemaPurpose ? "cinema_subtitles" : "");
       if (purpose !== "cinema_subtitles" && purpose !== "diagnostic") return json({ ok: false, error: "asr-purpose-not-allowed", charged: 0, billed: false }, 403);
       const routes = configuredAsrRoutes();
       if (!routes.length) return json({ ok: false, error: "asr-not-configured", charged: 0, billed: false }, 503);

@@ -8,9 +8,9 @@ const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
-assert.match(html, /min-height:100vh;min-height:100dvh/);
-assert.match(html, /\.phone\{width:100vw;height:100vh;height:100dvh/);
-assert.match(html, /\.livemap\{height:calc\(100vh - 44px\);height:calc\(100dvh - 44px\)/);
+assert.match(html, /html,body\{width:100%;height:100%;min-height:0;overflow:hidden\}/);
+assert.match(html, /\.phone\{width:100%;height:100%/);
+assert.match(html, /\.livemap\{flex:1;min-height:0;height:auto\}/);
 const controllerHandler=html.match(/controllerchange[\s\S]*?\}\);/)?.[0] || "";
 assert.match(controllerHandler,/sessionStorage\.setItem\(key,'1'\)/);
 assert.doesNotMatch(controllerHandler,/location\.replace|sessionStorage\.getItem/);
