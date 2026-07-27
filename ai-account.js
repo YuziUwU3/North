@@ -89,12 +89,12 @@ function aiServiceCards(){return aiRechargePlans().filter(p=>p.kind==='service')
     <b style="font-size:20px;white-space:nowrap">¥${Number(p.amount_cny||0).toFixed(1)}</b>
   </button>`).join('');}
 
-function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};S.settings.stt=S.settings.stt||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
+function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};S.settings.stt=S.settings.stt||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p!=='aiaccount')return;if(typeof maybePhoneNotice==='function')maybePhoneNotice();if(!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
   const knownBalance=aiVisibleBalance(),bal=knownBalance==null?'读取中…':knownBalance;
   const low=aiLowBalanceCfg();
   const voice=aiVoiceLabel(tts.voice);
   const relayLang=tts.relayLang||'';
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" onclick="aiAccountRefresh()">刷新</span></div>
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" style="display:flex;justify-content:flex-end;gap:10px;font-size:12px"><b onclick="showPhoneNotice(false)" style="font-weight:500;color:#aaa;cursor:pointer">使用须知</b><b onclick="aiAccountRefresh()" style="font-weight:500;cursor:pointer">刷新</b></span></div>
   <div class="scroll" style="background:#0f1117;color:#e8eaf0;padding:12px">
     <div style="background:#17191f;border-radius:8px;padding:18px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 28px rgba(0,0,0,.2)">
       <div style="font-size:12px;color:#aeb4bf">小手机内置AI点数</div>
