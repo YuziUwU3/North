@@ -4,6 +4,8 @@ import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
+assert.match(source, /const VOICE_MAX_CHARS=300;/);
+
 function functionSource(name) {
   const start = source.indexOf(`function ${name}`);
   assert.ok(start >= 0, `missing ${name}`);
