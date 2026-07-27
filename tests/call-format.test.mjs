@@ -40,7 +40,6 @@ const context = vm.createContext({
   CN_PUNCT_RE: /[（）()「」『』【】《》〈〉、，。．！？；：…—～·“”‘’]/g,
   splitBubbles: (text) => (text || "").split("\n").map((s) => s.trim()).filter(Boolean),
   ttsCueKind: (cue) => cue || "",
-  _callFallbackCursor: 0,
 });
 
 for (const name of [
@@ -85,13 +84,8 @@ assert.equal(context.callHasSpokenDialogue("[通话语气|中性]\n【看着镜�
 assert.equal(context.callHasSpokenDialogue("【看着镜头】\n我在，怎么了？", "zh"), true);
 assert.equal(context.callHasSpokenDialogue("【看着镜头】\nI'm here.\n（我在。）", "英"), true);
 assert.equal(context.callHasSpokenDialogue("【看着镜头】\n（我在。）", "英"), false);
-const fallbackOne=context.ensureVideoCallDialogue("【看着镜头】", "英");
-const fallbackTwo=context.ensureVideoCallDialogue("【看着镜头】", "英");
-assert.match(fallbackOne,/【看着镜头】\nI'm listening\. Go on\./);
-assert.match(fallbackTwo,/【看着镜头】\nI'm right here\. Tell me\./);
-assert.notEqual(fallbackOne,fallbackTwo,"consecutive video fallbacks must not repeat the same sentence");
-assert.doesNotMatch(source,/I got distracted for a moment|刚才有点走神/);
-assert.match(source,/for\(let _vd=0;_vd<2&&!callHasSpokenDialogue/);
+assert.equal(context.ensureVideoCallDialogue("【看着镜头】", "zh"), "【看着镜头】\n我在，刚才有点走神。");
+assert.equal(context.ensureVideoCallDialogue("【看着镜头】", "英"), "【看着镜头】\nI'm here. I got distracted for a moment.\n（我在，刚才有点走神。）");
 assert.match(source, /英文原文行不能夹中文称谓/);
 assert.match(source, /中文翻译必须写“宝贝\/亲爱的”/);
 assert.match(source, /每一轮都必须至少说1句真正会被听见的台词，同时至少有1行动作/);

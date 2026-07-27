@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='694'){
+if(window.__NORTH_SHELL_BUILD__!=='695'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v694 · 启动缓存切换修复';
+const APP_VER='v695 · 通话节奏恢复';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1137,8 +1137,7 @@ function callIsActionLine(line){return /^【(?!\s*(?:心情|心情值|通话语�
 function callHasVideoAction(text){return (String(text||'').match(/【[^】]{1,80}】/g)||[]).some(callIsActionLine);}
 function ensureVideoCallAction(text,cue){text=String(text||'').trim();if(callHasVideoAction(text))return text;cue=ttsCueKind(cue);const action=cue==='tense'?'【目光落在镜头上，神情认真了些】':cue==='soft'?'【望着镜头，神情慢慢柔和下来】':cue==='laugh'?'【看着镜头轻轻笑了一下】':cue==='sleepy'?'【靠近镜头，困倦地眨了眨眼】':cue==='surprised'?'【看向镜头，神情明显怔了一下】':'【看着镜头，神情随着话音轻轻变化】';return text?(text+'\n'+action):action;}
 function callHasSpokenDialogue(text,lang){return String(text||'').split(/\n+/).some(line=>{line=String(line||'').trim();if(!line||callIsActionLine(line)||/^[（(][^）)]*[）)]$/.test(line))return false;return !!pickSpoken(line,lang);});}
-let _callFallbackCursor=0;
-function callVideoFallbackDialogue(lang){lang=normVoiceLang(lang);const sets=lang==='英'?["I'm listening. Go on.\n（我在听，你继续。）","I'm right here. Tell me.\n（我就在这里，你说。）","I hear you. Keep talking.\n（我听着呢，继续说。）"]:lang==='日'?['聞いてるよ。続けて。\n（我在听，你继续。）','ここにいるよ。話して。\n（我就在这里，你说。）','ちゃんと聞いてる。続きを話して。\n（我听着呢，继续说。）']:lang==='韩'?['듣고 있어. 계속 말해.\n（我在听，你继续。）','나 여기 있어. 말해 봐.\n（我就在这里，你说。）','잘 듣고 있어. 계속해.\n（我听着呢，继续说。）']:['我在听，你继续。','我就在这里，你说。','我听着呢，继续说。'];const line=sets[_callFallbackCursor%sets.length];_callFallbackCursor=(_callFallbackCursor+1)%sets.length;return line;}
+function callVideoFallbackDialogue(lang){lang=normVoiceLang(lang);if(lang==='英')return "I'm here. I got distracted for a moment.\n（我在，刚才有点走神。）";if(lang==='日')return 'ここにいるよ。ちょっとぼんやりしてた。\n（我在，刚才有点走神。）';if(lang==='韩')return '여기 있어. 잠깐 딴생각했어.\n（我在，刚才有点走神。）';return '我在，刚才有点走神。';}
 function ensureVideoCallDialogue(text,lang){text=String(text||'').trim();if(callHasSpokenDialogue(text,lang))return text;const fallback=callVideoFallbackDialogue(lang);return text?(text+'\n'+fallback):fallback;}
 function callBadForeignMix(line,lang){lang=normVoiceLang(lang);if(lang!=='英')return false;let s=String(line||'').replace(/[（(][^）)]*[）)]/g,'').replace(/【[^】]*】/g,'').trim();if(!s||/^\[.*\]$/.test(s))return false;return /[A-Za-z]/.test(s)&&hasCN(s);}
 function callBadForeignLine(line,lang){lang=normVoiceLang(lang);const l=String(line||'').trim();if(!lang||lang==='zh'||!l||/^\[.*\]$/.test(l)||callIsActionLine(l)||(/^[（(][^）)]*[）)]$/.test(l)&&hasCN(l)))return false;const noAct=l.replace(/【[^】]*】/g,'').replace(/[（(][^）)]*[）)]/g,'').trim();if(!noAct)return false;return (hasCN(noAct)&&!hasForeign(noAct,lang))||callBadForeignMix(noAct,lang);}
@@ -1266,7 +1265,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=694';
+  const url='sw.js?v=695';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -9486,12 +9485,9 @@ async function callAI(sysNote,opts){if(!_call)return;
       if(_call&&_call.session===sess&&fix&&!callUnansweredMistake(fix))content=fix;
     }
     if(video&&_call&&_call.session===sess&&_call.state==='active'&&!callHasSpokenDialogue(content,_lang)){
-      let draft=content;
-      for(let _vd=0;_vd<2&&!callHasSpokenDialogue(content,_lang);_vd++){
-        let fix='';try{fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:draft},{role:'user',content:'[系统纠正：上一版只有动作、神态或控制标签，没有任何真正说出口的台词，不能作为视频通话回复。请直接以角色本人身份回答用户刚才的话，至少说一句有具体内容、能被听见的自然对白，同时保留1到2行【动作】。不要解释纠正，不要复述固定兜底句。]'},{role:'system',content:personaPin(c)}],_md);}catch(_) {break;}
-        if(fix)fix=fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');draft=fix||draft;
-        if(_call&&_call.session===sess&&fix&&!isRefusal(fix)&&!callUnansweredMistake(fix)&&(!_langN||!callDrifted(fix,_lang))&&callHasSpokenDialogue(fix,_lang))content=fix;
-      }
+      let fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：上一版只有动作、神态或控制标签，没有任何真正说出口的台词，不能作为视频通话回复。请重新回答用户刚才的话：至少说一句自然对白，同时保留1到2行【动作】；不要解释这次纠正。]'},{role:'system',content:personaPin(c)}],_md);
+      if(fix)fix=fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');
+      if(_call&&_call.session===sess&&fix&&!isRefusal(fix)&&!callUnansweredMistake(fix)&&(!_langN||!callDrifted(fix,_lang))&&callHasSpokenDialogue(fix,_lang))content=fix;
       if(!callHasSpokenDialogue(content,_lang))content=ensureVideoCallDialogue(content,_lang);
     }
     const _callCueTag=(content.match(/[\[【]\s*通话语气\s*[|｜:：]\s*([^\]】]+)[\]】]/)||[])[1]||'';
