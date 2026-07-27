@@ -63,18 +63,25 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v693 shell and service worker are aligned',()=>{
+test('v694 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v693 · 放映室字幕分段选择'/);
-  assert.match(html,/app\.js\?v=693/);
-  assert.match(sw,/BUILD='693'/);
+  assert.match(app,/APP_VER='v694 · 启动缓存切换修复'/);
+  assert.match(html,/app\.js\?v=694/);
+  assert.match(sw,/BUILD='694'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
+  const sw=readFileSync(join(root,'sw.js'),'utf8');
   const start=html.indexOf("addEventListener('controllerchange'");
   const end=html.indexOf("var url='sw.js",start);
   assert.ok(start>=0&&end>start);
   assert.doesNotMatch(html.slice(start,end),/location\.replace/);
+  const activateStart=sw.indexOf("self.addEventListener('activate'");
+  const fetchStart=sw.indexOf("self.addEventListener('fetch'",activateStart);
+  assert.ok(activateStart>=0&&fetchStart>activateStart);
+  const activation=sw.slice(activateStart,fetchStart);
+  assert.match(activation,/self\.clients\.claim\(\)/);
+  assert.doesNotMatch(activation,/client\.navigate|location\.(?:replace|reload)|clients\.openWindow/);
 });

@@ -1,5 +1,5 @@
-const BUILD='693';
-const SHELL_CACHE='north-shell-v693';
+const BUILD='694';
+const SHELL_CACHE='north-shell-v694';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -88,8 +88,6 @@ self.addEventListener('activate',event=>{
     const keys=await caches.keys();
     await Promise.all(keys.filter(key=>key.startsWith('north-shell-')&&key!==SHELL_CACHE).map(key=>caches.delete(key)));
     await self.clients.claim();
-    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    await Promise.all(windows.map(async client=>{try{const u=new URL(client.url);if(u.origin!==self.location.origin||u.searchParams.get('v')===BUILD)return;u.searchParams.set('v',BUILD);u.searchParams.set('sw',Date.now());await client.navigate(u.href);}catch(_){}}));
   })());
 });
 

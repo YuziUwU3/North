@@ -26,8 +26,12 @@ assert.match(sw, new RegExp(`const BUILD='${version}'`));
 assert.match(sw, /validShellText/);
 assert.match(sw, /incomplete/);
 assert.match(sw, /cache:'no-store'/);
-assert.match(sw, /self\.clients\.matchAll\(\{type:'window',includeUncontrolled:true\}\)/);
-assert.match(sw, /client\.navigate\(u\.href\)/);
+const activateStart=sw.indexOf("self.addEventListener('activate'");
+const fetchStart=sw.indexOf("self.addEventListener('fetch'",activateStart);
+assert.ok(activateStart>=0&&fetchStart>activateStart,'service worker activation handler must exist');
+const activation=sw.slice(activateStart,fetchStart);
+assert.match(activation, /self\.clients\.claim\(\)/);
+assert.doesNotMatch(activation, /client\.navigate|location\.(?:replace|reload)|clients\.openWindow/,'cache activation must never interrupt the active app page');
 assert.match(index, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(repair, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 
