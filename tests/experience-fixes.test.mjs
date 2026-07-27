@@ -68,8 +68,8 @@ assert.match(source, /if\(mode==='single'\)\{const point=await offSummarySingleP
 assert.match(source, /整场一条<\/button>/);
 assert.match(source, /拆成多条<\/button>/);
 
-// A spoken line replaces an action subtitle before TTS generation can stall the screen.
+// An action stays readable, then the spoken line can replace it before TTS generation stalls the screen.
 assert.match(source, /if\(video&&followedAction\)show\(\)/);
-assert.match(source, /if\(isAction\)[\s\S]{0,180}Math\.min\(980/);
+assert.match(source, /if\(isAction\)[\s\S]{0,220}Math\.max\(1150,Array\.from\(u\.orig\)\.length\*105\),760/);
 
 console.log("experience fixes tests passed");

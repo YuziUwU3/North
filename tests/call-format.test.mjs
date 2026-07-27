@@ -90,5 +90,7 @@ assert.match(source, /英文原文行不能夹中文称谓/);
 assert.match(source, /中文翻译必须写“宝贝\/亲爱的”/);
 assert.match(source, /每一轮都必须至少说1句真正会被听见的台词，同时至少有1行动作/);
 assert.match(source, /上一版只有动作、神态或控制标签，没有任何真正说出口的台词/);
+assert.match(source, /if\(isAction\)\{_call\.sub=\{who:'them',text:subText\};updateCallSub\(\);await sleep\(callPaceMs\(Math\.max\(1150,Array\.from\(u\.orig\)\.length\*105\),760\)\);continue;\}/);
+assert.doesNotMatch(source, /Math\.min\(980,360\+Array\.from\(u\.orig\)\.length\*17\)/);
 
 console.log("call format tests passed");

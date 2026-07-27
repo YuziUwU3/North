@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='695'){
+if(window.__NORTH_SHELL_BUILD__!=='696'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v695 · 通话节奏恢复';
+const APP_VER='v696 · 视频动作停留修复';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1265,7 +1265,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=695';
+  const url='sw.js?v=696';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -9538,7 +9538,7 @@ async function callAI(sysNote,opts){if(!_call)return;
       save();
       const spoken=pickSpoken(u.orig,_vlang);
       const subText=u.orig+(u.trans?'\n'+u.trans:'');
-      if(isAction){_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.min(980,360+Array.from(u.orig).length*17),320));continue;}
+      if(isAction){_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(1150,Array.from(u.orig).length*105),760));continue;}
       if(_call.replyVoice&&!c.muted&&spoken){let shown=false,preT=null;const show=()=>{if(shown)return;shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}};const off=phPhoneVoiceOffset();if(video&&followedAction)show();else if(off<0)preT=setTimeout(show,Math.max(0,600+off));await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:!_voiceInterjectionUsed,cacheMessage:video?callMsg:null,onAudioStart:()=>{if(preT)clearTimeout(preT);setTimeout(show,Math.max(0,off));}});_voiceInterjectionUsed=true;if(!shown&&_call&&_call.session===sess){show();await sleep(callPaceMs(620,420));}else await sleep(callPaceMs(360,220));}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(900,u.orig.length*72),620));}}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if((wantHang||wantWxLogin||wantRemoteControl)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':wantRemoteControl?'remotecontrol':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);else if(wantRemoteControl)setTimeout(()=>{if(!(typeof _call!=='undefined'&&_call))remoteControlRequest(cid||c.id);},1400);},900);
