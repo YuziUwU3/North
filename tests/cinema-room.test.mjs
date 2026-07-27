@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v673 · 极简弹幕与持续话筒'/);
+assert.match(source, /APP_VER='v674 · 字幕语音同步与连续播放'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -373,9 +373,11 @@ assert.match(functionSource("cinemaShoot"), /_cin\.shootQueue\.push/);
 assert.match(functionSource("cinemaShowShot"), /box\.innerHTML=''/);
 assert.match(functionSource("cinemaShowShot"), /d\.style\.top='28%'/);
 assert.match(functionSource("cinemaShowShot"), /\+' glide'/);
+assert.match(functionSource("cinemaShowShot"), /syncedMs/);
+assert.match(functionSource("cinemaShowShot"), /Math\.max\(900,Math\.min\(12000,\+syncedMs\)\)/);
 assert.match(functionSource("cinemaShotMs"), /Math\.max\(5500,Math\.min\(9000/);
 assert.match(functionSource("cinemaShootNext"), /await speakWait\(item\.speakText,item\.speaker,\{onAudioStart:show\}\)/);
-assert.match(functionSource("cinemaShootNext"), /const end=_cin\.shootResolve;if\(end\)end\(\)/);
+assert.doesNotMatch(functionSource("cinemaShootNext"), /const end=_cin\.shootResolve;if\(end\)end\(\)/);
 assert.doesNotMatch(functionSource("cinemaShootNext"), /sleep\(/);
 const shotOrder=[],shotResolvers=[];
 const shotQueueContext=vm.createContext({
@@ -390,6 +392,18 @@ shotQueueContext.shoot('role','reply');
 assert.deepEqual(shotOrder,['me:recognized speech'],'recognized user speech must be shown before the role reply');
 assert.equal(shotQueueContext._cin.shootQueue.length,1,'the next barrage must wait in the queue');
 shotResolvers.shift()();
+let syncedDuration=0;
+const syncedShotContext=vm.createContext({
+  _cin:{shootQueue:[],shootBusy:false,token:11,shootEpoch:0,busy:false},
+  cinemaShowShot:(_who,_text,duration)=>{syncedDuration=duration;return Promise.resolve();},
+  speakWait:async(_text,_speaker,opt)=>{opt.onAudioStart(2460);},
+  cinemaMicResumeVideo:()=>{},
+  Date,
+});
+vm.runInContext('async '+functionSource("cinemaShootNext")+'\n'+functionSource("cinemaShoot")+';globalThis.shoot=cinemaShoot;',syncedShotContext);
+syncedShotContext.shoot('role','sync with speech',{speakText:'sync with speech',speaker:{}});
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(syncedDuration,2460,'the barrage must appear at audio start and use the spoken audio duration');
 await new Promise(resolve=>setTimeout(resolve,0));
 assert.deepEqual(shotOrder,['me:recognized speech','role:reply'],'queued barrages must appear one at a time and in order');
 shotResolvers.shift()();
@@ -431,9 +445,24 @@ assert.match(functionSource("cinemaMicToggle"), /const sr=makeSR\(\)/);
 assert.match(functionSource("cinemaMicToggle"), /sr\.onresult=/);
 assert.match(functionSource("cinemaMicToggle"), /if\(finalText\)cinemaMicHeard\(kind,finalText\)/);
 assert.doesNotMatch(functionSource("cinemaMicToggle"), /startRec|stopRec/);
-assert.match(functionSource("cinemaMicHeard"), /if\(v&&!v\.paused\)\{_cin\.micResumeVideo=true;v\.pause\(\);\}/);
+assert.doesNotMatch(functionSource("cinemaMicHeard"), /\.pause\(/);
+assert.doesNotMatch(functionSource("cinemaMicHeard"), /micResumeVideo=true/);
 assert.match(source, /inp\.value=text/);
 assert.match(source, /cinemaSend\(kind\)/);
+let micPauseCount=0,micSendCount=0;
+const micInput={value:''},micSubtitle={classList:{remove:()=>{}}};
+const micPlaybackContext=vm.createContext({
+  _cin:{micKind:'video',micBusy:false,micSR:{},micIgnoreUntil:0,busy:false,shootBusy:false,voiceSubTimer:null},
+  $:selector=>selector==='#cinInput'?micInput:selector==='#cinVoiceSub'?micSubtitle:selector==='#cinVideo'?{paused:false,pause:()=>{micPauseCount++;}}:null,
+  clearTimeout:()=>{},
+  cinemaSetStatus:()=>{},
+  cinemaSend:()=>{micSendCount++;},
+});
+vm.runInContext(functionSource("cinemaMicHeard")+';globalThis.heard=cinemaMicHeard;',micPlaybackContext);
+micPlaybackContext.heard('video','我边看边说');
+assert.equal(micPauseCount,0,'continuous microphone speech must never pause the playing video');
+assert.equal(micInput.value,'我边看边说');
+assert.equal(micSendCount,1,'recognized speech must still be sent to the role');
 let liveHeard='',liveStart=0,liveStop=0;
 const liveSr={start:()=>{liveStart++;},stop:()=>{liveStop++;}};
 const liveMicContext=vm.createContext({
@@ -463,6 +492,6 @@ assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
-assert.match(html, /app\.js\?v=673/);
+assert.match(html, /app\.js\?v=674/);
 
 console.log("cinema room tests passed");
