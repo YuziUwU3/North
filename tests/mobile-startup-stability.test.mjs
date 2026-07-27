@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
 
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
@@ -47,49 +46,17 @@ test('stored avatar references render safely and refresh incoming call UI', () =
   assert.match(app, /else refreshHydratedUI\(\)/);
 });
 
-test('viewport height is temporary, offset-aware, and cleared after the iOS keyboard closes', () => {
-  const style = { value: '', setProperty(_k, v) { this.value = v; }, removeProperty() { this.value = ''; } };
-  const visual = { scale: 1, height: 852, offsetTop: 0 };
-  const context = {
-    window: { innerHeight: 852, innerWidth: 393, visualViewport: visual, matchMedia: () => ({ matches: false }) },
-    visualViewport: visual,
-    navigator: { standalone: false },
-    matchMedia: () => ({ matches: false }),
-    document: { documentElement: { style, clientHeight: 852 }, activeElement: null },
-    Math
-  };
-  vm.runInNewContext(`let _appViewportHeight=0,_appViewportOrientation='';\n${functionSource('appViewportEditing')}\n${functionSource('appLayoutViewportHeight')}\n${functionSource('appVisibleViewportHeight')}\n${functionSource('clearAppViewportHeight')}\n${functionSource('syncAppViewport')}\nsyncAppViewport()`, context);
-  assert.equal(style.value, '');
-  context.window.innerHeight = 700;
-  context.document.documentElement.clientHeight = 700;
-  visual.height = 700;
-  vm.runInNewContext('syncAppViewport()', context);
-  assert.equal(style.value, '');
-  context.document.activeElement = { tagName: 'INPUT', isContentEditable: false };
-  visual.height = 420;
-  visual.offsetTop = 160;
-  vm.runInNewContext('syncAppViewport()', context);
-  assert.equal(style.value, '580px');
-  context.document.activeElement = null;
-  vm.runInNewContext('syncAppViewport()', context);
-  assert.equal(style.value, '');
+test('keyboard events can never resize or clip the global phone shell', () => {
+  assert.doesNotMatch(html, /--north-app-height/);
+  assert.match(html, /\.phone\{width:100vw;height:100vh;height:100dvh;max-height:none/);
+  assert.doesNotMatch(app, /function syncAppViewport/);
+  assert.doesNotMatch(app, /function appVisibleViewportHeight/);
+  assert.doesNotMatch(app, /document\.documentElement\.style\.setProperty\(['"]--north-app-height/);
+  assert.doesNotMatch(app, /visualViewport\.addEventListener\(['"](?:resize|scroll)['"]/);
 });
 
-test('mobile viewport and desktop pages self-correct after resume and swipes', () => {
-  assert.match(html, /height:var\(--north-app-height,100dvh\)/);
-  const viewport = functionSource('syncAppViewport');
-  assert.match(viewport, /appViewportEditing\(\)/);
-  assert.match(viewport, /clearAppViewportHeight\(\)/);
-  assert.match(viewport, /_appViewportHeight=Math\.round\(h\)/);
-  assert.doesNotMatch(viewport, /screen\.height/);
-  assert.doesNotMatch(viewport, /Math\.max\(_appViewportHeight/);
-  assert.match(functionSource('appVisibleViewportHeight'), /vv\.offsetTop/);
-  assert.match(app, /window\.addEventListener\('pagehide',\(\)=>\{clearAppViewportHeight\(\)/);
-  assert.match(app, /window\.addEventListener\('pageshow',e=>\{clearAppViewportHeight\(\);settleAppViewport\(\)/);
-  assert.match(app, /if\(document\.hidden\).*clearAppViewportHeight\(\)/);
-  assert.match(app, /document\.addEventListener\('focusin',settleAppViewport\)/);
-  assert.match(app, /document\.addEventListener\('focusout',settleAppViewport\)/);
-  assert.match(app, /visualViewport\.addEventListener\('scroll',syncAppViewport\)/);
+test('mobile pages keep independent scrolling and home swipes after resume', () => {
+  assert.match(app, /window\.addEventListener\('pageshow',e=>\{/);
   assert.match(html, /scroll-snap-stop:always/);
   assert.match(html, /\.scroll\{flex:1;min-height:0;[^}]*touch-action:pan-y/);
   assert.match(html, /\.appswipe\{[^}]*touch-action:pan-x/);

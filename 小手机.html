@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='686';</script>
+<script>window.__NORTH_SHELL_BUILD__='687';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-686';
+  var key='north-sw-reloaded-687';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=686';
+  var url='sw.js?v=687';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -42,7 +42,7 @@
 button,.btn,.minibtn,.send,.plus,.app,.list .row,.tabbar .tb,.nav .l,.nav .r,.panel .it,.card,.sw,.it,.pfswipe{touch-action:manipulation;}
 html,body{height:100%;}
 body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
-  background:linear-gradient(135deg,#ffd6e8,#d6e4ff 50%,#e3d6ff);display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;min-height:var(--north-app-height,100dvh);padding:12px;}
+  background:linear-gradient(135deg,#ffd6e8,#d6e4ff 50%,#e3d6ff);display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:12px;}
 .phone{position:relative;width:380px;height:800px;max-height:97vh;background:#111;border-radius:48px;padding:12px;box-shadow:0 20px 60px rgba(255,143,171,.45);}
 .screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;display:flex;flex-direction:column;background:#ededed;}
 .island{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:108px;height:26px;background:#000;border-radius:16px;z-index:99;}
@@ -241,7 +241,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .sw.on:after{left:21px;}
 /* ========== 暗色 + 全屏 ========== */
 body{background:#000;padding:0;}
-.phone{width:100vw;height:100vh;height:100dvh;height:var(--north-app-height,100dvh);max-height:none;border-radius:0;padding:0;background:#000;box-shadow:none;}
+.phone{width:100vw;height:100vh;height:100dvh;max-height:none;border-radius:0;padding:0;background:#000;box-shadow:none;}
 .screen{border-radius:0;background:#000;}
 .island{display:none;}
 .statusbar,.statusbar.dark{color:#fff;}
@@ -865,7 +865,7 @@ body{background:#000;padding:0;}
 .cin-barrage{width:76vw;max-width:520px;white-space:pre-line!important;overflow-wrap:break-word;word-break:normal;text-align:center;line-height:1.35}.cin-voice-sub.mine b{color:#ffb3d3}.cin-voice-sub.mine span{display:none}.cin-stage.chat-open .cin-voice-sub{bottom:calc(var(--cin-chat-h) + 82px)}.cin-status-chip:empty{display:none}
 .cin-fullscreen-btn{width:36px;height:36px;flex:none;border:0;border-radius:12px;background:rgba(22,22,25,.64);color:#aaa;font-size:18px;line-height:1;backdrop-filter:blur(16px);touch-action:manipulation}
 @media (orientation:landscape) and (max-height:520px){.cin-fullscreen-btn{width:32px;height:32px}}
-@media (pointer:coarse){.cin-watch,.cin-stage{height:var(--north-app-height,100dvh);max-height:100dvh}.cin-tool-shelf button,.cin-edge-btn,.cin-collapse-btn,.cin-fullscreen-btn,.cin-end,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock,.cin-media-controls{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.chatbg,.smsbody,.cinema-home-scroll,.cin-logbox,.xscroll{min-height:0;overscroll-behavior-y:contain;touch-action:pan-y}}
+@media (pointer:coarse){.cin-watch,.cin-stage{height:100dvh;max-height:100dvh}.cin-tool-shelf button,.cin-edge-btn,.cin-collapse-btn,.cin-fullscreen-btn,.cin-end,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock,.cin-media-controls{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.chatbg,.smsbody,.cinema-home-scroll,.cin-logbox,.xscroll{min-height:0;overscroll-behavior-y:contain;touch-action:pan-y}}
 @media (prefers-reduced-motion:reduce){.cin-barrage{animation-duration:.01ms!important}}
 </style>
 <style>
@@ -927,8 +927,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=686" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=686" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=686"></script>
+<script src="license-gate.js?v=687" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=687" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=687"></script>
 </body>
 </html>
