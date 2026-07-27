@@ -7,20 +7,31 @@ const account=fs.readFileSync(new URL('../ai-account.js',import.meta.url),'utf8'
 const edge=fs.readFileSync(new URL('../supabase/functions/phone-ai/index.ts',import.meta.url),'utf8');
 const migration=fs.readFileSync(new URL('../supabase/migrations/202607270001_asr_billing.sql',import.meta.url),'utf8');
 
-test('built-in ASR is an independent AI-account switch',()=>{
+test('cinema ASR is an independent AI-account switch',()=>{
   assert.match(app,/stt:\{base:'',key:'',model:'',relay:false\}/);
   assert.match(app,/function sttRelayOn\(\)/);
-  assert.match(account,/内置语音识别/);
+  assert.match(account,/影院字幕识别/);
   assert.match(account,/function aiToggleAsrApi\(\)/);
   assert.match(app,/relay:!!oldStt\.relay/);
 });
-test('voice messages preserve audio and expose the recognized words',()=>{
+test('voice messages preserve audio and never call paid ASR',()=>{
   assert.match(app,/audio:m\.audio,content:m\.content\|\|'',showText:!!m\.content/);
-  assert.match(app,/if\(sttRelayOn\(\)\)\{try\{content=await sttTranscribe\(blob,\{durationSeconds:dur\}\)/);
+  assert.match(app,/const content=\(R\.getText\(\)\|\|''\)\.trim\(\),error='';/);
+  assert.doesNotMatch(app,/function stopRec[\s\S]{0,1200}sttTranscribe\(/);
+});
+
+test('diagnostic recordings are converted to wav for the cinema-only ASR route',()=>{
+  assert.match(app,/async function sttRecordedWav\(blob,durationSeconds\)/);
+  assert.match(app,/cinemaAudioChunkWav\(audio,0,end,16000\)/);
+  assert.match(account,/影院字幕接口测试（5秒）/);
+  assert.match(account,/function aiTestAsr\(\)/);
+  assert.match(account,/purpose:'diagnostic'/);
+  assert.match(edge,/asr-purpose-not-allowed/);
 });
 
 test('cinema chunks send trusted actual duration and never upload video to built-in ASR',()=>{
   assert.match(app,/durationSeconds:end-start/);
+  assert.match(app,/purpose:'cinema_subtitles'/);
   assert.match(app,/if\(sttRelayOn\(\)\)return toast\('内置识别不会上传原视频/);
   assert.match(app,/每 '\+sttRelaySecondsPerPoint\(\)\+' 秒 1 点计费/);
 });

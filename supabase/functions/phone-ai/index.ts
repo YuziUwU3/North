@@ -1692,6 +1692,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === "asr") {
+      const purpose = String(body.purpose || "").trim();
+      if (purpose !== "cinema_subtitles" && purpose !== "diagnostic") return json({ ok: false, error: "asr-purpose-not-allowed", charged: 0, billed: false }, 403);
       const routes = configuredAsrRoutes();
       if (!routes.length) return json({ ok: false, error: "asr-not-configured", charged: 0, billed: false }, 503);
       const audio = audioDataUri(body.audio);

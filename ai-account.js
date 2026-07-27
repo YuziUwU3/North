@@ -1,5 +1,5 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false,_aiImageBusy=false,_aiImageStatus='',_aiImageResult='',_aiLowBalanceTimer=0,_aiAccountPollTimer=0,_aiArrivalTimer=0;
+let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiAsrTestBusy=false,_aiAsrTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false,_aiImageBusy=false,_aiImageStatus='',_aiImageResult='',_aiLowBalanceTimer=0,_aiAccountPollTimer=0,_aiArrivalTimer=0;
 const AI_VOICE_PRESETS=[
   {id:'qingshouyin20260726',name:'青受音',clone:true,preset:true},
   {id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true},
@@ -125,8 +125,10 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div class="it"><span>内置语音语言<br><small style="color:#888">只影响内置AI语音；外置语音仍使用角色里的语言。</small></span><span class="v"><select onchange="aiSetVoiceLanguage(this.value)" style="background:#24262d;color:#eee;border:1px solid #3b3e48;border-radius:6px;padding:6px"><option value="" ${!relayLang?'selected':''}>暂未设置（沿用角色）</option><option value="zh" ${relayLang==='zh'?'selected':''}>中文</option><option value="英" ${relayLang==='英'?'selected':''}>英语</option><option value="日" ${relayLang==='日'?'selected':''}>日语</option><option value="韩" ${relayLang==='韩'?'selected':''}>韩语</option></select></span></div>
     </div>
     <div class="section">
-      <div class="it"><span>内置语音识别<br><small style="color:${aiAsrReady()===false?'#e6a0a8':'#888'}">${aiAsrReady()===false?'后台尚未配置识别渠道，暂时不能开启。':(aiAsrRouteCount()>1?'阿里主路线 + 腾讯备用路线；同一次最多各请求一次。':'使用已部署的语音识别渠道。')}</small></span><span class="sw ${aiAsrRelayOn()?'on':''}" onclick="aiToggleAsrApi()"></span></div>
-      <div style="margin:0 14px 10px;padding:10px 12px;border:1px solid rgba(126,184,255,.45);border-radius:10px;background:rgba(83,142,220,.08);color:#b9d6ff;font-size:13px;line-height:1.7">开启：长按语音消息和放映室“压缩音频提取字幕”走内置识别。<br>关闭：走设置里的外置语音转文字接口。<br>每 ${aiPrice('asr_seconds_per_point')||15} 秒 1 点，向上取整；5 分钟 20 点。双路线都失败会全额退点。</div>
+      <div class="it"><span>影院字幕识别<br><small style="color:${aiAsrReady()===false?'#e6a0a8':'#888'}">${aiAsrReady()===false?'后台尚未配置识别渠道，暂时不能开启。':(aiAsrRouteCount()>1?'阿里主路线 + 腾讯备用路线；只用于影院提取字幕。':'只用于影院提取字幕。')}</small></span><span class="sw ${aiAsrRelayOn()?'on':''}" onclick="aiToggleAsrApi()"></span></div>
+      <div style="margin:0 14px 10px;padding:10px 12px;border:1px solid rgba(126,184,255,.45);border-radius:10px;background:rgba(83,142,220,.08);color:#b9d6ff;font-size:13px;line-height:1.7">开启：放映室“压缩音频提取字幕”走内置识别。<br>微信长按语音不会调用这个接口，也不会扣识别点数。<br>影院字幕每 ${aiPrice('asr_seconds_per_point')||15} 秒 1 点，向上取整；5 分钟 20 点。双路线都失败会全额退点。</div>
+      <div class="btns" style="padding:0 14px 10px"><button class="btn p" ${_aiAsrTestBusy?'disabled':''} onclick="aiTestAsr()">${_aiAsrTestBusy?'测试中…':'影院字幕接口测试（5秒）'}</button></div>
+      ${_aiAsrTestStatus?`<div class="hint" style="padding:0 14px 12px;color:${_aiAsrTestBusy?'#9dc7ff':(/^✅/.test(_aiAsrTestStatus)?'#71e69f':'#ff9aa8')}">${esc(_aiAsrTestStatus)}</div>`:''}
     </div>
     <div class="section">
       <div class="it"><span>启用图片生成<br><small style="color:${aiImageReady()===false?'#e6a0a8':'#888'}">${aiImageReady()===false?'图片中转站尚未配置，暂时不能开启。':(aiImageRouteCount()>1?'图片双路线已启用：路线一失败自动切路线二；成功只扣一次，两条都失败才退点。':'使用已部署的 gpt-image-2 中转站，每张 '+aiPrice('image')+' 点；生成失败自动退点。')}</small></span><span class="sw ${aiImageRelayOn()?'on':''}" onclick="aiToggleImageApi()"></span></div>
@@ -211,7 +213,32 @@ function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);
 
 function aiToggleCore(){const ac=aiCoreInit();ac.enabled=false;save();aiRenderStable();toast('内置 AI 主通道已固定关闭');}
 function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();aiRenderStable();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
-function aiToggleAsrApi(){if(aiAsrReady()===false){toast('内置语音识别后台还没有配置好，暂时不能开启');return;}S.settings.stt=S.settings.stt||{};S.settings.stt.relay=!aiAsrRelayOn();save();aiRenderStable();toast(S.settings.stt.relay?'内置语音识别已开启':'内置语音识别已关闭，将使用外置配置');}
+function aiToggleAsrApi(){if(aiAsrReady()===false){toast('影院字幕识别后台还没有配置好，暂时不能开启');return;}S.settings.stt=S.settings.stt||{};S.settings.stt.relay=!aiAsrRelayOn();save();aiRenderStable();toast(S.settings.stt.relay?'影院字幕识别已开启':'影院字幕识别已关闭，将使用外置配置');}
+function aiAsrTestFinish(status){_aiAsrTestBusy=false;_aiAsrTestStatus=status;aiRenderStable();setTimeout(()=>aiAccountRefresh(true,true),500);}
+function aiAsrTestError(error){const raw=String(error||'').replace(/^内置AI失败：/,'').replace(/^asr-failed-refunded:\s*/,'');if(/unsupported-format-webm|format.*webm/i.test(raw))return '❌ 手机录音格式不兼容；请刷新到最新版后重试。本次点数已退回。';if(/empty/i.test(raw))return '❌ 接口没有听清文字，请靠近话筒清楚说一句再试。本次点数已退回。';if(/401|403|unauthor|forbidden|invalid.*key/i.test(raw))return '❌ 后台密钥或语音识别权限不正确，本次点数已退回。';if(/timeout|timed out|aborted/i.test(raw))return '❌ 识别接口超时，本次点数已退回，请稍后重试。';if(/network|fetch|load failed/i.test(raw))return '❌ 网络连接失败，录音没有识别成功。';return '❌ '+(raw||'语音识别失败；失败不会扣点').slice(0,220);}
+async function aiTestAsr(){
+  if(_aiAsrTestBusy)return;
+  if(!aiAsrRelayOn()){toast('请先打开「影院字幕识别」开关');return;}
+  if(aiAsrReady()===false){toast('后台尚未配置影院字幕识别渠道');return;}
+  if(_rec){toast('已有录音正在进行，请先结束');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){_aiAsrTestStatus='❌ 当前浏览器不能录音，请用 Safari 或 Chrome 并允许麦克风权限';aiRenderStable();return;}
+  _aiAsrTestBusy=true;_aiAsrTestStatus='正在打开麦克风…';aiRenderStable();let started=false;
+  await startRec(()=>{
+    started=true;_aiAsrTestStatus='正在录音，请清楚说一句话（5秒）…';aiRenderStable();
+    setTimeout(()=>{
+      if(!_rec){aiAsrTestFinish('❌ 录音意外停止，请重新测试');return;}
+      stopRec(false,async m=>{
+        if(!m||!m.blob){aiAsrTestFinish('❌ 没有录到声音，请检查麦克风权限');return;}
+        try{
+          const upload=await sttRecordedWav(m.blob,m.dur),j=await sttRequest(upload,{durationSeconds:m.dur,purpose:'diagnostic'}),text=String(j&&j.text||'').replace(/\s+/g,' ').trim();
+          if(!text)throw new Error('接口已响应，但没有听清文字');
+          aiAsrTestFinish('✅ 影院字幕接口可用，识别到：“'+text.slice(0,80)+'”'+(text.length>80?'…':'')+'（本次约扣1点）');
+        }catch(e){aiAsrTestFinish(aiAsrTestError((e&&e.message)||e));}
+      });
+    },5000);
+  },{hint:'影院字幕接口测试录音中'});
+  if(!started)aiAsrTestFinish('❌ 麦克风没有启动，请检查浏览器录音权限');
+}
 function aiSetVoiceLanguage(lang){S.settings.tts=S.settings.tts||{};S.settings.tts.relayLang=['zh','英','日','韩'].includes(lang)?lang:'';save();aiRenderStable();toast(lang?'内置语音已设为'+({zh:'中文','英':'英语','日':'日语','韩':'韩语'}[lang]||lang):'内置语音暂时沿用角色语言');}
 function aiToggleImageApi(){if(aiImageReady()===false){toast('图片中转站尚未配置，暂时不能开启');return;}const cfg=aiImageInit();cfg.enabled=!aiImageRelayOn();save();aiRenderStable();toast(cfg.enabled?'图片生成已开启':'图片生成已关闭');}
 function aiImageFailText(e){const full=String((e&&e.message)||e||'').replace(/^内置AI失败：/,'');const raw=full.slice(0,180);if(/429|No images were successfully|relay-image-empty|no image/i.test(full))return '中转站上游这次没有成功出图或正在限流排队；后台花费为0时不会扣真实费用，本次AI点数已退回。稍后再试，或把描述写短一点。';if(/upstream-timeout|timeout|timed out|aborted/i.test(full))return '中转站生成超时，通常不是密钥错误；本次点数已退回，可以稍后换短一点的描述再试。';if(/fetch|network|load failed|cors/i.test(full))return '网络等待太久断开；如果后台显示429/花费0，说明是中转站上游没有成功出图，不是密钥或付款问题。';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(full))return '中转站密钥或权限异常，本次点数已退回。';if(/404|model.*not.*found|not found/i.test(full))return '接口地址或图片模型不匹配，本次点数已退回。';return raw||'图片生成失败，本次点数已退回。';}
