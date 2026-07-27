@@ -63,10 +63,10 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v674 shell and service worker are aligned',()=>{
+test('v675 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v674 · 字幕语音同步与连续播放'/);
-  assert.match(html,/app\.js\?v=674/);
-  assert.match(sw,/BUILD='674'/);
+  assert.match(app,/APP_VER='v675 · 统一字幕速度与安静话筒'/);
+  assert.match(html,/app\.js\?v=675/);
+  assert.match(sw,/BUILD='675'/);
 });

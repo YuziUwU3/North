@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v674 · 字幕语音同步与连续播放'/);
+assert.match(source, /APP_VER='v675 · 统一字幕速度与安静话筒'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -123,8 +123,11 @@ assert.doesNotMatch(source, /function cinemaShowVoiceSubtitle/);
 assert.doesNotMatch(source, /speak\(outs\.map/);
 assert.match(functionSource("cinemaRoleReply"), /speakText:voiceOn\?out\.spoken:''/);
 assert.match(source, /commentDisplay:'barrage'/);
+assert.match(source, /captionSpeed:'normal'/);
 assert.match(source, /function cinemaCommentDisplay/);
 assert.match(source, /function cinemaCommentDisplaySave/);
+assert.match(source, /function cinemaCaptionSpeed/);
+assert.match(source, /function cinemaCaptionSpeedSave/);
 assert.match(source, /弹幕模式/);
 assert.match(source, /底部字幕模式/);
 assert.doesNotMatch(source, /角色已读到当前字幕/);
@@ -255,6 +258,7 @@ const toolsHtmlContext = vm.createContext({
   cinemaVoiceLangLabel: () => "中文",
   cinemaVisionIntervalLabel: () => "画面 按需",
   cinemaCommentDisplay: () => "barrage",
+  cinemaCaptionSpeedLabel: () => "标准",
   svgIc: () => "",
 });
 vm.runInContext(functionSource("cinemaStageTools") + ";globalThis.html=cinemaStageTools();", toolsHtmlContext);
@@ -263,6 +267,7 @@ assert.match(toolsHtmlContext.html, /data-cin-action="extract"/);
 assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="transcribe"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="frame"/);
 assert.match(toolsHtmlContext.html, /显示 · 弹幕/);
+assert.match(toolsHtmlContext.html, /标准/);
 assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="fx"/);
 assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="fullscreen"/);
 assert.doesNotMatch(toolsHtmlContext.html, /event\.stopPropagation/);
@@ -375,7 +380,16 @@ assert.match(functionSource("cinemaShowShot"), /d\.style\.top='28%'/);
 assert.match(functionSource("cinemaShowShot"), /\+' glide'/);
 assert.match(functionSource("cinemaShowShot"), /syncedMs/);
 assert.match(functionSource("cinemaShowShot"), /Math\.max\(900,Math\.min\(12000,\+syncedMs\)\)/);
+assert.match(functionSource("cinemaShowShot"), /cinemaCaptionDuration\(baseMs\)/);
 assert.match(functionSource("cinemaShotMs"), /Math\.max\(5500,Math\.min\(9000/);
+const captionSpeedState={settings:{captionSpeed:'normal'}};
+const captionSpeedContext=vm.createContext({cinemaInit:()=>captionSpeedState,Math});
+vm.runInContext(functionSource("cinemaCaptionSpeed")+'\n'+functionSource("cinemaCaptionDuration")+';globalThis.duration=cinemaCaptionDuration;',captionSpeedContext);
+assert.equal(captionSpeedContext.duration(5000),5000);
+captionSpeedState.settings.captionSpeed='slow';
+assert.equal(captionSpeedContext.duration(5000),6000);
+captionSpeedState.settings.captionSpeed='fast';
+assert.equal(captionSpeedContext.duration(5000),4000);
 assert.match(functionSource("cinemaShootNext"), /await speakWait\(item\.speakText,item\.speaker,\{onAudioStart:show\}\)/);
 assert.doesNotMatch(functionSource("cinemaShootNext"), /const end=_cin\.shootResolve;if\(end\)end\(\)/);
 assert.doesNotMatch(functionSource("cinemaShootNext"), /sleep\(/);
@@ -447,6 +461,7 @@ assert.match(functionSource("cinemaMicToggle"), /if\(finalText\)cinemaMicHeard\(
 assert.doesNotMatch(functionSource("cinemaMicToggle"), /startRec|stopRec/);
 assert.doesNotMatch(functionSource("cinemaMicHeard"), /\.pause\(/);
 assert.doesNotMatch(functionSource("cinemaMicHeard"), /micResumeVideo=true/);
+assert.doesNotMatch(functionSource("cinemaMicHeard"), /已听清并发送/);
 assert.match(source, /inp\.value=text/);
 assert.match(source, /cinemaSend\(kind\)/);
 let micPauseCount=0,micSendCount=0;
@@ -492,6 +507,6 @@ assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
-assert.match(html, /app\.js\?v=674/);
+assert.match(html, /app\.js\?v=675/);
 
 console.log("cinema room tests passed");
