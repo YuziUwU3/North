@@ -22,10 +22,16 @@ const PRICE: Record<string, number> = {
   tts: 1,
   tts_chars_per_point: 50,
   tts_max_chars: 300,
+  asr: 1,
+  asr_seconds_per_point: Math.max(5, Math.min(60, Number(Deno.env.get("ASR_SECONDS_PER_POINT") || 15) || 15)),
   summary: 2,
 };
 const TTS_CHARS_PER_POINT = 50;
 const TTS_MAX_CHARS = 300;
+const ASR_SECONDS_PER_POINT = PRICE.asr_seconds_per_point;
+const ASR_MAX_SECONDS = 300;
+const ASR_MAX_BYTES = 15 * 1024 * 1024;
+const ALI_ASR_MAX_DATA_URI_BYTES = 9_500_000;
 const DEFAULT_TTS_VOICE = "male-qn-qingse";
 const LICENSE_EPOCH = Number(Deno.env.get("LICENSE_EPOCH") || 4);
 const PUBLIC_TTS_VOICES = [
@@ -431,6 +437,18 @@ async function recoverStalePendingCharges(userId: string, clientSecret: string) 
       meta: { reason: "stale-pending-auto-refund" },
     });
   }
+  const asrCutoff = new Date(Date.now() - 12 * 60 * 1000).toISOString();
+  const { data: staleAsr } = await supabase.from("phone_ai_ledger")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("kind", "charge")
+    .eq("feature", "asr")
+    .eq("status", "pending")
+    .lt("created_at", asrCutoff)
+    .limit(8);
+  for (const row of staleAsr || []) {
+    await refundAsrPoints(String(row.id), userId, "stale-asr-auto-refund").catch(() => null);
+  }
 }
 
 async function refundTtsLedger(userId: string, clientSecret: string, ledgerId: string, reason: string) {
@@ -465,6 +483,203 @@ async function failCharged(ledgerId: string, cost: number, balance: number, mode
   const note = "模型请求已经发出，按一次成本计费；失败原因：" + reason;
   await finishCharge(ledgerId, false, { charged: true, model, reason, note });
   return json({ ok: false, error: "model-failed-charged: " + reason, charged: cost, balance, billed: true, note }, 502);
+}
+
+type AsrSegment = { start: number; end: number; text: string };
+type AsrResult = {
+  text: string;
+  segments: AsrSegment[];
+  duration: number;
+  provider: "aliyun" | "tencent";
+  model: string;
+  requestId?: string;
+};
+
+function configuredAsrRoutes() {
+  const routes: Array<"aliyun" | "tencent"> = [];
+  if (String(Deno.env.get("DASHSCOPE_API_KEY") || "").trim()) routes.push("aliyun");
+  if (
+    String(Deno.env.get("TENCENT_APP_ID") || "").trim() &&
+    String(Deno.env.get("TENCENT_SECRET_ID") || "").trim() &&
+    String(Deno.env.get("TENCENT_SECRET_KEY") || "").trim()
+  ) routes.push("tencent");
+  return routes;
+}
+
+function asrPointCost(durationSeconds: number) {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || durationSeconds > ASR_MAX_SECONDS + 1) throw new Error("invalid-asr-duration");
+  return Math.max(1, Math.ceil(durationSeconds / ASR_SECONDS_PER_POINT));
+}
+
+function asrRequestId(raw: unknown) {
+  const id = String(raw || "").trim();
+  if (!/^[A-Za-z0-9_.:-]{8,100}$/.test(id)) throw new Error("invalid-asr-request-id");
+  return id;
+}
+
+function audioDataUri(raw: unknown) {
+  const value = String(raw || "");
+  const match = value.match(/^data:([\w.+/-]+);base64,([A-Za-z0-9+/=\s]+)$/);
+  if (!match) throw new Error("invalid-asr-audio-data");
+  const encoded = match[2].replace(/\s+/g, "");
+  let binary = "";
+  try { binary = atob(encoded); } catch (_) { throw new Error("invalid-asr-base64"); }
+  if (!binary.length || binary.length > ASR_MAX_BYTES) throw new Error("asr-audio-too-large");
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { uri: value, mime: match[1].toLowerCase(), bytes };
+}
+
+function asrFormat(mime: string, filename: unknown) {
+  const name = String(filename || "").toLowerCase();
+  const ext = (name.match(/\.([a-z0-9-]{2,10})$/) || [])[1] || "";
+  if (ext === "wav" || /wav/.test(mime)) return "wav";
+  if (ext === "mp3" || /mpeg|mp3/.test(mime)) return "mp3";
+  if (ext === "ogg" || /ogg/.test(mime)) return "ogg-opus";
+  if (ext === "opus" || /opus/.test(mime)) return "opus";
+  if (ext === "m4a" || ext === "mp4" || /m4a|mp4/.test(mime)) return "m4a";
+  if (ext === "aac" || /aac/.test(mime)) return "aac";
+  if (ext === "amr" || /amr/.test(mime)) return "amr";
+  if (ext === "pcm" || /pcm/.test(mime)) return "pcm";
+  if (ext === "webm" || /webm/.test(mime)) return "webm";
+  return ext || "webm";
+}
+
+function wavDurationSeconds(bytes: Uint8Array) {
+  if (bytes.length < 44) return 0;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const tag = (offset: number) => String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
+  if (tag(0) !== "RIFF" || tag(8) !== "WAVE") return 0;
+  let offset = 12, byteRate = 0, dataSize = 0;
+  while (offset + 8 <= bytes.length) {
+    const id = tag(offset), size = view.getUint32(offset + 4, true);
+    if (id === "fmt " && size >= 16 && offset + 16 <= bytes.length) byteRate = view.getUint32(offset + 12, true);
+    if (id === "data") { dataSize = Math.min(size, Math.max(0, bytes.length - offset - 8)); break; }
+    offset += 8 + size + (size % 2);
+  }
+  return byteRate > 0 && dataSize > 0 ? dataSize / byteRate : 0;
+}
+
+function trustedAsrDuration(bytes: Uint8Array, format: string, supplied: unknown) {
+  const duration = (format === "wav" ? wavDurationSeconds(bytes) : 0) || Number(supplied || 0);
+  if (!Number.isFinite(duration) || duration < 0.2 || duration > ASR_MAX_SECONDS + 1) throw new Error("invalid-asr-duration");
+  return Math.min(ASR_MAX_SECONDS, duration);
+}
+
+async function reserveAsrPoints(userId: string, points: number, requestId: string) {
+  const { data, error } = await supabase.rpc("phone_ai_asr_reserve", { p_user_id: userId, p_points: points, p_request_id: requestId });
+  if (error) throw new Error(error.message || "asr-reserve-failed");
+  return data as { duplicate: boolean; ledger_id: string; status: string; points: number; balance: number };
+}
+
+async function finishAsrPoints(ledgerId: string, userId: string, meta: Record<string, unknown>) {
+  const { data, error } = await supabase.rpc("phone_ai_asr_finish", { p_ledger_id: ledgerId, p_user_id: userId, p_meta: meta });
+  if (error) throw new Error(error.message || "asr-finish-failed");
+  if (data !== true) throw new Error("asr-ledger-not-pending");
+}
+
+async function refundAsrPoints(ledgerId: string, userId: string, reason: string) {
+  const { data, error } = await supabase.rpc("phone_ai_asr_refund", { p_ledger_id: ledgerId, p_user_id: userId, p_reason: reason.slice(0, 300) });
+  if (error) throw new Error(error.message || "asr-refund-failed");
+  return data as { refunded: number; status: string; balance: number };
+}
+
+function cleanAsrSegments(rows: AsrSegment[]) {
+  return rows.map((row) => ({ start: Math.max(0, Number(row.start) || 0), end: Math.max(0, Number(row.end) || 0), text: String(row.text || "").replace(/\s+/g, " ").trim() }))
+    .filter((row) => row.text && row.end > row.start);
+}
+
+async function aliyunAsr(dataUri: string, format: string): Promise<AsrResult> {
+  if (new TextEncoder().encode(dataUri).byteLength > ALI_ASR_MAX_DATA_URI_BYTES) throw new Error("aliyun-input-too-large");
+  const key = String(Deno.env.get("DASHSCOPE_API_KEY") || "").trim();
+  if (!key) throw new Error("missing-dashscope-key");
+  const model = String(Deno.env.get("DASHSCOPE_ASR_MODEL") || "fun-asr-flash-2026-06-15").trim();
+  const endpoint = String(Deno.env.get("DASHSCOPE_ASR_URL") || "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation").trim();
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "X-DashScope-SSE": "enable" },
+    body: JSON.stringify({ model, input: { messages: [{ role: "user", content: [{ type: "input_audio", input_audio: { data: dataUri } }] }] }, parameters: { format: format === "ogg-opus" ? "ogg" : format, sample_rate: "16000" } }),
+    signal: AbortSignal.timeout(170000),
+  });
+  const raw = await response.text();
+  if (!response.ok) throw new Error(`aliyun-asr-${response.status}: ${raw.slice(0, 240)}`);
+  const events: any[] = [];
+  if (/text\/event-stream/i.test(response.headers.get("content-type") || "") || /^\s*(?:id:|event:|data:)/m.test(raw)) {
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line.startsWith("data:")) continue;
+      const value = line.slice(5).trim();
+      if (!value || value === "[DONE]") continue;
+      try { events.push(JSON.parse(value)); } catch (_) { /* ignore non-JSON SSE lines */ }
+    }
+  } else {
+    try { events.push(JSON.parse(raw)); } catch (_) { throw new Error("aliyun-asr-invalid-json"); }
+  }
+  const segmentMap = new Map<string, AsrSegment>();
+  let text = "", duration = 0, requestId = "";
+  for (const event of events) {
+    if (event?.code || event?.error) throw new Error(`aliyun-asr-error: ${event?.message || event?.code || event?.error}`);
+    const output = event?.output || {}, sentence = output.sentence;
+    if (String(output.text || "").trim()) text = String(output.text).trim();
+    if (sentence?.sentence_end === true && String(sentence.text || "").trim()) {
+      const id = String(sentence.sentence_id ?? `${sentence.begin_time}-${sentence.end_time}`);
+      segmentMap.set(id, { start: Number(sentence.begin_time || 0) / 1000, end: Number(sentence.end_time || 0) / 1000, text: String(sentence.text || "").trim() });
+    }
+    duration = Math.max(duration, Number(event?.usage?.duration || 0));
+    requestId = String(event?.request_id || requestId || "");
+  }
+  const segments = cleanAsrSegments([...segmentMap.values()].sort((a, b) => a.start - b.start));
+  if (!text) text = segments.map((row) => row.text).join("").trim();
+  if (!duration && segments.length) duration = Math.max(...segments.map((row) => row.end));
+  if (!text) throw new Error("aliyun-asr-empty");
+  return { text, segments, duration, provider: "aliyun", model, requestId };
+}
+
+function tencentVoiceFormat(format: string) {
+  if (["wav", "pcm", "mp3", "m4a", "aac", "amr"].includes(format)) return format;
+  if (format === "ogg-opus" || format === "opus") return "ogg-opus";
+  return "";
+}
+
+function tencentEngine(lang: unknown) {
+  const value = String(lang || "zh").toLowerCase();
+  if (value.startsWith("en")) return "16k_en";
+  if (value.startsWith("ja") || value.startsWith("jp")) return "16k_ja";
+  if (value.startsWith("ko") || value.startsWith("kr")) return "16k_ko";
+  return "16k_zh";
+}
+
+async function hmacSha1Base64(message: string, secret: string) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const signed = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(message)));
+  let binary = "";
+  for (const byte of signed) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+async function tencentAsr(bytes: Uint8Array, format: string, lang: unknown): Promise<AsrResult> {
+  const appId = String(Deno.env.get("TENCENT_APP_ID") || "").trim();
+  const secretId = String(Deno.env.get("TENCENT_SECRET_ID") || "").trim();
+  const secretKey = String(Deno.env.get("TENCENT_SECRET_KEY") || "").trim();
+  if (!appId || !secretId || !secretKey) throw new Error("missing-tencent-asr-credentials");
+  const voiceFormat = tencentVoiceFormat(format);
+  if (!voiceFormat) throw new Error(`tencent-unsupported-format-${format}`);
+  const params: Record<string, string> = { convert_num_mode: "1", engine_type: tencentEngine(lang), filter_dirty: "0", filter_modal: "0", filter_punc: "0", first_channel_only: "1", secretid: secretId, speaker_diarization: "0", timestamp: String(Math.floor(Date.now() / 1000)), voice_format: voiceFormat, word_info: "1" };
+  const query = Object.keys(params).sort().map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`).join("&");
+  const path = `asr.cloud.tencent.com/asr/flash/v1/${encodeURIComponent(appId)}?${query}`;
+  const signature = await hmacSha1Base64(`POST${path}`, secretKey);
+  const response = await fetch(`https://${path}`, { method: "POST", headers: { "Authorization": signature, "Content-Type": "application/octet-stream" }, body: bytes, signal: AbortSignal.timeout(170000) });
+  const raw = await response.text();
+  let data: any;
+  try { data = JSON.parse(raw); } catch (_) { throw new Error(`tencent-asr-invalid-json-${response.status}`); }
+  if (!response.ok || Number(data?.code || 0) !== 0) throw new Error(`tencent-asr-${data?.code ?? response.status}: ${data?.message || raw.slice(0, 180)}`);
+  const channels = Array.isArray(data?.flash_result) ? data.flash_result : [];
+  const segments: AsrSegment[] = [];
+  for (const channel of channels) for (const sentence of (Array.isArray(channel?.sentence_list) ? channel.sentence_list : [])) segments.push({ start: Number(sentence?.start_time || 0) / 1000, end: Number(sentence?.end_time || 0) / 1000, text: String(sentence?.text || "").trim() });
+  const clean = cleanAsrSegments(segments.sort((a, b) => a.start - b.start));
+  const text = channels.map((channel: any) => String(channel?.text || "").trim()).filter(Boolean).join("\n").trim() || clean.map((row) => row.text).join("").trim();
+  if (!text) throw new Error("tencent-asr-empty");
+  return { text, segments: clean, duration: Number(data?.audio_duration || 0) / 1000, provider: "tencent", model: params.engine_type, requestId: String(data?.request_id || "") };
 }
 
 type OpenAIRoute = { name: string; base: string; key: string; model?: string; timeoutMs?: number };
@@ -1198,6 +1413,8 @@ Deno.serve(async (req) => {
         capabilities: {
           image: configuredImageRoutes().some((route) => !!(route.key && route.base)),
           image_routes: configuredImageRoutes().filter((route) => !!(route.key && route.base)).length,
+          asr: configuredAsrRoutes().length > 0,
+          asr_routes: configuredAsrRoutes().length,
           private_voice: privateVoices.length > 0,
         },
         private_voices: privateVoices,
@@ -1470,6 +1687,69 @@ Deno.serve(async (req) => {
           note: reasonCode === "image-upstream-no-output-or-rate-limit"
             ? "中转站上游没有成功出图或正在限流，本次点数已自动退回"
             : "中转站图片生成失败，本次点数已自动退回",
+        }, 502);
+      }
+    }
+
+    if (action === "asr") {
+      const routes = configuredAsrRoutes();
+      if (!routes.length) return json({ ok: false, error: "asr-not-configured", charged: 0, billed: false }, 503);
+      const audio = audioDataUri(body.audio);
+      const format = asrFormat(audio.mime, body.filename);
+      const duration = trustedAsrDuration(audio.bytes, format, body.duration_seconds);
+      const cost = asrPointCost(duration);
+      const requestId = asrRequestId(body.request_id);
+      await ensureAccount(userId, clientSecret);
+      const reserved = await reserveAsrPoints(userId, cost, requestId);
+      if (reserved.duplicate) {
+        return json({ ok: false, error: "duplicate-asr-request", charged: 0, billed: false, balance: reserved.balance, ledger_id: reserved.ledger_id, request_status: reserved.status }, 409);
+      }
+      const attempts: Array<{ provider: string; reason: string }> = [];
+      let result: AsrResult | null = null;
+      try {
+        for (const route of routes) {
+          try {
+            result = route === "aliyun"
+              ? await aliyunAsr(audio.uri, format)
+              : await tencentAsr(audio.bytes, format, body.language);
+            break;
+          } catch (routeError) {
+            attempts.push({ provider: route, reason: errText(routeError).slice(0, 260) });
+          }
+        }
+        if (!result) throw new Error(attempts.map((row) => `${row.provider}:${row.reason}`).join(" | ") || "all-asr-routes-failed");
+        await finishAsrPoints(reserved.ledger_id, userId, {
+          provider: result.provider,
+          model: result.model,
+          request_id: result.requestId || "",
+          duration_seconds: duration,
+          provider_duration_seconds: result.duration || 0,
+          seconds_per_point: ASR_SECONDS_PER_POINT,
+          charged_points: cost,
+          attempts,
+        });
+        return json({
+          ok: true,
+          data: { text: result.text, segments: result.segments, duration: result.duration || duration, provider: result.provider },
+          charged: cost,
+          balance: reserved.balance,
+          billed: true,
+          ledger_id: reserved.ledger_id,
+          asr_provider: result.provider,
+        });
+      } catch (e) {
+        const reason = errText(e);
+        const refunded = await refundAsrPoints(reserved.ledger_id, userId, reason);
+        return json({
+          ok: false,
+          error: "asr-failed-refunded: " + reason,
+          charged: 0,
+          refunded: refunded.refunded || cost,
+          balance: refunded.balance,
+          billed: false,
+          ledger_id: reserved.ledger_id,
+          route_failures: attempts,
+          note: "语音识别失败，本次点数已全额退回。",
         }, 502);
       }
     }

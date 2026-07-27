@@ -52,15 +52,18 @@ function aiHasPendingPointOrder(){return !!(_aiAcct&&Array.isArray(_aiAcct.purch
 function aiScheduleAccountPoll(){clearTimeout(_aiAccountPollTimer);if(typeof cur!=='function'||cur().p!=='aiaccount'||!aiHasPendingPointOrder())return;_aiAccountPollTimer=setTimeout(()=>{if(cur().p==='aiaccount')aiAccountRefresh(true,true);},15000);}
 function aiVoiceEnabled(){return typeof ttsEnabled==='function'?ttsEnabled(S.settings.tts||{}):!!((S.settings.tts||{}).enabled);}
 function aiVoiceRelayOn(){return !!((S.settings.tts||{}).relay&&aiCoreUrl());}
+function aiAsrRelayOn(){return typeof sttRelayOn==='function'?sttRelayOn():!!((S.settings.stt||{}).relay&&aiCoreUrl());}
+function aiAsrReady(){return !_aiAcct||!_aiAcct.capabilities?null:_aiAcct.capabilities.asr!==false;}
+function aiAsrRouteCount(){const n=Number(_aiAcct&&_aiAcct.capabilities&&_aiAcct.capabilities.asr_routes);return Number.isFinite(n)&&n>0?Math.round(n):1;}
 function aiImageReady(){return !_aiAcct||!_aiAcct.capabilities?null:_aiAcct.capabilities.image!==false;}
 function aiImageRouteCount(){const n=Number(_aiAcct&&_aiAcct.capabilities&&_aiAcct.capabilities.image_routes);return Number.isFinite(n)&&n>0?Math.round(n):1;}
 function aiExternalTts(){const t=(typeof ttsCfg==='function'?ttsCfg():(S.settings.tts||{}));return t&&t.base&&t.key?t:null;}
-function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:20,tts:1,tts_chars_per_point:50,tts_max_chars:300,summary:2};return p[k]||0;}
+function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:20,tts:1,tts_chars_per_point:50,tts_max_chars:300,asr:1,asr_seconds_per_point:15,summary:2};return p[k]||0;}
 function aiTtsCharsPerPoint(){const n=Number(aiPrice('tts_chars_per_point'));return Number.isFinite(n)&&n>0?Math.round(n):50;}
 function aiTtsPointCost(chars){return Math.max(1,Math.ceil(Math.max(1,Number(chars)||1)/aiTtsCharsPerPoint()));}
 function aiTtsEstimatedCount(points,chars){return Math.floor(Math.max(0,Number(points)||0)/aiTtsPointCost(chars||100));}
 function aiLedgerTime(v){if(!v)return '';const d=new Date(v);if(isNaN(d))return String(v).replace('T',' ').slice(0,16);return d.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}
-function aiLedgerRows(){const rows=((_aiAcct&&_aiAcct.ledger)||[]).slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)),names={chat:'聊天',vision:'识图',image:'生图',tts:'语音',summary:'总结',manual:'手动加点',free:'赠送'};return rows.length?rows.map(x=>{const meta=x.meta||{},failed=x.status==='failed',billed=failed&&(meta.charged||x.billed),title=(names[x.feature]||x.feature)+(failed?(billed?' · 失败已计费':' · 失败未计费'):'');const note=meta.note||x.note||(failed?(meta.reason||'模型返回失败'):'');return `<div class="bill"><div><b>${esc(title)}</b><small>${esc(aiLedgerTime(x.created_at))}${note?' · '+esc(String(note).slice(0,80)):''}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`;}).join(''):'<div class="empty">还没有流水</div>';}
+function aiLedgerRows(){const rows=((_aiAcct&&_aiAcct.ledger)||[]).slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)),names={chat:'聊天',vision:'识图',image:'生图',tts:'语音',asr:'语音识别',summary:'总结',manual:'手动加点',free:'赠送'};return rows.length?rows.map(x=>{const meta=x.meta||{},failed=x.status==='failed',billed=failed&&(meta.charged||x.billed),title=(names[x.feature]||x.feature)+(failed?(billed?' · 失败已计费':' · 失败未计费'):'');const note=meta.note||x.note||(failed?(meta.reason||'模型返回失败'):'');return `<div class="bill"><div><b>${esc(title)}</b><small>${esc(aiLedgerTime(x.created_at))}${note?' · '+esc(String(note).slice(0,80)):''}</small></div><div class="${x.points>=0?'pos':'neg'}">${x.points>0?'+':''}${x.points}</div></div>`;}).join(''):'<div class="empty">还没有流水</div>';}
 function aiRechargePlans(){return _aiAcct&&Array.isArray(_aiAcct.plans)&&_aiAcct.plans.length?_aiAcct.plans:AI_RECHARGE_FALLBACK;}
 function aiPlanById(id){return aiRechargePlans().find(x=>String(x.id)===String(id));}
 function aiPaymentChannel(id){return AI_PAYMENT_CHANNELS.find(x=>x.id===id);}
@@ -86,7 +89,7 @@ function aiServiceCards(){return aiRechargePlans().filter(p=>p.kind==='service')
     <b style="font-size:20px;white-space:nowrap">¥${Number(p.amount_cny||0).toFixed(1)}</b>
   </button>`).join('');}
 
-function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
+function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};S.settings.stt=S.settings.stt||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p==='aiaccount'&&!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
   const knownBalance=aiVisibleBalance(),bal=knownBalance==null?'读取中…':knownBalance;
   const low=aiLowBalanceCfg();
   const voice=aiVoiceLabel(tts.voice);
@@ -120,6 +123,10 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div class="it"><span>内置语音<br><small style="color:#888">开：角色语音条和语音电话走部署后台；关：若设置里填了外置海螺，则走外置海螺。</small></span><span class="sw ${aiVoiceRelayOn()?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
       <div style="margin:0 14px 10px;padding:10px 12px;border:1px solid rgba(255,72,92,.48);border-radius:10px;background:rgba(255,72,92,.08);color:#ff5b6f;font-size:13px;font-weight:700;line-height:1.7">语音扣点明码标价<br>1～50字：1点<br>51～100字：2点<br>101～150字：3点<br>最多300字：6点<br>生成失败：不扣点</div>
       <div class="it"><span>内置语音语言<br><small style="color:#888">只影响内置AI语音；外置语音仍使用角色里的语言。</small></span><span class="v"><select onchange="aiSetVoiceLanguage(this.value)" style="background:#24262d;color:#eee;border:1px solid #3b3e48;border-radius:6px;padding:6px"><option value="" ${!relayLang?'selected':''}>暂未设置（沿用角色）</option><option value="zh" ${relayLang==='zh'?'selected':''}>中文</option><option value="英" ${relayLang==='英'?'selected':''}>英语</option><option value="日" ${relayLang==='日'?'selected':''}>日语</option><option value="韩" ${relayLang==='韩'?'selected':''}>韩语</option></select></span></div>
+    </div>
+    <div class="section">
+      <div class="it"><span>内置语音识别<br><small style="color:${aiAsrReady()===false?'#e6a0a8':'#888'}">${aiAsrReady()===false?'后台尚未配置识别渠道，暂时不能开启。':(aiAsrRouteCount()>1?'阿里主路线 + 腾讯备用路线；同一次最多各请求一次。':'使用已部署的语音识别渠道。')}</small></span><span class="sw ${aiAsrRelayOn()?'on':''}" onclick="aiToggleAsrApi()"></span></div>
+      <div style="margin:0 14px 10px;padding:10px 12px;border:1px solid rgba(126,184,255,.45);border-radius:10px;background:rgba(83,142,220,.08);color:#b9d6ff;font-size:13px;line-height:1.7">开启：长按语音消息和放映室“压缩音频提取字幕”走内置识别。<br>关闭：走设置里的外置语音转文字接口。<br>每 ${aiPrice('asr_seconds_per_point')||15} 秒 1 点，向上取整；5 分钟 20 点。双路线都失败会全额退点。</div>
     </div>
     <div class="section">
       <div class="it"><span>启用图片生成<br><small style="color:${aiImageReady()===false?'#e6a0a8':'#888'}">${aiImageReady()===false?'图片中转站尚未配置，暂时不能开启。':(aiImageRouteCount()>1?'图片双路线已启用：路线一失败自动切路线二；成功只扣一次，两条都失败才退点。':'使用已部署的 gpt-image-2 中转站，每张 '+aiPrice('image')+' 点；生成失败自动退点。')}</small></span><span class="sw ${aiImageRelayOn()?'on':''}" onclick="aiToggleImageApi()"></span></div>
@@ -204,6 +211,7 @@ function aiLaunchPayment(provider,automatic){const c=aiPaymentChannel(provider);
 
 function aiToggleCore(){const ac=aiCoreInit();ac.enabled=false;save();aiRenderStable();toast('内置 AI 主通道已固定关闭');}
 function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();aiRenderStable();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
+function aiToggleAsrApi(){if(aiAsrReady()===false){toast('内置语音识别后台还没有配置好，暂时不能开启');return;}S.settings.stt=S.settings.stt||{};S.settings.stt.relay=!aiAsrRelayOn();save();aiRenderStable();toast(S.settings.stt.relay?'内置语音识别已开启':'内置语音识别已关闭，将使用外置配置');}
 function aiSetVoiceLanguage(lang){S.settings.tts=S.settings.tts||{};S.settings.tts.relayLang=['zh','英','日','韩'].includes(lang)?lang:'';save();aiRenderStable();toast(lang?'内置语音已设为'+({zh:'中文','英':'英语','日':'日语','韩':'韩语'}[lang]||lang):'内置语音暂时沿用角色语言');}
 function aiToggleImageApi(){if(aiImageReady()===false){toast('图片中转站尚未配置，暂时不能开启');return;}const cfg=aiImageInit();cfg.enabled=!aiImageRelayOn();save();aiRenderStable();toast(cfg.enabled?'图片生成已开启':'图片生成已关闭');}
 function aiImageFailText(e){const full=String((e&&e.message)||e||'').replace(/^内置AI失败：/,'');const raw=full.slice(0,180);if(/429|No images were successfully|relay-image-empty|no image/i.test(full))return '中转站上游这次没有成功出图或正在限流排队；后台花费为0时不会扣真实费用，本次AI点数已退回。稍后再试，或把描述写短一点。';if(/upstream-timeout|timeout|timed out|aborted/i.test(full))return '中转站生成超时，通常不是密钥错误；本次点数已退回，可以稍后换短一点的描述再试。';if(/fetch|network|load failed|cors/i.test(full))return '网络等待太久断开；如果后台显示429/花费0，说明是中转站上游没有成功出图，不是密钥或付款问题。';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(full))return '中转站密钥或权限异常，本次点数已退回。';if(/404|model.*not.*found|not found/i.test(full))return '接口地址或图片模型不匹配，本次点数已退回。';return raw||'图片生成失败，本次点数已退回。';}
