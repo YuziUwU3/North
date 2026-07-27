@@ -30,7 +30,9 @@ assert.ok(voiceContext.voiceEstimatedSeconds("我马上回来，等我一下。"
 assert.equal(voiceContext.voiceEstimatedSeconds("很长的话。".repeat(200)), 60);
 assert.match(source, /if\(dec\.duration>VOICE_MAX_SECONDS\+\.25\)/);
 assert.match(source, /if\(dur>VOICE_MAX_SECONDS\)/);
-assert.match(source, /dur:voiceEstimatedSeconds\(t\)/);
+assert.match(source, /pushMsg\(id,\{role:'user',type:'voice',audio/);
+assert.match(source, /dur:m\.dur/);
+assert.doesNotMatch(source, /if\(_voiceMode\)pushMsg\(id,\{role:'user',type:'voice',content:t/);
 const loadingRule = html.match(/\.voiceb\.loading\{([^}]*)\}/)?.[1] || "";
 assert.doesNotMatch(loadingRule, /background|color|opacity/);
 

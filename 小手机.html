@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='684';</script>
+<script>window.__NORTH_SHELL_BUILD__='686';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-684';
+  var key='north-sw-reloaded-686';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=684';
+  var url='sw.js?v=686';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -155,6 +155,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .inputbar .plus:active{transform:scale(.9) rotate(90deg);}
 .inputbar textarea{flex:1;border:none;border-radius:6px;padding:8px 10px;font-size:15px;resize:none;max-height:84px;min-height:20px;line-height:1.3;outline:none;font-family:inherit;background:#fff;}
 .inputbar .send{background:linear-gradient(145deg,#f1f1f2,#bfc1c5);border:1px solid rgba(255,255,255,.3);color:#202124;font-size:14px;font-weight:650;padding:8px 13px;border-radius:7px;cursor:pointer;box-shadow:0 3px 9px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.72);}
+.inputbar button.plus{padding:0;font-family:inherit;appearance:none;-webkit-appearance:none;}
+.inputbar .voice-toggle.on{box-shadow:0 0 0 2px rgba(255,255,255,.18),0 3px 9px rgba(0,0,0,.36);}
+.inputbar .holdtalk{flex:1;align-self:stretch;min-height:38px;border:1px solid #3a3a3d;border-radius:7px;background:#2c2c2e;color:#f0f0f2;font-family:inherit;font-size:15px;font-weight:650;letter-spacing:.08em;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.inputbar .holdtalk.preparing{color:#b9b9be;}
+.inputbar .holdtalk.recording{background:#3a3a3c;color:#fff;box-shadow:inset 0 2px 7px rgba(0,0,0,.28),0 0 0 1px rgba(255,255,255,.08);transform:translateY(1px);}
+.inputbar .holdtalk:disabled{opacity:.5;}
 .manual-reply-row{display:flex;justify-content:flex-end;padding:5px 10px 0;background:#0b0b0c;}
 .manual-reply-chip{border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 12px;background:linear-gradient(145deg,#292b30,#191a1e);color:#c9cacf;font-size:12px;font-weight:600;line-height:1;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.05);}
 .manual-reply-chip:disabled{opacity:.58;cursor:default;}
@@ -310,6 +316,10 @@ body{background:#000;padding:0;}
 .wxlight .inputbar .plus{background:#fff!important;color:#555!important;border-color:#d8d8dc!important;box-shadow:0 2px 8px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.95)!important;}
 .wxlight .inputbar .plus svg{stroke:#555!important;}
 .wxlight .inputbar .send{background:#fff;color:#222;border-color:#d8d8dc;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.wxlight .inputbar .voice-toggle.on{background:#ececef!important;box-shadow:inset 0 1px 3px rgba(0,0,0,.12)!important;}
+.wxlight .inputbar .holdtalk{background:#fff;color:#222;border-color:#d8d8dc;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.wxlight .inputbar .holdtalk.preparing{color:#777;}
+.wxlight .inputbar .holdtalk.recording{background:#e4e4e7;color:#111;box-shadow:inset 0 2px 6px rgba(0,0,0,.12);}
 .wxlight .panel{background:#f4f4f5;border-top:.5px solid #d7d7da;}
 .wxlight .ptabs span{color:#76777c;}
 .wxlight .ptabs>span.on{color:#55565b;}
@@ -916,8 +926,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=684" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=684" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=684"></script>
+<script src="license-gate.js?v=686" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=686" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=686"></script>
 </body>
 </html>

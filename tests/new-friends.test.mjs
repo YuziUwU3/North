@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v684 · 内置语音识别与安全计费'/);
+assert.match(source, /APP_VER='v686 · 微信按住说话'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);
