@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='691'){
+if(window.__NORTH_SHELL_BUILD__!=='692'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v691 · 页面触控与字幕兼容';
+const APP_VER='v692 · 新朋友与通话回复修正';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1137,7 +1137,8 @@ function callIsActionLine(line){return /^【(?!\s*(?:心情|心情值|通话语�
 function callHasVideoAction(text){return (String(text||'').match(/【[^】]{1,80}】/g)||[]).some(callIsActionLine);}
 function ensureVideoCallAction(text,cue){text=String(text||'').trim();if(callHasVideoAction(text))return text;cue=ttsCueKind(cue);const action=cue==='tense'?'【目光落在镜头上，神情认真了些】':cue==='soft'?'【望着镜头，神情慢慢柔和下来】':cue==='laugh'?'【看着镜头轻轻笑了一下】':cue==='sleepy'?'【靠近镜头，困倦地眨了眨眼】':cue==='surprised'?'【看向镜头，神情明显怔了一下】':'【看着镜头，神情随着话音轻轻变化】';return text?(text+'\n'+action):action;}
 function callHasSpokenDialogue(text,lang){return String(text||'').split(/\n+/).some(line=>{line=String(line||'').trim();if(!line||callIsActionLine(line)||/^[（(][^）)]*[）)]$/.test(line))return false;return !!pickSpoken(line,lang);});}
-function callVideoFallbackDialogue(lang){lang=normVoiceLang(lang);if(lang==='英')return "I'm here. I got distracted for a moment.\n（我在，刚才有点走神。）";if(lang==='日')return 'ここにいるよ。ちょっとぼんやりしてた。\n（我在，刚才有点走神。）';if(lang==='韩')return '여기 있어. 잠깐 딴생각했어.\n（我在，刚才有点走神。）';return '我在，刚才有点走神。';}
+let _callFallbackCursor=0;
+function callVideoFallbackDialogue(lang){lang=normVoiceLang(lang);const sets=lang==='英'?["I'm listening. Go on.\n（我在听，你继续。）","I'm right here. Tell me.\n（我就在这里，你说。）","I hear you. Keep talking.\n（我听着呢，继续说。）"]:lang==='日'?['聞いてるよ。続けて。\n（我在听，你继续。）','ここにいるよ。話して。\n（我就在这里，你说。）','ちゃんと聞いてる。続きを話して。\n（我听着呢，继续说。）']:lang==='韩'?['듣고 있어. 계속 말해.\n（我在听，你继续。）','나 여기 있어. 말해 봐.\n（我就在这里，你说。）','잘 듣고 있어. 계속해.\n（我听着呢，继续说。）']:['我在听，你继续。','我就在这里，你说。','我听着呢，继续说。'];const line=sets[_callFallbackCursor%sets.length];_callFallbackCursor=(_callFallbackCursor+1)%sets.length;return line;}
 function ensureVideoCallDialogue(text,lang){text=String(text||'').trim();if(callHasSpokenDialogue(text,lang))return text;const fallback=callVideoFallbackDialogue(lang);return text?(text+'\n'+fallback):fallback;}
 function callBadForeignMix(line,lang){lang=normVoiceLang(lang);if(lang!=='英')return false;let s=String(line||'').replace(/[（(][^）)]*[）)]/g,'').replace(/【[^】]*】/g,'').trim();if(!s||/^\[.*\]$/.test(s))return false;return /[A-Za-z]/.test(s)&&hasCN(s);}
 function callBadForeignLine(line,lang){lang=normVoiceLang(lang);const l=String(line||'').trim();if(!lang||lang==='zh'||!l||/^\[.*\]$/.test(l)||callIsActionLine(l)||(/^[（(][^）)]*[）)]$/.test(l)&&hasCN(l)))return false;const noAct=l.replace(/【[^】]*】/g,'').replace(/[（(][^）)]*[）)]/g,'').trim();if(!noAct)return false;return (hasCN(noAct)&&!hasForeign(noAct,lang))||callBadForeignMix(noAct,lang);}
@@ -1265,7 +1266,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=691';
+  const url='sw.js?v=692';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1550,6 +1551,7 @@ function memoryResetProbeText(text){text=(''+(text||'')).replace(/\s+/g,'');retu
 function memoryResetReplyNeedsRepair(c,userText,content){if(!c||!c._memoryResetAt||!memoryResetProbeText(userText))return false;const t=(''+(content||'')).replace(/\s+/g,'');if(!t||/不记得|记不清|想不起来|忘(?:记)?了|没有印象|没印象|无法确定|不确定具体/.test(t))return false;return /记得|没忘|当然|怎么会忘|清清楚楚|很清楚|你(?:当时|之前|以前|那时).{0,18}(?:说|做|答应|承诺)|我(?:当时|之前|以前|那时).{0,18}(?:说|做|答应|承诺)/.test(t);}
 function friendOriginPrompt(c){const o=c&&c.friendOrigin;if(!o||!o.acceptedAt)return'';const fresh=Date.now()-o.acceptedAt<7*86400000,again=!!(c._deleteCount||o.kind==='readd');let s='\n\n# 你为什么会出现在这个微信里（持续有效）\n你最初通过「'+(o.source||'好友申请')+'」申请添加'+S.me.name+'，当时的明确来意是：'+(o.intent||'想认真认识ta')+'。验证消息是：「'+(o.requestMsg||'想认识你')+'」。这是你自己做过的事，后续聊天里不能莫名忘掉，也不能聊两句就变成毫无目的的随机陌生人；关系可以随着真实交流自然变化，但不能凭空编造申请前没有发生过的共同经历。';if(fresh)s+='\n你是在 '+fmtDT(o.acceptedAt)+' 刚被通过的，距今'+fmtDur(Date.now()-o.acceptedAt)+'。'+(again?'这次是删除或拉黑后重新加回，你知道不是第一次认识。':'这是刚正式成为微信好友的阶段，你清楚自己是新加进来的，说话要符合刚通过后的真实距离。');return s;}
 function buildSystem(c,opt){
+  friendDiscoveryRepairRoleName(c);
   opt=opt||{};
   const _main=isMain();
   const _voiceLang=ttsContentLang(c);
@@ -7614,8 +7616,9 @@ function ignoreFriend(rid){friendRequestsInit();const r=S.friendRequests.find(x=
 function friendDiscoverySettings(){const d=friendDiscoveryState();openModal(`<h3>每日新朋友</h3><div class="hint">像陌生来电一样，在你设定的间隔里出现有明确来意的新申请。系统只生成角色资料和验证消息，不会在后台自动消耗聊天 API；你同意后，角色才会用聊天模型继续交流。</div><div class="section"><div class="it"><span>允许陌生人申请</span><span id="nfd_on" class="sw ${d.enabled?'on':''}" onclick="this.classList.toggle('on')"></span></div><div class="it"><span>申请间隔<br><small style="color:#888">最低 10 分钟</small></span><span class="v"><input id="nfd_freq" type="number" min="10" value="${d.freq}" style="width:62px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"> 分钟</span></div><div class="it"><span>每天最多</span><span class="v"><input id="nfd_max" type="number" min="0" max="8" value="${d.max}" style="width:62px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"> 人</span></div><div class="it"><span>今天已出现</span><span class="v">${d.today===todayStr()?d.n:0} 人</span></div><div class="it" onclick="friendDiscoveryTest()"><span>模拟一条有来意的申请</span><span class="v">立即测试 ›</span></div></div><div class="hint">来意会写进角色长期人设：可能是粉丝、朋友的家人、共同社交圈、追求者、情敌或工作联系，不会加上后聊几句就忘掉目的。</div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="friendDiscoverySave()">保存</button></div>`);}
 function friendDiscoverySave(){const d=friendDiscoveryState(),on=!!($('#nfd_on')&&$('#nfd_on').classList.contains('on'));d.enabled=on;d.freq=Math.max(10,+($('#nfd_freq')&&$('#nfd_freq').value)||180);const mv=+($('#nfd_max')&&$('#nfd_max').value);d.max=Math.max(0,Math.min(8,Number.isFinite(mv)?mv:2));d.nextAt=on?Date.now()+d.freq*60000:0;save();closeModal();toast(on?'已开启每日新朋友':'已关闭每日新朋友');}
 function friendDiscoveryTarget(){return (S.contacts||[]).find(c=>!c.deleted&&c.pinned)||(S.couple&&getC(S.couple.cid))||(S.contacts||[]).find(c=>!c.deleted)||null;}
-function friendLineAvatar(seed){const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" fill="#050506"/><circle cx="48" cy="35" r="15" fill="none" stroke="#b9bdc7" stroke-width="3"/><path d="M22 82c3-19 13-29 26-29s23 10 26 29" fill="none" stroke="#b9bdc7" stroke-width="3" stroke-linecap="round"/></svg>';return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
-function friendDiscoveryProfile(){const target=friendDiscoveryTarget(),tn=target&&(target.remark||target.name)||'',me=S.me.name||'你',names=['林澈','许遥','周屿','程野','沈念','顾言','乔安','陆闻','宋知夏','贺川','苏禾','江临'],used=new Set((S.contacts||[]).map(c=>c&&c.name)),base=Math.floor(Math.random()*names.length);let name=names[base];for(let i=0;i<names.length&&used.has(name);i++)name=names[(base+i+1)%names.length];const common=[
+function friendDiscoveryRepairRoleName(c){const target=friendDiscoveryTarget(),from=String(target&&target.remark||'').trim(),to=String(target&&target.name||'').trim();if(!c||!target||c.id===target.id||!c.friendOrigin||c.friendOrigin.kind!=='surprise'||!from||!to||from===to)return false;let changed=false;const swap=(obj,key)=>{if(!obj||typeof obj[key]!=='string'||!obj[key].includes(from))return;obj[key]=obj[key].split(from).join(to);changed=true;};['persona','relation','signature'].forEach(k=>swap(c,k));['source','intent','requestMsg'].forEach(k=>swap(c.friendOrigin,k));return changed;}
+function friendLineAvatar(seed){const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" fill="#050506"/><circle cx="48" cy="35" r="15" fill="none" stroke="#b9bdc7" stroke-width="4"/><path d="M22 82c3-19 13-29 26-29s23 10 26 29" fill="none" stroke="#b9bdc7" stroke-width="4" stroke-linecap="round"/></svg>';return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
+function friendDiscoveryProfile(){const target=friendDiscoveryTarget(),tn=target&&target.name||'',me=S.me.name||'你',names=['林澈','许遥','周屿','程野','沈念','顾言','乔安','陆闻','宋知夏','贺川','苏禾','江临'],used=new Set((S.contacts||[]).map(c=>c&&c.name)),base=Math.floor(Math.random()*names.length);let name=names[base];for(let i=0;i<names.length&&used.has(name);i++)name=names[(base+i+1)%names.length];const common=[
     {source:'抖音 · 关注了你',relation:'短视频粉丝',intent:'因为刷到你的公开内容而来，想从评论区之外认真认识你',msg:'刷到你好几次了，还是想来认真认识一下。',persona:'你是在短视频平台关注'+me+'一阵子的真实粉丝。你不是无脑吹捧，而是会聊具体喜好、生活和作品；你申请好友是想从公开关注慢慢走到真正认识，之后始终记得这层来意。'},
     {source:'X · 共同关注',relation:'社交平台关注者',intent:'长期看过你的公开动态，对你的表达方式好奇',msg:'关注你的动态有一阵了，想来认识你本人。',persona:'你从社交平台的共同关注里注意到'+me+'。你喜欢ta表达观点的方式，但不会假装知道私密经历；你的目的是真正了解ta，而不是寒暄几句就消失。'},
     {source:'同城推荐',relation:'同城认识',intent:'在同城兴趣推荐里看到你，想找一个能长期聊天的人',msg:'同城推荐看到你，感觉会聊得来，要认识吗？',persona:'你和'+me+'生活在同一个城市或相近生活圈，从公开的同城兴趣推荐看到ta。你来是想建立稳定联系，会围绕城市生活、兴趣和见面边界循序推进，不编造已经见过面的过去。'},
@@ -9483,9 +9486,12 @@ async function callAI(sysNote,opts){if(!_call)return;
       if(_call&&_call.session===sess&&fix&&!callUnansweredMistake(fix))content=fix;
     }
     if(video&&_call&&_call.session===sess&&_call.state==='active'&&!callHasSpokenDialogue(content,_lang)){
-      let fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：上一版只有动作、神态或控制标签，没有任何真正说出口的台词，不能作为视频通话回复。请重新回答用户刚才的话：至少说一句自然对白，同时保留1到2行【动作】；不要解释这次纠正。]'},{role:'system',content:personaPin(c)}],_md);
-      if(fix)fix=fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');
-      if(_call&&_call.session===sess&&fix&&!isRefusal(fix)&&!callUnansweredMistake(fix)&&(!_langN||!callDrifted(fix,_lang))&&callHasSpokenDialogue(fix,_lang))content=fix;
+      let draft=content;
+      for(let _vd=0;_vd<2&&!callHasSpokenDialogue(content,_lang);_vd++){
+        let fix='';try{fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:draft},{role:'user',content:'[系统纠正：上一版只有动作、神态或控制标签，没有任何真正说出口的台词，不能作为视频通话回复。请直接以角色本人身份回答用户刚才的话，至少说一句有具体内容、能被听见的自然对白，同时保留1到2行【动作】。不要解释纠正，不要复述固定兜底句。]'},{role:'system',content:personaPin(c)}],_md);}catch(_) {break;}
+        if(fix)fix=fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');draft=fix||draft;
+        if(_call&&_call.session===sess&&fix&&!isRefusal(fix)&&!callUnansweredMistake(fix)&&(!_langN||!callDrifted(fix,_lang))&&callHasSpokenDialogue(fix,_lang))content=fix;
+      }
       if(!callHasSpokenDialogue(content,_lang))content=ensureVideoCallDialogue(content,_lang);
     }
     const _callCueTag=(content.match(/[\[【]\s*通话语气\s*[|｜:：]\s*([^\]】]+)[\]】]/)||[])[1]||'';

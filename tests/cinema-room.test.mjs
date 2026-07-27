@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v691 · 页面触控与字幕兼容'/);
+assert.match(source, /APP_VER='v692 · 新朋友与通话回复修正'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -526,6 +526,6 @@ assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=691/);
+assert.match(html, /app\.js\?v=692/);
 
 console.log("cinema room tests passed");

@@ -14,6 +14,7 @@ const cardFn = source.slice(cardStart, cardEnd);
 
 assert.ok(start >= 0 && end > start);
 assert.match(avatarFn, /fill="#050506"/);
+assert.equal((avatarFn.match(/stroke-width="4"/g) || []).length, 2, "head and shoulder lines should both be slightly thicker");
 assert.equal((avatarFn.match(/<circle/g) || []).length, 1, "only the head circle should remain");
 assert.equal((avatarFn.match(/<path/g) || []).length, 1, "only the shoulder outline should remain");
 assert.doesNotMatch(avatarFn, /linearGradient|url\(#g\)|cx="76"|M31 72/);
