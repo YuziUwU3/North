@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v677 · 新增更快字幕档位'/);
+assert.match(source, /APP_VER='v678 · 位置地图与放映室陪伴优化'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -137,6 +137,10 @@ assert.match(source, /bookVoice:false/);
 assert.match(source, /chatPanelHeight:104/);
 assert.match(source, /readerPaneHeight:0/);
 assert.match(source, /replyCount:1/);
+assert.match(source, /companionMode:'soft'/);
+assert.match(source, /autoLimit:4/);
+assert.match(source, /function cinemaCompanionMenu/);
+assert.match(source, /function cinemaCanAutoSpeak/);
 assert.doesNotMatch(source, /bookInputHeight:108/);
 assert.match(source, /function cinemaToggleBookVoice/);
 assert.match(source, /s\.kind==='book'\?set\.bookVoice:set\.voiceComment/);
@@ -257,13 +261,17 @@ const toolsHtmlContext = vm.createContext({
   cinemaReplyCount: () => 1,
   cinemaVoiceLangLabel: () => "中文",
   cinemaVisionIntervalLabel: () => "画面 按需",
+  cinemaCompanionMode: () => "soft",
+  cinemaCompanionLabel: () => "轻声陪伴",
+  cinemaAutoLimit: () => 4,
   cinemaCommentDisplay: () => "barrage",
   cinemaCaptionSpeedLabel: () => "快",
   svgIc: () => "",
 });
 vm.runInContext(functionSource("cinemaStageTools") + ";globalThis.html=cinemaStageTools();", toolsHtmlContext);
-assert.match(toolsHtmlContext.html, /data-cin-action="subtitle"/);
+assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="subtitle"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="extract"/);
+assert.match(toolsHtmlContext.html, /轻声陪伴 · 4条\/场/);
 assert.doesNotMatch(toolsHtmlContext.html, /data-cin-action="transcribe"/);
 assert.match(toolsHtmlContext.html, /data-cin-action="frame"/);
 assert.match(toolsHtmlContext.html, /显示 · 弹幕/);
@@ -513,6 +521,6 @@ assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
-assert.match(html, /app\.js\?v=677/);
+assert.match(html, /app\.js\?v=678/);
 
 console.log("cinema room tests passed");

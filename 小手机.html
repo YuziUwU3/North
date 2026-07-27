@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='677';</script>
+<script>window.__NORTH_SHELL_BUILD__='678';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-677';
+  var key='north-sw-reloaded-678';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=677';
+  var url='sw.js?v=678';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -855,6 +855,7 @@ body{background:#000;padding:0;}
 @media (prefers-reduced-motion:reduce){.cin-barrage{animation-duration:.01ms!important}}
 </style>
 <style>
+.lmview{background-color:#06101a;background-image:radial-gradient(circle at 53% 43%,rgba(35,76,108,.2),transparent 29%),linear-gradient(rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(rgba(116,158,194,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.02) 1px,transparent 1px)!important;background-size:auto,40px 40px,40px 40px,160px 160px,160px 160px!important}.lmview:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 0 42%,rgba(126,185,236,.05) 50%,transparent 58%);mix-blend-mode:screen}.lmzones path{fill:rgba(72,107,137,.055);stroke:rgba(154,190,222,.18);stroke-width:1.1;vector-effect:non-scaling-stroke}.lmroutes path{fill:none;stroke:url(#lmRoute);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:9 15;vector-effect:non-scaling-stroke}.lmregionnames text{fill:rgba(191,216,235,.28);font:700 10px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:1.7px;text-anchor:middle}.lmmeridians path{stroke:rgba(150,188,222,.065)!important}.lmlands path{fill:rgba(72,107,137,.035)!important;stroke:rgba(154,190,222,.08)!important;filter:none!important}.lmcity i{background:#a6c0d7;box-shadow:0 0 0 3px rgba(166,192,215,.1),0 0 12px rgba(116,178,232,.2)}.lmtrail{border-color:rgba(148,197,239,.38);background:linear-gradient(145deg,rgba(9,21,34,.93),rgba(14,24,36,.84));box-shadow:0 12px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05)}.lmtrail i{background:linear-gradient(145deg,#f2f6fb,#a8c7e7);color:#0b1722}.lmfootrow>i{background:linear-gradient(145deg,rgba(112,163,209,.24),rgba(63,99,132,.12));color:#c8e1f5}
 .livemap.lmdense .lmtrail{min-width:0;width:27px;height:27px;padding:0;border-radius:10px;justify-content:center;background:rgba(9,19,30,.94);border-color:rgba(151,196,235,.42);transform:translate(-50%,calc(-50% - 30px))}
 .livemap.lmdense .lmtrail i{width:21px;height:21px;border-radius:7px}
 .livemap.lmdense .lmtrail span{display:none}
@@ -906,8 +907,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=677" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=677" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=677"></script>
+<script src="license-gate.js?v=678" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=678" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=678"></script>
 </body>
 </html>

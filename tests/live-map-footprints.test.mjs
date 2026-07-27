@@ -45,6 +45,8 @@ assert.deepEqual(Array.from(trail, x => x.id), ['loc-3', 'loc-4', 'loc-5', 'loc-
 assert.ok(trail.every(x => x.source === '位置分享'));
 assert.ok(trail.every(x => /^真实地点/.test(x.label)));
 assert.doesNotMatch(lineFunctionSource('liveLocTrail'), /08:10|10:35|14:20|18:40|21:05/);
+assert.match(source, /function liveLocDailyTrail/);
+assert.match(lineFunctionSource('liveLocTrail'), /liveLocDailyTrail\(c,now,5-real\.length\)/);
 
 const render = lineFunctionSource('renderLiveMap');
 assert.equal((render.match(/trail\.map\(\(p,i\)=>/g) || []).length, 2, 'the markers and foot list must render from the identical trail array');
@@ -59,6 +61,10 @@ assert.match(html, /\.lmcity\{/);
 assert.match(html, /\.lmtrail b,\.lmtrail small\{display:block/);
 assert.match(html, /\.lmfoot\{[^}]*max-height:none/);
 assert.match(html, /\.livemap\.lmdense \.lmtrail/);
-assert.match(html, /app\.js\?v=677/);
+assert.match(html, /\.lmzones path/);
+assert.match(html, /\.lmroutes path/);
+assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmzones"/);
+assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmroutes"/);
+assert.match(html, /app\.js\?v=678/);
 
 console.log('live map footprint tests passed');
