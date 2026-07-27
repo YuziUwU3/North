@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v678 · 位置地图与放映室陪伴优化'/);
+assert.match(source, /APP_VER='v679 · 新朋友与书架陪伴完善'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -141,6 +141,10 @@ assert.match(source, /companionMode:'soft'/);
 assert.match(source, /autoLimit:4/);
 assert.match(source, /function cinemaCompanionMenu/);
 assert.match(source, /function cinemaCanAutoSpeak/);
+assert.match(source, /id="cinBookCompanionBtn"/);
+assert.match(source, /data-cin-action="auto"/);
+assert.match(source, /点这里调整书架陪伴/);
+assert.match(source, /\['#cinAutoBtn','#cinBookCompanionBtn'\]/);
 assert.doesNotMatch(source, /bookInputHeight:108/);
 assert.match(source, /function cinemaToggleBookVoice/);
 assert.match(source, /s\.kind==='book'\?set\.bookVoice:set\.voiceComment/);
@@ -521,6 +525,7 @@ assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
-assert.match(html, /app\.js\?v=678/);
+assert.match(html, /\.cin-reader-companion/);
+assert.match(html, /app\.js\?v=679/);
 
 console.log("cinema room tests passed");

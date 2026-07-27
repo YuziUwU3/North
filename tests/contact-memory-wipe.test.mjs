@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v678 · 位置地图与放映室陪伴优化'/);
+assert.match(source, /APP_VER='v679 · 新朋友与书架陪伴完善'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 
