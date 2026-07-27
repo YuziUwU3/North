@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='680';</script>
+<script>window.__NORTH_SHELL_BUILD__='681';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-680';
+  var key='north-sw-reloaded-681';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=680';
+  var url='sw.js?v=681';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -50,7 +50,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .statusbar.dark{color:#111;}
 #app{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
 .page{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;}
-.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;}
 /* 顶栏 */
 .nav{flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#ededed;border-bottom:.5px solid #dadada;position:relative;z-index:20;}
 .nav .t{font-size:17px;font-weight:600;color:#111;position:absolute;left:50%;transform:translateX(-50%);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -63,7 +63,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .home .clockw .hh{font-size:62px;font-weight:300;letter-spacing:2px;}
 .home .clockw .dd{font-size:15px;margin-top:2px;}
 .apps{margin-top:auto;padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;}
-.appswipe{width:100%;min-width:0;margin-top:auto;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.appswipe{width:100%;min-width:0;margin-top:auto;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}
 .appswipe::-webkit-scrollbar{display:none}
 .apppage{width:100%;min-width:100%;flex:0 0 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;padding:22px;scroll-snap-align:start;scroll-snap-stop:always;align-content:start;box-sizing:border-box}
 .pgdots{display:flex;justify-content:center;gap:8px;padding:2px 0 6px}
@@ -852,6 +852,9 @@ body{background:#000;padding:0;}
 @media (orientation:landscape) and (max-height:520px){.cin-media-controls{left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));height:42px;z-index:40}.cin-screen video{pointer-events:none}.cin-overlay-top,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock{z-index:42}.cin-chat-reveal{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px))}.cin-chat-dock{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px))}.cin-tool-shelf button,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock,.cin-media-controls{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
 .cin-media-controls{transition:opacity .18s ease,transform .2s ease}.cin-media-controls.hidden{opacity:0;transform:translateY(calc(100% + 18px));pointer-events:none}.cin-media-controls .cin-media-hide{width:30px;color:#c7c1c9;font-size:18px}.cin-stage:not(.media-hidden):not(.chat-open) .cin-sub,.cin-stage.cin-theater:not(.media-hidden):not(.chat-open) .cin-sub{bottom:max(64px,calc(env(safe-area-inset-bottom) + 56px))}.cin-stage.media-hidden:not(.chat-open) .cin-sub,.cin-stage.cin-theater.media-hidden:not(.chat-open) .cin-sub{bottom:max(18px,5vh)}.cin-stage.chat-open .cin-sub{bottom:calc(var(--cin-chat-h) + 66px)}.cin-stage.media-hidden .cin-chat-reveal,.cin-stage.media-hidden .cin-chat-dock{bottom:max(12px,env(safe-area-inset-bottom))}.cin-stage.media-hidden .cin-status-chip{bottom:max(12px,env(safe-area-inset-bottom))}.cin-stage.media-hidden.chat-open .cin-status-chip{bottom:calc(var(--cin-chat-h) + max(20px,env(safe-area-inset-bottom)))}.cin-reader [data-cin-action]{touch-action:manipulation}
 .cin-barrage{width:76vw;max-width:520px;white-space:pre-line!important;overflow-wrap:break-word;word-break:normal;text-align:center;line-height:1.35}.cin-voice-sub.mine b{color:#ffb3d3}.cin-voice-sub.mine span{display:none}.cin-stage.chat-open .cin-voice-sub{bottom:calc(var(--cin-chat-h) + 82px)}.cin-status-chip:empty{display:none}
+.cin-fullscreen-btn{width:36px;height:36px;flex:none;border:0;border-radius:12px;background:rgba(22,22,25,.64);color:#aaa;font-size:18px;line-height:1;backdrop-filter:blur(16px);touch-action:manipulation}
+@media (orientation:landscape) and (max-height:520px){.cin-fullscreen-btn{width:32px;height:32px}}
+@media (pointer:coarse){.cin-watch,.cin-stage{height:var(--north-app-height,100dvh);max-height:100dvh}.cin-tool-shelf button,.cin-edge-btn,.cin-collapse-btn,.cin-fullscreen-btn,.cin-end,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock,.cin-media-controls{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.chatbg,.smsbody,.cinema-home-scroll,.cin-logbox,.xscroll{min-height:0;overscroll-behavior-y:contain;touch-action:pan-y}}
 @media (prefers-reduced-motion:reduce){.cin-barrage{animation-duration:.01ms!important}}
 </style>
 <style>
@@ -913,8 +916,8 @@ body{background:#000;padding:0;}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=680" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=680" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=680"></script>
+<script src="license-gate.js?v=681" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=681" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=681"></script>
 </body>
 </html>
