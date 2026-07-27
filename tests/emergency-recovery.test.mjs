@@ -63,12 +63,12 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v681 shell and service worker are aligned',()=>{
+test('v682 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v681 · 安卓触控与放映室兼容修复'/);
-  assert.match(html,/app\.js\?v=681/);
-  assert.match(sw,/BUILD='681'/);
+  assert.match(app,/APP_VER='v682 · 苹果键盘输入栏兼容修复'/);
+  assert.match(html,/app\.js\?v=682/);
+  assert.match(sw,/BUILD='682'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

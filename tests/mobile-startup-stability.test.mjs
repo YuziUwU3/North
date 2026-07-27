@@ -47,7 +47,7 @@ test('stored avatar references render safely and refresh incoming call UI', () =
   assert.match(app, /else refreshHydratedUI\(\)/);
 });
 
-test('viewport follows Android browser chrome shrink but ignores a temporary keyboard shrink', () => {
+test('viewport follows browser chrome and iOS keyboard shrink', () => {
   const style = { value: '', setProperty(_k, v) { this.value = v; }, removeProperty() { this.value = ''; } };
   const visual = { scale: 1, height: 852 };
   const context = {
@@ -68,7 +68,7 @@ test('viewport follows Android browser chrome shrink but ignores a temporary key
   context.window.innerHeight = 420;
   visual.height = 420;
   vm.runInNewContext('syncAppViewport()', context);
-  assert.equal(style.value, '700px');
+  assert.equal(style.value, '420px');
 });
 
 test('mobile viewport and desktop pages self-correct after resume and swipes', () => {
@@ -78,7 +78,11 @@ test('mobile viewport and desktop pages self-correct after resume and swipes', (
   assert.match(viewport, /_appViewportHeight=Math\.round\(h\)/);
   assert.doesNotMatch(viewport, /screen\.height/);
   assert.doesNotMatch(viewport, /Math\.max\(_appViewportHeight/);
+  assert.doesNotMatch(viewport, /document\.activeElement/);
   assert.match(app, /window\.addEventListener\('pageshow',e=>\{syncAppViewport\(\)/);
+  assert.match(app, /document\.addEventListener\('focusin',settleAppViewport\)/);
+  assert.match(app, /document\.addEventListener\('focusout',settleAppViewport\)/);
+  assert.match(app, /visualViewport\.addEventListener\('scroll',syncAppViewport\)/);
   assert.match(html, /scroll-snap-stop:always/);
   assert.match(html, /\.scroll\{flex:1;min-height:0;[^}]*touch-action:pan-y/);
   assert.match(html, /\.appswipe\{[^}]*touch-action:pan-x/);
