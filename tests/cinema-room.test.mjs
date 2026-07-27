@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v692 · 新朋友与通话回复修正'/);
+assert.match(source, /APP_VER='v693 · 放映室字幕分段选择'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -105,10 +105,13 @@ assert.match(source, /function cinemaAudioChunkWav/);
 assert.match(source, /function sttTimedRows/);
 assert.match(source, /function cinemaExtractHelp/);
 assert.match(source, /sttTranscribeTimed\(f/);
-assert.match(source, /chunkSec=300/);
+assert.match(source, /Number\(chunkSeconds\)===180\?180:300/);
+assert.match(source, /cinemaExtractAudioSubtitles\(180\)/);
+assert.match(source, /cinemaExtractAudioSubtitles\(300\)/);
 assert.match(source, /sttRequest\(wav,/);
 assert.match(source, /sttTimedRows\(j,start\)/);
-assert.match(source, /压缩音频后提取（推荐）/);
+assert.match(source, /3 分钟稳定提取/);
+assert.match(source, /5 分钟原路线/);
 assert.match(source, /timestamp_granularities\[\]/);
 assert.match(source, /接口没有返回分段时间戳/);
 assert.match(source, /function cinemaAnalyzeFrame/);
@@ -526,6 +529,6 @@ assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=692/);
+assert.match(html, /app\.js\?v=693/);
 
 console.log("cinema room tests passed");
