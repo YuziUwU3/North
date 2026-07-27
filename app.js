@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='688'){
+if(window.__NORTH_SHELL_BUILD__!=='689'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v688 · 语音转写兼容与测试';
+const APP_VER='v689 · 小手机使用须知';
 const VOICE_MAX_CHARS=180;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1265,7 +1265,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=688';
+  const url='sw.js?v=689';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2811,7 +2811,7 @@ function chatRouteFillForm(c){c=chatRouteCopy(c);[['s_cbase','base'],['s_ckey','
 function chatRouteRefreshUI(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;try{document.querySelectorAll('[data-chat-route]').forEach((btn,i)=>{const on=i===active;btn.style.background=on?'#07c160':'#24242a';btn.style.borderColor=on?'#07c160':'rgba(255,255,255,.1)';btn.style.color=on?'#fff':'#ddd';const sm=btn.querySelector('small');if(sm)sm.textContent=chatRouteSummary(rs[i]);});}catch(_){}}
 function chatRouteSwitch(i){chatRoutesInit();chatRouteCaptureForm();const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));S.settings.chatRouteActive=i;S.settings.chat=chatRouteCopy(rs[i]);chatRouteFillForm(S.settings.chat);save();chatRouteRefreshUI();toast('已切换到'+CHAT_ROUTE_NAMES[i]);}
 function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive,a=S.settings.chat,v=S.settings.vision;
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">设置</span><span class="r"></span></div>
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">设置</span><span class="r" onclick="showPhoneNotice(false)" style="font-size:12px;color:#999;cursor:pointer">使用须知</span></div>
   <div class="scroll" id="settingsscroll" style="padding:12px;background:#000">
     <div class="section" style="border:1px solid rgba(255,143,171,.5);background:linear-gradient(135deg,rgba(255,143,171,.18),rgba(108,92,231,.14));margin-bottom:10px" onclick="showManual()"><div class="it" style="background:transparent"><span><b style="color:#ffd0df;font-size:15px">📖 使用说明书 · 常见报错</b><br><small style="color:#aaa">404、501、密钥、模型、安卓黑屏等问题都在这里</small></span><span class="v" style="color:#ff8fab">随时查看 ›</span></div></div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -4530,12 +4530,32 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
   </div>
   <div class="btns" style="margin-top:14px"><button class="btn p" onclick="closeModal()">我知道了</button></div>`);
   if(section==='ai')setTimeout(()=>{const box=document.getElementById('manual_scroll'),target=document.getElementById('manual_ai');if(box&&target)box.scrollTop=Math.max(0,target.offsetTop-box.offsetTop-6);},30);}
-function maybeFirstRun(){try{if(!gateOK())return;if(localStorage.getItem('yibei_manual_seen'))return;
+const PHONE_NOTICE_ACCEPTED_KEY='north_phone_notice_accepted';
+let _phoneNoticeRequired=false;
+function phoneNoticeAccepted(){try{return localStorage.getItem(PHONE_NOTICE_ACCEPTED_KEY)==='1';}catch(_){return false;}}
+function phoneNoticeContent(){return `<div style="line-height:1.75;font-size:13px;color:#bbb">
+    <p>欢迎来到小手机。</p>
+    <p>这里的角色由人工智能生成，是基于设定与用户互动的虚拟角色，并非现实中的真人。AI可能会出现理解偏差、虚构内容或不准确回复，请理性看待互动内容。</p>
+    <p>小手机希望为大家提供轻松、有趣的陪伴体验，但AI无法替代现实中的亲友关系，也无法代替专业人士提供医疗、心理、法律、金融等方面的帮助。</p>
+    <p>本产品主要面向成年用户。未满18岁的用户如需使用或购买相关服务，请提前取得监护人同意，并遵守相关年龄限制。</p>
+    <p>请大家理性体验、合理消费，不上传他人的隐私信息、照片、声音或违法违规内容。</p>
+    <p>购买前请确认相关价格、规则及消耗说明。正常调用成功产生的消耗不支持退还，调用失败将按照页面规则处理，法律另有规定的除外。</p>
+    <p>感谢大家喜欢小手机，希望它能给大家带来快乐和陪伴</p>
+  </div>`;}
+function showPhoneNotice(required){_phoneNoticeRequired=required!==false;openModal(`<h3 style="text-align:center">小手机使用须知</h3>
+  ${phoneNoticeContent()}
+  <div class="hint" style="margin-top:10px">继续进入，即表示您已阅读并同意以上内容。</div>
+  ${_phoneNoticeRequired?`<div class="btns" style="margin-top:14px"><button class="btn g" onclick="exitPhoneNotice()">暂不进入</button><button class="btn p" onclick="acceptPhoneNotice()">我已阅读并同意</button></div>`:
+  `<div class="btns" style="margin-top:14px"><button class="btn p" onclick="closeModal()">我知道了</button></div>`}`);}
+function acceptPhoneNotice(){try{localStorage.setItem(PHONE_NOTICE_ACCEPTED_KEY,'1');}catch(_){} _phoneNoticeRequired=false;closeModal();setTimeout(maybeFirstRun,180);}
+function exitPhoneNotice(){_phoneNoticeRequired=false;closeModal();let el=document.getElementById('phoneNoticeExit');if(!el){el=document.createElement('div');el.id='phoneNoticeExit';el.className='gate';document.body.appendChild(el);}el.innerHTML='<div class="glogo">North</div><h2>已暂时退出</h2><p>您尚未同意《小手机使用须知》。<br>如需继续使用，请重新打开小手机并阅读确认。</p>';}
+function maybePhoneNotice(){try{if(!gateOK()||phoneNoticeAccepted())return false;showPhoneNotice(true);return true;}catch(_){return false;}}
+function maybeFirstRun(){try{if(!gateOK()||!phoneNoticeAccepted())return;if(localStorage.getItem('yibei_manual_seen'))return;
     const noContacts=!(S.contacts||[]).filter(c=>!c.deleted).length;
     const noKey=!(S.settings&&S.settings.chat&&S.settings.chat.key);
     if(noContacts&&noKey){localStorage.setItem('yibei_manual_seen','1');showManual();}}catch(e){}}
 function licenseMarkUnlocked(){try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}}
-function licenseFinishGate(){licenseMarkUnlocked();const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);}
+function licenseFinishGate(){licenseMarkUnlocked();const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(()=>{if(!maybePhoneNotice())maybeFirstRun();},400);}
 function licenseEvictedNotice(result){const a=result&&result.session&&result.session.evicted;if(a&&a.length)toast('已恢复，并退出最早的浏览器：'+a.join('、'));}
 function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   if(!el){el=document.createElement('div');el.id='gate';el.className='gate';document.body.appendChild(el);}
@@ -9903,7 +9923,7 @@ function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);
   document.getElementById('cfmNo').onclick=()=>done(false);
   document.getElementById('cfmYes').onclick=()=>done(true);});}
 function askConfirm(msg,onYes,opt){uiConfirm(msg,opt).then(v=>{if(v){try{onYes&&onYes();}catch(e){}}});}
-$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&!_phoneNoticeRequired)closeModal();});
 function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}if(lockClearTarget({type:'chat',id},true))save(500);stack=stack.filter(s=>s.p!=='chat');_scrollBottomOnce['chat:'+id]=Date.now();go('chat',{id});}
 
 /* ---------- 备份 ---------- */
@@ -10087,4 +10107,4 @@ setTimeout(licenseCheckSession,2200);
 setInterval(licenseCheckSession,300000);
 window.addEventListener('pageshow',()=>setTimeout(licenseCheckSession,900));
 window.addEventListener('focus',()=>setTimeout(licenseCheckSession,900));
-setTimeout(maybeFirstRun,600);
+setTimeout(()=>{if(!maybePhoneNotice())maybeFirstRun();},600);
