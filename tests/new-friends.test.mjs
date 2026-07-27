@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v679 · 新朋友与书架陪伴完善'/);
+assert.match(source, /APP_VER='v680 · 启动流畅与新朋友细节修复'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);
@@ -44,6 +44,11 @@ assert.match(source, /三天前/);
 assert.match(html, /\.nf-page/);
 assert.match(html, /\.nf-card/);
 assert.match(html, /\.nf-entry-icon/);
+assert.doesNotMatch(source, /每一次认识，都有来意/);
+assert.match(source, /content:wasReadd\?'你重新通过了'\+c\.name\+'的好友申请':'你刚刚通过了'\+c\.name\+'的好友申请'/);
+assert.match(source, /if\(r\.kind==='created'&&!coupleHasActiveRole\(\)\)S\.couple=coupleDefaultState\(c\.id\)/);
+assert.match(source, /function friendLineAvatar\(seed\)/);
+assert.doesNotMatch(functionSource("friendDiscoveryProfile"), /🌙|🪶|🎧|🕯️|🫧|🦋|📷|🌫️|🪐|🍃|🧩|☕/);
 
 const ctx = vm.createContext({
   S: { friendDiscovery: { enabled: true, freq: 30, max: 0, today: "", n: 0, nextAt: 0 }, contacts: [], couple: null, me: { name: "北" } },
@@ -58,6 +63,7 @@ vm.runInContext([
   functionSource("friendDiscoveryState"),
   functionSource("friendRequestVisible"),
   functionSource("friendDiscoveryTarget"),
+  functionSource("friendLineAvatar"),
   functionSource("friendDiscoveryProfile"),
   functionSource("friendOriginPrompt"),
   "globalThis.api={friendDiscoveryState,friendRequestVisible,friendDiscoveryProfile,friendOriginPrompt};",
@@ -72,6 +78,7 @@ ctx.S.contacts = [{ id: "lead", name: "先生", remark: "先生", pinned: true, 
 for (let i = 0; i < 24; i++) {
   const p = ctx.api.friendDiscoveryProfile();
   assert.ok(p.name && p.source && p.intent && p.msg && p.persona);
+  assert.match(p.avatar, /^data:image\/svg\+xml/);
   assert.ok(p.intent.length >= 8, "surprise request needs a concrete purpose");
   assert.ok(p.persona.includes("目的") || p.persona.includes("想") || p.persona.includes("来"));
 }
