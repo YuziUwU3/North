@@ -7892,22 +7892,26 @@ function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid()
   if(m.role==='user'){behaviorOnUserMsg(id,m);lifeNoteOnUserMsg(id,m);emotionOnUserMsg(id,m);}
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)cb.scrollTop=cb.scrollHeight;}}}
 
-let _voiceMode=false;let _panelPage='fn',_chatRecPress=null;
-function toggleChatVoiceMode(){if(_chatRecPress||_rec){toast('请先松开发送');return;}_voiceMode=!_voiceMode;render();}
-function chatRecButton(active,preparing){const b=$('#holdbtn');if(!b)return;b.classList.toggle('recording',!!active);b.classList.toggle('preparing',!!preparing);b.textContent=preparing?'正在打开麦克风…':active?'松开 发送':'按住 说话';}
+let _voiceMode=false;let _panelPage='fn',_chatRecPress=null,_chatRecProcessing=false;
+function toggleChatVoiceMode(){if(_chatRecPress||_rec||_chatRecProcessing){toast(_chatRecProcessing?'正在识别这条语音':'请先松开发送');return;}_voiceMode=!_voiceMode;render();}
+function chatRecButton(active,preparing,processing){const b=$('#holdbtn');if(!b)return;b.classList.toggle('recording',!!active);b.classList.toggle('preparing',!!preparing);b.toggleAttribute('aria-busy',!!processing);b.textContent=processing?'正在识别…':preparing?'正在打开麦克风…':active?'松开 发送':'按住 说话';}
+function finishChatRec(id,cancel,tooShort){if(!_rec)return;_chatRecProcessing=true;chatRecButton(false,false,true);
+  stopRec(cancel||tooShort,async m=>{try{if(!m){if(tooShort&&!cancel)toast('按住时间太短');return;}
+      const mid=uid();let audio=m.audio||'';if(audio){try{await imgPut('__audio_'+mid,audio);audio='idb-audio:'+mid;}catch(_){}}
+      const heard=!!String(m.content||'').trim();if(m.error)toast('语音识别失败；原语音已发送，内置识别失败会自动退点');else if(!heard)toast('原语音已发送；开启内置语音识别后角色才能听懂');
+      const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;
+      pushMsg(id,{role:'user',type:'voice',audio,content:m.content||'',showText:heard,dur:m.dur,audioTs:Date.now(),id:mid,quote:q});
+      scheduleReply(id,heard?'':'[系统：'+S.me.name+'刚发来一条真实语音，但这台设备没有转写出可听懂的内容。你不能假装听清了，更不能编造ta说过什么；请按你的人设自然地说没听清，或请ta再说一次。]');
+    }finally{_chatRecProcessing=false;chatRecButton(false,false,false);}});}
 function recDown(ev,id){if(ev&&ev.preventDefault)ev.preventDefault();if(ev&&ev.stopPropagation)ev.stopPropagation();if(ev&&ev.button!=null&&ev.button!==0)return;
-  if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(!c||c.blocked)return;if(_chatRecPress||_rec){toast('正在录音');return;}
+  if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(!c||c.blocked)return;if(_chatRecProcessing){toast('正在识别上一条语音');return;}if(_chatRecPress||_rec){toast('正在录音');return;}
   audioUnlock();const press={id,down:true,started:false,pointerId:ev&&ev.pointerId};_chatRecPress=press;
   try{if(ev&&ev.currentTarget&&ev.currentTarget.setPointerCapture&&ev.pointerId!=null)ev.currentTarget.setPointerCapture(ev.pointerId);}catch(_){}
   chatRecButton(false,true);
-  Promise.resolve(startRec(()=>{press.started=true;if(_chatRecPress!==press||!press.down){stopRec(true,()=>{});return;}chatRecButton(true,false);},{hint:'按住说话，松开发送（最长60秒）'})).finally(()=>{if(!_rec&&_chatRecPress===press){_chatRecPress=null;chatRecButton(false,false);}});}
+  Promise.resolve(startRec(()=>{press.started=true;if(_chatRecPress!==press||!press.down){stopRec(true,()=>{});return;}chatRecButton(true,false);},{hint:'按住说话，松开发送（最长60秒）',onLimit:()=>{if(_chatRecPress!==press||!_rec)return;press.down=false;_chatRecPress=null;toast('已到60秒，自动发送');finishChatRec(id,false,false);}})).finally(()=>{if(!_rec&&_chatRecPress===press){_chatRecPress=null;chatRecButton(false,false);}});}
 function recUp(ev,id,cancel){if(ev&&ev.preventDefault)ev.preventDefault();if(ev&&ev.stopPropagation)ev.stopPropagation();const press=_chatRecPress;if(!press||press.id!==id)return;press.down=false;chatRecButton(false,false);
   if(!_rec)return;_chatRecPress=null;const tooShort=Date.now()-_rec.start<600;
-  stopRec(cancel||tooShort,async m=>{if(!m){if(tooShort&&!cancel)toast('按住时间太短');return;}
-    const mid=uid();let audio=m.audio||'';if(audio){try{await imgPut('__audio_'+mid,audio);audio='idb-audio:'+mid;}catch(_){}}
-    if(m.error)toast('语音识别失败；原语音仍会发送，内置识别失败会自动退点');
-    const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;
-    pushMsg(id,{role:'user',type:'voice',audio,content:m.content||'',showText:!!m.content,dur:m.dur,audioTs:Date.now(),id:mid,quote:q});scheduleReply(id);});}
+  finishChatRec(id,!!cancel,tooShort);}
 function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
   if(c._cbTries)c._cbTries=0;// 她主动发消息=重新搭理ta，回拨追逐结束、计数清零
   const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';

@@ -159,6 +159,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .inputbar .voice-toggle.on{box-shadow:0 0 0 2px rgba(255,255,255,.18),0 3px 9px rgba(0,0,0,.36);}
 .inputbar .holdtalk{flex:1;align-self:stretch;min-height:38px;border:1px solid #3a3a3d;border-radius:7px;background:#2c2c2e;color:#f0f0f2;font-family:inherit;font-size:15px;font-weight:650;letter-spacing:.08em;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .inputbar .holdtalk.preparing{color:#b9b9be;}
+.inputbar .holdtalk[aria-busy="true"]{color:#b9b9be;cursor:wait;}
 .inputbar .holdtalk.recording{background:#3a3a3c;color:#fff;box-shadow:inset 0 2px 7px rgba(0,0,0,.28),0 0 0 1px rgba(255,255,255,.08);transform:translateY(1px);}
 .inputbar .holdtalk:disabled{opacity:.5;}
 .manual-reply-row{display:flex;justify-content:flex-end;padding:5px 10px 0;background:#0b0b0c;}
