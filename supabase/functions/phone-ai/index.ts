@@ -553,7 +553,7 @@ function wavDurationSeconds(bytes: Uint8Array) {
   let offset = 12, byteRate = 0, dataSize = 0;
   while (offset + 8 <= bytes.length) {
     const id = tag(offset), size = view.getUint32(offset + 4, true);
-    if (id === "fmt " && size >= 16 && offset + 16 <= bytes.length) byteRate = view.getUint32(offset + 12, true);
+    if (id === "fmt " && size >= 16 && offset + 24 <= bytes.length) byteRate = view.getUint32(offset + 16, true);
     if (id === "data") { dataSize = Math.min(size, Math.max(0, bytes.length - offset - 8)); break; }
     offset += 8 + size + (size % 2);
   }

@@ -1,11 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const account=fs.readFileSync(new URL('../ai-account.js',import.meta.url),'utf8');
 const edge=fs.readFileSync(new URL('../supabase/functions/phone-ai/index.ts',import.meta.url),'utf8');
 const migration=fs.readFileSync(new URL('../supabase/migrations/202607270001_asr_billing.sql',import.meta.url),'utf8');
+
+function functionSource(name){
+  const start=edge.indexOf(`function ${name}`);
+  assert.ok(start>=0,`missing ${name}`);
+  const brace=edge.indexOf('{',start);
+  let depth=0;
+  for(let i=brace;i<edge.length;i++){
+    if(edge[i]==='{')depth++;
+    else if(edge[i]==='}'&&--depth===0)return edge.slice(start,i+1);
+  }
+  throw new Error(`unterminated ${name}`);
+}
 
 test('cinema ASR is an independent AI-account switch',()=>{
   assert.match(app,/stt:\{base:'',key:'',model:'',relay:false\}/);
@@ -42,6 +55,19 @@ test('legacy cached cinema clients remain compatible without reopening generic v
   assert.match(edge,/\.wav\$\/i\.test\(String\(body\.filename/);
   assert.match(edge,/data:audio\\\/\(\?:wav\|x-wav\);base64,/);
   assert.match(edge,/requestedPurpose \|\| \(legacyCinemaPurpose \? "cinema_subtitles" : ""\)/);
+});
+
+test('server reads WAV byte rate instead of mistaking sample rate for duration billing',()=>{
+  const context={DataView,Uint8Array,String};
+  const source=functionSource('wavDurationSeconds').replace('bytes: Uint8Array','bytes').replace('offset: number','offset');
+  vm.runInNewContext(source,context);
+  const rate=16000,frames=rate,bytes=new Uint8Array(44+frames*2),view=new DataView(bytes.buffer);
+  const ascii=(offset,text)=>{for(let i=0;i<text.length;i++)view.setUint8(offset+i,text.charCodeAt(i));};
+  ascii(0,'RIFF');view.setUint32(4,36+frames*2,true);ascii(8,'WAVE');ascii(12,'fmt ');
+  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);
+  view.setUint32(24,rate,true);view.setUint32(28,rate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);
+  ascii(36,'data');view.setUint32(40,frames*2,true);
+  assert.equal(context.wavDurationSeconds(bytes),1);
 });
 
 test('server prices ASR by each started interval and attempts each configured route once',()=>{
