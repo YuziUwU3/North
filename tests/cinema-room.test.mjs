@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v705 · 边看边提取字幕'/);
+assert.match(source, /APP_VER='v706 · 后台字幕与追赶保护'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -105,7 +105,8 @@ assert.match(source, /function cinemaAudioChunkWav/);
 assert.match(source, /function sttTimedRows/);
 assert.match(source, /function cinemaExtractHelp/);
 assert.match(source, /sttTranscribeTimed\(f/);
-assert.match(source, /cinemaExtractAudioSubtitles\(90\)/);
+assert.match(source, /cinemaExtractAudioSubtitles\(90,'watch'\)/);
+assert.match(source, /cinemaExtractAudioSubtitles\(90,'background'\)/);
 assert.match(source, /sttRequest\(wav,/);
 assert.match(source, /sttTimedRows\(j,start\)/);
 assert.match(source, /边看边提取（推荐）/);
@@ -116,6 +117,12 @@ assert.match(source, /visionAPI\(data/);
 assert.match(source, /visionInterval/);
 assert.match(source, /visionOnAsk/);
 assert.match(source, /visionByRole/);
+assert.match(functionSource("cinemaVisionMenu"), /cinVisionEnabled/);
+assert.match(functionSource("cinemaVisionSave"), /set\.visionEnabled=enabled/);
+assert.match(functionSource("cinemaVisionSave"), /s\.nextVisionAt=set\.autoVision/);
+assert.match(functionSource("cinemaVisionIntervalLabel"), /150:'2分30秒'/);
+assert.match(functionSource("cinemaVideoTick"), /set\.visionEnabled&&set\.autoVision/);
+assert.match(functionSource("cinemaAnalyzeFrame"), /automatic&&\(!set\.visionEnabled/);
 assert.match(source, /cinemaQuestionNeedsVision/);
 assert.match(source, /识别中…/);
 assert.match(source, /function cinemaShowDialogueSubtitle/);
@@ -525,7 +532,19 @@ assert.match(functionSource("cinemaRoleReply"), /shootText:out\.display\|\|out\.
 assert.match(html, /\.cin-mic\.recording/);
 assert.match(html, /\.cin-voice-sub\.mine b/);
 assert.match(html, /\.cin-stage\.chat-open \.cin-voice-sub/);
+const proactiveTick=functionSource("cinemaVideoTick");
+const proactiveReply=functionSource("cinemaRoleReply");
+assert.match(proactiveTick, /当前刚播放到的台词是/);
+assert.match(proactiveTick, /绝对不能引用后面的台词或剧情/);
+assert.match(proactiveTick, /allowSilence:true/);
+assert.doesNotMatch(proactiveTick, /autoCount=.*\+1/);
+assert.match(proactiveReply, /\[保持安静\]/);
+assert.match(proactiveReply, /automatic&&outs\.length&&opt\.countActive!==false&&!visionResponse/);
+assert.match(functionSource("cinemaSubtitleContext"), /x\.start<=t\+\.5/);
+assert.match(functionSource("cinemaSend"), /cinemaRoleReply\([\s\S]*,false\)/);
+assert.match(functionSource("cinemaBookComment"), /,false\)/);
+assert.doesNotMatch(functionSource("cinemaBookPage"), /autoCount=.*\+1/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=705/);
+assert.match(html, /app\.js\?v=706/);
 
 console.log("cinema room tests passed");

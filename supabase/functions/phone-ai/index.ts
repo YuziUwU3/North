@@ -588,6 +588,13 @@ async function reserveAsrPoints(userId: string, points: number, requestId: strin
   return data as { duplicate: boolean; ledger_id: string; status: string; points: number; balance: number };
 }
 
+async function cachedAsrResult(userId: string, ledgerId: string) {
+  const { data, error } = await supabase.from("phone_ai_ledger").select("status,meta").eq("id", ledgerId).eq("user_id", userId).maybeSingle();
+  if (error) throw new Error(error.message || "asr-cache-read-failed");
+  const cached = data?.meta && typeof data.meta === "object" ? (data.meta as Record<string, any>).result : null;
+  return { status: String(data?.status || ""), data: cached && typeof cached === "object" ? cached : null };
+}
+
 async function finishAsrPoints(ledgerId: string, userId: string, meta: Record<string, unknown>) {
   const { data, error } = await supabase.rpc("phone_ai_asr_finish", { p_ledger_id: ledgerId, p_user_id: userId, p_meta: meta });
   if (error) throw new Error(error.message || "asr-finish-failed");
@@ -1735,9 +1742,12 @@ Deno.serve(async (req) => {
         ? Math.max(-1, Math.min(10000, Math.trunc(rawChunkIndex)))
         : -1;
       await ensureAccount(userId, clientSecret);
-      const reserved = await reserveAsrPoints(userId, cost, requestId);
+      let reserved = await reserveAsrPoints(userId, cost, requestId);
       if (reserved.duplicate) {
-        return json({ ok: false, error: "duplicate-asr-request", charged: 0, billed: false, balance: reserved.balance, ledger_id: reserved.ledger_id, request_status: reserved.status }, 409);
+        const cached = await cachedAsrResult(userId, reserved.ledger_id);
+        if (cached.status === "done" && cached.data) return json({ ok: true, data: cached.data, charged: 0, billed: false, cached: true, balance: reserved.balance, ledger_id: reserved.ledger_id });
+        if (cached.status === "failed") reserved = await reserveAsrPoints(userId, cost, asrRequestId(`${requestId}.retry.${crypto.randomUUID().slice(0, 8)}`));
+        else return json({ ok: false, error: "duplicate-asr-request-pending", charged: 0, billed: false, balance: reserved.balance, ledger_id: reserved.ledger_id, request_status: cached.status || reserved.status }, 409);
       }
       const attempts: Array<{ provider: string; reason: string }> = [];
       let result: AsrResult | null = null;
@@ -1753,6 +1763,7 @@ Deno.serve(async (req) => {
           }
         }
         if (!result) throw new Error(attempts.map((row) => `${row.provider}:${row.reason}`).join(" | ") || "all-asr-routes-failed");
+        const responseData = { text: result.text, segments: result.segments, duration: result.duration || duration, provider: result.provider };
         await finishAsrPoints(reserved.ledger_id, userId, {
           provider: result.provider,
           model: result.model,
@@ -1765,10 +1776,11 @@ Deno.serve(async (req) => {
           job_id: jobId,
           chunk_index: chunkIndex,
           attempts,
+          result: responseData,
         });
         return json({
           ok: true,
-          data: { text: result.text, segments: result.segments, duration: result.duration || duration, provider: result.provider },
+          data: responseData,
           charged: cost,
           balance: reserved.balance,
           billed: true,

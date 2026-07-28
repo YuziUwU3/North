@@ -7,6 +7,7 @@ const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const edge=fs.readFileSync(new URL('../supabase/functions/phone-ai/index.ts',import.meta.url),'utf8');
 const migration=fs.readFileSync(new URL('../supabase/migrations/202607280001_asr_long_discount.sql',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 
 function functionSource(source,name){
   const start=source.indexOf(`function ${name}`);
@@ -34,10 +35,61 @@ test('long MP4 extraction is progressive and resumable',()=>{
   assert.match(main,/正在准备音轨/);
   assert.match(main,/全片提取完成/);
   assert.match(app,/cinemaExtractAudioSubtitles=cinemaExtractAudioSubtitlesProgressive/);
-  assert.doesNotMatch(main,/v\.pause\(\)/);
-  assert.match(main,/v&&v\.paused\)v\.play\(\)/);
+  assert.match(main,/mode==='background'&&v\)v\.pause\(\)/);
+  assert.match(main,/mode==='watch'&&v&&v\.paused\)v\.play\(\)/);
   assert.match(main,/字幕已同步到/);
-  assert.match(app,/cinemaExtractAudioSubtitles\(90\)/);
+  assert.match(app,/cinemaExtractAudioSubtitles\(90,'watch'\)/);
+  assert.match(app,/cinemaExtractAudioSubtitles\(90,'background'\)/);
+});
+
+test('completed chunks persist, resume without billing, and expose a home-page task ball',()=>{
+  const main=functionSource(app,'cinemaExtractAudioSubtitlesProgressive');
+  const save=functionSource(app,'cinemaAsrSaveJob');
+  assert.ok(main.indexOf('const key=String(seg.index),old=job.parts&&job.parts[key]')<main.indexOf('request=sttRequest'), 'saved chunks must be skipped before any paid request');
+  assert.match(main,/requestId=\(job\.jobId\+'_chunk_'\+seg\.index\)/);
+  assert.match(main,/本次没有扣点/);
+  assert.match(save,/await cinPut\(cinemaAsrJobKey\(s\),job\)/);
+  assert.match(save,/navigator\.storage\.persist/);
+  assert.match(app,/function cinemaAsrTasksHTML/);
+  assert.match(app,/主页面可随时查看/);
+  assert.match(app,/waitText/);
+  assert.match(html,/\.cin-asr-task>i/);
+});
+
+test('playback waits before it can outrun the extracted subtitle frontier',()=>{
+  const context={
+    _cin:{extracting:true,asrMode:'watch',asrCoveredUntil:0,asrGuardPaused:false},
+    cinemaFmt:()=> '0:20',
+    cinemaSetStatus:()=>{},
+    Math,Number,
+  };
+  vm.runInNewContext(functionSource(app,'cinemaAsrGuardPlayback'),context);
+  let pauses=0;
+  const video={currentTime:25,paused:false,pause(){this.paused=true;pauses++;}};
+  assert.equal(context.cinemaAsrGuardPlayback(video),true);
+  assert.equal(video.currentTime,20);
+  assert.equal(pauses,1);
+  assert.equal(context._cin.asrGuardPaused,true);
+  assert.match(functionSource(app,'cinemaVideoTick'),/cinemaAsrGuardPlayback\(v\)/);
+  assert.match(functionSource(app,'cinemaAfterVideoRender'),/seeked[\s\S]*cinemaAsrGuardPlayback\(v\)/);
+});
+
+test('contiguous coverage rejects a missing middle segment',()=>{
+  const context={Object,Number,Math};
+  vm.runInNewContext(functionSource(app,'cinemaAsrContiguousSeconds'),context);
+  assert.equal(context.cinemaAsrContiguousSeconds({duration:270,parts:{0:{start:0,end:90},2:{start:180,end:270}}}),90);
+  assert.equal(context.cinemaAsrContiguousSeconds({duration:270,parts:{0:{start:0,end:90},1:{start:90,end:180},2:{start:180,end:270}}}),270);
+});
+
+test('vision status temporarily owns the shared progress chip',()=>{
+  const status=functionSource(app,'cinemaSetStatus');
+  const vision=functionSource(app,'cinemaAnalyzeFrame');
+  assert.match(status,/_cin\.visionBusy/);
+  assert.match(status,/_cin\.statusDeferred/);
+  assert.match(vision,/正在识别当前画面…','working','vision'/);
+  assert.match(vision,/画面识别完成','ready','vision'/);
+  assert.match(vision,/cinemaResumeDeferredStatus/);
+  assert.match(html,/\.cin-status-chip[^\n]*top:max\(124px/);
 });
 
 test('metadata probing stops once MP4 track information is ready',()=>{
@@ -79,6 +131,13 @@ test('discount is computed from successful server ledger rows only',()=>{
   assert.match(migration,/v_duration >= 7200 then v_rate := 10/);
   assert.match(migration,/greatest\(0, v_target - v_already_refunded\)/);
   assert.match(migration,/revoke all on function public\.phone_ai_asr_long_discount/);
+});
+
+test('server returns a cached successful chunk for the stable request id',()=>{
+  assert.match(edge,/async function cachedAsrResult/);
+  assert.match(edge,/cached\.status === "done" && cached\.data/);
+  assert.match(edge,/charged: 0, billed: false, cached: true/);
+  assert.match(edge,/result: responseData/);
 });
 
 test('vendored MP4 parser is available offline',async()=>{

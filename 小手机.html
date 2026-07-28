@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='705';</script>
+<script>window.__NORTH_SHELL_BUILD__='706';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-705';
+  var key='north-sw-reloaded-706';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=705';
+  var url='sw.js?v=706';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -863,6 +863,7 @@ body{background:#000;padding:0;}
 @media (orientation:landscape) and (max-height:520px){.cin-media-controls{left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));height:42px;z-index:40}.cin-screen video{pointer-events:none}.cin-overlay-top,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock{z-index:42}.cin-chat-reveal{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px))}.cin-chat-dock{bottom:max(58px,calc(env(safe-area-inset-bottom) + 50px))}.cin-tool-shelf button,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock,.cin-media-controls{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
 .cin-media-controls{transition:opacity .18s ease,transform .2s ease}.cin-media-controls.hidden{opacity:0;transform:translateY(calc(100% + 18px));pointer-events:none}.cin-media-controls .cin-media-hide{width:30px;color:#c7c1c9;font-size:18px}.cin-stage:not(.media-hidden):not(.chat-open) .cin-sub,.cin-stage.cin-theater:not(.media-hidden):not(.chat-open) .cin-sub{bottom:max(64px,calc(env(safe-area-inset-bottom) + 56px))}.cin-stage.media-hidden:not(.chat-open) .cin-sub,.cin-stage.cin-theater.media-hidden:not(.chat-open) .cin-sub{bottom:max(18px,5vh)}.cin-stage.chat-open .cin-sub{bottom:calc(var(--cin-chat-h) + 66px)}.cin-stage.media-hidden .cin-chat-reveal,.cin-stage.media-hidden .cin-chat-dock{bottom:max(12px,env(safe-area-inset-bottom))}.cin-stage.media-hidden .cin-status-chip{bottom:max(12px,env(safe-area-inset-bottom))}.cin-stage.media-hidden.chat-open .cin-status-chip{bottom:calc(var(--cin-chat-h) + max(20px,env(safe-area-inset-bottom)))}.cin-reader [data-cin-action]{touch-action:manipulation}
 .cin-barrage{width:76vw;max-width:520px;white-space:pre-line!important;overflow-wrap:break-word;word-break:normal;text-align:center;line-height:1.35}.cin-voice-sub.mine b{color:#ffb3d3}.cin-voice-sub.mine span{display:none}.cin-stage.chat-open .cin-voice-sub{bottom:calc(var(--cin-chat-h) + 82px)}.cin-status-chip:empty{display:none}
+.cin-status-chip,.cin-stage.chat-open .cin-status-chip,.cin-stage.media-hidden .cin-status-chip,.cin-stage.media-hidden.chat-open .cin-status-chip{left:max(8px,env(safe-area-inset-left));top:max(124px,calc(env(safe-area-inset-top) + 116px));bottom:auto;z-index:19;max-width:min(46vw,300px);padding:3px 6px;border-radius:6px;font-size:7px;line-height:1.25;transition:top .22s}.cin-asr-tasks{margin:12px 14px 0;padding:12px;border:1px solid rgba(218,166,194,.18);border-radius:18px;background:linear-gradient(145deg,rgba(57,35,50,.86),rgba(23,21,29,.92))}.cin-asr-task-row{display:flex;gap:9px;overflow-x:auto;scrollbar-width:none}.cin-asr-task-row::-webkit-scrollbar{display:none}.cin-asr-task{min-width:min(250px,76vw);display:flex;align-items:center;gap:10px;padding:9px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.045);color:#eee;text-align:left}.cin-asr-task>i,.cin-asr-detail>i{--p:0%;position:relative;width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:50%;background:conic-gradient(#dc86ae var(--p),rgba(255,255,255,.09) 0)}.cin-asr-task>i:after,.cin-asr-detail>i:after{content:'';position:absolute;inset:4px;border-radius:50%;background:#19151d}.cin-asr-task>i b,.cin-asr-detail>i b{position:relative;z-index:1;font-size:8px;color:#f3d9e7}.cin-asr-task>span{min-width:0}.cin-asr-task>span b,.cin-asr-task>span small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cin-asr-task>span b{font-size:11px}.cin-asr-task>span small{margin-top:4px;color:#a99eaa;font-size:8px}.cin-asr-task.done>i,.cin-asr-detail.done>i{background:conic-gradient(#71c695 var(--p),rgba(255,255,255,.09) 0)}.cin-asr-detail{display:flex;align-items:center;gap:13px;margin:12px 0;padding:13px;border:1px solid #302b34;border-radius:15px;background:#111015}.cin-asr-detail>i{width:58px;height:58px}.cin-asr-detail>i b{font-size:11px}.cin-asr-detail>div>b,.cin-asr-detail>div>span{display:block}.cin-asr-detail>div>b{color:#eee;font-size:13px}.cin-asr-detail>div>span{margin-top:5px;color:#aaa;font-size:10px;line-height:1.6}@media (orientation:landscape) and (max-height:520px){.cin-status-chip,.cin-stage.chat-open .cin-status-chip,.cin-stage.media-hidden .cin-status-chip,.cin-stage.media-hidden.chat-open .cin-status-chip{top:max(74px,calc(env(safe-area-inset-top) + 66px))}}
 .cin-fullscreen-btn{width:36px;height:36px;flex:none;border:0;border-radius:12px;background:rgba(22,22,25,.64);color:#aaa;font-size:18px;line-height:1;backdrop-filter:blur(16px);touch-action:manipulation}
 @media (orientation:landscape) and (max-height:520px){.cin-fullscreen-btn{width:32px;height:32px}}
 @media (pointer:coarse){.cin-tool-shelf button,.cin-edge-btn,.cin-collapse-btn,.cin-fullscreen-btn,.cin-end,.cin-top-reveal,.cin-chat-reveal,.cin-chat-dock,.cin-media-controls{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.chatbg,.smsbody,.cinema-home-scroll,.cin-logbox,.xscroll{min-height:0;overscroll-behavior-y:contain;touch-action:pan-y}}
@@ -936,8 +937,8 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=705" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=705" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=705"></script>
+<script src="license-gate.js?v=706" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=706" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=706"></script>
 </body>
 </html>
