@@ -21,15 +21,29 @@ function functionSource(source,name){
 }
 
 test('long MP4 extraction is progressive and resumable',()=>{
-  const main=functionSource(app,'cinemaExtractAudioSubtitles');
+  const main=functionSource(app,'cinemaExtractAudioSubtitlesProgressive');
   assert.doesNotMatch(main,/\.arrayBuffer\(\),audio=await ac\.decodeAudioData/);
   assert.match(app,/MP4Box\.createFile\(false\)/);
-  assert.match(app,/mp4\.discardMdatData=false/);
+  assert.match(app,/MP4Box\.createFile\(true\)/);
   assert.match(app,/file\.slice\(offset,end\)\.arrayBuffer\(\)/);
   assert.match(app,/sizePerSegment:6\*1024\*1024/);
   assert.match(app,/cinemaMp4ResetBaseTime/);
   assert.match(app,/cinemaAsrSaveJob/);
   assert.match(app,/下次可继续/);
+  assert.match(main,/cinemaAwaitAsr/);
+  assert.match(main,/正在准备音轨/);
+  assert.match(main,/全片提取完成/);
+  assert.match(app,/cinemaExtractAudioSubtitles=cinemaExtractAudioSubtitlesProgressive/);
+});
+
+test('metadata probing stops once MP4 track information is ready',()=>{
+  const prepare=functionSource(app,'cinemaMp4Prepare');
+  const run=functionSource(app,'cinemaMp4RunSegments');
+  assert.match(prepare,/if\(info\)break/);
+  assert.match(prepare,/onProgress/);
+  assert.doesNotMatch(prepare,/return\{mp4,queue/);
+  assert.match(run,/MP4Box\.createFile\(true\)/);
+  assert.match(run,/onReadProgress/);
 });
 
 test('long-video estimates keep the conservative discount ceiling',()=>{
