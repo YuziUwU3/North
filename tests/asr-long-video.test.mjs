@@ -166,7 +166,9 @@ test('vision status temporarily owns the shared progress chip',()=>{
   assert.match(status,/_cin\.visionBusy/);
   assert.match(status,/_cin\.statusDeferred/);
   assert.match(vision,/正在识别当前画面…','working','vision'/);
-  assert.match(vision,/画面识别完成','ready','vision'/);
+  assert.match(vision,/画面识别完成 · 准备角色回应','ready','vision'/);
+  assert.match(functionSource(app,'cinemaUpdateSubtitle'),/statusLockUntil/);
+  assert.doesNotMatch(vision,/autoVision=false/);
   assert.match(vision,/cinemaResumeDeferredStatus/);
   assert.match(html,/\.cin-status-chip[^\n]*top:max\(124px/);
 });

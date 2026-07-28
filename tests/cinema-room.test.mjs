@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v717 · 强度严格执行'/);
+assert.match(source, /APP_VER='v718 · 影院识图与总结修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -122,8 +122,16 @@ assert.match(functionSource("cinemaVisionSave"), /set\.visionEnabled=enabled/);
 assert.match(functionSource("cinemaVisionSave"), /s\.nextVisionAt=set\.autoVision/);
 assert.match(functionSource("cinemaVisionIntervalLabel"), /150:'2分30秒'/);
 assert.match(functionSource("cinemaVideoTick"), /set\.visionEnabled&&set\.autoVision/);
-assert.match(functionSource("cinemaAfterVideoRender"), /s\.nextVisionAt=Math\.max\(0,Number\(v\.currentTime\)\|\|Number\(s\.progress\)\|\|0\)\+Math\.max\(30,\+set\.visionInterval\|\|150\)/);
+assert.match(functionSource("cinemaAfterVideoRender"), /cinemaVisionResetTimer\(s,Math\.max\(0,Number\(v\.currentTime\)\|\|Number\(s\.progress\)\|\|0\)\)/);
+assert.match(functionSource("cinemaAfterVideoRender"), /if\(v\.readyState>=1\)ready\(\)/);
+assert.match(functionSource("cinemaAfterVideoRender"), /seeked[\s\S]*cinemaVisionResetTimer\(s,v\.currentTime\)/);
 assert.match(functionSource("cinemaAnalyzeFrame"), /automatic&&\(!set\.visionEnabled/);
+assert.doesNotMatch(functionSource("cinemaAnalyzeFrame"), /settings\.autoVision=false/);
+assert.match(functionSource("cinemaAnalyzeFrame"), /秒后自动重试/);
+assert.match(functionSource("cinemaAnalyzeFrame"), /cinemaVisionReact\(s,token,reactSeq,0\)/);
+assert.match(functionSource("cinemaUpdateSubtitle"), /statusLockUntil/);
+assert.match(functionSource("cinemaVisionReact"), /等待角色接话/);
+assert.match(functionSource("cinemaVisionReact"), /不要保持沉默/);
 assert.match(functionSource("cinemaPickVideo"), /\.m4v,\.mov/);
 assert.match(source, /cinemaQuestionNeedsVision/);
 assert.match(source, /识别中…/);
@@ -174,6 +182,51 @@ assert.doesNotMatch(source, /id="cinVideo"[^>]* controls/);
 assert.match(source, /data-cin-resize="reader"/);
 assert.doesNotMatch(source, /data-cin-resize="book"/);
 assert.ok(source.indexOf('class="cin-reader-divider"') < source.indexOf('class="cin-reader-actions"'));
+
+const visionTimerState={settings:{visionEnabled:true,autoVision:true,visionInterval:150}};
+const visionSession={progress:0,duration:600,nextVisionAt:0,updatedAt:0};
+const visionVideo={currentTime:0,duration:600,paused:false};
+let visionTriggered=0,visionSaved=0;
+const visionTimerContext=vm.createContext({
+  _cin:{lastSaveAt:Date.now(),visionBusy:false,cues:[]},
+  cinemaInit:()=>visionTimerState,
+  cinemaSession:()=>visionSession,
+  cinemaAsrGuardPlayback:()=>false,
+  cinemaUpdateSubtitle:()=>{},cinemaSyncMediaControls:()=>{},cinemaSaveProgress:()=>{},
+  cinemaCueAt:()=>null,cinemaAnalyzeFrame:()=>{visionTriggered++;},cinemaCanAutoSpeak:()=>false,
+  cinemaAutoGap:()=>230,cinemaRoleReply:()=>{},save:()=>{visionSaved++;},
+  $:selector=>selector==='#cinVideo'?visionVideo:null,
+  Math,Number,Date,
+});
+vm.runInContext(functionSource("cinemaVisionResetTimer")+'\n'+functionSource("cinemaVideoTick")+';globalThis.reset=cinemaVisionResetTimer;globalThis.tick=cinemaVideoTick;',visionTimerContext);
+assert.equal(visionTimerContext.reset(visionSession,0),150);
+visionVideo.currentTime=149;visionTimerContext.tick();
+assert.equal(visionTriggered,0);
+visionVideo.currentTime=150;visionTimerContext.tick();
+assert.equal(visionTriggered,1,'the configured 2m30s frame check must fire at 150 seconds');
+assert.equal(visionSession.nextVisionAt,300,'the next frame check must remain scheduled after triggering');
+assert.ok(visionSaved>=2);
+
+const cinemaEndSource=functionSource("cinemaEnd");
+assert.doesNotMatch(functionSource("cinemaTranscript"), /cinemaProgressText/);
+assert.doesNotMatch(functionSource("cinemaFallbackMemory"), /cinemaProgressText/);
+assert.doesNotMatch(cinemaEndSource, /cinemaCleanRoleText/);
+assert.doesNotMatch(cinemaEndSource, /90到180/);
+assert.match(cinemaEndSource, /最多300字/);
+assert.match(cinemaEndSource, /禁止写影片全长、观看时长、分钟数、时间点或播放进度/);
+assert.match(cinemaEndSource, /cinemaSummaryClean\(raw,len\.max\)/);
+const summaryContext=vm.createContext({
+  summaryStripModelNoise:x=>String(x||'').trim(),cleanReply:x=>String(x||''),
+  trimSentence:(x,n)=>Array.from(x).slice(0,n).join(''),Math,Array,
+});
+vm.runInContext(functionSource("cinemaSummaryClean")+';globalThis.clean=cinemaSummaryClean;',summaryContext);
+const cleanedSummary=summaryContext.clean('影片全长约10分钟。我们一起看了7分钟，主角终于愿意面对自己的恐惧。',300);
+assert.doesNotMatch(cleanedSummary,/全长|10分钟|7分钟|观看时长|播放进度/);
+assert.match(cleanedSummary,/主角终于愿意面对自己的恐惧/);
+const summaryLengthContext=vm.createContext({cinemaWatchedHighlights:()=>'',Array});
+vm.runInContext(functionSource("cinemaSummaryLength")+';globalThis.lengthFor=cinemaSummaryLength;',summaryLengthContext);
+assert.deepEqual({...summaryLengthContext.lengthFor({items:[{text:'短内容'}]})},{min:50,max:110});
+assert.deepEqual({...summaryLengthContext.lengthFor({items:[{text:'长'.repeat(1800)}]})},{min:150,max:300});
 assert.match(source, /function cinemaReplyCountMenu/);
 assert.match(source, /automatic\?1:cinemaRandomReplyCount\(\)/);
 assert.match(source, /function cinemaRandomReplyCount/);
@@ -181,7 +234,8 @@ assert.match(source, /1\+Math\.floor\(Math\.random\(\)\*limit\)/);
 assert.match(source, /data-cin-action="media-hide"/);
 assert.doesNotMatch(functionSource("cinemaMediaToggle"), /toast\(/);
 assert.match(source, /_cin\.mediaOpen===false\)cinemaMediaToggle\(true\)/);
-assert.match(source, /!opt\.silentReply&&!_cin\.busy/);
+assert.doesNotMatch(functionSource("cinemaAnalyzeFrame"), /!opt\.silentReply&&!_cin\.busy/);
+assert.match(functionSource("cinemaAnalyzeFrame"), /if\(!opt\.silentReply\)setTimeout\(\(\)=>cinemaVisionReact/);
 assert.match(source, /addSummary\(c,memory,4,'【放映室】'\)/);
 assert.match(source, /cinemaSessionId=s\.id/);
 assert.match(source, /S\.cinema\.sessions=\(S\.cinema\.sessions\|\|\[\]\)\.filter\(x=>x&&x\.cid!==id\)/);
@@ -547,6 +601,6 @@ assert.match(functionSource("cinemaSend"), /cinemaRoleReply\([\s\S]*,false\)/);
 assert.match(functionSource("cinemaBookComment"), /,false\)/);
 assert.doesNotMatch(functionSource("cinemaBookPage"), /autoCount=.*\+1/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=717/);
+assert.match(html, /app\.js\?v=718/);
 
 console.log("cinema room tests passed");
