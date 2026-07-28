@@ -15,6 +15,7 @@ function functionSource(source, name) {
 const context = vm.createContext({});
 vm.runInContext(functionSource(app, "sanitizeRolePhotoScene"), context);
 vm.runInContext(functionSource(app, "rolePhotoPromptLocked"), context);
+vm.runInContext(functionSource(app, "rolePhotoSceneOnlyRequest"), context);
 
 const sanitized = context.sanitizeRolePhotoScene("拍一张露脸、完整正脸、清晰侧脸、看镜头的镜子自拍");
 assert.doesNotMatch(sanitized, /露脸|正脸|侧脸|看镜头|五官|面部|脸部/);
@@ -28,6 +29,13 @@ assert.match(locked, /no face or recognizable facial features may appear/i);
 assert.match(locked, /Never use a random stock selfie person/i);
 assert.match(locked, /preserve the exact character identity, biological sex, time, lighting, and location/i);
 assert.match(locked, /zero women, girls, female bodies, female hands/i);
+assert.match(locked, /night view, street view, sky, weather, object, food, pet/i);
+assert.match(locked, /ZERO PEOPLE and NO CHARACTER IN FRAME/);
+
+assert.equal(context.rolePhotoSceneOnlyRequest('给我发一张今晚的城市夜景照片'), true);
+assert.equal(context.rolePhotoSceneOnlyRequest('拍一张窗外的晚霞给我'), true);
+assert.equal(context.rolePhotoSceneOnlyRequest('拍你站在夜景前的背影'), false);
+assert.equal(context.rolePhotoSceneOnlyRequest('自拍一张你和夜景'), false);
 
 assert.match(app, /aiRelay\('image',\{prompt:rawPrompt,size:'1024x1536',source:'role_photo'\}\)/);
 assert.match(app, /function roleVisualIdentity\(c\)/);
@@ -37,6 +45,11 @@ assert.match(app, /当前真实时间是/);
 assert.match(app, /照片背景、光线、衣着状态和上一句聊天必须连贯/);
 assert.match(app, /不能生成白天、海边、飞机窗边、咖啡店等无关背景/);
 assert.match(app, /你的样子\|现在的样子\|看看你\|看你\|想看你\|想看看你/);
+assert.match(app, /directSceneOnly=rolePhotoSceneOnlyRequest\(directUserRequest\)/);
+assert.match(app, /const wantsSelf=!directSceneOnly&&/);
+assert.match(app, /风景\|夜景\|街景\|城市灯光/);
+assert.match(app, /ZERO PEOPLE, NO CHARACTER IN FRAME/);
+assert.match(app, /如果是夜景、风景、街景、天空、晚霞或天气/);
 assert.match(app, /【最高优先级构图锁】整张图片绝对不能出现任何人的脸或可辨认五官/);
 assert.match(app, /不要默认把整个头部裁掉/);
 assert.match(app, /手机完全挡住整张脸/);

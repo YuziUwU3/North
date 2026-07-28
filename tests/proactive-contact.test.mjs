@@ -38,15 +38,24 @@ assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);
 assert.match(source, /focus['"],initiativeWakeCheck/);
 assert.match(source, /【本轮允许主动照片】/);
+assert.match(source, /【本轮允许位置报备】/);
 assert.match(source, /普通问候、催回复和关心消息绝对不能顺带附图/);
 assert.match(source, /_initiativeNoImage=initiativeBlocksImage\(note\)/);
+assert.match(source, /_initiativeNoLocation=initiativeBlocksLocation\(note\)/);
 assert.match(source, /_initiativeNoImage&&[\s\S]*photoTail=3;continue/);
+assert.match(source, /_initiativeNoLocation&&[\s\S]*位置/);
 
 const blockContext = vm.createContext({});
 vm.runInContext(functionSource('initiativeBlocksImage') + ';globalThis.block=initiativeBlocksImage;', blockContext);
 assert.equal(blockContext.block('[系统：这是一次【主动消息】，不是对方刚发来新话。]'), true);
 assert.equal(blockContext.block('[系统：这是一次【主动消息】。【本轮允许主动照片】]'), false);
 assert.equal(blockContext.block('给我发一张照片'), false, 'an explicit real chat request must still be allowed to produce a photo');
+
+const locationBlockContext = vm.createContext({});
+vm.runInContext(functionSource('initiativeBlocksLocation') + ';globalThis.block=initiativeBlocksLocation;', locationBlockContext);
+assert.equal(locationBlockContext.block('[系统：这是一次【主动消息】。【本轮禁止发送位置卡片】]'), true);
+assert.equal(locationBlockContext.block('[系统：这是一次【主动消息】。【本轮允许位置报备】]'), false);
+assert.equal(locationBlockContext.block('把你的位置发给我'), false, 'an explicit real chat request must still allow a location card');
 
 const captionContext = vm.createContext({});
 vm.runInContext(functionSource('initiativePhotoCaptionOk') + ';globalThis.ok=initiativePhotoCaptionOk;', captionContext);
@@ -59,7 +68,7 @@ vm.runInContext(functionSource('initiativeDelayMs') + ';globalThis.delay=initiat
 assert.equal(delayContext.delay, 60000, 'one minute in settings must mean one real minute');
 
 const planMath = Object.create(Math);
-planMath.random = () => 0;
+planMath.random = () => 0.99;
 const planContext = vm.createContext({
   S: {settings: {imgGen: true}},
   initiativeMemory: () => null,
@@ -70,20 +79,32 @@ const planContext = vm.createContext({
   hm: () => '12:00',
   Math: planMath,
 });
-vm.runInContext(functionSource('initiativePlan') + ';globalThis.plan=initiativePlan;', planContext);
+vm.runInContext(functionSource('initiativeLocationReady') + ';' + functionSource('initiativePlan') + ';globalThis.plan=initiativePlan;', planContext);
 const role = {id: 'r1', traits: {active: 50, cling: 60}};
 const activity = {key: 'morning', label: '刚起床收拾', busy: 1};
 const ordinaryPlan = planContext.plan(role, activity, {turn: 1, lastKind: '', lastMemory: ''});
 assert.notEqual(ordinaryPlan.kind, 'photo');
+assert.notEqual(ordinaryPlan.kind, 'location');
 assert.doesNotMatch(ordinaryPlan.note, /\[图片\|/);
-const photoActivity = {label: '在路上散步', busy: 1};
-const photoPlan = planContext.plan(role, photoActivity, {turn: 1, lastKind: '', lastMemory: ''});
+assert.match(ordinaryPlan.note, /【本轮禁止发送位置卡片】/);
+const photoActivity = {key: 'evening', label: '刚闲下来', busy: 1};
+const photoPlan = planContext.plan(role, photoActivity, {turn: 3, lastKind: '', lastMemory: ''});
 assert.equal(photoPlan.kind, 'photo');
 assert.match(photoPlan.note, /【本轮允许主动照片】/);
 assert.match(photoPlan.note, /拍了什么、为什么想给ta看/);
-const locationPlan = planContext.plan(role, activity, {turn: 3, lastKind: '', lastMemory: ''});
+assert.match(photoPlan.note, /默认是你拿手机向外拍眼前所见/);
+assert.match(photoPlan.note, /夜景、风景、街景、天空、宠物或物品，就只拍那个主体/);
+planContext.S.settings.imgGen = false;
+const textOnlyPlan = planContext.plan(role, photoActivity, {turn: 3, lastKind: '', lastMemory: ''});
+assert.notEqual(textOnlyPlan.kind, 'photo');
+assert.notEqual(textOnlyPlan.kind, 'location');
+assert.match(textOnlyPlan.note, /图片功能没开就只发文字/);
+planContext.S.settings.imgGen = true;
+const travelActivity = {key: 'morning', label: '在通勤路上', busy: 1};
+const locationPlan = planContext.plan(role, travelActivity, {turn: 3, lastKind: '', lastMemory: ''});
 assert.equal(locationPlan.kind, 'location');
 assert.match(locationPlan.note, /\[位置\|公司\|办公区\]/);
+assert.match(locationPlan.note, /【本轮允许位置报备】/);
 
 function schedulerContext({planKind = 'share', callProb = 0, queue = true, delivered = queue, activityKey = 'work'} = {}) {
   const now = Date.now();
