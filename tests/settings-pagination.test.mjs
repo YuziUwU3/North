@@ -26,6 +26,8 @@ assert.doesNotMatch(render.slice(page2,page3),/id="set_image"/,'preference page 
 assert.match(tools,/settingsJump\(3,'set_license'\)/);
 assert.match(tools,/settingsJump\(3,'set_layout'\)/);
 assert.match(tools,/settingsJump\(3,'set_backup'\)/);
+assert.match(tools,/重要提醒：[\s\S]*?请养成定期导出备份的习惯/);
+assert.match(tools,/color:#ff5c6c;font-size:15px;font-weight:700/);
 assert.match(tools,/settingsJump\(3,'set_storage'\)/);
 assert.match(render,/_setTab===3\?settingsDataToolsSafeHTML\(\):''/);
 assert.match(render,/return settingsTabTap\(event,3\)/);

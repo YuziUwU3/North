@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='700'){
+if(window.__NORTH_SHELL_BUILD__!=='701'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v700 · 长片字幕续传优惠';
+const APP_VER='v701 · 备份提醒醒目化';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1265,7 +1265,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=700';
+  const url='sw.js?v=701';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1925,7 +1925,7 @@ function cinemaAsrNewJob(s,pipeline,duration){return{version:1,pipeline,mediaKey
 async function cinemaAsrLoadJob(s,pipeline){const job=await cinGet(cinemaAsrJobKey(s));return job&&job.version===1&&job.mediaKey===s.mediaKey&&(!pipeline||job.pipeline===pipeline)?job:null;}
 async function cinemaAsrSaveJob(s,job){job.updatedAt=Date.now();await cinPut(cinemaAsrJobKey(s),job);return job;}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=700').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=701').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=256*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;}mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),samples=mp4.getTrackSamplesInfo(track.id)||[],secondsPerSample=duration/Math.max(1,Number(track.nb_samples)||samples.length),nbSamples=Math.max(1,Math.floor(Math.max(60,Math.min(180,Number(chunkSeconds)||180))/Math.max(.0001,secondsPerSample))),queue=[];let init=null,previousSample=0,index=0;mp4.discardMdatData=false;mp4.onSegment=(id,user,fragment,sampleNumber,last)=>{const from=previousSample,to=Math.max(from+1,Number(sampleNumber)||from+1),first=samples[from],tail=samples[Math.min(samples.length-1,to-1)],start=first?Number(first.cts!=null?first.cts:first.dts)/Number(first.timescale||track.timescale):from*secondsPerSample,end=tail?(Number(tail.cts!=null?tail.cts:tail.dts)+Number(tail.duration||0))/Number(tail.timescale||track.timescale):Math.min(duration,to*secondsPerSample),normalized=cinemaMp4ResetBaseTime(fragment);queue.push({index:index++,start:Math.max(0,start),end:Math.min(duration,Math.max(start+.05,end)),blob:new Blob([init,normalized],{type:'audio/mp4'}),last:!!last});previousSample=to;mp4.releaseUsedSamples(id,to);};mp4.setSegmentOptions(track.id,null,{nbSamples,nbSamplesPerFragment:nbSamples,sizePerSegment:6*1024*1024,rapAlignement:false,normalizeAudioSampleEntriesForMSE:true});init=mp4.initializeSegmentation('per-track')[0].buffer;mp4.start();return{mp4,queue,track,duration};}
@@ -2805,6 +2805,7 @@ function settingsDataToolsHTML(){return `${quickJumpBar([['手机授权',"settin
     <div class="btns" style="margin-top:10px"><button class="btn p" style="background:linear-gradient(135deg,#5bc0de,#8f8fe0)" onclick="cloudSyncModal()">☁️ 云同步（换设备不丢·推荐）</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn p" style="background:linear-gradient(135deg,#e69650,#d35f67)" onclick="emergencyRestoreAll()">恢复所有数据（扫描本机存档）</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px;color:#d7a47d">优先寻找本机遗留的完整核心存档、安全快照和长聊天库；恢复前会显示可找回的数量，不会凭空生成数据。</div>
+    <div style="margin:10px 14px 2px;padding:10px 12px;border:1px solid rgba(250,81,81,.38);border-radius:10px;background:rgba(250,81,81,.09);color:#ff5c6c;font-size:15px;font-weight:700;line-height:1.55;text-align:left"><span style="font-size:16px">重要提醒：</span>请养成定期导出备份的习惯。换手机、清理浏览器数据或系统回收存储时，本机数据可能无法找回。</div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportData()">导出备份(文件)</button><button class="btn g" onclick="importData()">导入</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn g" onclick="exportBeautyData()">导出美化</button><button class="btn g" onclick="importBeautyData()">导入美化</button></div>
     <div class="hint" style="text-align:center;padding:2px 14px">美化包只恢复壁纸、图标、头像、气泡和音乐背景，不覆盖聊天、人设、API或真人好友数据。</div>
