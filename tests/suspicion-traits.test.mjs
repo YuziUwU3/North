@@ -66,7 +66,7 @@ assert.match(source,/setInterval\(suspicionTick,1000\)/);
 
 let seq=0;
 const requestContext=vm.createContext({Date,Math,save:()=>{},uid:()=>`m${++seq}`});
-for(const name of ['traitValue','suspicionState','suspicionRequestMessage'])vm.runInContext(functionSource(name),requestContext);
+for(const name of ['traitValue','suspicionState','suspicionEventOpen','suspicionRequestMessage'])vm.runInContext(functionSource(name),requestContext);
 const requestRole={traits:{suspicious:80,paranoid:60}};
 const request=requestContext.suspicionRequestMessage(requestRole,'location','想确认你安全到家');
 assert.equal(request.type,'verifyreq');
@@ -88,6 +88,7 @@ const hangupState={score:20,unresolved:[]};
 const hangupContext=vm.createContext({
   S:{me:{name:'小北'}},Date,Math,uid:()=>`e${++seq}`,save:()=>{},
   traitValue:(c,k)=>c.traits[k]||0,suspicionRaise:()=>hangupState,
+  suspicionEventOpen:e=>!!e,
   scheduleReply:(id,note,done)=>{hangupDone=done;return true;},
   getC:()=>hangupRole,suspicionState:()=>hangupState,suspicionUserRepliedSince:()=>false,
 });
@@ -98,5 +99,33 @@ assert.equal(hangupState.pendingHangup.status,'asking');
 hangupDone(true);
 assert.equal(hangupState.pendingHangup.status,'waiting');
 assert.ok(hangupState.pendingHangup.deadline-hangupState.pendingHangup.askedAt===10000);
+
+assert.match(functionSource('suspicionPrompt'),/你不是规则执行器/);
+assert.match(functionSource('suspicionPrompt'),/不要见到“朋友\/同事\/前任”就机械吃醋/);
+assert.match(functionSource('suspicionStartDaily'),/自主决定是直接问、旁敲侧击、表达担心\/不满，还是先克制观察/);
+assert.match(functionSource('suspicionStartDaily'),/不能同时来电、登录微信、远控或索要多种证明/);
+assert.match(functionSource('suspicionCheckDaily'),/lastSilenceMessageId/);
+assert.match(functionSource('suspicionTick'),/这是同一件事最后一次跟进/);
+assert.match(functionSource('suspicionRequestMessage'),/suspicionEventOpen\(st\.pendingHangup\)/);
+assert.match(functionSource('maybeFollowup'),/suspicionPromiseCoversText/);
+assert.match(source,/if\(got\)suspicionOnAssistantReply\(c\)/);
+
+const detailContext=vm.createContext({Date,Math});
+for(const name of ['traitValue','suspicionNumber','suspicionPromiseDue','suspicionClaimFacts','suspicionDirectContradiction','suspicionSilenceDelay'])vm.runInContext(functionSource(name),detailContext);
+const base=Date.parse('2026-07-29T10:00:00+08:00');
+const tenMinutes=detailContext.suspicionPromiseDue('我十分钟后到家，到了给你报平安',base);
+assert.equal(tenMinutes.kind,'arrival');
+assert.equal(tenMinutes.due-base,10*60000);
+const photoPromise=detailContext.suspicionPromiseDue('晚点我拍张照片发给你',base);
+assert.equal(photoPromise.kind,'photo');
+assert.equal(photoPromise.due-base,30*60000);
+assert.equal(detailContext.suspicionPromiseDue('我现在到家了',base),null,'a completed action is not a future promise');
+assert.equal(detailContext.suspicionSilenceDelay({traits:{suspicious:0}}),0,'disabled sensitivity must not trigger silence checks');
+assert.ok(detailContext.suspicionSilenceDelay({traits:{suspicious:90}})<detailContext.suspicionSilenceDelay({traits:{suspicious:55}}),'higher sensitivity should notice silence sooner');
+const first=detailContext.suspicionClaimFacts('我现在在公司')[0];first.ts=Date.now();
+const moved=detailContext.suspicionClaimFacts('我刚到家')[0];
+assert.equal(detailContext.suspicionDirectContradiction(first,moved,'我刚到家'),false,'a stated move is not a contradiction');
+const conflict=detailContext.suspicionClaimFacts('我一直在家，没出门')[0];
+assert.equal(detailContext.suspicionDirectContradiction(first,conflict,'我一直在家，没出门'),true,'an explicit continuity claim can contradict a recent location');
 
 console.log('suspicion trait tests passed');
