@@ -46,7 +46,8 @@ test('cinema chunks send trusted actual duration and never upload video to built
   assert.match(app,/durationSeconds:end-start/);
   assert.match(app,/purpose:'cinema_subtitles'/);
   assert.match(app,/if\(sttRelayOn\(\)\)return toast\('内置识别不会上传原视频/);
-  assert.match(app,/每 '\+sttRelaySecondsPerPoint\(\)\+' 秒 1 点计费/);
+  assert.match(app,/sttRelaySecondsPerPoint\(\)/);
+  assert.match(app,/cinemaAsrDiscountPct/);
 });
 
 test('legacy cached cinema clients remain compatible without reopening generic voice ASR',()=>{

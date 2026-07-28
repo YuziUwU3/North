@@ -24,6 +24,9 @@ const PRICE: Record<string, number> = {
   tts_max_chars: 300,
   asr: 1,
   asr_seconds_per_point: Math.max(5, Math.min(60, Number(Deno.env.get("ASR_SECONDS_PER_POINT") || 15) || 15)),
+  asr_long_discount_30: 5,
+  asr_long_discount_60: 8,
+  asr_long_discount_120: 10,
   summary: 2,
 };
 const TTS_CHARS_PER_POINT = 50;
@@ -517,6 +520,19 @@ function asrRequestId(raw: unknown) {
   return id;
 }
 
+function asrJobId(raw: unknown, required = false) {
+  const id = String(raw || "").trim();
+  if (!id && !required) return "";
+  if (!/^[A-Za-z0-9_.:-]{8,100}$/.test(id)) throw new Error("invalid-asr-job-id");
+  return id;
+}
+
+async function applyAsrLongDiscount(userId: string, jobId: string) {
+  const { data, error } = await supabase.rpc("phone_ai_asr_long_discount", { p_user_id: userId, p_job_id: jobId });
+  if (error) throw new Error(error.message || "asr-long-discount-failed");
+  return data as { refunded: number; discount_rate: number; charged_points: number; duration_seconds: number; balance: number };
+}
+
 function audioDataUri(raw: unknown) {
   const value = String(raw || "");
   const match = value.match(/^data:([\w.+/-]+);base64,([A-Za-z0-9+/=\s]+)$/);
@@ -598,7 +614,7 @@ async function aliyunAsr(dataUri: string, format: string): Promise<AsrResult> {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "X-DashScope-SSE": "enable" },
-    body: JSON.stringify({ model, input: { messages: [{ role: "user", content: [{ type: "input_audio", input_audio: { data: dataUri } }] }] }, parameters: { format: format === "ogg-opus" ? "ogg" : format, sample_rate: "16000" } }),
+    body: JSON.stringify({ model, input: { messages: [{ role: "user", content: [{ type: "input_audio", input_audio: { data: dataUri } }] }] }, parameters: { format: format === "ogg-opus" ? "ogg" : format, ...(["wav", "pcm"].includes(format) ? { sample_rate: "16000" } : {}) } }),
     signal: AbortSignal.timeout(170000),
   });
   const raw = await response.text();
@@ -618,8 +634,8 @@ async function aliyunAsr(dataUri: string, format: string): Promise<AsrResult> {
   let text = "", duration = 0, requestId = "";
   for (const event of events) {
     if (event?.code || event?.error) throw new Error(`aliyun-asr-error: ${event?.message || event?.code || event?.error}`);
-    const output = event?.output || {}, sentence = output.sentence;
-    if (String(output.text || "").trim()) text = String(output.text).trim();
+    const outer = event?.output || {}, output = outer?.output || outer, sentence = output?.sentence;
+    if (String(outer?.text || output?.text || "").trim()) text = String(outer?.text || output?.text).trim();
     if (sentence?.sentence_end === true && String(sentence.text || "").trim()) {
       const id = String(sentence.sentence_id ?? `${sentence.begin_time}-${sentence.end_time}`);
       segmentMap.set(id, { start: Number(sentence.begin_time || 0) / 1000, end: Number(sentence.end_time || 0) / 1000, text: String(sentence.text || "").trim() });
@@ -1691,6 +1707,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (action === "asr_discount") {
+      await ensureAccount(userId, clientSecret);
+      const jobId = asrJobId(body.job_id, true);
+      const discount = await applyAsrLongDiscount(userId, jobId);
+      return json({ ok: true, ...discount, job_id: jobId });
+    }
+
     if (action === "asr") {
       const requestedPurpose = String(body.purpose || "").trim();
       const legacyCinemaPurpose = !requestedPurpose
@@ -1706,6 +1729,11 @@ Deno.serve(async (req) => {
       const duration = trustedAsrDuration(audio.bytes, format, body.duration_seconds);
       const cost = asrPointCost(duration);
       const requestId = asrRequestId(body.request_id);
+      const jobId = purpose === "cinema_subtitles" ? asrJobId(body.job_id) : "";
+      const rawChunkIndex = Number(body.chunk_index);
+      const chunkIndex = Number.isFinite(rawChunkIndex)
+        ? Math.max(-1, Math.min(10000, Math.trunc(rawChunkIndex)))
+        : -1;
       await ensureAccount(userId, clientSecret);
       const reserved = await reserveAsrPoints(userId, cost, requestId);
       if (reserved.duplicate) {
@@ -1733,6 +1761,9 @@ Deno.serve(async (req) => {
           provider_duration_seconds: result.duration || 0,
           seconds_per_point: ASR_SECONDS_PER_POINT,
           charged_points: cost,
+          purpose,
+          job_id: jobId,
+          chunk_index: chunkIndex,
           attempts,
         });
         return json({
