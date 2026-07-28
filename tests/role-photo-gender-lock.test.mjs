@@ -54,7 +54,7 @@ assert.match(explicitWoman, /只有描述中被明确点名的女性可以出现
 assert.match(app, /男性照片铁律，优先级最高/);
 assert.match(app, /“恋人、对象、用户、我、收照片的人”都不等于女性/);
 assert.match(app, /function rolePhotoLatestUserImageRequest\(c\)/);
-assert.match(app, /const directUserRequest=rolePhotoLatestUserImageRequest\(c\),pairWithUser=rolePhotoPairWithUser\(directUserRequest\)/);
+assert.match(app, /const directUserRequest=rolePhotoContextRequest\(c\)\|\|rolePhotoLatestUserImageRequest\(c\)/);
 assert.match(app, /只有用户亲口提出的要求可以授权女性入镜/);
 assert.match(app, /imageGenerateExternal\(base,key,model,prompt,size\)\{const p=\(prompt\|\|'一张生活照'\)\.slice\(0,3200\)/);
 assert.match(app, /const rawPrompt=String\(prompt\|\|''\)/);

@@ -54,7 +54,7 @@ assert.match(app, /风景\|夜景\|街景\|城市灯光/);
 assert.match(app, /ZERO PEOPLE, NO CHARACTER IN FRAME/);
 assert.match(app, /如果是夜景、风景、街景、天空、晚霞或天气/);
 assert.match(app, /【最高优先级构图锁】整张图片绝对不能出现任何人的脸或可辨认五官/);
-assert.match(app, /不要默认把整个头部裁掉/);
+assert.match(app, /不要默认无头裁切|不要默认把整个头部裁到画面外/);
 assert.match(app, /手机完全挡住整张脸/);
 assert.match(app, /【最终检查】画面中零张脸、零个可见五官/);
 assert.match(app, /遮脸硬规则，优先级最高/);
