@@ -34,13 +34,13 @@ assert.match(account,/function aiImageReady\(\)/);
 assert.match(account,/图片中转站尚未配置/);
 assert.match(account,/图片双路线已启用/);
 assert.match(account,/成功只扣一次，两条都失败才退点/);
-assert.match(account,/图片生成每张固定扣20点/);
+assert.match(account,/图片生成每张固定扣6点/);
 assert.match(account,/function aiShowPurchaseNotice\(\)/);
-assert.match(account,/成功只扣一次20点/);
-assert.match(account,/两条路线都失败则20点全额退回/);
+assert.match(account,/成功只扣一次6点/);
+assert.match(account,/两条路线都失败则6点全额退回/);
 assert.match(account,/更换浏览器或手机前请先备份并确认用户ID/);
 
-assert.match(backend,/image: 20/);
+assert.match(backend,/image: 6/);
 assert.match(backend,/Deno\.env\.get\("IMAGE_MODEL"\) \|\| "gpt-image-2"/);
 assert.match(backend,/function configuredImageRoutes\(\)/);
 assert.match(backend,/IMAGE_ROUTE_2_BASE_URL/);

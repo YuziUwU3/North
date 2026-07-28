@@ -18,7 +18,7 @@ const cors = {
 const PRICE: Record<string, number> = {
   chat: 10,
   vision: 25,
-  image: 20,
+  image: 6,
   tts: 1,
   tts_chars_per_point: 50,
   tts_max_chars: 300,

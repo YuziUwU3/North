@@ -19,7 +19,7 @@ const AI_PAYMENT_CHANNELS=[
   {id:'wechat',name:'微信支付',qr:'./pay-assets/wechat-receive.jpg',url:''}
 ];
 const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
-const AI_PURCHASE_NOTICE='图片生成每张固定扣20点，按当前套餐折算约0.62～0.79元/张。系统优先使用路线一，生成失败会自动重试并尝试路线二；无论切换或重试多少次，成功只扣一次20点，两条路线都失败则20点全额退回，不会因为切换路线重复扣点。点数属于通用点数，也可以用于文字、语音等功能，请按需购买、少量多次。AI账户与当前浏览器中的用户ID绑定，更换浏览器或手机前请先备份并确认用户ID，否则可能读取不到原账户点数。';
+const AI_PURCHASE_NOTICE='图片生成每张固定扣6点，按当前套餐折算约0.19～0.24元/张。系统优先使用路线一，生成失败会自动重试并尝试路线二；无论切换或重试多少次，成功只扣一次6点，两条路线都失败则6点全额退回，不会因为切换路线重复扣点。点数属于通用点数，也可以用于文字、语音等功能，请按需购买、少量多次。AI账户与当前浏览器中的用户ID绑定，更换浏览器或手机前请先备份并确认用户ID，否则可能读取不到原账户点数。';
 function aiPageScroll(){const sc=typeof $==='function'?$('.scroll'):null;return sc?sc.scrollTop:0;}
 function aiBalanceCacheKey(){return'yibei_ai_balance_'+aiUserId();}
 function aiCachedBalance(){try{const raw=localStorage.getItem(aiBalanceCacheKey());if(raw==null||raw==='')return null;const n=Number(raw);return Number.isFinite(n)&&n>=0?n:null;}catch(_){return null;}}
@@ -59,7 +59,7 @@ function aiAsrRouteCount(){const n=Number(_aiAcct&&_aiAcct.capabilities&&_aiAcct
 function aiImageReady(){return !_aiAcct||!_aiAcct.capabilities?null:_aiAcct.capabilities.image!==false;}
 function aiImageRouteCount(){const n=Number(_aiAcct&&_aiAcct.capabilities&&_aiAcct.capabilities.image_routes);return Number.isFinite(n)&&n>0?Math.round(n):1;}
 function aiExternalTts(){const t=(typeof ttsCfg==='function'?ttsCfg():(S.settings.tts||{}));return t&&t.base&&t.key?t:null;}
-function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:20,tts:1,tts_chars_per_point:50,tts_max_chars:300,asr:1,asr_seconds_per_point:15,summary:2};return p[k]||0;}
+function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:6,tts:1,tts_chars_per_point:50,tts_max_chars:300,asr:1,asr_seconds_per_point:15,summary:2};return p[k]||0;}
 function aiTtsCharsPerPoint(){const n=Number(aiPrice('tts_chars_per_point'));return Number.isFinite(n)&&n>0?Math.round(n):50;}
 function aiTtsPointCost(chars){return Math.max(1,Math.ceil(Math.max(1,Number(chars)||1)/aiTtsCharsPerPoint()));}
 function aiTtsEstimatedCount(points,chars){return Math.floor(Math.max(0,Number(points)||0)/aiTtsPointCost(chars||100));}
