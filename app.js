@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='708'){
+if(window.__NORTH_SHELL_BUILD__!=='709'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v708 · 主动分享图片位置修复';
+const APP_VER='v709 · 竖图生成兼容增强';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -883,7 +883,7 @@ async function visionAPI(dataURL,prompt,opt){opt=opt||{};const a=S.settings.visi
 /* AI 真图：走 /images/generations 真生成一张图，返回图片URL（可单独配接口/Key，留空则用聊天模型的）*/
 function imageApiUrls(base,path){const b=(''+base).replace(/\/+$/,'');const urls=/\/v1$/i.test(b)?[b+path]:[b+'/v1'+path,b+path];return urls.filter((x,i,a)=>x&&a.indexOf(x)===i);}
 function imageRespErr(d){const msg=d&&d.choices&&d.choices[0]&&d.choices[0].message,txt=msg&&msg.content;return ((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||(d&&d.message)||(typeof txt==='string'&&txt)||'').slice(0,260);}
-function imageShouldRetryChat(status,msg){return status===400||status===404||status===405||status===422||status===500||status===501||/html|doctype|网页|unsupported|not support|not found|does not exist|images\/generations|image.*endpoint|渠道不存在|可用渠道不存在|available.*channel|no image|empty/i.test(''+msg);}
+function imageShouldRetryChat(status,msg){return status===400||status===404||status===405||status===422||status===501||/html|doctype|网页|unsupported|not support|not found|does not exist|images\/generations|image.*endpoint|渠道不存在|可用渠道不存在|available.*channel/i.test(''+msg);}
 function imageCollectValues(v,out){if(!v||out.length>40)return;if(typeof v==='string'){out.push(v);return;}if(Array.isArray(v)){v.forEach(x=>imageCollectValues(x,out));return;}if(typeof v!=='object')return;
   if(v.url)out.push(v.url);if(v.b64_json)out.push(v.b64_json);if(v.data&&/image\//i.test(v.mime_type||v.mimeType||''))out.push('data:'+(v.mime_type||v.mimeType)+';base64,'+v.data);
   if(v.inlineData&&v.inlineData.data)out.push('data:'+(v.inlineData.mimeType||'image/png')+';base64,'+v.inlineData.data);
@@ -899,15 +899,16 @@ function imageResultURL(d){const direct=d&&d.data&&d.data[0];if(direct&&(direct.
   for(const raw of cands){const data=(''+raw).match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i);if(data)return data[0].replace(/\s+/g,'');const md=(''+raw).match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i),plain=(''+raw).match(/https?:\/\/[^\s<>"')\]]+/i);if(md||plain)return (md&&md[1])||(plain&&plain[0]);}
   return '';
 }
+function imageSizeRatio(size){return size==='1024x1536'?'2:3':size==='1536x1024'?'3:2':'1:1';}
 async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000),ct=(res.headers.get('content-type')||'').toLowerCase();const txt=await res.text(),html=/html/.test(ct)||/^\s*<!doctype\s+html|^\s*<html[\s>]/i.test(txt);let d=null;try{d=txt&&!html?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(html)d={message:'接口返回网页HTML，不是API JSON；已继续尝试 /v1 路径',html:true};if(res.ok&&!html)return {res,d,url};last={res,d,url};if(!html&&![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
 async function imageGenerateExternal(base,key,model,prompt,size){const p=(prompt||'一张生活照').slice(0,3200),target=size||'1024x1536';
-  const geminiImage=/gemini.*image/i.test(model),rich=geminiImage?{model,prompt:p,n:1,size:target,response_format:'b64_json'}:{model,prompt:p,n:1,size:target,quality:'medium',output_format:'jpeg',output_compression:88,response_format:'url'};
+  const geminiImage=/gemini.*image/i.test(model),gptImage=/^gpt-image(?:-|$)/i.test(model),rich={model,prompt:p,n:1,size:target,quality:'medium',output_format:'jpeg',output_compression:88,...(gptImage?{}:{response_format:geminiImage?'b64_json':'url'}),...(geminiImage?{aspect_ratio:imageSizeRatio(target)}:{})};
   let out=await imagePostCompat(base,key,'/images/generations',rich,180000),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
   if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   let url=res&&res.ok?imageResultURL(d):'';
   if(url)return {url,endpoint:'images-generations',model};
-  if(!res||!res.ok&&imageShouldRetryChat(res.status,err)){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。尺寸：'+target}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
+  if(!res||!res.ok&&imageShouldRetryChat(res.status,err)){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。必须保持画布尺寸 '+target+'（'+imageSizeRatio(target)+' 比例），不要改成方图。'}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
   if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
   throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
 }
@@ -933,7 +934,7 @@ async function fillGenImage(msg,prompt){
   catch(e){msg.pending=false;msg.src='';msg.failed=true;msg.errText=(e&&e.message||'生图失败');}
   save();if(cur().p==='chat'||cur().p==='wechat')setTimeout(render,40);
 }
-function generatedImageFailureLabel(err){const s=String(err||'');if(/429|No images were successfully|relay-image-empty|relay-image-failed-refunded|no image/i.test(s))return'上游限流或没有成功出图，点数已退回';if(/timeout|timed out|aborted|超时/i.test(s))return'生成超时，点数已退回';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(s))return'图片线路权限异常，点数已退回';if(/404|model.*not.*found|not found/i.test(s))return'图片模型或线路不匹配，点数已退回';if(/fetch|network|load failed|cors/i.test(s))return'网络中断或等待过久';return'生成失败'+(s?('：'+s.replace(/^内置AI失败：/,'').slice(0,70)):'');}
+function generatedImageFailureLabel(err){const s=String(err||'');if(/429|No images were successfully|relay-image-empty|relay-image-failed-refunded|no image/i.test(s))return'上游限流或没有成功出图，点数已退回';if(/504|timeout|timed out|aborted|超时/i.test(s))return'上游生成超过等待时间，点数会退回；为避免重复费用未自动重试';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(s))return'图片线路权限异常，点数已退回';if(/404|model.*not.*found|not found/i.test(s))return'图片模型或线路不匹配，点数已退回';if(/fetch|network|load failed|cors/i.test(s))return'网络中断或等待过久';return'生成失败'+(s?('：'+s.replace(/^内置AI失败：/,'').slice(0,70)):'');}
 function retryGeneratedImage(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x&&x.id===mid);if(!c||!m||m.type!=='image'||m.pending||!m.genPrompt)return;m.failed=false;m.errText='';m.pending=true;save();render();setTimeout(()=>fillGenImage(m,m.genPrompt),60);}
 
 /* =================== 提示词 =================== */
@@ -1271,7 +1272,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=708';
+  const url='sw.js?v=709';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1944,7 +1945,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=708').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=709').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}

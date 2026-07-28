@@ -99,10 +99,11 @@ function guardedImagePrompt(prompt: unknown, rolePhoto = false) {
 function guardedChatImagePrompt(prompt: unknown, size: string, rolePhoto = false) {
   const request = String(prompt || "casual phone photo").slice(0, 3600);
   const roleLock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
+  const ratio = size === "1024x1536" ? "2:3 portrait" : size === "1536x1024" ? "3:2 landscape" : "1:1 square";
   return `Generate exactly one realistic casual phone photo for this request:
 ${request}
 
-Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same current character with the exact gender and identity described in the request wearing it. Keep the scene time, background, and lighting logically consistent with the request. Size: ${size}. Return the image only.${roleLock}`;
+Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same current character with the exact gender and identity described in the request wearing it. Keep the scene time, background, and lighting logically consistent with the request. Required canvas: ${size}, ${ratio}. Preserve that exact orientation and do not substitute a square canvas. Return the image only.${roleLock}`;
 }
 
 const PLANS = [
@@ -763,11 +764,18 @@ async function openai(path: string, body: unknown, timeoutMs = 180000, route?: O
         } catch {
           data = text ? { response: text.slice(0, 180) } : null;
         }
-        if (!r.ok) throw new Error(`model-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
+        if (!r.ok) {
+          const failure: any = new Error(`model-http-${r.status}: ${JSON.stringify(data || {}).slice(0, 180)}`);
+          // Trying both /v1/path and /path is safe only when the first path is
+          // unsupported. A 504/5xx/429 request may already have started and been
+          // billed upstream, so repeating it against the alternate URL can pay twice.
+          failure.stopAlternateUrl = ![404, 405, 501].includes(r.status);
+          throw failure;
+        }
         return data;
       } catch (e) {
         lastError = e;
-        if (/upstream-timeout|aborted/i.test(errText(e))) throw e;
+        if ((e as any)?.stopAlternateUrl || /upstream-timeout|aborted/i.test(errText(e))) throw e;
       }
     }
     throw lastError || new Error("model-request-failed");
@@ -836,7 +844,7 @@ function relayImageResult(data: any) {
 }
 
 function shouldRetryImageAsChat(reason: string) {
-  return /available.*channel|渠道不存在|可用渠道不存在|unsupported.*endpoint|unsupported.*path|not.*support.*images|images\/generations|image.*endpoint|model-http-400|model-http-404|model-http-500/i.test(reason);
+  return /available.*channel|渠道不存在|可用渠道不存在|unsupported.*endpoint|unsupported.*path|not.*support.*images|images\/generations|image.*endpoint|model-http-400|model-http-404/i.test(reason);
 }
 
 function shouldRetryImagePlain(reason: string) {
@@ -845,14 +853,29 @@ function shouldRetryImagePlain(reason: string) {
 
 function imageFailCode(reason: string) {
   if (/429|No images were successfully|relay-image-empty/i.test(reason)) return "image-upstream-no-output-or-rate-limit";
-  if (/upstream-timeout|timeout|aborted/i.test(reason)) return "image-upstream-timeout";
+  if (/upstream-timeout|timeout|aborted|model-http-504|\b504\b/i.test(reason)) return "image-upstream-timeout";
   if (/401|403|unauthori|forbidden|no access|invalid.*key/i.test(reason)) return "image-auth-or-permission";
   if (/404|model.*not.*found|not found|渠道不存在|可用渠道不存在|available.*channel|unsupported.*endpoint|unsupported.*path/i.test(reason)) return "image-model-or-endpoint";
   return "image-upstream-failed";
 }
 
 function shouldRetrySameImageRoute(reason: string) {
-  return /relay-image-empty|No images were successfully|no image|429|rate.?limit/i.test(reason);
+  // A timeout or an empty 2xx response may already have been billed upstream.
+  // Only retry explicit rate-limit rejections, which did not start generation.
+  return /429|rate.?limit/i.test(reason);
+}
+
+function shouldTryNextImageRoute(reason: string) {
+  // Do not fan out after ambiguous paid failures. 504/timeout/empty responses can
+  // mean the image finished after the gateway disconnected, so retrying another
+  // route could turn one failed user request into two real upstream charges.
+  return !/upstream-timeout|timeout|aborted|model-http-50[0234]|\b50[0234]\b|relay-image-empty|No images were successfully|no image/i.test(reason);
+}
+
+function imageAspectRatio(size: string) {
+  if (size === "1024x1536") return "2:3";
+  if (size === "1536x1024") return "3:2";
+  return "1:1";
 }
 
 async function generateImageThroughRoute(route: OpenAIRoute, rawPrompt: unknown, size: string, rolePhoto: boolean) {
@@ -868,34 +891,35 @@ async function generateImageThroughRoute(route: OpenAIRoute, rawPrompt: unknown,
   };
   let endpoint = "images-generations";
   let upstream: any;
-  if (/^gpt-image-2$/i.test(model)) {
+  try {
+    const geminiImage = /gemini.*image/i.test(model);
+    const gptImage = /^gpt-image(?:-|$)/i.test(model);
+    const richBody = {
+      model,
+      prompt,
+      n: 1,
+      size,
+      quality: "medium",
+      output_format: "jpeg",
+      output_compression: 88,
+      ...(gptImage ? {} : { response_format: geminiImage ? "b64_json" : "url" }),
+      ...(geminiImage ? { aspect_ratio: imageAspectRatio(size) } : {}),
+    };
+    try {
+      upstream = await openai("/images/generations", richBody, 120000, route);
+    } catch (richError) {
+      const richReason = errText(richError);
+      if (!shouldRetryImagePlain(richReason)) throw richError;
+      upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000, route);
+    }
+    // Parse before returning; empty responses are treated as ambiguous paid
+    // failures and are intentionally not fanned out to another generation call.
+    return { data: relayImageResult(upstream), model, endpoint };
+  } catch (firstError) {
+    const firstReason = errText(firstError);
+    if (!shouldRetryImageAsChat(firstReason)) throw firstError;
     endpoint = "chat-completions";
     upstream = await openai("/chat/completions", chatBody, chatTimeout, route);
-  } else {
-    try {
-      const richBody = {
-        model,
-        prompt,
-        n: 1,
-        size,
-        quality: "medium",
-        output_format: "jpeg",
-        output_compression: 88,
-        response_format: "url",
-      };
-      try {
-        upstream = await openai("/images/generations", richBody, 120000, route);
-      } catch (richError) {
-        const richReason = errText(richError);
-        if (!shouldRetryImagePlain(richReason)) throw richError;
-        upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000, route);
-      }
-    } catch (firstError) {
-      const firstReason = errText(firstError);
-      if (!shouldRetryImageAsChat(firstReason)) throw firstError;
-      endpoint = "chat-completions";
-      upstream = await openai("/chat/completions", chatBody, chatTimeout, route);
-    }
   }
   return { data: relayImageResult(upstream), model, endpoint };
 }
@@ -1680,6 +1704,7 @@ Deno.serve(async (req) => {
             }
           }
           if (result) break;
+          if (i < routes.length - 1 && !shouldTryNextImageRoute(errText(lastError))) break;
         }
         if (!result) throw lastError || new Error("all-image-routes-failed");
         await finishCharge(c.ledgerId, true, {

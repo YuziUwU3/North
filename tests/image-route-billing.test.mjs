@@ -11,6 +11,7 @@ assert.equal((image.match(/await charge\(userId, clientSecret, "image"\)/g) || [
 assert.match(image, /for \(let i = 0; i < routes\.length; i\+\+\)/);
 assert.match(image, /const maxAttempts = route\.name === "route-1" \? 2 : 1/);
 assert.match(image, /shouldRetrySameImageRoute\(routeReason\)/);
+assert.match(image, /shouldTryNextImageRoute\(errText\(lastError\)\)/);
 assert.match(image, /result = await generateImageThroughRoute\(route/);
 assert.match(image, /if \(!result\) throw lastError/);
 assert.equal((image.match(/await finishCharge\(c\.ledgerId, true/g) || []).length, 1, "success must settle once");
