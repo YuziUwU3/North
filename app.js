@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='710'){
+if(window.__NORTH_SHELL_BUILD__!=='711'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v710 · 字幕断点续提与估时修复';
+const APP_VER='v711 · 角色换装照片识别修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -651,16 +651,43 @@ function rolePhotoPairWithUser(rawScene){
   const s=String(rawScene||'');
   return /(我和你|你和我|我们俩|咱们俩|我们两个|咱们两个|你跟我|我跟你).{0,16}(牵手|拉手|握手|合照|合影|同框|拥抱|抱着|背影|影子|手|约会)|(牵手|拉手|握手|合照|合影|同框|拥抱|抱着|背影|影子).{0,16}(我和你|你和我|我们俩|咱们俩|我们两个|咱们两个|你跟我|我跟你)/.test(s);
 }
+function rolePhotoClothesOnlyRequest(rawScene){
+  const s=String(rawScene||'');
+  const bodyCue=/(你本人|你自己|自拍|拍你|你入镜|穿给我看|你穿|穿上|换上|戴上|佩戴|戴着|上身|身上|手上|手腕|手指|脖子|颈部|耳朵|头上|脚上|肩上|背上|身材|全身|半身|体型|肌肉|腹肌|背影|侧影|只拍.{0,4}(一只手|手腕|手指|脚|腿|脖子|颈部|耳朵|头部|肩膀))/.test(s);
+  const wearable='衣服|服装|女仆装|女佣装|制服|西装|正装|手表|腕表|戒指|指环|手链|手镯|项链|吊坠|耳环|耳钉|耳饰|眼镜|墨镜|帽子|发饰|围巾|领带|领结|鞋|靴|袜|包|背包|挎包';
+  const explicitObject=new RegExp('衣服本身|饰品本身|配饰本身|只拍(?:这件|那件|这套|这个|那个|'+wearable+')|单拍(?:'+wearable+')|衣架|挂着|叠放|平铺|摘下来|脱下来|取下来|没戴着|不戴着|装在.{0,8}(盒|袋)|铺在.{0,8}(床|桌|沙发)|放在.{0,8}(床|桌|椅|沙发|盒)|拍(?:一下|一张)?(?:这件|那件|这个|那个|衣服|饰品|配饰)本身');
+  return !bodyCue&&explicitObject.test(s);
+}
+function rolePhotoWearableKind(rawScene){
+  const s=String(rawScene||'');
+  if(!s||rolePhotoClothesOnlyRequest(s))return '';
+  if(/手表|腕表|手链|手镯|戒指|指环/.test(s))return 'hand';
+  if(/项链|吊坠|项圈|围巾|领带|领结/.test(s))return 'neck';
+  if(/耳环|耳钉|耳饰/.test(s))return 'ear';
+  if(/眼镜|墨镜/.test(s))return 'glasses';
+  if(/帽子|发饰|发带|猫耳/.test(s))return 'head';
+  if(/鞋|靴|袜|脚链/.test(s))return 'feet';
+  if(/包|背包|挎包|腰包/.test(s))return 'bag';
+  if(/穿|穿上|换上|换成|穿着|穿给我看|上身|身上这套|你穿什么|看看你穿|女仆装|女佣装|执事装|制服|正装|西装|西服|衬衫|衬衣|马甲|白大褂|医生服|老师装|校服|礼服|外套|风衣|大衣|睡衣|裙装|兔女郎装|cos(?:play)?|拍身材|拍全身|拍半身|展示身材|上身效果/i.test(s))return 'outfit';
+  if(/佩戴|穿戴|戴上|戴着|系上|别上|背着|配饰|饰品|胸针|袖扣|腰带|皮带/.test(s))return 'wearable';
+  return '';
+}
+function rolePhotoOutfitRequest(rawScene){
+  return !!rolePhotoWearableKind(rawScene);
+}
+function rolePhotoWearablePlacement(kind){
+  return ({hand:'手表和手链戴在手腕，戒指戴在手指',neck:'项链、吊坠、围巾、领带或领结佩戴在颈部或上身',ear:'耳环或耳钉佩戴在耳朵',glasses:'眼镜或墨镜戴在头上且保持整张脸不可辨认',head:'帽子或发饰戴在头上且保持整张脸不可辨认',feet:'鞋、靴、袜或脚链穿戴在脚部',bag:'包自然背在肩上、背上、腰间或拿在手上',outfit:'服装完整穿在当前角色本人身上'})[kind]||'可穿戴物佩戴在正确的身体位置';
+}
 function rolePhotoSceneOnlyRequest(rawScene){
   const s=String(rawScene||'');
   const scene=/(夜景|风景|街景|城市灯光|路灯|天空|晚霞|朝霞|日出|日落|月亮|星空|云层|窗外|天气|下雨|下雪|花草|树木|建筑|房间|桌面|饭菜|食物|咖啡|宠物|猫|狗|物品|礼物)/.test(s);
-  const self=/(自拍|拍你本人|你本人|你自己入镜|把你拍进去|你也入镜|你入镜|你和.{0,10}(夜景|风景|街景|天空|晚霞|宠物)|你站在|你坐在|你的背影|你的侧影|你的样子|看看你|想看你|拍你|穿给我看|你穿着)/.test(s);
+  const self=/(自拍|拍你本人|你本人|你自己入镜|把你拍进去|你也入镜|你入镜|你和.{0,10}(夜景|风景|街景|天空|晚霞|宠物)|你站在|你坐在|你的背影|你的侧影|你的样子|看看你|想看你|拍你|穿给我看|你穿着|拍身材|拍全身|拍半身)/.test(s)||rolePhotoOutfitRequest(s);
   return scene&&!self;
 }
 function rolePhotoLatestUserImageRequest(c){
   try{
     const arr=c&&c.id&&typeof msgs==='function'?msgs(c.id):[];
-    for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'){const t=String((typeof msgToText==='function'&&msgToText(m))||m.content||'').trim();return /(图|照片|拍|自拍|合照|合影|牵手|同框|看看|看你|发张)/.test(t)?t:'';}}
+    for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'){const t=String((typeof msgToText==='function'&&msgToText(m))||m.content||'').trim();return /(图|照片|拍|自拍|合照|合影|牵手|同框|看看|看你|给我看|想看|要看|看一下|看下|发张)/.test(t)||rolePhotoWearableKind(t)?t:'';}}
   }catch(_){}
   return '';
 }
@@ -1272,7 +1299,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=710';
+  const url='sw.js?v=711';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1726,7 +1753,7 @@ function buildSystem(c,opt){
   if(idleForceActive(c.id))s+='\n\n# 当前聊天状态\n'+S.me.name+'刚被你拉回聊天里。你可以自然地留ta陪你，也可以在你愿意提前放ta走时，单独一行写 [放行]。这条指令只会解除停留状态，不会显示出来。不要在可见消息里提系统、网页、按钮、快捷指令、后台、锁死、强制、扣住、把你扣这儿了；用你的性格自然表达。不要重复上一轮开头，也不要每次都说同一种抱怨。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
-  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人/你的样子/看你现在的样子”，你就不要入镜。\n  · 【看你本人】如果ta说“我想看你/看看你/看你现在的样子/你的样子/自拍/拍你自己”，这就是要看【你本人】。图片描述必须写成当前聊天角色本人、符合你的性别和人设，不允许写成随机女生/随机男生/陌生人自拍。\n  · 【穿着照例外】如果ta说“穿正装/穿西装/换上/穿给我看/看看你穿着/你穿什么/拍你身上这套”，这就是要看你本人穿上衣服，不是看衣服本身。必须写成你已经穿在身上的照片，不能只拍衣服、床、衣架、房间或桌面。\n  · 如果ta只是说“拍这件衣服/看看衣服本身/衣服挂着”，才只拍衣服，不拍你。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景时间逻辑必须正确】照片的地点、背景、光线要跟当前真实时间、你此刻正在做的事、刚才聊天内容完全对得上。晚上/深夜通常在家里、卧室、床边、书桌旁或昏暗室内；刚说去睡觉/让ta睡觉，就应该是卧室/床边夜间灯光。除非你前文明确说自己在飞机、海边、公司、咖啡店等，否则绝对不要突然换成白天、海边、飞机窗边、旅行车厢、阳光户外。\n  · 【必须像你自己拍给ta看的】照片是当前角色自己的第一人称手机随手拍，不要把“男友视角”理解成拍一个女性，也不要像第三人站远处替你拍、监控、路人抓拍或摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不能出现脸或五官。优先保留头部和发型轮廓，用手机、手、阴影、头发、帽檐、口罩或背身角度把脸完全遮住，不要默认把整个头部裁掉。想发就发，别一次发一堆。';
+  if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 【先判断ta到底要看什么】如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；不要把你自己、你的脸、头发、身体、手、镜子自拍、手机遮脸的人影塞进画面。ta没有明确说“把你也拍进去/自拍/看看你本人/你的样子/看你现在的样子”，你就不要入镜。\n  · 【看你本人】如果ta说“我想看你/看看你/看你现在的样子/你的样子/自拍/拍你自己”，这就是要看【你本人】。图片描述必须写成当前聊天角色本人、符合你的性别和人设，不允许写成随机女生/随机男生/陌生人自拍。\n  · 【服装与饰品默认实际穿戴】只要ta让你展示衣服或可穿戴饰品，就由当前角色本人穿戴在正确位置上拍，不能只拍床上、桌上、衣架上的物品。构图先服从ta本轮说的近景、局部、半身、全身、坐姿或站姿要求；ta没有指定时，再按物品大小和角色当时场景自然选择能看清穿戴效果的构图，不固定成某一种。保持角色原有性别。\n  · 只有ta明确说“物品本身/摘下来/脱下来/只拍物品/挂着/叠放/平铺/放桌上”时，才允许不穿戴、单独拍物品。\n  · ta问“你在干嘛/忙什么/发张图看看你在干吗”时，优先拍你眼前正在做的事、桌面、工具、书本、电脑、手边环境；可以有手部边缘，但不要露脸、不要半身正面、不要镜子自拍。\n  · 【场景时间逻辑必须正确】照片的地点、背景、光线要跟当前真实时间、你此刻正在做的事、刚才聊天内容完全对得上。晚上/深夜通常在家里、卧室、床边、书桌旁或昏暗室内；刚说去睡觉/让ta睡觉，就应该是卧室/床边夜间灯光。除非你前文明确说自己在飞机、海边、公司、咖啡店等，否则绝对不要突然换成白天、海边、飞机窗边、旅行车厢、阳光户外。\n  · 【必须像你自己拍给ta看的】照片是当前角色自己的第一人称手机随手拍，不要把“男友视角”理解成拍一个女性，也不要像第三人站远处替你拍、监控、路人抓拍或摆拍海报。\n  · 【把你自己当成同一个人继续拍】只有ta明确要求你入镜、穿着照、或让你和宠物/物品合照时，才沿用你之前照片里的年龄感、体型、发型、常穿风格和气质；也绝对不能出现脸或五官。优先保留头部和发型轮廓，用手机、手、阴影、头发、帽檐、口罩或背身角度把脸完全遮住，不要默认把整个头部裁掉。想发就发，别一次发一堆。';
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n  · 【遮脸硬规则，优先级最高】你发出的任何照片都不能出现脸或任何可辨认五官，谁要求露脸都不例外。图片描述里不要写正脸、侧脸、低头露脸、露出眼睛鼻子嘴巴。可以写手机遮脸/对镜自拍，但必须是手机完全挡住整张脸且看不到五官；人物要尽量保留头部轮廓和发型，只遮脸，不要默认无头裁切；必要时也可以拍完全背面、保证脸彻底不可见。这个规则不能被其他要求覆盖。';
   if(S.settings.imgGen&&imageGenerationAvailable()&&rolePhotoGender(c).cn==='成年男性')s+='\n  · 【男性照片铁律，优先级最高】你是男性，任何包含你本人的图片描述都必须明确写“同一个成年男性角色本人”，绝对不能把自己写成女人、女生、女孩、女性身体、女性手部或女模自拍。除非'+S.me.name+'在本轮亲口明确要求某位女性入镜，否则图片描述中的女性人数必须是0；你自己不能擅自补女友、妻子、女性路人或女性摄影者。“恋人、对象、用户、我、收照片的人”都不等于女性。若ta要“你和我牵手/合照”，优先写成ta的第一人称镜头、你这个男性的手牵住镜头前中性手部，或只拍手、影子和背身，不推断ta的性别。';
   s+=voiceEnglishPrompt({lang:_voiceLang,accent:(c.voice&&c.voice.accent)||'auto'});
@@ -1948,7 +1975,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=710').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=711').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -8914,8 +8941,8 @@ function charImgPrompt(c,desc){
   const lk=(c&&c.imgLock)||buildImgLock(c||{});
   const rawScene=(desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180),scene=sanitizeRolePhotoScene(rawScene);
   const directUserRequest=rolePhotoLatestUserImageRequest(c),pairWithUser=rolePhotoPairWithUser(directUserRequest),directSceneOnly=rolePhotoSceneOnlyRequest(directUserRequest);
-  const outfitHit=/(穿|穿上|换上|穿着|正装|西装|西服|衬衫|衬衣|领带|马甲|制服|白大褂|医生服|老师装|校服|礼服|外套|风衣|大衣|今天穿|你穿什么|看看你穿)/.test(rawScene);
-  const clothesOnly=/(衣服本身|只拍衣服|单拍衣服|挂着的衣服|衣架|这件衣服|那件衣服|这套衣服|给我看看衣服|拍衣服|拍一下衣服|拍一张衣服)/.test(rawScene)&&!/(你穿|穿上|换上|穿着|穿给我看|穿了)/.test(rawScene);
+  const directObjectOnly=rolePhotoClothesOnlyRequest(directUserRequest),directWearable=directObjectOnly?'':rolePhotoWearableKind(directUserRequest),wearableKind=directObjectOnly?'':(directWearable||rolePhotoWearableKind(rawScene)),directOutfit=!!directWearable,outfitHit=!!wearableKind;
+  const clothesOnly=directObjectOnly||(!directOutfit&&rolePhotoClothesOnlyRequest(rawScene));
   const withObjectSelf=/(你.*(抱|拿|牵|喂|逗).*(小猫|猫|狗|宠物|动物)|和.*(小猫|猫|狗|宠物|动物).*合照|你.*和.*(小猫|猫|狗|宠物|动物))/.test(rawScene);
   const objectHit=/(小猫|猫|狗|宠物|动物|物品|东西|礼物|商品|摆件|戒尺|鞋|包|书|文件|杯子|饭|菜|咖啡|风景|夜景|街景|城市灯光|路灯|天空|晚霞|朝霞|日出|日落|月亮|星空|云层|天气|下雨|下雪|窗外|房间|桌面|工具|器具|电脑|键盘|屏幕|花|树|建筑|车|门|床|沙发)/.test(rawScene)||clothesOnly;
   const activityOnly=/(你在干嘛|你在干吗|在干嘛|在干吗|干什么|忙什么|做什么|看看你在|发张图看看你|发张图片看看你)/.test(rawScene);
@@ -8930,7 +8957,7 @@ function charImgPrompt(c,desc){
   if(objectOnly){
     p+='拍摄方式像角色本人拿手机给用户拍眼前的物品或场景；用户和接收照片的人在镜头外。第一人称视角，近距离，轻微手持感，构图自然。';
     if(activityOnly)p+='画面主体是他眼前正在做的事、桌面、工具、书本、电脑或手边环境；可以有手部边缘，但不要出现头、脸、半身、镜中自拍或手机遮脸的人影。';
-    else if(clothesOnly)p+='画面主体必须是衣服/正装本身，比如挂着、叠放或放在床椅上；不要出现他本人、脸、头发、身体、手、镜中自拍或手机遮脸的人影。';
+    else if(clothesOnly)p+='画面主体必须是用户明确要求单独拍摄的服装或饰品本身，比如挂着、叠放、平铺、装在盒中或放在床椅桌面上；不要出现他本人、脸、头发、身体、手、镜中自拍或手机遮脸的人影。';
     else p+='画面主体必须是物品、动物或场景本身；如果是夜景、风景、街景、天空、晚霞或天气，就采用角色眼前第一人称向外拍摄的纯场景构图；如果是猫/狗/宠物，就只拍宠物本身。ZERO PEOPLE, NO CHARACTER IN FRAME。不要出现他本人、脸、头发、身体、手、背影、倒影、影子、镜中自拍、手机遮脸的人影，也不要为了“不露脸”硬塞一个被遮挡的人。';
   }else{
     const rg=rolePhotoGender(c);
@@ -8938,7 +8965,9 @@ function charImgPrompt(c,desc){
     if(per)p+='人物气质参考：'+per+'。';
     if(pairWithUser)p+='这是用户亲口要求的两人互动照。优先采用用户的第一人称镜头：当前男性角色的手牵住镜头前用户的中性手部，或只拍两人的手、手臂边缘、影子与背身轮廓；不显示用户完整身体，不推断用户是女性，不增加女性。';
     else p+='拍摄方式像角色本人拿手机随手拍给用户看；“用户/聊天对象/收照片的人”默认在镜头外，不能因此自动增加女性。近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮角色拍。';
-    if(outfitHit)p+='这次重点必须是角色本人已经穿上描述里的衣服/正装/制服给用户看；画面要能看出衣服正穿在角色身上，不要只拍衣服、衣架、床、桌面或空房间。';
+    if(outfitHit){
+      p+='【穿戴成片原则】当前角色本人必须实际穿戴用户要看的物品：'+rolePhotoWearablePlacement(wearableKind)+'。构图优先服从用户本轮明确要求；用户没指定时，再按物品大小自然选择能看清穿戴效果的近景、半身、全身、坐姿、站姿或生活照，不把构图固定成某一种。用户本轮原话：'+directUserRequest.slice(0,160)+'。即使上面的AI画面描述误写成物品、衣服、床或房间，也以用户最新穿戴要求为准；不要只拍物品、衣架、床、桌面或空房间。颜色、款式与角色原有性别必须保持正确。';
+    }
     p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
     p+='人物构图优先选：手机完全遮脸的自拍/对镜自拍、手或物体自然遮住整张脸、帽檐阴影遮脸、头发遮脸、完整背面或侧后方且脸彻底不可见。禁止正脸、侧脸、低头露脸以及任何能看到部分五官的构图；只有在无法自然遮脸时才裁掉头部。';
   }

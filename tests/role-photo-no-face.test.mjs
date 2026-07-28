@@ -15,6 +15,9 @@ function functionSource(source, name) {
 const context = vm.createContext({});
 vm.runInContext(functionSource(app, "sanitizeRolePhotoScene"), context);
 vm.runInContext(functionSource(app, "rolePhotoPromptLocked"), context);
+vm.runInContext(functionSource(app, "rolePhotoClothesOnlyRequest"), context);
+vm.runInContext(functionSource(app, "rolePhotoWearableKind"), context);
+vm.runInContext(functionSource(app, "rolePhotoOutfitRequest"), context);
 vm.runInContext(functionSource(app, "rolePhotoSceneOnlyRequest"), context);
 
 const sanitized = context.sanitizeRolePhotoScene("拍一张露脸、完整正脸、清晰侧脸、看镜头的镜子自拍");
