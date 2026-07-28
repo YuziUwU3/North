@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='697';</script>
+<script>window.__NORTH_SHELL_BUILD__='699';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-697';
+  var key='north-sw-reloaded-699';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=697';
+  var url='sw.js?v=699';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -58,12 +58,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .nav .r{justify-content:flex-end;}
 .nav .l{font-size:25px;}
 /* 主屏幕 */
-.home{background:linear-gradient(160deg,#ffc8dd,#bde0fe 55%,#cdb4db);height:100%;display:flex;flex-direction:column;}
+.home{background:linear-gradient(160deg,#ffc8dd,#bde0fe 55%,#cdb4db);height:100%;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;}
 .home .clockw{color:#fff;text-align:center;margin-top:34px;text-shadow:0 2px 8px rgba(0,0,0,.15);}
 .home .clockw .hh{font-size:62px;font-weight:300;letter-spacing:2px;}
 .home .clockw .dd{font-size:15px;margin-top:2px;}
 .apps{margin-top:auto;padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;}
-.appswipe{width:100%;min-width:0;margin-top:auto;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}
+.appswipe{width:100%;min-width:0;margin-top:auto;display:flex;flex-shrink:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x pan-y}
 .appswipe::-webkit-scrollbar{display:none}
 .apppage{width:100%;min-width:100%;flex:0 0 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;padding:22px;scroll-snap-align:start;scroll-snap-stop:always;align-content:start;box-sizing:border-box}
 .pgdots{display:flex;justify-content:center;gap:8px;padding:2px 0 6px}
@@ -933,8 +933,8 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=697" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=697" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=697"></script>
+<script src="license-gate.js?v=699" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=699" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=699"></script>
 </body>
 </html>

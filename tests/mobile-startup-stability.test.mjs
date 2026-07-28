@@ -58,11 +58,12 @@ test('keyboard events can never resize or clip the global phone shell', () => {
   assert.doesNotMatch(app, /visualViewport\.addEventListener\(['"](?:resize|scroll)['"]/);
 });
 
-test('mobile pages keep independent scrolling and home swipes after resume', () => {
+test('mobile pages keep independent scrolling and home supports both swipe axes', () => {
   assert.match(app, /window\.addEventListener\('pageshow',e=>\{/);
   assert.match(html, /scroll-snap-stop:always/);
   assert.match(html, /\.scroll\{flex:1;min-height:0;[^}]*touch-action:pan-y/);
-  assert.match(html, /\.appswipe\{[^}]*touch-action:pan-x/);
+  assert.match(html, /\.home\{[^}]*overflow-y:auto;[^}]*touch-action:pan-y/);
+  assert.match(html, /\.appswipe\{[^}]*flex-shrink:0;[^}]*touch-action:pan-x pan-y/);
   assert.match(functionSource('homeSnapPage'), /p\*w/);
   assert.match(functionSource('homeRestorePage'), /_homePage\*\(el\.clientWidth\|\|1\)/);
 });
