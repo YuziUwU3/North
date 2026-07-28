@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='704'){
+if(window.__NORTH_SHELL_BUILD__!=='705'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v704 · 长片字幕进度修复';
+const APP_VER='v705 · 边看边提取字幕';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1265,7 +1265,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=704';
+  const url='sw.js?v=705';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1911,7 +1911,7 @@ function cinemaSubtitleContext(t){return _cin.cues.filter(x=>x.source!=='speech'
 function cinemaApplyCues(cues,name,source){cues=(cues||[]).map(x=>Object.assign({},x,{source:source||x.source||'subtitle'})).filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start&&x.text);const speech=_cin.cues.filter(x=>x&&x.source==='speech');_cin.cues=cues.concat(speech).sort((a,b)=>a.start-b.start);_cin.subtitleName=name||'字幕';const s=cinemaSession();if(s){s.subtitleName=_cin.subtitleName;s.subtitleCount=cues.length;s.subtitleSource=source||'subtitle';s.updatedAt=Date.now();save();}cinemaUpdateSubtitle();const lab=$('#cinSubState');if(lab)lab.textContent='字幕 '+cues.length;return cues.length;}
 function cinemaAsrDiscountPct(seconds){seconds=Math.max(0,Number(seconds)||0);return seconds>=7200?10:seconds>=3600?8:seconds>=1800?5:0;}
 function cinemaAsrEstimate(seconds){seconds=Math.max(0,Number(seconds)||0);const base=Math.max(1,Math.ceil(seconds/sttRelaySecondsPerPoint())),pct=cinemaAsrDiscountPct(seconds),discount=Math.floor(base*pct/100);return{base,pct,discount,net:base-discount};}
-function cinemaSubtitleMenu(){const local=!!_cin.videoFile,configured=cinemaSttConfigured(),off=!local||!configured,relay=sttRelayOn(),directOff=off||relay;openModal(`<h3>视频字幕</h3><div class="hint">智能提取会流式读取 MP4 / MOV 音轨，按大小自动切成约 2～3 分钟的小段；半小时、1 小时和 2 小时影片都不会整部解码进内存。每段成功后立即保存，退出后可以继续，不上传影片画面。${relay?' 每 '+sttRelaySecondsPerPoint()+' 秒 1 点；累计 30 / 60 / 120 分钟后分别返还约 5% / 8% / 10% 长片优惠。':''}</div><button class="btn p" style="margin-top:10px;width:100%" ${off?'disabled':''} onclick="closeModal();cinemaExtractAudioSubtitles(180)">智能分段提取（推荐）</button><div class="btns"><button class="btn g" onclick="closeModal();cinemaPickSubtitle()">导入 SRT / VTT</button><button class="btn g" ${directOff?'disabled':''} onclick="closeModal();cinemaExtractSubtitles()">直接上传原视频</button></div>${!local?'<div class="hint">在线视频直链暂不能整段提取，请使用本地视频或导入字幕文件。</div>':!configured?'<div class="hint">提取前，请在 AI账户开启内置语音识别，或在设置里配置外置接口。</div>':relay?'<div class="hint">长片优惠由服务器按成功识别的累计时长核验后返还；失败段自动退点，重试不会重复扣点。</div>':'<div class="hint">外置接口由对应平台计费；长片优惠只适用于小手机内置识别。</div>'}`);}
+function cinemaSubtitleMenu(){const local=!!_cin.videoFile,configured=cinemaSttConfigured(),off=!local||!configured,relay=sttRelayOn(),directOff=off||relay;openModal(`<h3>视频字幕</h3><div class="hint">智能提取会流式读取 MP4 / MOV 音轨，按约 1.5 分钟切段。开始后视频照常播放，第一段完成就立刻显示字幕，后续字幕边看边补；退出后也能继续，不上传影片画面。${relay?' 每 '+sttRelaySecondsPerPoint()+' 秒 1 点；累计 30 / 60 / 120 分钟后分别返还约 5% / 8% / 10% 长片优惠。':''}</div><button class="btn p" style="margin-top:10px;width:100%" ${off?'disabled':''} onclick="closeModal();cinemaExtractAudioSubtitles(90)">边看边提取（推荐）</button><div class="btns"><button class="btn g" onclick="closeModal();cinemaPickSubtitle()">导入 SRT / VTT</button><button class="btn g" ${directOff?'disabled':''} onclick="closeModal();cinemaExtractSubtitles()">直接上传原视频</button></div>${!local?'<div class="hint">在线视频直链暂不能整段提取，请使用本地视频或导入字幕文件。</div>':!configured?'<div class="hint">提取前，请在 AI账户开启内置语音识别，或在设置里配置外置接口。</div>':relay?'<div class="hint">长片优惠由服务器按成功识别的累计时长核验后返还；失败段自动退点，重试不会重复扣点。</div>':'<div class="hint">外置接口由对应平台计费；长片优惠只适用于小手机内置识别。</div>'}`);}
 function cinemaPickSubtitle(){pickFile('.srt,.vtt,text/vtt,application/x-subrip,text/plain',async f=>{try{const cues=cinemaParseSubtitles(cinemaDecodeText(await f.arrayBuffer()));if(!cues.length)throw new Error('没有识别到有效字幕时间轴');const n=cinemaApplyCues(cues,f.name||'字幕','subtitle');toast('字幕已连接：共 '+n+' 句，已按原时间轴对齐');}catch(e){toast((e&&e.message)||'字幕读取失败');}});}
 function cinemaSetStatus(text,state){const status=$('#cinContextStatus');if(!status)return;clearTimeout(_cin.statusTimer);status.textContent=text||'';status.classList.toggle('working',state==='working');status.classList.toggle('ready',state==='ready');status.classList.toggle('error',state==='error');if(state==='ready')_cin.statusTimer=setTimeout(()=>{if(status.isConnected){status.textContent='';status.classList.remove('ready','working','error');}},1200);}
 function cinemaExtractHelp(){cinemaSetStatus('提取字幕未配置 · 点提取字幕查看说明','error');openModal('<h3>提取字幕需要先配置</h3><div class="hint">可以去 AI账户开启“内置语音识别”；也可以在设置 → 语音转文字中填写自己的外置接口并测试。<br><br>“压缩音频后提取”只把本地临时音频段交给识别接口，不上传影片画面，也不是播放时持续转写。</div><div class="btns"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();cinemaLeaveImmersive();go(\'aiaccount\')">去AI账户</button></div>');}
@@ -1925,7 +1925,7 @@ function cinemaAsrNewJob(s,pipeline,duration){return{version:1,pipeline,mediaKey
 async function cinemaAsrLoadJob(s,pipeline){const job=await cinGet(cinemaAsrJobKey(s));return job&&job.version===1&&job.mediaKey===s.mediaKey&&(!pipeline||job.pipeline===pipeline)?job:null;}
 async function cinemaAsrSaveJob(s,job){job.updatedAt=Date.now();await cinPut(cinemaAsrJobKey(s),job);return job;}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=704').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=705').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -1938,13 +1938,14 @@ async function cinemaExtractAudioSubtitlesProgressive(chunkSeconds){
   if(!cinemaSttConfigured())return cinemaExtractHelp();
   if(_cin.extracting)return toast('字幕正在提取，请稍候');
   if(!/\.(?:mp4|m4v|mov)$/i.test(String(f.name||''))&&!/video\/(?:mp4|quicktime)/i.test(String(f.type||'')))return cinemaExtractDecodedAudioSubtitles(chunkSeconds);
-  const v=$('#cinVideo'),resume=!!(v&&!v.paused),b=$('#cinExtractBtn'),knownDuration=Math.max(0,Number(v&&v.duration)||Number(s.duration)||0);
+  const v=$('#cinVideo'),b=$('#cinExtractBtn'),knownDuration=Math.max(0,Number(v&&v.duration)||Number(s.duration)||0);
   let job=await cinemaAsrLoadJob(s,'mp4-aac-v1'),doneCues=cinemaAsrJobCues(job);
   if(job&&job.status==='done'&&doneCues.length){const n=cinemaApplyCues(doneCues,'已保存的提取字幕','extract');cinemaSetStatus('已恢复全片 '+n+' 句字幕','ready');return toast('这部影片的完整提取结果已经保存在本机');}
   const savedParts=job&&job.status!=='done'?Object.keys(job.parts||{}).length:0,knownEstimate=cinemaAsrEstimate(knownDuration),knownMinutes=knownDuration?Math.max(1,Math.round(knownDuration/60)):0,timeLow=knownMinutes?Math.max(1,Math.ceil(knownMinutes/10)):0,timeHigh=knownMinutes?Math.max(timeLow+1,Math.ceil(knownMinutes/3)):0,costText=sttRelayOn()&&knownDuration?('预计原价 '+knownEstimate.base+' 点'+(knownEstimate.pct?'，完成后返还约 '+knownEstimate.discount+' 点，净扣约 '+knownEstimate.net+' 点':'')+'。'):(sttRelayOn()?'读取音轨后会显示准确点数。':'外置接口可能产生平台费用。'),timeText=knownMinutes?('一般约需 '+timeLow+'～'+timeHigh+' 分钟，网络繁忙时会更久。'):'完成速度取决于片长和网络。',resumeText=savedParts?('已保存前面 '+savedParts+' 段，将从断点继续。'):'';
-  if(!await uiConfirm((knownMinutes?'影片约 '+knownMinutes+' 分钟。':'将读取影片音轨。')+'手机会逐段提取，不上传影片画面。'+costText+timeText+resumeText+'确定开始？'))return;
-  if(v)v.pause();
+  if(!await uiConfirm((knownMinutes?'影片约 '+knownMinutes+' 分钟。':'将读取影片音轨。')+'手机会在后台逐段提取，视频继续播放，第一段完成后字幕马上出现。'+costText+timeText+resumeText+'确定开始？'))return;
   _cin.extracting=true;
+  if(v&&v.paused)v.play().catch(()=>{});
+  toast('已在后台提取字幕，可以边看边等');
   if(b){b.classList.add('on');b.disabled=true;const t=b.querySelector('span');if(t)t.textContent='准备 0%';}
   cinemaSetStatus('正在准备音轨 0%','working');
   try{
@@ -1962,7 +1963,7 @@ async function cinemaExtractAudioSubtitlesProgressive(chunkSeconds){
       job.parts=job.parts||{};job.parts[key]={start:seg.start,end:seg.end,cues:rows};await cinemaAsrSaveJob(s,job);
       const partial=cinemaAsrJobCues(job),percent=Math.min(99,Math.max(1,Math.round(seg.end/prepared.duration*100)));
       if(partial.length)cinemaApplyCues(partial,'正在提取的字幕','extract');
-      cinemaSetStatus('已完成 '+percent+'% · 已保存 '+partial.length+' 句','working');
+      cinemaSetStatus('字幕已同步到 '+cinemaFmt(seg.end)+' · 已完成 '+percent+'% · '+partial.length+' 句','working');
     },p=>cinemaSetStatus('正在切分音轨 '+p+'%','working'));
     if(token!==_cin.token||cinemaSession()!==s)throw new Error('已取消这次字幕提取');
     const cues=cinemaAsrJobCues(job);job.status='done';job.coveredSeconds=prepared.duration;await cinemaAsrSaveJob(s,job);const rebate=await cinemaClaimAsrDiscount(s,job);
@@ -1973,7 +1974,7 @@ async function cinemaExtractAudioSubtitlesProgressive(chunkSeconds){
     if(partial.length){cinemaApplyCues(partial,'已保存的部分字幕','extract');cinemaSetStatus('已保存 '+partial.length+' 句 · '+reason,'error');toast(reason+'；已完成部分不会丢失，点提取可继续');}
     else{cinemaSetStatus('提取失败：'+reason,'error');toast('提取失败：'+reason);}
   }finally{
-    _cin.extracting=false;if(b&&b.isConnected){b.disabled=false;b.classList.remove('on');const t=b.querySelector('span');if(t)t.textContent='提取字幕';}if(resume&&v&&v.isConnected)v.play().catch(()=>{});
+    _cin.extracting=false;if(b&&b.isConnected){b.disabled=false;b.classList.remove('on');const t=b.querySelector('span');if(t)t.textContent='提取字幕';}
   }
 }
 async function cinemaClaimAsrDiscount(s,job){if(!sttRelayOn()||!job||!job.jobId)return 0;try{const d=await aiRelay('asr_discount',{job_id:job.jobId});job.discountPending=false;job.discountPoints=Math.max(0,Number(d&&d.refunded)||0)+(Number(job.discountPoints)||0);job.discountRate=Math.max(0,Number(d&&d.discount_rate)||0);await cinemaAsrSaveJob(s,job);return Math.max(0,Number(d&&d.refunded)||0);}catch(_){job.discountPending=true;await cinemaAsrSaveJob(s,job);return 0;}}

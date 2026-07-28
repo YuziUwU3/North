@@ -34,6 +34,10 @@ test('long MP4 extraction is progressive and resumable',()=>{
   assert.match(main,/正在准备音轨/);
   assert.match(main,/全片提取完成/);
   assert.match(app,/cinemaExtractAudioSubtitles=cinemaExtractAudioSubtitlesProgressive/);
+  assert.doesNotMatch(main,/v\.pause\(\)/);
+  assert.match(main,/v&&v\.paused\)v\.play\(\)/);
+  assert.match(main,/字幕已同步到/);
+  assert.match(app,/cinemaExtractAudioSubtitles\(90\)/);
 });
 
 test('metadata probing stops once MP4 track information is ready',()=>{
