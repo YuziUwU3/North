@@ -83,10 +83,36 @@ test('one video can expose only one subtitle extraction task',()=>{
   vm.runInNewContext(functionSource(app,'cinemaAsrTaskRows'),context);
   assert.deepEqual(context.cinemaAsrTaskRows().map(x=>x.id),['other','newest']);
   const update=functionSource(app,'cinemaAsrTaskUpdate');
+  const init=functionSource(app,'cinemaInit');
+  const html=functionSource(app,'cinemaAsrTasksHTML');
   assert.match(update,/cinemaStoreKey\('asr-task',s\.mediaKey\)/);
   assert.match(update,/x\.asrTasks\[k\]\.mediaKey===s\.mediaKey/);
   assert.match(update,/delete x\.asrTasks\[k\]/);
+  assert.match(update,/cur\(\)\.p==='cinema'\)cinemaRenderKeepScroll\(\)/);
+  assert.match(init,/const uniqueTasks=\{\}/);
+  assert.match(init,/cinemaStoreKey\('asr-task',t\.mediaKey\)/);
+  assert.match(html,/running\?'后台提取中':'等待继续'/);
   assert.match(functionSource(app,'cinemaExtractAudioSubtitlesProgressive'),/if\(_cin\.extracting\)return toast/);
+});
+
+test('cross-tab extraction never queues a second job and pending discounts recover',()=>{
+  const main=functionSource(app,'cinemaExtractAudioSubtitlesProgressive');
+  assert.match(main,/navigator\.locks&&navigator\.locks\.request/);
+  assert.match(main,/\{ifAvailable:true\}/);
+  assert.match(main,/已有字幕提取任务，不会重复排队或扣点/);
+  assert.match(main,/job\.discountPending\?await cinemaClaimAsrDiscount\(s,job\):0/);
+});
+
+test('late role and vision replies cannot leak into another screening',()=>{
+  const reply=functionSource(app,'cinemaRoleReply');
+  const vision=functionSource(app,'cinemaAnalyzeFrame');
+  const send=functionSource(app,'cinemaSend');
+  const page=functionSource(app,'cinemaBookPage');
+  assert.ok((reply.match(/token!==_cin\.token\|\|cinemaSession\(\)!==s/g)||[]).length>=3);
+  assert.match(vision,/token=_cin\.token/);
+  assert.match(vision,/if\(token!==_cin\.token\|\|cinemaSession\(\)!==s\)return false/);
+  assert.match(send,/if\(token!==_cin\.token\|\|cinemaSession\(\)!==s\)return/);
+  assert.match(page,/if\(token===_cin\.token&&cinemaSession\(\)===s\)cinemaRoleReply/);
 });
 
 test('playback waits before it can outrun the extracted subtitle frontier',()=>{

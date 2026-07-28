@@ -72,6 +72,9 @@ test('storage details separate core, chats, images, voice cache and music', () =
   assert.match(app, /\^__\(\?:messages\|pf_messages\|pf_group_messages\)/);
   assert.match(app, /k\.indexOf\('__audio_'\)===0\?'voice'/);
   assert.match(app, /scanIDBStoreBytes\(mIDB,'audio',\(\)=> 'music'\)/);
+  assert.match(app, /__cinema_asr-job_'/);
+  assert.match(app, /'cinemaSubtitle'/);
+  assert.match(app, /parts\.cinemaSubtitle/);
   assert.match(app, /核心数据[\s\S]*长聊天库[\s\S]*图片[\s\S]*语音\/通话缓存[\s\S]*音乐文件/);
   assert.match(app, /onclick="showStorageBreakdown\(\)">查看占用明细/);
 });
