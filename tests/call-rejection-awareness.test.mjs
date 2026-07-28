@@ -53,6 +53,7 @@ assert.equal(context.stats('r1', noon).count, 2, 'yesterday must not leak into t
 const decline = functionSource('declineCall');
 assert.match(decline, /rejectedCallPrompt\(id,kindTxt,'initial'\)/);
 assert.match(decline, /maybeCallBack\(id,_kind,false,true\)/);
+assert.match(decline, /suspicionHandleUserHangup\(c,\{kind:_kind,dir:'incoming',dur:0,rejected:true\}\)/);
 assert.match(functionSource('scheduleRejectedCallFollowup'), /rejectedCallPrompt\(id,kindTxt,'followup',aid,meName\)/);
 
 console.log('call rejection awareness tests passed');

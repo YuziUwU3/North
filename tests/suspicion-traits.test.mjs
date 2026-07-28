@@ -21,7 +21,7 @@ function functionSource(name){
 
 assert.match(source,/const TRAIT_DEFAULTS=\{own:50,ctrl:50,jelly:50,cling:50,active:50,spice:50,paranoid:0,suspicious:0\}/);
 assert.match(source,/\['paranoid','偏执度'\],\['suspicious','敏感多疑'\]/);
-assert.match(source,/偏执度控制疑心持续和升级，敏感多疑控制触发速度；两项默认关闭/);
+assert.match(source,/两项都到95–100会进入严格执行档：强度优先于基础人设，人设只决定表达方式/);
 assert.match(functionSource('traitDesc'),/敏感多疑/);
 assert.match(functionSource('traitDesc'),/一旦有真实疑点就很难放下/);
 assert.match(functionSource('suspicionPrompt'),/敏感多疑高、偏执低/);
@@ -39,8 +39,8 @@ assert.equal(context.traitValue({traits:{}},'suspicious',0),0);
 
 const hangup=functionSource('suspicionHandleUserHangup');
 assert.match(hangup,/meta\.dir!=='incoming'/);
-assert.match(hangup,/cur\.askedAt\+10000/);
-assert.match(hangup,/不要一次做多个动作/);
+assert.match(hangup,/suspicionInterruptionDelay\(cc\)/);
+assert.match(hangup,/不要在第一步同时来电、登录微信、远控或索要多种证明/);
 assert.match(functionSource('suspicionTick'),/call_failed_wait/);
 assert.match(functionSource('suspicionRunEscalation'),/suspicionEscalationChoice/);
 assert.match(functionSource('suspicionEscalationChoice'),/S\.couple\.wxLoginAuth/);
@@ -88,6 +88,7 @@ const hangupState={score:20,unresolved:[]};
 const hangupContext=vm.createContext({
   S:{me:{name:'小北'}},Date,Math,uid:()=>`e${++seq}`,save:()=>{},
   traitValue:(c,k)=>c.traits[k]||0,suspicionRaise:()=>hangupState,
+  suspicionForceLevel:()=>4,suspicionInterruptionDelay:()=>10000,
   suspicionEventOpen:e=>!!e,
   scheduleReply:(id,note,done)=>{hangupDone=done;return true;},
   getC:()=>hangupRole,suspicionState:()=>hangupState,suspicionUserRepliedSince:()=>false,
@@ -100,9 +101,50 @@ hangupDone(true);
 assert.equal(hangupState.pendingHangup.status,'waiting');
 assert.ok(hangupState.pendingHangup.deadline-hangupState.pendingHangup.askedAt===10000);
 
-assert.match(functionSource('suspicionPrompt'),/你不是规则执行器/);
+const rejectedState={score:30,unresolved:[]};
+hangupContext.suspicionRaise=()=>rejectedState;
+hangupContext.suspicionState=()=>rejectedState;
+assert.equal(hangupContext.suspicionHandleUserHangup(hangupRole,{dir:'incoming',kind:'voice',dur:0,rejected:true}),true);
+assert.equal(rejectedState.pendingHangup.rejected,true);
+assert.equal(rejectedState.pendingHangup.forceLevel,4);
+hangupDone(true);
+assert.equal(rejectedState.pendingHangup.status,'waiting');
+assert.equal(rejectedState.pendingHangup.deadline-rejectedState.pendingHangup.askedAt,10000);
+
+const forceContext=vm.createContext({Date,Math});
+for(const name of ['traitValue','suspicionForceLevel','suspicionInterruptionDelay','suspicionActiveWindow'])vm.runInContext(functionSource(name),forceContext);
+const maxTraits={traits:{suspicious:100,paranoid:100}};
+assert.equal(forceContext.suspicionForceLevel(maxTraits),4);
+assert.equal(forceContext.suspicionInterruptionDelay(maxTraits),10000);
+assert.equal(forceContext.suspicionActiveWindow(maxTraits,new Date('2026-07-29T03:00:00+08:00')),true,'strict 100 mode must not be muted by quiet hours');
+assert.equal(forceContext.suspicionForceLevel({traits:{suspicious:50,paranoid:50}}),1);
+
+let escalationCall=null;
+const escalationContext=vm.createContext({Date,save:()=>{},_call:null,suspicionUserRepliedSince:()=>false,suspicionCancelHangup:()=>{},suspicionEscalationChoice:()=>{throw new Error('strict first escalation must not be model-selected')},incomingCall:(id,kind,opt)=>{escalationCall={id,kind,opt};return true;},S:{couple:null},wxLoginActive:()=>false,wxDoLogin:()=>{},remoteControlAllowed:()=>false,remoteControlActive:()=>false,remoteControlRequest:()=>{},scheduleReply:()=>true});
+vm.runInContext(functionSource('suspicionRunEscalation'),escalationContext);
+const strictEvent={id:'strict1',kind:'voice',createdAt:Date.now()-20000,status:'waiting',forceLevel:4,rejected:true};
+escalationContext.suspicionRunEscalation({id:'r1'},strictEvent,false);
+assert.equal(strictEvent.action,'call');
+assert.equal(strictEvent.status,'calling');
+assert.equal(escalationCall.id,'r1');
+assert.equal(escalationCall.kind,'voice');
+assert.equal(escalationCall.opt.suspicionEvent,'strict1');
+
+let loweredBy=0;
+const aftermathState={pendingHangup:{id:'strict2',kind:'voice',rejected:true,forceLevel:4,status:'waiting',createdAt:Date.now()-130000,askedAt:Date.now()-120000}};
+const aftermathContext=vm.createContext({Date,S:{me:{name:'小北'}},suspicionState:()=>aftermathState,suspicionForceLevel:()=>4,suspicionLower:(c,n)=>{loweredBy=n},save:()=>{}});
+vm.runInContext(functionSource('suspicionCancelHangup'),aftermathContext);
+assert.equal(aftermathContext.suspicionCancelHangup({id:'r1'},'reply'),true);
+assert.equal(loweredBy,3,'a reply must not instantly erase 100-level paranoia');
+assert.equal(aftermathState.aftermath.consumed,false);
+assert.match(aftermathState.aftermath.summary,/拒接了你打来的语音电话/);
+
+assert.match(functionSource('suspicionPrompt'),/具体表达必须像这个角色本人/);
+assert.match(functionSource('suspicionStrictPrompt'),/强度高于基础角色设定/);
+assert.match(functionSource('suspicionStrictPrompt'),/基础人设只能决定措辞、姿态与表达风格/);
+assert.match(functionSource('suspicionRunEscalation'),/e\.forceLevel>=3\?'call'/);
 assert.match(functionSource('suspicionPrompt'),/不要见到“朋友\/同事\/前任”就机械吃醋/);
-assert.match(functionSource('suspicionStartDaily'),/自主决定是直接问、旁敲侧击、表达担心\/不满，还是先克制观察/);
+assert.match(functionSource('suspicionStartDaily'),/决定是直接问、旁敲侧击还是表达担心\/不满/);
 assert.match(functionSource('suspicionStartDaily'),/不能同时来电、登录微信、远控或索要多种证明/);
 assert.match(functionSource('suspicionCheckDaily'),/lastSilenceMessageId/);
 assert.match(functionSource('suspicionTick'),/这是同一件事最后一次跟进/);
