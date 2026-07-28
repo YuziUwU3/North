@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v713 · 生图价格调整'/);
+assert.match(source, /APP_VER='v714 · 偏执与敏感多疑'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 
@@ -35,7 +35,7 @@ const role = {
   tasks: { date: "today" }, taskHist: ["old task"], _accountMemory: { alt: ["alt memory"] },
   _memoryMeta: { main: { old: {} } }, _memoryConflicts: { main: { oldText: "a" } },
   _memoryLastPick: { main: { picked: ["old"] } }, _dialogueEmotion: { main: { cause: "fight" } },
-  _jailHandoff: { text: "jail" }, _offlineHandoff: { text: "date ending" }, gamesPlayed: ["dice"], wxLoginHistory: [{ actions: ["old"] }], remoteControlHistory: [{ actions: ["remote"] }],
+  _jailHandoff: { text: "jail" }, _offlineHandoff: { text: "date ending" }, gamesPlayed: ["dice"], wxLoginHistory: [{ actions: ["old"] }], remoteControlHistory: [{ actions: ["remote"] }], suspicion: { score: 80, pendingHangup: { id: "old" } },
   _spyKnowledge: { contacts: { old: {} } }, _loginCode: { code: "1234" }, _lastCallEnded: { ts: 1 },
   phoneSpoofHistory: [{ num: "199" }],
   phoneAliasHistory: [{ num: "188" }], mood: "angry", moodVal: 10, coldUntil: 999,
@@ -98,6 +98,7 @@ assert.equal(role.gamesPlayed, undefined);
 assert.equal(role.taskHist, undefined);
 assert.equal(role.wxLoginHistory, undefined);
 assert.equal(role.remoteControlHistory, undefined);
+assert.equal(role.suspicion, undefined);
 assert.equal(role._spyKnowledge, undefined);
 assert.equal(role._loginCode, undefined);
 assert.equal(role._lastCallEnded, undefined);
