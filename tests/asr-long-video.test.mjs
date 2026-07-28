@@ -56,6 +56,39 @@ test('completed chunks persist, resume without billing, and expose a home-page t
   assert.match(html,/\.cin-asr-task>i/);
 });
 
+test('removing a video also removes its subtitle cache and task',()=>{
+  const remove=functionSource(app,'cinemaLibraryDelete');
+  const clear=functionSource(app,'cinemaDeleteStoredSubtitles');
+  const save=functionSource(app,'cinemaAsrSaveJob');
+  assert.match(remove,/cinemaDeleteStoredSubtitles\(item\.mediaKey\)/);
+  assert.match(remove,/Promise\.all\(\[cinDel\(contentKey\),subtitleDelete\]\)/);
+  assert.match(remove,/视频和字幕已删除/);
+  assert.match(clear,/delete x\.asrTasks\[taskKey\]/);
+  assert.match(clear,/await cinDel\(jobKey\)/);
+  assert.match(clear,/_cin\.token\+\+/);
+  assert.match(clear,/_cin\.cues=_cin\.cues\.filter/);
+  assert.match(save,/if\(!exists\(\)\)return null/);
+  assert.match(save,/if\(!exists\(\)\)\{await cinDel\(cinemaAsrJobKey\(s\)\)/);
+});
+
+test('one video can expose only one subtitle extraction task',()=>{
+  const context={
+    cinemaInit:()=>({asrTasks:{
+      old:{id:'old',mediaKey:'same-video',updatedAt:1},
+      newest:{id:'newest',mediaKey:'same-video',updatedAt:2},
+      other:{id:'other',mediaKey:'other-video',updatedAt:3},
+    }}),
+    Object,Set,
+  };
+  vm.runInNewContext(functionSource(app,'cinemaAsrTaskRows'),context);
+  assert.deepEqual(context.cinemaAsrTaskRows().map(x=>x.id),['other','newest']);
+  const update=functionSource(app,'cinemaAsrTaskUpdate');
+  assert.match(update,/cinemaStoreKey\('asr-task',s\.mediaKey\)/);
+  assert.match(update,/x\.asrTasks\[k\]\.mediaKey===s\.mediaKey/);
+  assert.match(update,/delete x\.asrTasks\[k\]/);
+  assert.match(functionSource(app,'cinemaExtractAudioSubtitlesProgressive'),/if\(_cin\.extracting\)return toast/);
+});
+
 test('playback waits before it can outrun the extracted subtitle frontier',()=>{
   const context={
     _cin:{extracting:true,asrMode:'watch',asrCoveredUntil:0,asrGuardPaused:false},
