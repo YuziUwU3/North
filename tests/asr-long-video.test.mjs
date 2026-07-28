@@ -54,6 +54,26 @@ test('completed chunks persist, resume without billing, and expose a home-page t
   assert.match(app,/主页面可随时查看/);
   assert.match(app,/waitText/);
   assert.match(html,/\.cin-asr-task>i/);
+  assert.match(functionSource(app,'cinemaAsrTaskOpen'),/继续提取剩余/);
+  assert.match(functionSource(app,'cinemaAsrTaskOpen'),/已完成部分不会重复提取或扣点/);
+  assert.match(functionSource(app,'cinemaAsrTaskResume'),/cinemaExtractAudioSubtitles\(90,'background'\)/);
+});
+
+test('remaining time excludes pauses and old jobs never inherit wall-clock downtime',()=>{
+  const context={Object,Number,Math};
+  vm.runInNewContext(functionSource(app,'cinemaAsrContiguousSeconds')+'\n'+functionSource(app,'cinemaAsrRemainingText'),context);
+  const legacy={status:'working',duration:600,startedAt:Date.now()-88*60*1000,parts:{0:{start:0,end:90},1:{start:90,end:180},2:{start:180,end:270},3:{start:270,end:360}}};
+  assert.equal(context.cinemaAsrRemainingText(legacy,8,4,600),'预计还需 1～2 分钟');
+  const measured={status:'working',duration:600,parts:{0:{start:0,end:90,processingMs:20000},1:{start:90,end:180,processingMs:30000},2:{start:180,end:270,processingMs:25000},3:{start:270,end:360,processingMs:25000}}};
+  assert.equal(context.cinemaAsrRemainingText(measured,8,4,600),'约还需 2 分钟');
+  const unstable={status:'working',duration:600,parts:{0:{start:0,end:90,processingMs:20*60*1000},1:{start:90,end:180,processingMs:20*60*1000},2:{start:180,end:270,processingMs:20*60*1000},3:{start:270,end:360,processingMs:20*60*1000}}};
+  assert.equal(context.cinemaAsrRemainingText(unstable,8,4,600),'识别服务速度波动，剩余时间暂不稳定');
+  assert.doesNotMatch(functionSource(app,'cinemaAsrTaskUpdate'),/Date\.now\(\)-startedAt/);
+  assert.match(functionSource(app,'cinemaExtractAudioSubtitlesProgressive'),/processingMs:Math\.max\(1,Date\.now\(\)-processingStartedAt\)/);
+  vm.runInNewContext(functionSource(app,'cinemaAsrTaskDisplayWait'),context);
+  const staleTask={status:'working',duration:600,coveredSeconds:360,total:8,completed:4,waitText:'约还需 88 分钟'};
+  assert.equal(context.cinemaAsrTaskDisplayWait(staleTask,false),'已保留进度 · 继续后预计 1～2 分钟');
+  assert.equal(context.cinemaAsrTaskDisplayWait(staleTask,true),'识别服务速度波动，剩余时间暂不稳定');
 });
 
 test('removing a video also removes its subtitle cache and task',()=>{
