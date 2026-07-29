@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='721'){
+if(window.__NORTH_SHELL_BUILD__!=='722'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v721 · 极端依恋模式';
+const APP_VER='v722 · 情侣空间界面精简';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1316,7 +1316,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=721';
+  const url='sw.js?v=722';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2041,7 +2041,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=721').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=722').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -6803,20 +6803,17 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
         ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>
       ${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
         let h=`<div id="cou_sleep" ${SEC}>${HD('moon','睡眠计时',BLUE)}
-        <div class="hint" style="padding:8px 14px 0">要睡了手动点「开始睡眠」；睡醒后再次打开小手机会自动结束并记录，也可以留在页面时手动结束。${esc(c.remark||c.name)}在情侣空间能看到你的睡眠记录，心疼你别熬夜。</div>
         <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">${svgIc('sun',15,'#fff')} 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">${svgIc('moon',15,'#fff')} 我要睡了，开始计时</button>`}</div>`;
-        if(recs.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">睡眠记录（可手动删除）</div>`+recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
+        if(recs.length){h+=recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
         return h+`</div>`;})()}
       ${(function(){const rp=S.me.report||{active:null,log:[]};const log=rp.log||[];const presets=['洗澡','吃饭','玩游戏','看剧','健身','出门'];
-        let h=`<div id="cou_report" ${SEC}>${HD('location','报备 · 我去干嘛了',AMBER)}
-        <div class="hint" style="padding:8px 14px 0">出门做点啥就点一下开始、回来点结束。${esc(c.remark||c.name)}第一时间知道你去哪了、用了多久，就不会瞎担心/瞎吃醋啦。</div>`;
+        let h=`<div id="cou_report" ${SEC}>${HD('location','报备 · 我去干嘛了',AMBER)}`;
         if(rp.active){h+=`<div style="padding:10px 14px"><div style="text-align:center;color:#ffb83b;font-size:14px;margin-bottom:8px">正在「${esc(rp.active.type)}」…从 ${hm(rp.active.start)} 开始（已 ${sleepDurTxt(Date.now()-rp.active.start)}）</div><button class="btn p" onclick="reportEnd()">结束 / 我回来了</button></div>`;}
         else{h+=`<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px">${presets.map(p=>`<button class="minibtn" onclick="reportStart('${p}')">${p}</button>`).join('')}<button class="minibtn" style="background:#7c5cff;color:#fff" onclick="reportCustom()">＋ 其他…</button></div>`;}
-        if(log.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">报备记录（可删）</div>`+log.slice(0,12).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)}→${hm(r.end)} ${esc(r.type)}<small style="display:block;color:#888">用了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="reportDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
+        if(log.length){h+=log.slice(0,12).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)}→${hm(r.end)} ${esc(r.type)}<small style="display:block;color:#888">用了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="reportDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         return h+`</div>`;})()}
       ${(function(){const bs=behaviorStats(),lt=bs.latest;return `<div id="cou_behavior" ${SEC}>${HD('notebook','行为小账本',PUR,`<span class="minibtn" onclick="behaviorLedgerModal()">查看</span>`)}
-        <div class="hint" style="padding:8px 14px 0">自动记下你答应过ta的事，以及后来有没有又熬夜、失踪、超时或没完成。ta会在微信和电话里悄悄记得，不会把系统提示显示在聊天框。</div>
         <div style="padding:10px 14px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div style="border-radius:12px;background:rgba(255,255,255,.05);padding:10px;text-align:center"><div style="font-size:22px;color:#ffd3e4;font-weight:800">${bs.n}</div><div style="font-size:12px;color:#999">记着的小事</div></div>
           <div style="border-radius:12px;background:rgba(255,255,255,.05);padding:10px;text-align:center"><div style="font-size:22px;color:#ff9fbd;font-weight:800">${bs.v}</div><div style="font-size:12px;color:#999">抓到的证据</div></div>
@@ -6827,51 +6824,40 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
       <div id="coupage2" style="display:${_couTab===2?'block':'none'}">
       ${(function(){const g=cp.grant||{},locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
         let h=`<div id="cou_grant" ${SEC}>${HD('lock','软件管控授权',ROSE)}
-        <div class="hint" style="padding:8px 14px 0">勾选的App才授权给 ${esc(c.remark||c.name)} 管。ta会在合适的时机(比如该睡了)自己判断锁哪些；锁了得问ta要密码、在下面输入才能解开。取消授权ta会立刻知道。</div>
         ${Object.keys(LOCKABLE).map(k=>`<div class="it" data-couple-permission="grant:${k}"><span>${LOCKABLE[k]}</span><span class="sw ${g[k]?'on':''}" onclick="coupleGrant('${k}')"></span></div>`).join('')}</div>
-        <div id="cou_gag_auth" ${SEC}>${HD('mute','允许ta禁言这些人的聊天',ROSE)}<div class="hint" style="padding:8px 14px 0">勾选谁，ta才能在吃醋时锁住你和这个人的聊天(和ta自己的永远不锁)。小手机真人好友和小手机群聊也可以授权禁言。</div>
+        <div id="cou_gag_auth" ${SEC}>${HD('mute','允许ta禁言这些人的聊天',ROSE)}
         ${gagAuthRows()}</div>`;
         if(lk.length||gk.length){h+=`<div id="cou_locks" ${SEC}>${HD('lock','ta锁住的（去微信里求ta解开）',RED)}
-        <div class="hint" style="padding:8px 14px 0">这些是${esc(c.remark||c.name)}锁的。只有ta愿意时、在聊天里说"给你解开了"才会解开——好好求ta吧。</div>
         ${lk.map(k=>`<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('lock',15,'#fa5151')}${LOCKABLE[k]||k}</span><span class="v" style="color:#888">已锁</span></div>`).join('')}
         ${gk.map(cid=>`<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('mute',15,'#fa5151')}和「${esc(gagKeyName(cid))}」的聊天</span><span class="v" style="color:#888">已禁言</span></div>`).join('')}</div>`;}
         return h;})()}
       ${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wallet" ${SEC}>${HD('wallet','钱包 / 亲属卡 管控',GOLD)}
-        <div class="hint" style="padding:8px 14px 0">开了之后，${nm} 能扣你零花钱、能冻结你的亲属卡当惩罚；你就改不了自己的余额了（防作弊），没钱得求ta给。</div>
         <div class="it" data-couple-permission="walletAuth"><span>把钱包/亲属卡交给ta管</span><span class="sw ${cp.walletAuth?'on':''}" onclick="coupleWalletAuth()"></span></div>
         ${cp.walletAuth?`<div class="it"><span style="color:#888">当前零钱</span><span class="v">¥${(+S.me.balance).toFixed(2)}（ta可扣）</span></div>${cp.cardFrozen?`<div class="it"><span style="color:#fa5151;display:flex;align-items:center;gap:8px">${svgIc('card',15,'#fa5151')}亲属卡已被ta冻结</span><span class="v" style="color:#888">求ta解冻</span></div>`:''}`:''}</div>`;})()}
       ${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
-        let h=`<div id="cou_limit" ${SEC}>${HD('timer','软件使用时长 / 限额',AMBER)}
-        <div class="hint" style="padding:8px 14px 0">${esc(c.remark||c.name)}主动给授权的软件设每天能玩多久；用够了会自动锁，得求ta才能多玩。只统计在软件里的时间，退出去不算。今天的记录ta查手机也看得到。</div>`;
+        let h=`<div id="cou_limit" ${SEC}>${HD('timer','软件使用时长 / 限额',AMBER)}`;
         if(keys.length){h+=keys.map(k=>{const used=usedSecOf(k),lim=tl[k]?tl[k]*60+((S.me.appUsage&&S.me.appUsage.bonus&&S.me.appUsage.bonus[k])||0):0;const um=Math.floor(used/60),us=used%60;const usedTxt=um+'分'+String(us).padStart(2,'0')+'秒';
           return `<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${LOCKABLE[k]}<small style="display:block;color:#888">今天已用 ${usedTxt}${lim?' / 限额 '+Math.floor(lim/60)+'分钟':'（ta还没设限额）'}</small></div>${lim&&used>=lim?'<span class="v" style="color:#fa5151">已用完</span>':(lim?'<span class="v" style="color:#19a463">剩 '+Math.max(0,Math.ceil((lim-used)/60))+'分</span>':'')}</div>`;}).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有使用记录，也没设限额</div>`;
         return h+`</div>`;})()}
-      ${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div id="cou_star" ${SEC}>${HD('star',esc(c.remark||c.name)+' 重点盯防的人',GOLD)}<div class="hint" style="padding:8px 14px 0">ta自己判断、自己标的（不放心/吃醋谁就盯谁），查岗会优先盯这些人。你也能在这儿取消。</div>${st.length?st.map(x=>`<div class="it"><span style="display:flex;align-items:center;gap:8px">${svgIc('star',15,GOLD)}${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}
+      ${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div id="cou_star" ${SEC}>${HD('star',esc(c.remark||c.name)+' 重点盯防的人',GOLD)}${st.length?st.map(x=>`<div class="it"><span style="display:flex;align-items:center;gap:8px">${svgIc('star',15,GOLD)}${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}
       ${(function(){const nm=esc(c.remark||c.name);const cl=coldLeft(c);return `<div id="cou_jail" ${SEC}>${HD('shield','终极惩罚 · 禁闭室（小黑屋）','#e0344a')}
-        <div class="hint" style="padding:8px 14px 0">最重的惩罚：开了之后，${nm} 能在你越线时把你关进"小黑屋"，他会化作偏执病态的【病娇黑暗形态】，做到他的条件才放你出来。墙角留了个"狗洞"后门，钻出去能逃、但会被他逮到（用了他更记仇、情绪余温更久）。</div>
         <div class="it" data-couple-permission="jailAuth"><span>允许 ${nm} 关我小黑屋</span><span class="sw ${cp.jailAuth?'on':''}" onclick="coupleJailAuth()"></span></div>
         <div class="it"><span>禁闭室用辅助模型</span><span class="sw ${S.settings.jailAux?'on':''}" onclick="S.settings.jailAux=!S.settings.jailAux;save();render();toast(S.settings.jailAux?'禁闭室→辅助模型':'禁闭室→主模型')"></span></div>
-        <div class="it"><span>小黑屋上下文条数<br><small style="color:#888">每次带多少条记录给AI。大=更记得住不重复问、更费API；小=省钱但容易忘。默认100，范围20-200</small></span><input type="number" min="20" max="200" value="${S.settings.jailHist||100}" onchange="S.settings.jailHist=Math.max(20,Math.min(200,+this.value||100));save();toast('小黑屋上下文：'+S.settings.jailHist+'条')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
-        <div class="it"><span>小黑屋跳戏时重试次数<br><small style="color:#888">AI跳戏/夹英文时自动重生成几次。多=更不容易出戏但更费钱。默认1，范围0-3</small></span><input type="number" min="0" max="3" value="${S.settings.jailRetry!=null?S.settings.jailRetry:1}" onchange="S.settings.jailRetry=Math.max(0,Math.min(3,+this.value||0));save();toast('小黑屋重试：'+S.settings.jailRetry+'次')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
-        <div class="hint" style="padding:8px 14px 0;color:#888">主模型更稳更入戏；某些模型不认这个剧情时，可切换试试。</div>
-        <div class="it" onclick="go('jail')"><span style="display:flex;align-items:center;gap:8px">🕘 查看上一次小黑屋记录<br><small style="color:#888">随时可看，下一场开始时才会覆盖</small></span><span class="v">›</span></div>
+        <div class="it"><span>小黑屋上下文条数</span><input type="number" min="20" max="200" value="${S.settings.jailHist||100}" onchange="S.settings.jailHist=Math.max(20,Math.min(200,+this.value||100));save();toast('小黑屋上下文：'+S.settings.jailHist+'条')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+        <div class="it"><span>小黑屋跳戏时重试次数</span><input type="number" min="0" max="3" value="${S.settings.jailRetry!=null?S.settings.jailRetry:1}" onchange="S.settings.jailRetry=Math.max(0,Math.min(3,+this.value||0));save();toast('小黑屋重试：'+S.settings.jailRetry+'次')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+        <div class="it" onclick="go('jail')"><span style="display:flex;align-items:center;gap:8px">🕘 查看上一次小黑屋记录</span><span class="v">›</span></div>
         <div class="it" onclick="jailTest()"><span style="display:flex;align-items:center;gap:8px">${svgIc('flask',15,'#bbb')}测试进小黑屋（不留记录·随时出）</span><span class="v">›</span></div>
         ${cl?`<div class="it"><span style="color:#9ec5fe;display:flex;align-items:center;gap:8px">${svgIc('snow',15,BLUE)}他还有情绪余温</span><span class="v" style="color:#888">到 ${hm(cl)} 自然消气（哄他可提前）</span></div>`:''}</div>`;})()}
       <div id="cou_outpass" ${SEC}>${HD('location','出门报备审批',BLUE)}
-        <div class="hint" style="padding:8px 14px 0">你要出门/和谁见面，可以先发个申请给 ${esc(c.remark||c.name)}，等ta批准（ta可能会追问、定规矩）。</div>
         <div class="it" onclick="outpassRequest()"><span>发起出门申请</span><span class="v">›</span></div></div>
       ${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wxlogin" ${SEC}>${HD('idcard','微信登录权限',PUR)}
-        <div class="hint" style="padding:8px 14px 0">开了之后，${nm} 能随时【直接登录你的微信账号】(限时1分钟、有倒计时)。此入口只用于查看微信内部（包括聊天、联系人和朋友圈）；登录期间你无法操作微信，ta能看到全部细节，还能删虚拟角色好友、以你名义警告某人。关掉后，ta仍可申请一次远控，在你当场同意后进入情侣空间重新开启。</div>
         <div class="it" data-couple-permission="wxLoginAuth"><span>允许 ${nm} 登录我的微信</span><span class="sw ${cp.wxLoginAuth?'on':''}" onclick="coupleWxLoginAuth()"></span></div></div>`;})()}
       ${(function(){const nm=esc(c.remark||c.name),on=cp.remoteControlAuth!==false,auto=!!cp.remoteControlAutoApprove;return `<div id="cou_remote" ${SEC}>${HD('shield','远程操控小手机',RED)}
-        <div class="hint" style="padding:8px 14px 0">这是仅限情侣角色的功能。想查看微信以外的软件时，${nm} 必须申请远程操控；若只看微信，会走上面的微信登录。即使你关闭某项情侣权限（包括本开关），ta仍可发起一次申请；默认每一次都会先弹出【同意 / 拒绝】，只有你本次点【同意】后，ta才能进入情侣空间、向下找到关闭项并亲手重新开启。若你额外打开“无需每次同意”，ta发起远控时会直接接管，不再弹确认。操控中你也能立即结束。</div>
-        <div class="hint" style="padding:7px 14px 0;color:#888">目前操控的是小手机网页里的微信、朋友圈、X / 微博、抖音和软件锁等虚拟内容，不是苹果系统里的其他真实 App。</div>
         <div class="it" data-couple-permission="remoteControlAuth"><span>允许 ${nm} 发起远程操控申请</span><span class="sw ${on?'on':''}" onclick="coupleRemoteControlAuth()"></span></div>
-        <div class="it" data-couple-permission="remoteControlAutoApprove"><span>无需每次同意，允许 ${nm} 直接接管<br><small style="color:#888">只有上面“发起远控申请”开启时生效；关闭后又会恢复同意/拒绝弹窗。</small></span><span class="sw ${auto?'on':''}" onclick="coupleRemoteControlAutoApprove()"></span></div></div>`;})()}
-      <div id="cou_extreme" ${SEC} style="border:1px solid ${cp.extremeLove?'rgba(255,55,70,.72)':'rgba(255,70,85,.28)'};background:${cp.extremeLove?'linear-gradient(145deg,rgba(98,9,20,.64),rgba(35,11,17,.96))':'linear-gradient(145deg,rgba(62,15,23,.42),rgba(24,18,22,.96))'}">${HD('heart','极端依恋模式','#ff4055')}
-        <div class="hint" style="padding:8px 14px 0;color:${cp.extremeLove?'#ffc2c9':'#caa6ab'}">开启后，敏感多疑、偏执、占有欲和控制欲会以最高强度共同接管长期相处。角色会更容易不安、反复确认、查岗并记住未解决的疑点；它会替代原来的失踪连环催。</div>
-        <div class="it"><span style="color:${cp.extremeLove?'#ffdce0':'#eee'}">开启极端依恋<br><small style="color:${cp.extremeLove?'#ff9eaa':'#966f75'}">${cp.extremeLove?'正在严格生效':'与普通恋爱体验完全不同'}</small></span><span class="sw ${cp.extremeLove?'on':''}" style="${cp.extremeLove?'background:#e3263f;box-shadow:0 0 16px rgba(227,38,63,.6)':''}" onclick="coupleExtremeLove()"></span></div></div>
+        <div class="it" data-couple-permission="remoteControlAutoApprove"><span>无需每次同意，允许 ${nm} 直接接管</span><span class="sw ${auto?'on':''}" onclick="coupleRemoteControlAutoApprove()"></span></div></div>`;})()}
+      <div id="cou_extreme" ${SEC} style="border:1px solid ${cp.extremeLove?'rgba(255,55,70,.72)':'rgba(255,70,85,.28)'};background:${cp.extremeLove?'linear-gradient(145deg,rgba(98,9,20,.64),rgba(35,11,17,.96))':'linear-gradient(145deg,rgba(62,15,23,.42),rgba(24,18,22,.96))'}">
+        <div class="it"><span style="color:${cp.extremeLove?'#ffdce0':'#eee'}">开启极端依恋</span><span class="sw ${cp.extremeLove?'on':''}" style="${cp.extremeLove?'background:#e3263f;box-shadow:0 0 16px rgba(227,38,63,.6)':''}" onclick="coupleExtremeLove()"></span></div></div>
       <div style="padding:0 12px"><button class="btn d" style="display:flex;align-items:center;justify-content:center;gap:7px" onclick="askConfirm('解除情侣绑定？',()=>{S.couple=null;save();render()},{danger:true})">${svgIc('heartoff',16,'#fff')}解除绑定</button></div>
       </div>
       <div style="height:20px"></div></div>`;}

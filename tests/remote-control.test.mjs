@@ -23,8 +23,12 @@ test('remote control is exposed only through the bound couple space', () => {
   assert.match(app, /!remoteControlAllowed\(cid\)/);
   assert.match(app, /id="cou_remote"/);
   assert.match(app, /允许 \$\{nm\} 发起远程操控申请/);
-  assert.match(app, /每一次都会先弹出【同意 \/ 拒绝】/);
-  assert.match(app, /不是苹果系统里的其他真实 App/);
+  const start=app.indexOf('function renderCouple()');
+  const end=app.indexOf('function coupleWalletAuth()',start);
+  const coupleUi=app.slice(start,end);
+  assert.doesNotMatch(coupleUi,/每一次都会先弹出【同意 \/ 拒绝】/);
+  assert.doesNotMatch(coupleUi,/不是苹果系统里的其他真实 App/);
+  assert.match(coupleUi,/无需每次同意，允许 \$\{nm\} 直接接管/);
 });
 
 test('refusal never starts a session and produces a personality reaction', () => {

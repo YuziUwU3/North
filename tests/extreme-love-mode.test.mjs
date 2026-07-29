@@ -19,9 +19,13 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source,/id="cou_extreme"/);
-assert.match(source,/极端依恋模式/);
-assert.match(source,/background:#e3263f/);
+const coupleUi=functionSource('renderCouple');
+assert.match(coupleUi,/id="cou_extreme"/);
+assert.match(coupleUi,/开启极端依恋/);
+assert.match(coupleUi,/background:#e3263f/);
+assert.doesNotMatch(coupleUi,/class="hint"/);
+assert.doesNotMatch(coupleUi,/HD\('heart','极端依恋模式'/);
+assert.doesNotMatch(coupleUi,/正在严格生效|与普通恋爱体验完全不同/);
 assert.doesNotMatch(source,/失踪 · 夺命连环催/);
 assert.doesNotMatch(source,/onclick="coupleEscalate\(\)"/);
 assert.doesNotMatch(source,/S\.couple\.escalate/);
