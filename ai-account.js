@@ -1,5 +1,5 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiAsrTestBusy=false,_aiAsrTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false,_aiImageBusy=false,_aiImageStatus='',_aiImageResult='',_aiLowBalanceTimer=0,_aiAccountPollTimer=0,_aiArrivalTimer=0;
+let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiAcctFetchedAt=0,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiAsrTestBusy=false,_aiAsrTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false,_aiImageBusy=false,_aiImageStatus='',_aiImageResult='',_aiLowBalanceTimer=0,_aiAccountPollTimer=0,_aiArrivalTimer=0;
 const AI_VOICE_PRESETS=[
   {id:'qingshouyin20260726',name:'青受音',clone:true,preset:true},
   {id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true},
@@ -90,7 +90,7 @@ function aiServiceCards(){return aiRechargePlans().filter(p=>p.kind==='service')
     <b style="font-size:20px;white-space:nowrap">¥${Number(p.amount_cny||0).toFixed(1)}</b>
   </button>`).join('');}
 
-function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};S.settings.stt=S.settings.stt||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p!=='aiaccount')return;if(typeof maybePhoneNotice==='function')maybePhoneNotice();if(!_aiAcct&&!_aiAcctBusy&&!_aiAutoTried)aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
+function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};S.settings.stt=S.settings.stt||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p!=='aiaccount')return;if(typeof maybePhoneNotice==='function')maybePhoneNotice();if(!_aiAcctBusy&&(!_aiAcct||Date.now()-Number(_aiAcctFetchedAt||0)>5000))aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
   const knownBalance=aiVisibleBalance(),bal=knownBalance==null?'读取中…':knownBalance;
   const low=aiLowBalanceCfg();
   const voice=aiVoiceLabel(tts.voice);
@@ -102,6 +102,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div style="font-size:38px;font-weight:700;margin:6px 0">${bal}</div>
       <div style="font-size:12px;color:#cbd5e1;word-break:break-all">用户ID：${esc(id)} <button class="minibtn" onclick="aiCopyId()" style="margin-left:6px">复制</button></div>
     </div>
+    <div style="margin:0 0 12px;padding:12px 14px;border:1px solid rgba(255,72,92,.62);border-radius:9px;background:rgba(255,72,92,.11);color:#ff5b6f;font-size:14px;font-weight:800;line-height:1.65">充值需要人工审核，如未及时到账，请联系管理员处理。</div>
     <button onclick="showManual('ai')" style="width:100%;margin:0 0 12px;padding:11px 12px;border:1px solid rgba(165,180,252,.3);background:#171a24;color:#cdd5ff;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between"><span>AI账户使用说明与常见问题</span><b style="font-size:16px">›</b></button>
     <div class="section">
       <div class="it"><span>点数不足提醒<br><small style="color:#888">余额低于设定值时在小手机屏幕弹窗提醒</small></span><span class="sw ${low.lowBalanceAlertOn?'on':''}" onclick="aiToggleLowBalance()"></span></div>
@@ -294,6 +295,7 @@ async function aiTestVoice(){const text=aiVoiceTestText();
   finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')aiRenderStable();}}
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId()},pricing:null,plans:null,ledger:[]};
+  if(action==='account')_aiAcctFetchedAt=Date.now();
   if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(Array.isArray(d.private_voices)){_aiAcct.private_voices=d.private_voices;const first=d.private_voices.find(v=>v&&v.voice_id),core=aiCoreInit();if(first&&!(S.settings.tts||{}).voice&&core.privateVoiceAutoSet!==first.voice_id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=first.voice_id;core.privateVoiceAutoSet=first.voice_id;save();}}if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
   if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;aiRememberBalance(d.balance);}
   if(d.charged){const feature=action||'chat';_aiAcct.ledger=_aiAcct.ledger||[];_aiAcct.ledger.unshift({kind:'charge',feature,points:-d.charged,balance_after:d.balance,status:d.ok===false?'failed':'done',billed:!!d.billed,note:d.note||d.error||'',created_at:new Date().toISOString()});_aiAcct.ledger=_aiAcct.ledger.slice(0,80);}

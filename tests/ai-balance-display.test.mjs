@@ -36,3 +36,7 @@ assert.doesNotMatch(source, /account:\{user_id:aiUserId\(\),points:0\}/);
 assert.match(source, /const knownBalance=aiVisibleBalance\(\),bal=knownBalance==null\?'读取中…':knownBalance/);
 assert.match(source, /const d=await aiRelay\('account',\{\}\)/);
 assert.doesNotMatch(source, /_aiAcct=await aiRelay\('account',\{\}\)/);
+assert.match(source, /_aiAcctFetchedAt=0/);
+assert.match(functionSource("renderAIAccount"), /Date\.now\(\)-Number\(_aiAcctFetchedAt\|\|0\)>5000/);
+assert.match(functionSource("aiAccountApplyResult"), /if\(action==='account'\)_aiAcctFetchedAt=Date\.now\(\)/);
+assert.match(functionSource("renderAIAccount"), /充值需要人工审核，如未及时到账，请联系管理员处理。/);

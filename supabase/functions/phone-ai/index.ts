@@ -35,6 +35,7 @@ const ASR_SECONDS_PER_POINT = PRICE.asr_seconds_per_point;
 const ASR_MAX_SECONDS = 300;
 const ASR_MAX_BYTES = 15 * 1024 * 1024;
 const ALI_ASR_MAX_DATA_URI_BYTES = 9_500_000;
+const IMAGE_PENDING_REFUND_MS = 12 * 60 * 1000;
 const DEFAULT_TTS_VOICE = "male-qn-qingse";
 const LICENSE_EPOCH = Number(Deno.env.get("LICENSE_EPOCH") || 4);
 const PUBLIC_TTS_VOICES = [
@@ -390,27 +391,97 @@ async function requireBalance(userId: string, clientSecret: string, feature: str
 }
 
 async function finishCharge(ledgerId: string, ok: boolean, meta: Record<string, unknown> = {}) {
-  await supabase.from("phone_ai_ledger").update({ status: ok ? "done" : "failed", meta }).eq("id", ledgerId);
+  let query = supabase.from("phone_ai_ledger")
+    .update({ status: ok ? "done" : "failed", meta })
+    .eq("id", ledgerId);
+  if (ok) query = query.eq("status", "pending");
+  const { data, error } = await query.select("id").maybeSingle();
+  if (error) throw error;
+  return !!data;
 }
 
 async function refund(userId: string, clientSecret: string, feature: string, points: number, ledgerId: string, reason: string) {
-  const acct = await ensureAccount(userId, clientSecret);
-  const next = (acct.points || 0) + points;
-  await supabase.from("phone_ai_accounts").update({ points: next }).eq("user_id", userId);
-  await supabase.from("phone_ai_ledger").insert({
-    user_id: userId,
-    kind: "refund",
-    feature,
-    points,
-    balance_after: next,
-    request_id: ledgerId,
-    meta: { reason },
-  });
-  await finishCharge(ledgerId, false, { refunded: true, reason });
+  if (!ledgerId || !Number.isSafeInteger(points) || points < 1) throw new Error("invalid-refund");
+  const safeReason = String(reason || "request-failed").slice(0, 300);
+  let originalStatus = "";
+  for (const status of ["pending", "done"]) {
+    const { data: claimed, error } = await supabase.from("phone_ai_ledger")
+      .update({ status: "refunding", meta: { refund_pending: true, reason: safeReason } })
+      .eq("id", ledgerId)
+      .eq("user_id", userId)
+      .eq("kind", "charge")
+      .eq("feature", feature)
+      .eq("status", status)
+      .select("id")
+      .maybeSingle();
+    if (error) throw error;
+    if (claimed) {
+      originalStatus = status;
+      break;
+    }
+  }
+  if (!originalStatus) {
+    const acct = await ensureAccount(userId, clientSecret);
+    return { refunded: 0, balance: Number(acct.points || 0) };
+  }
+
+  let next = 0;
+  let credited = false;
+  try {
+    for (let i = 0; i < 6; i++) {
+      const acct = await ensureAccount(userId, clientSecret);
+      const current = Number(acct.points || 0);
+      next = current + points;
+      const { data: updated, error } = await supabase.from("phone_ai_accounts")
+        .update({ points: next })
+        .eq("user_id", userId)
+        .eq("points", current)
+        .select("points")
+        .maybeSingle();
+      if (error) throw error;
+      if (updated) {
+        credited = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 60 + i * 70));
+    }
+    if (!credited) throw new Error("refund-balance-busy-retry-later");
+
+    const { error: finishError } = await supabase.from("phone_ai_ledger")
+      .update({ status: "failed", meta: { refunded: true, reason: safeReason } })
+      .eq("id", ledgerId)
+      .eq("status", "refunding");
+    if (finishError) throw finishError;
+    const { error: ledgerError } = await supabase.from("phone_ai_ledger").insert({
+      user_id: userId,
+      kind: "refund",
+      feature,
+      points,
+      balance_after: next,
+      status: "done",
+      request_id: ledgerId,
+      meta: { reason: safeReason },
+    });
+    if (ledgerError) throw ledgerError;
+    return { refunded: points, balance: next };
+  } catch (error) {
+    if (!credited) {
+      await supabase.from("phone_ai_ledger")
+        .update({ status: originalStatus, meta: { refund_retry: true, reason: safeReason } })
+        .eq("id", ledgerId)
+        .eq("status", "refunding");
+    } else {
+      await supabase.from("phone_ai_ledger")
+        .update({ status: "failed", meta: { refunded: true, reason: safeReason, settlement_error: errText(error) } })
+        .eq("id", ledgerId)
+        .eq("status", "refunding");
+    }
+    throw error;
+  }
 }
 
 async function recoverStalePendingCharges(userId: string, clientSecret: string) {
-  const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - IMAGE_PENDING_REFUND_MS).toISOString();
   const { data: pending } = await supabase.from("phone_ai_ledger")
     .select("id,feature,points")
     .eq("user_id", userId)
@@ -422,24 +493,7 @@ async function recoverStalePendingCharges(userId: string, clientSecret: string) 
   for (const row of pending || []) {
     const points = Math.abs(Number(row.points || 0));
     if (!points) continue;
-    const { data: claimed } = await supabase.from("phone_ai_ledger")
-      .update({ status: "failed", meta: { refunded: true, reason: "stale-pending-auto-refund" } })
-      .eq("id", row.id)
-      .eq("status", "pending")
-      .select("id");
-    if (!claimed?.length) continue;
-    const acct = await ensureAccount(userId, clientSecret);
-    const next = Number(acct.points || 0) + points;
-    await supabase.from("phone_ai_accounts").update({ points: next }).eq("user_id", userId);
-    await supabase.from("phone_ai_ledger").insert({
-      user_id: userId,
-      kind: "refund",
-      feature: row.feature || "image",
-      points,
-      balance_after: next,
-      request_id: row.id,
-      meta: { reason: "stale-pending-auto-refund" },
-    });
+    await refund(userId, clientSecret, row.feature || "image", points, String(row.id), "stale-pending-auto-refund").catch(() => null);
   }
   const asrCutoff = new Date(Date.now() - 12 * 60 * 1000).toISOString();
   const { data: staleAsr } = await supabase.from("phone_ai_ledger")
@@ -477,9 +531,7 @@ async function refundTtsLedger(userId: string, clientSecret: string, ledgerId: s
     .maybeSingle();
   if (oldRefund) return { refunded: 0, reason: "already-refunded" };
   const points = Math.abs(Number(row.points || 0));
-  await refund(userId, clientSecret, "tts", points, ledgerId, reason || "tts-client-failed");
-  const acct = await ensureAccount(userId, clientSecret);
-  return { refunded: points, balance: acct.points || 0 };
+  return await refund(userId, clientSecret, "tts", points, ledgerId, reason || "tts-client-failed");
 }
 
 async function failCharged(ledgerId: string, cost: number, balance: number, model: string, e: unknown) {
@@ -1632,7 +1684,7 @@ Deno.serve(async (req) => {
           max_tokens: body.max_tokens || 900,
           messages: guardedMessages(body.messages),
         });
-        await finishCharge(c.ledgerId, true, { model });
+        if (!await finishCharge(c.ledgerId, true, { model })) throw new Error("charge-settlement-conflict");
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
         if (errText(e).includes("missing-openai-key")) {
@@ -1659,7 +1711,7 @@ Deno.serve(async (req) => {
             ],
           }],
         });
-        await finishCharge(c.ledgerId, true, { model });
+        if (!await finishCharge(c.ledgerId, true, { model })) throw new Error("charge-settlement-conflict");
         return json({ ok: true, data, charged: c.cost, balance: c.balance });
       } catch (e) {
         if (errText(e).includes("missing-openai-key")) {
@@ -1707,7 +1759,7 @@ Deno.serve(async (req) => {
           if (i < routes.length - 1 && !shouldTryNextImageRoute(errText(lastError))) break;
         }
         if (!result) throw lastError || new Error("all-image-routes-failed");
-        await finishCharge(c.ledgerId, true, {
+        if (!await finishCharge(c.ledgerId, true, {
           model,
           provider: "configured-relay",
           route: usedRoute,
@@ -1716,7 +1768,7 @@ Deno.serve(async (req) => {
           endpoint,
           quality: "medium",
           size,
-        });
+        })) throw new Error("charge-settlement-conflict");
         return json({ ok: true, data: result.data, charged: c.cost, balance: c.balance, image_route: usedRoute, fallback: usedRoute === "route-2" });
       } catch (e) {
         const reason = errText(e);
@@ -1881,7 +1933,7 @@ Deno.serve(async (req) => {
       }
       const c = await charge(userId, clientSecret, "tts", ttsCost);
       const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
-      await finishCharge(c.ledgerId, true, {
+      if (!await finishCharge(c.ledgerId, true, {
         model,
         voice_id: voiceId,
         requested_voice_id: requestedVoiceId,
@@ -1891,7 +1943,7 @@ Deno.serve(async (req) => {
         charged_points: ttsCost,
         estimated_cny: Number((chars * cnyPerChar).toFixed(4)),
         postpaid: true,
-      });
+      })) throw new Error("charge-settlement-conflict");
       return json({ ok: true, data, charged: c.cost, balance: c.balance, chars, ledger_id: c.ledgerId });
     }
 
