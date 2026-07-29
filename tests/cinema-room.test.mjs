@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v723 · 极端依恋关系决策'/);
+assert.match(source, /APP_VER='v724 · 放映室在线搜索'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -47,6 +47,10 @@ assert.match(source, /URL\.createObjectURL\(f\)/);
 assert.doesNotMatch(source, /S\.cinema\.(?:videoFile|bookText)\s*=/);
 assert.match(source, /cinemaOpenOnlineModal/);
 assert.match(source, /cinemaOpenOnline\(\)[\s\S]*?https\?:/);
+assert.match(functionSource("renderCinema"), /在线找片 \/ 搜书/);
+assert.match(functionSource("cinemaOpenSearchModal"), /夸克[\s\S]*百度[\s\S]*必应/);
+assert.match(functionSource("cinemaOpenSearchModal"), /target="_blank"[\s\S]*noopener noreferrer external/);
+assert.match(functionSource("cinemaLaunchSearch"), /S\.browser\.history\.unshift/);
 assert.match(source, /function cinemaRenameSave/);
 assert.match(source, /function cinemaLibraryPlay/);
 assert.doesNotMatch(functionSource("cinemaLibraryHTML"), /slice\(0,\s*12\)/, "video box and bookshelf must not hide older saved items");
@@ -72,6 +76,12 @@ assert.equal(cues[1].text, "第二句");
 const pages = helperContext.paginate("第一段。".repeat(180) + "\n\n" + "第二段。".repeat(180), 500);
 assert.ok(pages.length >= 3);
 assert.ok(pages.every((page) => page.length <= 510));
+
+const searchContext = vm.createContext({ encodeURIComponent, String });
+vm.runInContext(lineFunctionSource("cinemaSearchUrl") + ";globalThis.url=cinemaSearchUrl;", searchContext);
+assert.equal(searchContext.url("quark", "video", "海绵宝宝"), "https://quark.sm.cn/s?q=" + encodeURIComponent("海绵宝宝 电影 电视剧 在线观看"));
+assert.equal(searchContext.url("baidu", "book", "活着"), "https://m.baidu.com/s?word=" + encodeURIComponent("活着 小说 在线阅读"));
+assert.equal(searchContext.url("bing", "video", "流浪地球"), "https://www.bing.com/search?q=" + encodeURIComponent("流浪地球 电影 电视剧 在线观看"));
 
 const timedOffsetContext = vm.createContext({});
 vm.runInContext(lineFunctionSource("sttTimedRows") + ";globalThis.rows=sttTimedRows({segments:[{start:1.5,end:3,text:'  hello   world  '}]},300);", timedOffsetContext);
@@ -601,6 +611,6 @@ assert.match(functionSource("cinemaSend"), /cinemaRoleReply\([\s\S]*,false\)/);
 assert.match(functionSource("cinemaBookComment"), /,false\)/);
 assert.doesNotMatch(functionSource("cinemaBookPage"), /autoCount=.*\+1/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=723/);
+assert.match(html, /app\.js\?v=724/);
 
 console.log("cinema room tests passed");
