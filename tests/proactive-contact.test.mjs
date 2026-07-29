@@ -31,7 +31,7 @@ assert.doesNotMatch(maybeSource, /humanLikeOn/, 'the dedicated proactive switch 
 assert.doesNotMatch(maybeSource, /isMain\(/, 'proactive contact must work for the currently active identity too');
 assert.doesNotMatch(maybeSource, /15\s*\*\s*60000/, 'the configured interval must not be replaced by a 15-minute floor');
 assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep activity must not override an explicitly configured proactive window');
-assert.match(maybeSource, /affNow\(c\)>=35/, 'ignore escalation may suppress ordinary initiative only when escalation is actually eligible');
+assert.match(maybeSource, /extremeLoveOn\(c\)/, 'extreme-love escalation may suppress ordinary initiative only while the mode is active');
 assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]/);
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
@@ -76,6 +76,7 @@ const planContext = vm.createContext({
   roleLiveLoc: () => ({name: '公司', address: '办公区'}),
   activityHash: () => 0,
   traitValue: (c,k,f=0) => c&&c.traits&&c.traits[k]!=null?+c.traits[k]:f,
+  extremeLoveOn: () => false,
   suspicionBusy: () => false,
   memoryNorm: (v) => String(v),
   hm: () => '12:00',
@@ -155,6 +156,7 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true, deliv
     initiativeDelayMs: () => 60000,
     lastMsg: () => ({role: 'user', time: now - 120000}),
     lastUserTs: () => 0,
+    extremeLoveOn: () => false,
     currentRoleActivity: () => ({key: activityKey, label: activityKey === 'sleep' ? '在睡觉或休息' : '正在忙工作', busy: 4, until: now + 21600000}),
     initiativePlan: () => ({kind: planKind, memory: null, note: '[系统：主动联系]'}),
     effCallProb: () => callProb,

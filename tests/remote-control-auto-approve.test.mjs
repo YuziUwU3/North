@@ -24,7 +24,7 @@ test("auto-approve is exposed and restorable from couple permissions", () => {
   assert.match(app, /data-couple-permission="remoteControlAutoApprove"/);
   assert.match(app, /无需每次同意，允许 \$\{nm\} 直接接管/);
   assert.match(app, /\{key:'remoteControlAutoApprove',name:'远程操控免同意权限'/);
-  assert.match(app, /\['wxLoginAuth','remoteControlAuth','remoteControlAutoApprove','walletAuth','jailAuth','escalate'\]/);
+  assert.match(app, /\['wxLoginAuth','remoteControlAuth','remoteControlAutoApprove','walletAuth','jailAuth'\]/);
   assert.match(app, /if\(key==='remoteControlAutoApprove'\)cp\.remoteControlAuth=true/);
 });
 
@@ -35,4 +35,3 @@ test("remote control exit notice is shown after the remote session closes", () =
   assert.match(app, /已退出远程操控/);
   assert.match(app, /remoteControlExitNotice\(c\.remark\|\|c\.name\)/);
 });
-

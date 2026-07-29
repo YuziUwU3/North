@@ -29,7 +29,7 @@ assert.match(functionSource('suspicionPrompt'),/敏感低、偏执高/);
 assert.match(functionSource('suspicionPrompt'),/不能凭空捏造/);
 assert.match(functionSource('suspicionPrompt'),/绝不能绕过权限/);
 
-const context=vm.createContext({Date,Math});
+const context=vm.createContext({Date,Math,extremeLoveOn:()=>false});
 for(const name of ['traitValue','suspicionState','suspicionDecayRate','suspicionSnapshot'])vm.runInContext(functionSource(name),context);
 const now=Date.now();
 const low={traits:{paranoid:0},suspicion:{score:100,updatedAt:now-2*3600000,unresolved:[]}};
@@ -65,7 +65,7 @@ assert.match(functionSource('coupleRemoteControlAuth'),/suspicionRaise\(c,'permi
 assert.match(source,/setInterval\(suspicionTick,1000\)/);
 
 let seq=0;
-const requestContext=vm.createContext({Date,Math,save:()=>{},uid:()=>`m${++seq}`});
+const requestContext=vm.createContext({Date,Math,save:()=>{},uid:()=>`m${++seq}`,extremeLoveOn:()=>false});
 for(const name of ['traitValue','suspicionState','suspicionEventOpen','suspicionRequestMessage'])vm.runInContext(functionSource(name),requestContext);
 const requestRole={traits:{suspicious:80,paranoid:60}};
 const request=requestContext.suspicionRequestMessage(requestRole,'location','想确认你安全到家');
@@ -111,7 +111,7 @@ hangupDone(true);
 assert.equal(rejectedState.pendingHangup.status,'waiting');
 assert.equal(rejectedState.pendingHangup.deadline-rejectedState.pendingHangup.askedAt,10000);
 
-const forceContext=vm.createContext({Date,Math});
+const forceContext=vm.createContext({Date,Math,extremeLoveOn:()=>false});
 for(const name of ['traitValue','suspicionForceLevel','suspicionInterruptionDelay','suspicionActiveWindow'])vm.runInContext(functionSource(name),forceContext);
 const maxTraits={traits:{suspicious:100,paranoid:100}};
 assert.equal(forceContext.suspicionForceLevel(maxTraits),4);
@@ -152,7 +152,7 @@ assert.match(functionSource('suspicionRequestMessage'),/suspicionEventOpen\(st\.
 assert.match(functionSource('maybeFollowup'),/suspicionPromiseCoversText/);
 assert.match(source,/if\(got\)suspicionOnAssistantReply\(c\)/);
 
-const detailContext=vm.createContext({Date,Math});
+const detailContext=vm.createContext({Date,Math,extremeLoveOn:()=>false});
 for(const name of ['traitValue','suspicionNumber','suspicionPromiseDue','suspicionClaimFacts','suspicionDirectContradiction','suspicionSilenceDelay'])vm.runInContext(functionSource(name),detailContext);
 const base=Date.parse('2026-07-29T10:00:00+08:00');
 const tenMinutes=detailContext.suspicionPromiseDue('我十分钟后到家，到了给你报平安',base);
