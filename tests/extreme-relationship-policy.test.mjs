@@ -26,6 +26,10 @@ assert.match(aiReply,/relationshipCheck\(c,_relIntent,content\)/);
 assert.match(aiReply,/relationshipRewriteNote\(_relIntent,_rc\)/);
 assert.match(aiReply,/relationshipFallback\(c,_relIntent\)/);
 assert.match(aiReply,/relationshipCommit\(c,_relIntent,content\)/);
+assert.match(aiReply,/_relIntent&&_relIntent\.kind!=='baseline'/,'ordinary context must never be replaced by an attachment fallback');
+assert.doesNotMatch(functionSource('relationshipIntent'),/turn%3/,'extreme attachment must not inject a hard relationship topic on fixed turns');
+assert.match(functionSource('relationshipPolicyPrompt'),/绝对不能为了表现依恋另起/);
+assert.doesNotMatch(functionSource('relationshipFallback'),/过来陪我一会儿。别让我找不到你/,'the unrelated canned line from the reported screenshot must be gone');
 
 const relationshipContext=vm.createContext({
   S:{},

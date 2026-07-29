@@ -32,14 +32,16 @@ assert.doesNotMatch(maybeSource, /isMain\(/, 'proactive contact must work for th
 assert.doesNotMatch(maybeSource, /15\s*\*\s*60000/, 'the configured interval must not be replaced by a 15-minute floor');
 assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep activity must not override an explicitly configured proactive window');
 assert.match(maybeSource, /extremeLoveOn\(c\)/, 'extreme-love escalation may suppress ordinary initiative only while the mode is active');
-assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]/);
+assert.match(maybeSource, /lm&&lm\.role===['"]user['"]/,'an unanswered user message must outrank proactive contact');
+assert.match(maybeSource, /initiativeQueueNote\(c,plan,plan\.note\)/,'queued initiative must carry a freshness baseline');
+assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]&&plan\.kind!==['"]conflict['"]/);
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);
 assert.match(source, /focus['"],initiativeWakeCheck/);
 assert.match(source, /【本轮允许主动照片】/);
 assert.match(source, /【本轮允许位置报备】/);
-assert.match(source, /普通问候、催回复、关心和查岗绝对不能顺带附图/);
+assert.match(source, /普通问候、催回复、关心、查岗和争吵承接绝对不能顺带附图/);
 assert.match(source, /_initiativeNoImage=initiativeBlocksImage\(note\)/);
 assert.match(source, /_initiativeNoLocation=initiativeBlocksLocation\(note\)/);
 assert.match(source, /_initiativeNoImage&&[\s\S]*photoTail=3;continue/);
@@ -67,8 +69,46 @@ const delayContext = vm.createContext({S: {settings: {proactiveIdleMin: 1}}});
 vm.runInContext(functionSource('initiativeDelayMs') + ';globalThis.delay=initiativeDelayMs();', delayContext);
 assert.equal(delayContext.delay, 60000, 'one minute in settings must mean one real minute');
 
+let conflictEmotion={type:'neutral',intensity:0,cause:'',threads:[]},conflictMessages=[];
+const conflictContext=vm.createContext({
+  dialogueEmotionSnapshot:()=>conflictEmotion,
+  msgs:()=>conflictMessages,
+  msgToText:m=>m.content||'',
+  Date,
+});
+vm.runInContext(functionSource('initiativeConflictState')+';globalThis.conflict=initiativeConflictState;',conflictContext);
+const conflictRole={id:'conflict'};
+conflictMessages=[{role:'user',type:'text',content:'一个半小时',time:Date.now()}];
+assert.equal(conflictContext.conflict(conflictRole).active,false,'ordinary bargaining or time discussion must not be misread as an argument');
+conflictEmotion={type:'hurt',intensity:55,cause:'刚才的话让我受伤',threads:[{topic:'刚才的话还没说开'}]};
+assert.equal(conflictContext.conflict(conflictRole).active,true,'an unresolved emotional thread must arbitrate proactive content');
+conflictEmotion={type:'neutral',intensity:0,cause:'',threads:[]};
+conflictMessages=[{role:'assistant',type:'text',content:'别跟我说话，我还在生气。',time:Date.now()}];
+assert.equal(conflictContext.conflict(conflictRole).active,true,'recent explicit fighting language must be detected even without a stored thread');
+conflictEmotion={type:'warm',intensity:4,cause:'',repair:100,threads:[]};
+assert.equal(conflictContext.conflict(conflictRole).active,false,'an explicitly reconciled dialogue must not be reopened by old fighting text');
+
+let queuedUserTime=1000,queuedConflict=false;
+const freshnessContext=vm.createContext({
+  lastUserTs:()=>queuedUserTime,
+  initiativeConflictState:()=>({active:queuedConflict,cause:''}),
+});
+vm.runInContext(functionSource('initiativeNoteActive')+';'+functionSource('initiativeQueueNote')+';'+functionSource('initiativeReplyFresh')+';globalThis.queue=initiativeQueueNote;globalThis.fresh=initiativeReplyFresh;',freshnessContext);
+const queuedRole={id:'queued'};
+const normalQueued=freshnessContext.queue(queuedRole,{kind:'photo'},'[系统：这是一次【主动消息】。【本轮允许主动照片】]');
+assert.equal(freshnessContext.fresh(queuedRole,normalQueued),true);
+queuedUserTime=2000;
+assert.equal(freshnessContext.fresh(queuedRole,normalQueued),false,'a new user message must cancel a queued daily photo');
+queuedUserTime=1000;queuedConflict=true;
+assert.equal(freshnessContext.fresh(queuedRole,normalQueued),false,'a newly started argument must cancel an ordinary queued initiative');
+const conflictQueued=freshnessContext.queue(queuedRole,{kind:'conflict'},'[系统：这是一次【主动消息】。承接争吵。]');
+assert.equal(freshnessContext.fresh(queuedRole,conflictQueued),true,'an unresolved conflict follow-up may continue the same issue');
+queuedConflict=false;
+assert.equal(freshnessContext.fresh(queuedRole,conflictQueued),false,'a resolved conflict must cancel a stale conflict follow-up');
+
 const planMath = Object.create(Math);
 planMath.random = () => 0.99;
+let planConflict={active:false,cause:''};
 const planContext = vm.createContext({
   S: {settings: {imgGen: true}},
   initiativeMemory: () => null,
@@ -78,6 +118,7 @@ const planContext = vm.createContext({
   traitValue: (c,k,f=0) => c&&c.traits&&c.traits[k]!=null?+c.traits[k]:f,
   extremeLoveOn: () => false,
   suspicionBusy: () => false,
+  initiativeConflictState: () => planConflict,
   memoryNorm: (v) => String(v),
   hm: () => '12:00',
   Math: planMath,
@@ -97,6 +138,12 @@ assert.match(photoPlan.note, /【本轮允许主动照片】/);
 assert.match(photoPlan.note, /拍了什么、为什么想给ta看/);
 assert.match(photoPlan.note, /默认是你拿手机向外拍眼前所见/);
 assert.match(photoPlan.note, /夜景、风景、街景、天空、宠物或物品，就只拍那个主体/);
+planConflict={active:true,cause:'刚才的话还没有说开'};
+const conflictPlan=planContext.plan(role,photoActivity,{turn:3,lastKind:'',lastMemory:''});
+assert.equal(conflictPlan.kind,'conflict');
+assert.doesNotMatch(conflictPlan.note,/【本轮允许主动照片】/);
+assert.match(conflictPlan.note,/不能突然分享工作、吃饭、天气、风景、自拍或其他生活日常/);
+planConflict={active:false,cause:''};
 planContext.S.settings.imgGen = false;
 const textOnlyPlan = planContext.plan(role, photoActivity, {turn: 3, lastKind: '', lastMemory: ''});
 assert.notEqual(textOnlyPlan.kind, 'photo');
@@ -131,7 +178,7 @@ assert.equal(planContext.checkin(paranoidRole,{turn:0,lastCheckinAt:0},Date.now(
 const cooldownState={turn:2,lastCheckinAt:Date.now()-5*60000};
 assert.equal(planContext.checkin(strictRole,cooldownState,Date.now()),'','check-ins must respect a short anti-spam cooldown');
 
-function schedulerContext({planKind = 'share', callProb = 0, queue = true, delivered = queue, activityKey = 'work'} = {}) {
+function schedulerContext({planKind = 'share', callProb = 0, queue = true, delivered = queue, activityKey = 'work',lastRole='assistant'} = {}) {
   const now = Date.now();
   const state = {nextAt: now - 1, lastAt: 0, lastKind: '', lastMemory: '', turn: 0};
   const c = {id: 'r1', proactive: {enabled: true, start: 0, end: 23, times: 10}, followups: []};
@@ -154,11 +201,12 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true, deliv
     initiativeWindow: () => true,
     initiativeState: () => state,
     initiativeDelayMs: () => 60000,
-    lastMsg: () => ({role: 'user', time: now - 120000}),
+    lastMsg: () => ({role: lastRole, time: now - 120000}),
     lastUserTs: () => 0,
     extremeLoveOn: () => false,
     currentRoleActivity: () => ({key: activityKey, label: activityKey === 'sleep' ? '在睡觉或休息' : '正在忙工作', busy: 4, until: now + 21600000}),
     initiativePlan: () => ({kind: planKind, memory: null, note: '[系统：主动联系]'}),
+    initiativeQueueNote: (c,plan,note) => note,
     effCallProb: () => callProb,
     proCall: () => { calls.called++; return true; },
     scheduleReply: (id, note, done) => { calls.queued++; if (done) done(delivered); return queue; },
@@ -174,8 +222,12 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true, deliv
 
 const message = schedulerContext();
 assert.equal(message.result, true);
-assert.equal(message.calls.queued, 1, 'manual reply mode and a busy activity must still allow proactive messages');
+assert.equal(message.calls.queued, 1, 'manual reply mode and a busy activity may still allow proactive messages when no user reply is pending');
 assert.equal(message.S._proactiveCount.r1.n, 1);
+
+const pendingUser=schedulerContext({lastRole:'user'});
+assert.equal(pendingUser.result,false,'an unanswered user message must block a new proactive topic');
+assert.equal(pendingUser.calls.queued,0);
 
 const lateNight = schedulerContext({activityKey: 'sleep'});
 assert.equal(lateNight.result, true, 'an explicit active window must still honor the one-minute interval at night');
@@ -196,5 +248,9 @@ assert.equal(call.calls.queued, 0);
 const location = schedulerContext({planKind: 'location', callProb: 100});
 assert.equal(location.calls.called, 0, 'location sharing must not be replaced by a call');
 assert.equal(location.calls.queued, 1);
+
+const conflictCall=schedulerContext({planKind:'conflict',callProb:100});
+assert.equal(conflictCall.calls.called,0,'an unresolved argument follow-up must not suddenly become a casual proactive call');
+assert.equal(conflictCall.calls.queued,1);
 
 console.log('proactive contact tests passed');
