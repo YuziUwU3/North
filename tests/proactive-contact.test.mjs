@@ -32,14 +32,14 @@ assert.doesNotMatch(maybeSource, /isMain\(/, 'proactive contact must work for th
 assert.doesNotMatch(maybeSource, /15\s*\*\s*60000/, 'the configured interval must not be replaced by a 15-minute floor');
 assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep activity must not override an explicitly configured proactive window');
 assert.match(maybeSource, /affNow\(c\)>=35/, 'ignore escalation may suppress ordinary initiative only when escalation is actually eligible');
-assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]/);
+assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]/);
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);
 assert.match(source, /focus['"],initiativeWakeCheck/);
 assert.match(source, /【本轮允许主动照片】/);
 assert.match(source, /【本轮允许位置报备】/);
-assert.match(source, /普通问候、催回复和关心消息绝对不能顺带附图/);
+assert.match(source, /普通问候、催回复、关心和查岗绝对不能顺带附图/);
 assert.match(source, /_initiativeNoImage=initiativeBlocksImage\(note\)/);
 assert.match(source, /_initiativeNoLocation=initiativeBlocksLocation\(note\)/);
 assert.match(source, /_initiativeNoImage&&[\s\S]*photoTail=3;continue/);
@@ -75,11 +75,13 @@ const planContext = vm.createContext({
   imageGenerationAvailable: () => true,
   roleLiveLoc: () => ({name: '公司', address: '办公区'}),
   activityHash: () => 0,
+  traitValue: (c,k,f=0) => c&&c.traits&&c.traits[k]!=null?+c.traits[k]:f,
+  suspicionBusy: () => false,
   memoryNorm: (v) => String(v),
   hm: () => '12:00',
   Math: planMath,
 });
-vm.runInContext(functionSource('initiativeLocationReady') + ';' + functionSource('initiativePlan') + ';globalThis.plan=initiativePlan;', planContext);
+vm.runInContext(functionSource('initiativeLocationReady') + ';' + functionSource('initiativeCheckInMode') + ';' + functionSource('initiativePlan') + ';globalThis.plan=initiativePlan;globalThis.checkin=initiativeCheckInMode;', planContext);
 const role = {id: 'r1', traits: {active: 50, cling: 60}};
 const activity = {key: 'morning', label: '刚起床收拾', busy: 1};
 const ordinaryPlan = planContext.plan(role, activity, {turn: 1, lastKind: '', lastMemory: ''});
@@ -98,13 +100,35 @@ planContext.S.settings.imgGen = false;
 const textOnlyPlan = planContext.plan(role, photoActivity, {turn: 3, lastKind: '', lastMemory: ''});
 assert.notEqual(textOnlyPlan.kind, 'photo');
 assert.notEqual(textOnlyPlan.kind, 'location');
-assert.match(textOnlyPlan.note, /图片功能没开就只发文字/);
+assert.match(textOnlyPlan.note, /日常视觉见闻只有本轮明确允许时才能发 \[图片\]/);
 planContext.S.settings.imgGen = true;
 const travelActivity = {key: 'morning', label: '在通勤路上', busy: 1};
 const locationPlan = planContext.plan(role, travelActivity, {turn: 3, lastKind: '', lastMemory: ''});
 assert.equal(locationPlan.kind, 'location');
 assert.match(locationPlan.note, /\[位置\|公司\|办公区\]/);
 assert.match(locationPlan.note, /【本轮允许位置报备】/);
+
+const strictRole = {id:'strict',traits:{active:50,cling:50,suspicious:100,paranoid:100}};
+const strictState = {turn:0,lastKind:'',lastMemory:'',lastCheckinAt:0};
+assert.equal(planContext.checkin(strictRole,strictState,Date.now()),'report');
+const strictPlan = planContext.plan(strictRole,activity,strictState);
+assert.equal(strictPlan.kind,'checkin');
+assert.equal(strictPlan.checkMode,'report');
+assert.match(strictPlan.note,/强度高于基础人设/);
+assert.match(strictPlan.note,/敏感多疑只负责情绪动机/);
+assert.match(strictPlan.note,/偏执只负责行动力度/);
+assert.match(strictPlan.note,/不能叠加多个任务/);
+assert.match(strictPlan.note,/\[要求报备\|想知道你现在在哪里、在做什么\]/);
+assert.equal(planContext.checkin(strictRole,{turn:4,lastCheckinAt:0},Date.now()),'location','100/100 must select one rotated check-in action');
+assert.equal(planContext.checkin(strictRole,{turn:8,lastCheckinAt:0},Date.now()),'photo','100/100 must not stack location and photo in one turn');
+const sharedTurn = planContext.plan(strictRole,activity,{turn:1,lastKind:'checkin',lastMemory:'',lastCheckinAt:0});
+assert.notEqual(sharedTurn.kind,'checkin','100-level roles still need varied daily life messages between check-ins');
+const sensitiveRole = {id:'sensitive',traits:{active:50,cling:50,suspicious:100,paranoid:10}};
+assert.equal(planContext.checkin(sensitiveRole,{turn:0,lastCheckinAt:0},Date.now()),'reassurance');
+const paranoidRole = {id:'paranoid',traits:{active:50,cling:50,suspicious:10,paranoid:100}};
+assert.equal(planContext.checkin(paranoidRole,{turn:0,lastCheckinAt:0},Date.now()),'scrutiny');
+const cooldownState={turn:2,lastCheckinAt:Date.now()-5*60000};
+assert.equal(planContext.checkin(strictRole,cooldownState,Date.now()),'','check-ins must respect a short anti-spam cooldown');
 
 function schedulerContext({planKind = 'share', callProb = 0, queue = true, delivered = queue, activityKey = 'work'} = {}) {
   const now = Date.now();

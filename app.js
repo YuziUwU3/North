@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='719'){
+if(window.__NORTH_SHELL_BUILD__!=='720'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v719 · AI点数结算加固';
+const APP_VER='v720 · 主动查岗强度联动';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1316,7 +1316,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=719';
+  const url='sw.js?v=720';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2039,7 +2039,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=719').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=720').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -9980,21 +9980,24 @@ function initiativeBlocksImage(note){return !!(note&&/这是一次【主动消�
 function initiativeBlocksLocation(note){return !!(note&&/这是一次【主动消息】/.test(note)&&!/【本轮允许位置报备】/.test(note));}
 function initiativePhotoCaptionOk(note,content){if(!note||!/【本轮允许主动照片】/.test(note))return false;const text=String(content||'').split(/\n+/).filter(x=>!/^\s*[\[【](?:图片|照片|自拍|心情|心情值)[|｜:：]/.test(x)).join(' ').replace(/\s+/g,' ').trim();if(!text)return false;const linked=/(给你看|拍给你|拍了|发给你|发来|报备|分享|刚看到|刚拍|路过|窗外|这边|眼前|这一幕|这个|好看|天气|晚霞|云|下雨|下雪|阳光|街景|路上|桌面|早餐|午饭|晚饭|咖啡|花|猫|狗|风景|现场)/.test(text),generic=/(醒了没|醒了吗|睡醒没|睡醒了吗|怎么不回|为什么不回|在干嘛|干什么|怎么不接)/.test(text);return linked&&!generic;}
 function initiativeLocationReady(a){const label=String(a&&a.label||'');return /(?:在通勤路上|在(?:去|回|前往|赶往)[^，。]{0,12}路上|刚到(?:达)?|已经?到(?:达)?|抵达|正在?出发|前往|赶往|机场|车站|航班|酒店办理入住|来接|去接|等你到)/.test(label);}
-function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50,canPhoto=!!(S.settings.imgGen&&imageGenerationAvailable()),slot=(+st.turn||0)%6,photoReady=canPhoto&&a&&a.key!=='sleep'&&!/(睡觉|睡着|准备休息|准备睡|刚起床)/.test(a.label||''),locationReady=initiativeLocationReady(a);let kind;
-  if(slot===3&&locationReady)kind='location';
+function initiativeCheckInMode(c,st,now){const t=c&&c.traits||{},s=t.suspicious==null?0:Math.max(0,Math.min(100,+t.suspicious||0)),p=t.paranoid==null?0:Math.max(0,Math.min(100,+t.paranoid||0)),top=Math.max(s,p),level=s>=95&&p>=95?4:top>=90?3:top>=70?2:top>=45?1:0;if(!level||typeof suspicionBusy==='function'&&suspicionBusy(c))return'';now=+now||Date.now();const every=[0,6,4,3,2][level],gap=[0,180,120,60,30][level]*60000,turn=+st.turn||0;if(st.lastCheckinAt&&now-st.lastCheckinAt<gap||turn%every)return'';if(level===4)return['report','natural','location','natural','photo','natural'][Math.floor(turn/every)%6];if(s>=p+15)return'reassurance';if(p>=s+15)return'scrutiny';return'mixed';}
+function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.traits&&c.traits.active!=null?+c.traits.active:50,cling=c.traits&&c.traits.cling!=null?+c.traits.cling:50,sensitive=traitValue(c,'suspicious',0),paranoid=traitValue(c,'paranoid',0),canPhoto=!!(S.settings.imgGen&&imageGenerationAvailable()),slot=(+st.turn||0)%6,photoReady=canPhoto&&a&&a.key!=='sleep'&&!/(睡觉|睡着|准备休息|准备睡|刚起床)/.test(a.label||''),locationReady=initiativeLocationReady(a),checkMode=initiativeCheckInMode(c,st);let kind;
+  if(checkMode)kind='checkin';
+  else if(slot===3&&locationReady)kind='location';
   else if(photoReady&&(slot===3||Math.random()<.18))kind='photo';
   else if(mem&&Math.random()<(active>=65?.48:.32))kind='callback';
   else if(a&&a.busy<=1&&Math.random()<.5)kind='share';
   else if(active>=60&&Math.random()<.55)kind='self';
   else kind='reconnect';
   if(kind===st.lastKind){const choices=['callback','share','self','reconnect'].filter(x=>x!==kind&&(x!=='callback'||mem));if(choices.length)kind=choices[activityHash(c.id+'|'+Date.now())%choices.length];}
-  let goal='';if(kind==='callback')goal='自然想起并回访这件事：「'+mem.text+'」。只问一个具体落点，不要背诵旧记录，也不要说“我还记得数据库里写着”。';
+  let goal='';if(kind==='checkin'){const priority=sensitive>=95&&paranoid>=95?'这是95–100组合严格档：敏感多疑只负责情绪动机（在意、担心、受伤或起疑），偏执只负责行动力度（追问或要求确认），两者必须合成一次自然反应，不能各说一套、不能叠加多个任务。查岗强度高于基础人设；基础人设只决定你是冷淡质问、克制审视、强势要求、委屈确认还是温柔但不容回避。不能把它弱化成普通问候。':'';if(checkMode==='report')goal=priority+'这次必须主动查岗，并单独输出 [要求报备|想知道你现在在哪里、在做什么]，再配一到两句符合角色的自然话；只要这一种确认。';else if(checkMode==='location')goal=priority+'这次必须主动查岗，并单独输出 [要求定位|想确认你现在在哪里]，再配一到两句自然话；不要同时要求照片或报备。';else if(checkMode==='photo')goal=priority+'这次必须主动查岗，并单独输出 [要求照片|想看看你现在在做什么]，再配一到两句自然话；不要同时要求定位或报备。';else if(checkMode==='reassurance')goal='你的敏感多疑很高。你会主动担心ta是否还在意你、是否安稳，也更需要得到回应；先表达真实在意或一点受伤，再只问一个具体的去向/状态问题，不得凭空指控。';else if(checkMode==='scrutiny')goal='你的偏执度很高。你会主动想掌握ta的去向和安排，并在意回答是否具体连贯；只查问一个具体事实，例如现在在哪里、在做什么或大概几点回来，不得凭空认定ta撒谎。';else goal='你的敏感多疑和偏执都很高。主动发起一次明显但自然的查岗：先表现担心、起疑或不悦，再只问一个具体的去向/状态问题，不能像普通问候一样轻轻带过。';}
+  else if(kind==='callback')goal='自然想起并回访这件事：「'+mem.text+'」。只问一个具体落点，不要背诵旧记录，也不要说“我还记得数据库里写着”。';
   else if(kind==='photo')goal='从你此刻“'+a.label+'”这个真实状态出发，挑一个确实值得给ta看的具体画面，例如眼前的天气、光线、夜景、路上景色、桌面、食物、宠物或正在做的事。必须单独发一行 [图片|具体的生活感随手拍描述]，并配一句直接说明“拍了什么、为什么想给ta看”的自然短话。默认是你拿手机向外拍眼前所见，画面里没有任何人物；只有你这一轮确实想让ta看你本人时，才明确写自拍、本人入镜或自己的背影。用户若点名要夜景、风景、街景、天空、宠物或物品，就只拍那个主体，不能擅自把自己加进去。照片和文字必须讲同一件事；这一轮不要再问“醒了吗/在干嘛/怎么不回/怎么不接”等无关问题，也不要为了发图编造系统不知道的地点、人物或事件。';
   else if(kind==='location'){const loc=roleLiveLoc(c),ln=String(loc.name||loc.city||a.label||'当前位置').replace(/[|｜\]】]/g,' '),la=String(loc.address||a.label||'').replace(/[|｜\]】]/g,' ');goal='你现在确实处于出发、到达、通勤、接送或旅行节点，需要自然报备行程。这一轮必须单独发一行 [位置|'+ln+'|'+la+']，并配一句符合人设的短话；位置只说明人在哪里，不用它代替风景或生活照片，也不得另编与当前活动不一致的地点。';}
   else if(kind==='share')goal='从你此刻“'+a.label+'”这个真实状态出发，分享一个很小的当下感受或念头；可以说刚忙完、正休息、准备做什么，但不要编造具体公司、人名、餐厅、商品、天气或已经发生的外部事件。';
   else if(kind==='self')goal='主动表达一个符合你人设的真实想法、偏好或此刻心情，让对方更了解你；要和近期聊天有一点自然联系，不要突然发表人生演讲。';
   else goal='自然重新开启对话。主动度或黏人度高可以直接表达想念、想听ta说话；低则淡淡抛出一个具体话头。不要机械质问“为什么不回”，也不要查岗。';
-  return{kind,memory:mem,goal,note:'[系统：这是一次【主动消息】，不是对方刚发来新话。'+(kind==='photo'?'【本轮允许主动照片】':'【本轮不是照片分享，禁止附带图片或自拍】')+(kind==='location'?'【本轮允许位置报备】':'【本轮禁止发送位置卡片】')+'现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按你的主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常生活小片段、突然想到ta、碎碎念、轻微吃醋/撒娇/关心都要按人设轮换。日常视觉见闻在图片功能开启时优先发照片；图片功能没开就只发文字，绝不能用位置卡片顶替。只有明确出发、到达、通勤、接送或旅行报备时才发位置。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。只有本轮明确标记允许主动照片时才能发 [图片]；普通问候、催回复和关心消息绝对不能顺带附图。]'};}
+  return{kind,checkMode,memory:mem,goal,note:'[系统：这是一次【主动消息】，不是对方刚发来新话。'+(kind==='photo'?'【本轮允许主动照片】':'【本轮不是照片分享，禁止附带图片或自拍】')+(kind==='location'?'【本轮允许位置报备】':'【本轮禁止发送位置卡片】')+'现在是'+hm()+'，你此刻'+a.label+'。本轮目标：'+goal+'\n按敏感多疑 '+sensitive+'/100、偏执度 '+paranoid+'/100、主动度 '+active+'/100、黏人度 '+cling+'/100 和关系阶段决定热度。主动内容要多样：日常分享、突然想到ta、碎碎念、关心和查岗按强度轮换；高敏感/高偏执不能永远只分享自己生活，但同一次只处理一种查岗或确认。只发1到2条有内容的短消息，留一个对方容易接住的落点；不要复述最近说过的话，不要例行问候，不要编造系统不知道的现实细节。日常视觉见闻只有本轮明确允许时才能发 [图片]；普通问候、催回复、关心和查岗绝对不能顺带附图。只有角色自己明确出发、到达、通勤、接送或旅行报备时才发 [位置]，不能用自己的位置卡片代替向对方查岗。]'};}
 let _initiativeBusy={};
 function initiativeRunKey(c){return memoryScopeKey()+'|'+c.id;}
 function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.settings.initiative===false||!c||c.deleted||c.blocked||(typeof cinemaRoleOccupied==='function'&&cinemaRoleOccupied(c.id))||!c.proactive||!c.proactive.enabled||_call||_initiativeBusy[runKey])return false;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active)return false;const now=new Date();if(!initiativeWindow(c,now))return false;
@@ -10005,8 +10008,8 @@ function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.setting
   S._proactiveCount=S._proactiveCount||{};const countKey=memoryScopeKey()==='main'?c.id:runKey,today=now.toDateString(),pc=S._proactiveCount[countKey]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}if(pc.n>=(c.proactive.times||1))return false;
   const a=currentRoleActivity(c,now);if(!a)return false;/* 用户明确设置的主动时段优先：即使推断活动是睡觉，也不能悄悄把一分钟间隔拖到早晨 */
   if(lm&&lm.role==='assistant'&&ts-(lm.time||0)<delay){st.nextAt=(lm.time||ts)+delay;return false;}
-  const plan=initiativePlan(c,a,st),record=()=>{const doneAt=Date.now();st.lastAt=doneAt;st.lastKind=plan.kind;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=doneAt+initiativeDelayMs(c);st.turn=(+st.turn||0)+1;c._initiativeLast={time:doneAt,kind:plan.kind,activity:a.label,memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[countKey]=pc;save();};
-  const cp=effCallProb(c),callEligible=plan.kind!=='photo'&&plan.kind!=='location';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
+  const plan=initiativePlan(c,a,st),record=()=>{const doneAt=Date.now();st.lastAt=doneAt;st.lastKind=plan.kind;if(plan.kind==='checkin')st.lastCheckinAt=doneAt;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=doneAt+initiativeDelayMs(c);st.turn=(+st.turn||0)+1;c._initiativeLast={time:doneAt,kind:plan.kind,activity:a.label,memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[countKey]=pc;save();};
+  const cp=effCallProb(c),callEligible=plan.kind!=='photo'&&plan.kind!=='location'&&plan.kind!=='checkin';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
   _initiativeBusy[runKey]=1;const queued=scheduleReply(c.id,plan.note,ok=>{delete _initiativeBusy[runKey];if(ok)record();else{st.nextAt=Date.now()+15000;save();}});if(!queued){delete _initiativeBusy[runKey];st.nextAt=ts+15000;return false;}setTimeout(()=>{if(_initiativeBusy[runKey]){delete _initiativeBusy[runKey];st.nextAt=Date.now()+15000;}},300000);return true;}
 let _initiativeCursor=0;
 function checkInitiative(){if(S.settings.initiative===false)return;const cs=S.contacts||[];for(let i=0;i<cs.length;i++){const idx=(_initiativeCursor+i)%cs.length;if(initiativeMaybeSend(cs[idx])){_initiativeCursor=(idx+1)%Math.max(1,cs.length);break;}}}
