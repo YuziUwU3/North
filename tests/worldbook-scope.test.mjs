@@ -11,6 +11,10 @@ assert.match(source, /const WORLD_SCOPE_OPTIONS=/);
 assert.match(source, /允许这些软件吃世界书/);
 assert.match(source, /function worldbookScopeOn\(scope\)/);
 assert.match(source, /function toggleWorldScope\(k\)/);
+assert.match(source, /function worldbookImportFile\(\)/);
+assert.match(source, /\.json,\.txt,\.md/);
+assert.match(source, /导入只会追加，不会覆盖现有内容/);
+assert.match(source, /TXT\/MD 会作为一条常驻世界书/);
 assert.match(source, /worldbookPrompt\(recent,c\.id,'',opt\.worldbookScope\|\|'wechat'\)/);
 assert.match(source, /worldbookPrompt\([\s\S]*?'线下约会','offline'\)/);
 assert.match(source, /worldbookPromptForContacts\([\s\S]*?'角色扮演软件','roleplay'\)/);
@@ -60,5 +64,20 @@ assert.match(sandbox.roleplayText, /只给角色一/);
 assert.equal(sandbox.offlineOn, true);
 assert.equal(sandbox.saved, true);
 assert.equal(sandbox.rendered, true);
+
+const importStart = source.indexOf("function worldbookFileBase(name)");
+const importEnd = source.indexOf("function worldbookReadText(f)", importStart);
+assert.ok(importStart >= 0 && importEnd > importStart);
+const importSandbox = { S: { contacts: [{ id: "c1" }] } };
+vm.runInNewContext(
+  source.slice(importStart, importEnd) +
+    ";globalThis.fromText=worldbookImportRows(null,'城市设定.md','苏州全年多雨');" +
+    ";globalThis.fromJson=worldbookImportRows({entries:{0:{comment:'机场',key:['机场','登机'],content:'机场设定',constant:false,disable:false},1:{name:'常识',content:'共同常识',constant:true}}},'book.json','');",
+  importSandbox,
+);
+assert.deepEqual(JSON.parse(JSON.stringify(importSandbox.fromText)), [{ name: "城市设定", keys: "", content: "苏州全年多雨", enabled: true, always: true, contacts: [] }]);
+assert.equal(importSandbox.fromJson.length, 2);
+assert.deepEqual(JSON.parse(JSON.stringify(importSandbox.fromJson[0])), { name: "机场", keys: "机场,登机", content: "机场设定", enabled: true, always: false, contacts: [] });
+assert.equal(importSandbox.fromJson[1].always, true);
 
 console.log("worldbook scope tests passed");

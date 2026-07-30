@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='726'){
+if(window.__NORTH_SHELL_BUILD__!=='727'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -350,7 +350,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v726 · 授权异常恢复';
+const APP_VER='v727 · 回复补试与世界书导入';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1316,7 +1316,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=726';
+  const url='sw.js?v=727';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2054,7 +2054,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=726').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=727').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -3347,9 +3347,9 @@ function pickTtsProvider(base,model){const b=$('#s_tbase'),m=$('#s_tmodel');if(b
 
 /* ---------- 世界书 ---------- */
 function renderWorldbook(){
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">世界书</span><span class="r" onclick="editWorld()">＋</span></div>
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">世界书</span><span class="r" style="min-width:88px;gap:14px"><small onclick="worldbookImportFile()" style="font-size:13px;cursor:pointer">导入</small><b onclick="editWorld()" style="font-size:24px;font-weight:400;cursor:pointer">＋</b></span></div>
   <div class="scroll" style="padding:12px;background:#000">
-    <div class="hint">世界书 = 给所有角色共享的设定/常识。"常驻"的每次都生效；否则当聊天里出现关键词时才注入。</div>
+    <div class="hint">世界书 = 给所有角色共享的设定/常识。"常驻"的每次都生效；否则当聊天里出现关键词时才注入。支持导入 TXT、MD、JSON，导入只会追加，不会覆盖现有内容；TXT/MD 会作为一条常驻世界书。</div>
     <div class="section">
       <div style="padding:10px 14px;color:#ffca7a;font-weight:700">允许这些软件吃世界书</div>
       ${WORLD_SCOPE_OPTIONS.map(([k,t])=>`<div class="it"><span>${esc(t)}</span><span class="sw ${worldbookScopeOn(k)?'on':''}" onclick="toggleWorldScope('${k}')"></span></div>`).join('')}
@@ -3378,6 +3378,13 @@ function saveWorld(id,isNew){const contacts=[...document.querySelectorAll('[data
   if(isNew)S.worldbook.push(w);else{const i=S.worldbook.findIndex(x=>x.id===id);w.enabled=S.worldbook[i].enabled;S.worldbook[i]=w;}
   save();closeModal();render();}
 function delWorld(id){S.worldbook=S.worldbook.filter(x=>x.id!==id);save();closeModal();render();}
+function worldbookFileBase(name){return String(name||'导入世界书').replace(/\.[^.]+$/,'').trim()||'导入世界书';}
+function worldbookJSONList(data){if(Array.isArray(data))return data;if(!data||typeof data!=='object')return[];if(Array.isArray(data.worldbook))return data.worldbook;let e=data.entries||(data.character_book&&data.character_book.entries)||(data.data&&data.data.character_book&&data.data.character_book.entries);if(Array.isArray(e))return e;if(e&&typeof e==='object')return Object.values(e);if(data.content||data.text||data.description)return[data];return[];}
+function worldbookImportRows(data,fileName,plainText){const base=worldbookFileBase(fileName);if(data==null){const content=String(plainText||'').replace(/^\uFEFF/,'').trim();return content?[{name:base,keys:'',content:content.slice(0,100000),enabled:true,always:true,contacts:[]}]:[];}return worldbookJSONList(data).slice(0,500).map((x,i)=>{x=x&&typeof x==='object'?x:{};let keys=x.keys!=null?x.keys:(x.key!=null?x.key:(x.keywords!=null?x.keywords:''));if(Array.isArray(keys))keys=keys.join(',');else keys=String(keys||'');let content=x.content!=null?x.content:(x.text!=null?x.text:(x.description!=null?x.description:''));if(content&&typeof content==='object')content=JSON.stringify(content);content=String(content||'').trim().slice(0,100000);const contacts=Array.isArray(x.contacts)?x.contacts.filter(cid=>(S.contacts||[]).some(c=>c&&!c.deleted&&c.id===cid)):[];return{name:String(x.name||x.comment||x.title||(base+(i?' '+(i+1):''))).trim().slice(0,80)||base,keys:keys.trim().slice(0,1000),content,enabled:x.enabled!==false&&x.disable!==true,always:x.always===true||x.constant===true||!keys.trim(),contacts};}).filter(x=>x.content);}
+function worldbookReadText(f){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(new Error('文件读取失败，请重新选择'));r.readAsText(f);});}
+function worldbookMergeRows(rows){S.worldbook=S.worldbook||[];let added=0,skipped=0;rows.forEach(w=>{const duplicate=S.worldbook.some(x=>x&&String(x.name||'').trim()===w.name&&String(x.keys||'').trim()===w.keys&&String(x.content||'').trim()===w.content);if(duplicate){skipped++;return;}S.worldbook.push(Object.assign({},w,{id:uid()}));added++;});if(added){save();render();}toast(added?'已导入 '+added+' 条世界书'+(skipped?'，跳过 '+skipped+' 条重复内容':''):(skipped?'这些内容已经导入过了':'文件里没有可导入的世界书内容'));return{added,skipped};}
+async function worldbookImportRead(f){try{if(!f)throw new Error('没有选择文件');if((+f.size||0)>4*1024*1024)throw new Error('文件超过 4MB，请拆分后再导入');const text=await worldbookReadText(f),isJson=/\.json$/i.test(f.name||'')||/json/i.test(f.type||'');let data=null;if(isJson){try{data=JSON.parse(text.replace(/^\uFEFF/,''));}catch(_){throw new Error('JSON 格式不正确，请检查文件后重试');}}const rows=worldbookImportRows(data,f.name,text);worldbookMergeRows(rows);}catch(e){toast((e&&e.message)||'世界书文件导入失败');}}
+function worldbookImportFile(){pickFile('.json,.txt,.md,application/json,text/plain,text/markdown',f=>worldbookImportRead(f));}
 
 /* ---------- 查他手机 ---------- */
 function openSpy(){if(S.couple&&S.couple.cid&&getC(S.couple.cid)){go('spy',{id:S.couple.cid});return;}
@@ -9351,6 +9358,7 @@ function replyEpoch(id,aid){const k=replyStateKey(id,aid);return +(_replyEpoch&&
 function replyTouch(id,aid){const k=replyStateKey(id,aid);_replyEpoch[k]=replyEpoch(id,aid)+1;if(_replyTimers[k]){clearTimeout(_replyTimers[k]);delete _replyTimers[k];}delete _replyDeferred[k];try{if((aid||actId())===actId()&&cur().p==='chat'&&cur().id===id){const t=$('#typing');if(t)t.remove();}}catch(_){}}
 function replyStale(id,token,aid){return token!=null&&+token!==replyEpoch(id,aid);}
 function replyPendingUserText(id,aid){const a=msgsForAccount(id,aid||actId()),out=[];for(let i=a.length-1;i>=0;i--){const m=a[i];if(!m||m._call)continue;if(m.role==='assistant'&&m.type!=='sys')break;if(m.role==='user'&&m.type!=='sys'){const t=msgToText(m);if(t)out.unshift('· '+t.replace(/\n/g,' ').slice(0,220));}}return out.slice(-6).join('\n');}
+function replyVisibleAssistantCount(id,aid){return msgsForAccount(id,aid||actId()).filter(m=>m&&m.role==='assistant'&&m.type!=='sys').length;}
 function deferAccountReply(id,note,token,aid){const k=replyStateKey(id,aid);if(replyStale(id,token,aid))return;_replyDeferred[k]={id,note,token,aid};}
 function replyAccountChanged(id,note,token,aid,typingEl){if(actId()===aid)return false;if(typingEl&&typingEl.isConnected)typingEl.remove();deferAccountReply(id,note,token,aid);return true;}
 function resumeAccountReplies(aid){Object.keys(_replyDeferred).forEach(k=>{const d=_replyDeferred[k];if(!d||d.aid!==aid||replyStale(d.id,d.token,d.aid))return;delete _replyDeferred[k];clearTimeout(_replyTimers[k]);_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];aiReply(d.id,d.note,d.token,d.aid);},120);});}
@@ -9366,10 +9374,11 @@ function scheduleReply(id,note,onDone){
   // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
   if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();if(typeof onDone==='function')onDone(false);return false;}
   const aid=actId(),k=replyStateKey(id,aid),token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);if(_replyDone[k]){const prev=_replyDone[k];delete _replyDone[k];try{prev(false);}catch(_){}}delete _replyDeferred[k];if(typeof onDone==='function')_replyDone[k]=onDone;_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];const done=_replyDone[k];delete _replyDone[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);if(done)done(false);return;}Promise.resolve(aiReply(id,note,token,aid)).then(ok=>{if(done)done(ok===true);}).catch(()=>{if(done)done(false);});},(Number(S.settings.replyDelay)||0)*1000);return true;}
-function manualReply(id){if(offlineFocusActive()){toast('线下约会进行中，微信消息已暂停');return;}if(_replying)return;if(hasPendingVision(id)){toast('图片还在识别，看到“已看清”后再点');return;}const c=getC(id);if(!c||c.blocked)return;_replying=id;if(cur().p==='chat'&&cur().id===id)render();
+function manualReplyRetryAllowed(id,aid,token){const c=getC(id);return !!(c&&!c.blocked&&!c.deleted&&actId()===aid&&!replyStale(id,token,aid)&&!offlineFocusActive()&&!cinemaRoleOccupied(id)&&!wxLoginBlockReply(id));}
+async function manualReply(id){if(offlineFocusActive()){toast('线下约会进行中，微信消息已暂停');return;}if(_replying)return;if(hasPendingVision(id)){toast('图片还在识别，看到“已看清”后再点');return;}const c=getC(id);if(!c||c.blocked)return;_replying=id;if(cur().p==='chat'&&cur().id===id)render();
   // 判断最后一条真实对话是谁发的：若是他自己发的，这次「让ta回复」=继续多说，要明确告诉他别把自己的话当成对方说的
   let _note;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){const mm=_ms[i];if(mm.type==='sys'||mm._call)continue;if(mm.role==='user')break;if(mm.role==='assistant'){_note='[系统：'+S.me.name+'这会儿还没开口、还没回你。请你接着自己刚才的话【再自然地多说几句】（补充、延续你上面说的，或换个角度再聊两句），不要重复已经说过的内容。注意：上面那几条都是【你自己】说的，不是'+S.me.name+'说的，千万别把自己说过的话当成ta说的去回应。]';break;}}}
-  const aid=actId(),token=replyEpoch(id,aid);Promise.resolve(aiReply(id,_note,token,aid)).finally(()=>{_replying=null;if(cur().p==='chat'&&cur().id===id)render();});}
+  const aid=actId(),token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token))toast('这次模型没有返回可见消息，请再点一下');}}finally{_replying=null;if(cur().p==='chat'&&cur().id===id)render();}}
 /* 提示音 + 通知 */
 let _audio;
 function ensureAudio(){try{
