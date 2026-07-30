@@ -40,6 +40,9 @@ test("remote control opens contacts, then new friends, before rejecting selected
   assert.match(source, /op:'reject_friend_request'/);
   assert.match(source, /fromNewFriendList:true/);
   assert.match(source, /remoteControlPrepareFriendReject\(a\)/);
+  assert.match(functionSource("remoteControlPrepareFriendReject"), /preparedFriendReject=\{rid:a\.targetId,button:btn\}/);
+  assert.match(functionSource("remoteControlExecute"), /prepared\.button\.click\(\)/);
+  assert.match(functionSource("remoteControlExecute"), /x\.status==='rejected'/);
   assert.match(source, /targetType==='newFriendList'\)\{wxTab='chats';remoteControlSetPage\('wechat'\)/);
 });
 
@@ -79,7 +82,7 @@ test("WeChat friends and Phone contacts have distinct labels, and Me uses a line
   assert.match(source, /remoteControlOpenApp\(a,c\)[\s\S]*?remoteControlDesktopKey\(app\)/);
 });
 
-test("the role sees only visible pending requests and chooses instead of rejecting all", () => {
+test("the role sees only visible pending requests, avoids blanket rejection, and completes the dedicated task", () => {
   const candidates = functionSource("remoteControlNewFriendRequests");
   const choice = functionSource("remoteControlNewFriendChoicePlan");
   assert.match(candidates, /r\.status==='pending'/);
@@ -87,7 +90,44 @@ test("the role sees only visible pending requests and chooses instead of rejecti
   assert.match(candidates, /r\.contactId!==actorId/);
   assert.match(choice, /只挑出你真正介意/);
   assert.match(choice, /不要为了展示功能而全选/);
-  assert.match(choice, /没有想拒绝的就返回空数组/);
+  assert.match(choice, /必须至少拒绝一位/);
+  assert.match(choice, /普通合理申请可以保留/);
+});
+
+test("a dedicated rejection cannot leave without at least one real reject action", () => {
+  const context = vm.createContext({
+    _remoteCtl: { purpose: "reject_friend_requests" },
+    remoteControlNewFriendRequests: () => [],
+    remoteControlIntentContext: () => "",
+  });
+  for (const name of ["remoteControlFriendRejectActions", "remoteControlForcedFriendRejectPlan"])
+    vm.runInContext(`${functionSource(name)};globalThis.${name}=${name};`, context);
+  const list = [
+    { id: "r1", name: "程野" },
+    { id: "r2", name: "贺川" },
+  ];
+  const named = context.remoteControlForcedFriendRejectPlan({}, list, "先拒绝贺川");
+  assert.equal(named.length, 1);
+  assert.equal(named[0].targetId, "r2");
+  assert.equal(named[0].op, "reject_friend_request");
+  const fallback = context.remoteControlForcedFriendRejectPlan({}, list, "把在意的申请拒绝掉");
+  assert.equal(fallback.length, 1);
+  assert.equal(fallback[0].targetId, "r1");
+});
+
+test("the same completed remote intent is blocked from immediately starting again", () => {
+  let now = 100000;
+  const context = vm.createContext({
+    Date: { now: () => now },
+    _remoteIntentDone: { r1: { purpose: "reject_friend_requests", intentIssuedAt: 90000, at: 99000 } },
+    REMOTE_REPEAT_GUARD_MS: 120000,
+  });
+  vm.runInContext(`${functionSource("remoteControlRepeatBlocked")};globalThis.remoteControlRepeatBlocked=remoteControlRepeatBlocked;`, context);
+  assert.equal(context.remoteControlRepeatBlocked("r1", "reject_friend_requests", 0), true);
+  assert.equal(context.remoteControlRepeatBlocked("r1", "reject_friend_requests", 90000), true);
+  assert.equal(context.remoteControlRepeatBlocked("r1", "reject_friend_requests", 100001), false);
+  now += 120001;
+  assert.equal(context.remoteControlRepeatBlocked("r1", "reject_friend_requests", 0), false);
 });
 
 test("rejecting a request is idempotent and preserves the existing 24-hour record", () => {
