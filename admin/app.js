@@ -48,29 +48,36 @@ const operatorLabel = (value) => {
 };
 
 async function api(action, payload = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: PUBLIC_KEY,
-        Authorization: 'Bearer ' + PUBLIC_KEY,
-        'x-admin-token': token,
-      },
-      body: JSON.stringify({action, ...payload}),
-      signal: controller.signal,
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok || !data || data.ok === false) {
-      const error = new Error((data && data.error) || ('HTTP ' + response.status));
-      error.status = response.status;
-      throw error;
+  const attempts = action === 'admin_license_users' ? 2 : 1;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: PUBLIC_KEY,
+          Authorization: 'Bearer ' + PUBLIC_KEY,
+          'x-admin-token': token,
+        },
+        body: JSON.stringify({action, ...payload}),
+        signal: controller.signal,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data || data.ok === false) {
+        const error = new Error((data && data.error) || ('HTTP ' + response.status));
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      const transient = error.name === 'AbortError' || !error.status || error.status >= 500;
+      if (!transient || attempt + 1 >= attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    } finally {
+      clearTimeout(timer);
     }
-    return data;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -622,7 +629,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=632', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=633', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -719,6 +726,6 @@ async function restoreSavedLogin() {
   showAuth('请重新进入');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=632', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=633', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();

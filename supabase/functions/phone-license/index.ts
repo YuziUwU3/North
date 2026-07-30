@@ -694,7 +694,11 @@ async function redeemRecovery(req: Request, body: JsonMap) {
 async function restoreLocalIdentity(req: Request, body: JsonMap) {
   const phoneFriendId = cleanText(body.phoneFriendId, 16).toUpperCase();
   const phoneFriendSecret = cleanText(body.phoneFriendSecret, 180);
-  if (!/^SP[A-Z0-9]{8}$/.test(phoneFriendId) || phoneFriendSecret.length < 16) {
+  const aiUserId = cleanText(body.aiUserId, 140);
+  const aiClientSecret = cleanText(body.aiClientSecret, 260);
+  const hasFriendIdentity = /^SP[A-Z0-9]{8}$/.test(phoneFriendId) && phoneFriendSecret.length >= 16;
+  const hasAiIdentity = aiUserId.length >= 8 && aiClientSecret.length >= 16;
+  if (!hasFriendIdentity && !hasAiIdentity) {
     throw new LicenseHttpError('本机恢复身份不完整', 400, 'license-local-identity-missing');
   }
   const { data: wave, error: waveError } = await supabase
@@ -706,25 +710,41 @@ async function restoreLocalIdentity(req: Request, body: JsonMap) {
   if (!wave || new Date(wave.expires_at).getTime() <= Date.now()) {
     throw new LicenseHttpError('当前没有开放批量恢复', 409, 'license-incident-recovery-closed');
   }
-  const { data: verified, error: verifyError } = await supabase.rpc('phone_friend_check', {
-    p_phone_id: phoneFriendId,
-    p_secret: phoneFriendSecret,
-  });
-  if (verifyError) throw temporaryLicenseError();
-  if (verified !== true) {
+  const licenses = new Map<string, JsonMap>();
+  let friendServiceFailed = false;
+  if (hasFriendIdentity) {
+    const { data: verified, error: verifyError } = await supabase.rpc('phone_friend_check', {
+      p_phone_id: phoneFriendId,
+      p_secret: phoneFriendSecret,
+    });
+    friendServiceFailed = !!verifyError;
+    if (!verifyError && verified === true) {
+      const { data: rows, error } = await supabase
+        .from('phone_licenses')
+        .select('id,status,epoch,updated_at')
+        .eq('phone_friend_id', phoneFriendId)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      if (error) throw temporaryLicenseError();
+      for (const item of rows || []) licenses.set(String(item.id), item);
+    }
+  }
+  if (hasAiIdentity) {
+    const { data: rows, error } = await supabase
+      .from('phone_licenses')
+      .select('id,status,epoch,updated_at')
+      .eq('ai_user_id', aiUserId)
+      .eq('ai_client_secret', aiClientSecret)
+      .order('updated_at', { ascending: false })
+      .limit(20);
+    if (error) throw temporaryLicenseError();
+    for (const item of rows || []) licenses.set(String(item.id), item);
+  }
+  if (!licenses.size) {
+    if (friendServiceFailed) throw temporaryLicenseError();
     throw new LicenseHttpError('本机恢复身份校验失败', 403, 'license-local-identity-invalid', true);
   }
-  const { data: licenses, error: licenseError } = await supabase
-    .from('phone_licenses')
-    .select('id,status,epoch,updated_at')
-    .eq('phone_friend_id', phoneFriendId)
-    .order('updated_at', { ascending: false })
-    .limit(20);
-  if (licenseError) throw temporaryLicenseError();
-  if (!licenses?.length) {
-    throw new LicenseHttpError('没有找到可恢复的手机授权', 404, 'license-local-identity-unlinked');
-  }
-  const eligible = licenses.find((item) => item.status === 'active' && Number(item.epoch) === LICENSE_EPOCH);
+  const eligible = [...licenses.values()].find((item) => item.status === 'active' && Number(item.epoch) === LICENSE_EPOCH);
   if (!eligible) throw new LicenseHttpError('等待管理员执行一键恢复', 409, 'license-awaiting-admin-restore');
   if (eligible.status !== 'active' || Number(eligible.epoch) !== LICENSE_EPOCH) {
     throw new LicenseHttpError('等待管理员执行一键恢复', 409, 'license-awaiting-admin-restore');

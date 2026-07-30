@@ -17,7 +17,7 @@ assert.match(licenseBackend, /license-admin-blocked'[\s\S]*?true/);
 assert.match(licenseBackend, /license-awaiting-admin-restore/);
 assert.match(licenseBackend, /async function restoreLocalIdentity/);
 assert.match(licenseBackend, /phone_license_incident_recovery/);
-assert.match(licenseBackend, /licenses\.find\(\(item\) => item\.status === 'active'/);
+assert.match(licenseBackend, /\[\.\.\.licenses\.values\(\)\]\.find\(\(item\) => item\.status === 'active'/);
 assert.match(licenseBackend, /action === 'local_identity_restore'/);
 assert.match(licenseBackend, /permanent: error\.permanent/);
 
@@ -30,8 +30,14 @@ assert.match(app, /e&&e\.server&&e\.permanent===true/);
 assert.doesNotMatch(app, /e&&e\.server&&e\.status===400/);
 assert.match(app, /授权服务暂时拥堵，已保留当前登录/);
 assert.match(app, /licenseTryIncidentRecovery/);
-assert.match(app, /north_license_phone_friend_sync_v1/);
+assert.match(app, /aiReady=aiId\.length>=8&&aiSecret\.length>=16/);
+assert.doesNotMatch(app, /synced\.includes\(id\)/);
 assert.match(app, /授权已自动恢复，不需要重新输入邀请码/);
+assert.match(gate, /aiUserId: aiUserId/);
+assert.match(licenseBackend, /const hasFriendIdentity/);
+assert.match(licenseBackend, /const hasAiIdentity/);
+assert.match(licenseBackend, /\.eq\('ai_user_id', aiUserId\)/);
+assert.match(licenseBackend, /if \(friendServiceFailed\) throw temporaryLicenseError\(\)/);
 
 assert.match(migration, /create table if not exists public\.phone_license_incident_recovery/);
 assert.match(migration, /create or replace function public\.phone_license_restore_all_safe/);

@@ -323,10 +323,12 @@
     return result;
   }
 
-  async function restoreLocalIdentity(phoneFriendId, phoneFriendSecret) {
+  async function restoreLocalIdentity(phoneFriendId, phoneFriendSecret, aiUserId, aiClientSecret) {
     const result = await api('local_identity_restore', {
       phoneFriendId: phoneFriendId,
       phoneFriendSecret: phoneFriendSecret,
+      aiUserId: aiUserId,
+      aiClientSecret: aiClientSecret,
       deviceLabel: deviceLabel(),
     });
     saveSession(result.session, {
