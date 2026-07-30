@@ -63,12 +63,12 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v733 shell and service worker are aligned',()=>{
+test('v734 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v733 · 微信好友入口纠正'/);
-  assert.match(html,/app\.js\?v=733/);
-  assert.match(sw,/BUILD='733'/);
+  assert.match(app,/APP_VER='v734 · 微信新朋友硬路径'/);
+  assert.match(html,/app\.js\?v=734/);
+  assert.match(sw,/BUILD='734'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

@@ -55,6 +55,9 @@ test("friend-request rejection stays inside remote control and an active call en
   assert.match(source, /尚未真实经过“好友 → 新的朋友”，不能执行拒绝/);
   assert.match(source, /purpose==='reject_friend_requests'/);
   assert.match(source, /remember\('reject_friend_requests'\)/);
+  assert.match(source, /if\(!hasWx&&!hasRemote\)\{if\(requestText&&friendReject\)/);
+  assert.match(source, /主屏幕点微信App → 微信底部点好友 → 好友页点新的朋友/);
+  assert.match(source, /电话App和电话“通讯录”在这条任务中绝对禁止打开/);
 });
 
 test("WeChat friends and Phone contacts have distinct labels, and Me uses a line smile", () => {
@@ -63,6 +66,8 @@ test("WeChat friends and Phone contacts have distinct labels, and Me uses a line
   assert.match(source, /tb\('me',svgIc\('smile',23\),'我'\)/);
   assert.match(source, /smile:'<circle cx="12" cy="12" r="8\.2"\/>/);
   assert.match(source, /\['通讯录','phoneContacts'\]/);
+  assert.match(source, /function remoteControlDesktopKey\(app\)[\s\S]*?wechat:'wechat'/);
+  assert.match(source, /remoteControlOpenApp\(a,c\)[\s\S]*?remoteControlDesktopKey\(app\)/);
 });
 
 test("the role sees only visible pending requests and chooses instead of rejecting all", () => {

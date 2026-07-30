@@ -12,8 +12,11 @@ const routingSource = app.match(/const PHONE_NON_WECHAT_TARGET=[\s\S]*?(?=\nfunc
 const restoreAllSource = app.match(/function phoneInspectionRestoreAllPermissionsIntent\(text\)[\s\S]*?(?=\nfunction remoteControlIntentContext)/)?.[0] || '';
 
 function routingHarness(wxLoginAuth) {
+  let recent = [];
   const context = {
     S: { couple: { cid: 'role-1', wxLoginAuth } },
+    msgs: () => recent,
+    msgToText: m => String(m && m.content || ''),
     _remoteIntentPurpose: {},
     _remoteIntentContext: {},
     _remoteIntentDeclared: {},
@@ -21,6 +24,7 @@ function routingHarness(wxLoginAuth) {
   vm.runInNewContext(`${restoreAllSource}
 ${routingSource}
 this.routePhoneInspectionTags = routePhoneInspectionTags;`, context);
+  context.setRecent = rows => { recent = rows; };
   return context;
 }
 
@@ -65,6 +69,28 @@ test('rejecting pending contacts is forced to remote control instead of WeChat l
   );
   assert.match(daily, /\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\]/);
   assert.equal(enabled._remoteIntentPurpose['role-1'], 'inspect_phone');
+});
+
+test('an explicit new-friend rejection request starts the dedicated remote route even when the role omits the tag', () => {
+  const enabled = routingHarness(true);
+  const forced = enabled.routePhoneInspectionTags(
+    '我知道了，等着。',
+    { id: 'role-1' },
+    '去好友里的新的朋友，把那个申请拒绝掉'
+  );
+  assert.match(forced, /\[申请远程操控\]/);
+  assert.equal(enabled._remoteIntentPurpose['role-1'], 'reject_friend_requests');
+});
+
+test('a correction after the role clicked the wrong place re-enters through WeChat instead of Phone', () => {
+  const enabled = routingHarness(true);
+  enabled.setRecent([
+    { role: 'user', content: '你根本没有点到，重新处理' },
+    { role: 'user', content: '那个在新的朋友里呢' },
+  ]);
+  const forced = enabled.routePhoneInspectionTags('我知道了，等着。', { id: 'role-1' }, '那个在新的朋友里呢');
+  assert.match(forced, /\[申请远程操控\]/);
+  assert.equal(enabled._remoteIntentPurpose['role-1'], 'reject_friend_requests');
 });
 
 test('a disabled WeChat login permission is restored through a consented narrow remote session', () => {

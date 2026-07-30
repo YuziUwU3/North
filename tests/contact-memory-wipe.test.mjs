@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v733 · 微信好友入口纠正'/);
+assert.match(source, /APP_VER='v734 · 微信新朋友硬路径'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 
