@@ -46,6 +46,26 @@ test('routing behavior no longer rewrites a single entry tag chosen by the role'
   assert.equal(disabled._remoteIntentPurpose['role-1'], undefined);
 });
 
+test('rejecting pending contacts is forced to remote control instead of WeChat login', () => {
+  const enabled = routingHarness(true);
+  const forced = enabled.routePhoneInspectionTags(
+    '\u6211\u53bb\u5904\u7406\u3002\n[\u767b\u5f55\u5fae\u4fe1]',
+    { id: 'role-1' },
+    '\u5e2e\u6211\u62d2\u7edd\u901a\u8baf\u5f55\u91cc\u7684\u597d\u53cb\u7533\u8bf7'
+  );
+  assert.doesNotMatch(forced, /\[\u767b\u5f55\u5fae\u4fe1\]/);
+  assert.match(forced, /\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\]/);
+  assert.equal(enabled._remoteIntentPurpose['role-1'], 'inspect_phone');
+
+  const daily = enabled.routePhoneInspectionTags(
+    '\u6211\u8fdc\u7a0b\u770b\u770b\u3002\n[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7]',
+    { id: 'role-1' },
+    '\u6211\u60f3\u65e5\u5e38\u67e5\u5c97\uff0c\u770b\u770b\u901a\u8baf\u5f55\u548c\u5176\u4ed6\u8f6f\u4ef6'
+  );
+  assert.match(daily, /\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\]/);
+  assert.equal(enabled._remoteIntentPurpose['role-1'], 'inspect_phone');
+});
+
 test('a disabled WeChat login permission is restored through a consented narrow remote session', () => {
   assert.match(app, /remember\(restoreAll\?'restore_all_permissions':\(onlyWx&&!\(S\.couple&&S\.couple\.cid===c\.id&&S\.couple\.wxLoginAuth\)\)\?'restore_wx':'inspect_phone'\)/);
   assert.match(app, /purpose==='restore_wx'/);

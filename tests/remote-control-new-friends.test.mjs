@@ -39,6 +39,15 @@ test("remote control opens contacts, then new friends, before rejecting selected
   assert.match(source, /remoteControlPrepareFriendReject\(a\)/);
 });
 
+test("friend-request rejection stays inside remote control and an active call ends first", () => {
+  assert.match(source, /# \u62d2\u7edd\u65b0\u7684\u670b\u53cb\u7533\u8bf7\uff08\u5165\u53e3\u786c\u89c4\u5219\uff09/);
+  assert.match(source, /\u62d2\u7edd\u5fae\u4fe1“\u901a\u8baf\u5f55 → \u65b0\u7684\u670b\u53cb”[\s\S]*?\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\][\s\S]*?\u7edd\u4e0d\u80fd\u4f7f\u7528 \[\u767b\u5f55\u5fae\u4fe1\]/);
+  assert.match(source, /const wantRemoteControl=!!\(remoteControlAllowed/);
+  assert.match(source, /if\(\(wantHang\|\|wantWxLogin\|\|wantRemoteControl\)[^\n]+hangupCall\(true/);
+  assert.match(source, /else if\(wantRemoteControl\)setTimeout\([^\n]+remoteControlRequest/);
+  assert.match(source, /\['\u6700\u8fd1\u901a\u8bdd','\u77ed\u4fe1','\u8bed\u97f3\u7559\u8a00','\u901a\u8baf\u5f55'\]\.forEach/);
+});
+
 test("the role sees only visible pending requests and chooses instead of rejecting all", () => {
   const candidates = functionSource("remoteControlNewFriendRequests");
   const choice = functionSource("remoteControlNewFriendChoicePlan");
