@@ -93,7 +93,7 @@ test('required apps are inspected while chats and DMs are chosen from their visi
 test('remote subtitles are one at a time and every visible line comes from the role API', () => {
   assert.match(app, /function remoteControlRoleLines\(c,a,r\)/);
   assert.match(app, /function remoteControlRoleReaction\(c,a,r\)/);
-  assert.match(app, /\['wechatList','xDmList','dyDmList'\]\.includes\(a&&a\.targetType\)\)return\{lines:\[\],deleteIntent:false/);
+  assert.match(app, /\['wechatList','newFriendList','xDmList','dyDmList'\]\.includes\(a&&a\.targetType\)\)return\{lines:\[\],deleteIntent:false/);
   assert.match(app, /await chatAPI\(\[\{role:'system',content:buildSystem\(c\)\}/);
   assert.match(app, /max:520,complete:true,temp:\.82,aux:false/);
   assert.match(app, /await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);

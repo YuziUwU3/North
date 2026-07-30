@@ -13,7 +13,7 @@ assert.match(source, /function friendRetryAfterIgnore\(c,attempt,now\)/);
 assert.match(source, /function friendRequestSweep\(\)/);
 assert.match(source, /setInterval\(friendRequestSweep,1000\)/);
 assert.match(source, /if\(isLover\(c\)\)\{friendRetryReset\(c\)/);
-assert.match(source, /function ignoreFriend\(rid\)[\s\S]*?friendRetryAfterIgnore\(c,r&&r\.attempt,Date\.now\(\)\)/);
+assert.match(source, /function rejectFriendRequestRecord\(rid\)[\s\S]*?friendRetryAfterIgnore\(c,r\.attempt,Date\.now\(\)\)/);
 assert.match(source, /if\(\(\+st\.attempt\|\|0\)>=3\)return/);
 assert.doesNotMatch(source, /8000\+Math\.random\(\)\*9000/);
 
@@ -63,7 +63,7 @@ assert.deepEqual(sweepCreateCalls, ["c1"]);
 assert.equal(sweepSandbox.S.contacts[0]._friendReqRetry.nextAt, 0);
 assert.equal(sweepSaveCalls, 1);
 assert.match(source, /async function createFriendRequest\(id\)\{const c=getC\(id\);if\(!friendMainBlocked\(c\)\)return/);
-assert.match(source, /function ignoreFriend\(rid\)[\s\S]*?if\(friendMainBlocked\(c\)\)friendRetryAfterIgnore/);
+assert.match(source, /function rejectFriendRequestRecord\(rid\)[\s\S]*?if\(r\.kind==='readd'&&friendMainBlocked\(c\)\)friendRetryAfterIgnore/);
 assert.match(source, /function acceptFriend\(rid\)[\s\S]*?friendMainUnblock\(c\)/);
 
 const accountSandbox = {
