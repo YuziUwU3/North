@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='734'){
+if(window.__NORTH_SHELL_BUILD__!=='735'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -351,7 +351,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v734 · 微信新朋友硬路径';
+const APP_VER='v735 · 远控入口实页校验';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1317,7 +1317,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=734';
+  const url='sw.js?v=735';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2056,7 +2056,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=734').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=735').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -8638,7 +8638,7 @@ function remoteControlRequiredPlan(c){
   const snap=remoteControlSnapshot(c),groups={},add=(app,targetName,extra)=>{groups[app]=groups[app]||[];groups[app].push(Object.assign({app,op:'view',targetName},extra||{}));};
   if(_remoteCtl&&_remoteCtl.purpose==='restore_wx')return[{app:'couple',op:'view',targetId:'wxLoginAuth',targetName:'微信登录权限（当前关闭）',targetType:'couplePermission',section:'cou_wxlogin'}];
   if(_remoteCtl&&_remoteCtl.purpose==='restore_all_permissions')return(snap.couplePermissions||[]).filter(x=>!x.enabled).sort((a,b)=>remoteControlPermissionPageOrder(a)-remoteControlPermissionPageOrder(b)).map(x=>({app:'couple',op:'enable_couple_permission',targetId:x.key,targetName:x.name+'（当前关闭）',targetType:'couplePermission',section:x.section,restoreAll:true}));
-  if(_remoteCtl&&_remoteCtl.purpose==='reject_friend_requests')return remoteControlNewFriendRequests(c).length?[{app:'wechat',op:'view',targetName:'好友 · 新的朋友',targetType:'newFriendList'}]:[];
+  if(_remoteCtl&&_remoteCtl.purpose==='reject_friend_requests')return[{app:'wechat',op:'view',targetName:'好友 · 新的朋友',targetType:'newFriendList'}];
   const mentionedWechat=remoteControlMentionedWechatTargets(c);
   add('wechat','微信好友与聊天列表',{targetType:'wechatList'});
   if(remoteControlNewFriendRequests(c).length)add('wechat','好友 · 新的朋友',{targetType:'newFriendList'});
@@ -8837,7 +8837,6 @@ async function remoteControlRunRestoreAll(c){
 }
 async function remoteControlRun(c){
   const ctl=_remoteCtl;if(!ctl||!ctl.active)return;if(ctl.purpose==='restore_all_permissions')return remoteControlRunRestoreAll(c);let required=remoteControlFocusedPlan(c,remoteControlRequiredPlan(c));required=await remoteControlOrderPlan(c,required);
-  if(ctl.purpose==='reject_friend_requests'&&!required.length){await remoteControlFinish('没有待处理的新朋友申请');return;}
   for(let i=0;i<required.length;i++){
     if(!remoteControlActive()||ctl.cancelled)break;const a=required[i];remoteControlBeginPage(a);await remoteControlOpenApp(a,c);if(!remoteControlActive()||ctl.cancelled||remoteControlPageExpired())continue;
     if(a.targetType==='newFriendList')await remoteControlEnterNewFriends();else if(a.fromNewFriendList)await remoteControlPrepareFriendReject(a);else if(a.fromWechatList)await remoteControlWechatEnterFromList(a);else if(a.fromDmList)await remoteControlDmEnterFromList(a);if(!remoteControlActive()||ctl.cancelled)break;if(remoteControlPageExpired())continue;

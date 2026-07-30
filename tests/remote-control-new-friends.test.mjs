@@ -43,6 +43,15 @@ test("remote control opens contacts, then new friends, before rejecting selected
   assert.match(source, /targetType==='newFriendList'\)\{wxTab='chats';remoteControlSetPage\('wechat'\)/);
 });
 
+test("dedicated rejection always opens the real new-friends page before deciding it is empty", () => {
+  const required = functionSource("remoteControlRequiredPlan");
+  const run = functionSource("remoteControlRun");
+  assert.match(required, /purpose==='reject_friend_requests'\)return\[\{app:'wechat',op:'view',targetName:'好友 · 新的朋友',targetType:'newFriendList'\}\]/);
+  assert.doesNotMatch(required, /remoteControlNewFriendRequests\(c\)\.length\?\[\{app:'wechat'/);
+  assert.doesNotMatch(run, /purpose==='reject_friend_requests'&&!required\.length/);
+  assert.ok(run.indexOf("remoteControlOpenApp(a,c)") < run.indexOf("remoteControlEnterNewFriends()"));
+});
+
 test("friend-request rejection stays inside remote control and an active call ends first", () => {
   assert.match(source, /# \u62d2\u7edd\u65b0\u7684\u670b\u53cb\u7533\u8bf7\uff08\u5165\u53e3\u786c\u89c4\u5219\uff09/);
   assert.match(source, /\u62d2\u7edd\u5fae\u4fe1“\u597d\u53cb → \u65b0\u7684\u670b\u53cb”[\s\S]*?\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\][\s\S]*?\u7edd\u4e0d\u80fd\u4f7f\u7528 \[\u767b\u5f55\u5fae\u4fe1\]/);
