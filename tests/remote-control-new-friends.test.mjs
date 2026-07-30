@@ -46,7 +46,9 @@ test("friend-request rejection stays inside remote control and an active call en
   assert.match(source, /if\(\(wantHang\|\|wantWxLogin\|\|wantRemoteControl\)[^\n]+hangupCall\(true/);
   assert.match(source, /else if\(wantRemoteControl\)setTimeout\([^\n]+remoteControlRequest/);
   assert.match(source, /\['\u901a\u8baf\u5f55','phoneContacts'\]/);
-  assert.match(source, /target='newFriendList'/);
+  assert.match(source, /target:'newFriendList'/);
+  assert.match(source, /newFriendsOpenedAt=Date\.now\(\)/);
+  assert.match(source, /尚未真实经过“通讯录 → 新的朋友”，不能执行拒绝/);
 });
 
 test("the role sees only visible pending requests and chooses instead of rejecting all", () => {

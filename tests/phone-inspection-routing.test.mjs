@@ -16,6 +16,7 @@ function routingHarness(wxLoginAuth) {
     S: { couple: { cid: 'role-1', wxLoginAuth } },
     _remoteIntentPurpose: {},
     _remoteIntentContext: {},
+    _remoteIntentDeclared: {},
   };
   vm.runInNewContext(`${restoreAllSource}
 ${routingSource}
@@ -85,7 +86,7 @@ test('disabled couple permissions remain visible and can be re-enabled by the ro
 
 test('turning off the remote-request switch does not bypass per-session consent', () => {
   assert.match(app, /function remoteControlAllowed\(cid\)\{return !!\(S\.couple&&S\.couple\.cid===cid\);\}/);
-  assert.match(app, /remoteControlRequest\(cid\)[\s\S]*?_remoteRequest=\{cid,ts:Date\.now\(\),purpose,intentContext\}/);
+  assert.match(app, /remoteControlRequest\(cid\)[\s\S]*?_remoteRequest=\{cid,ts:Date\.now\(\),purpose,intentContext,declaredIntent\}/);
   assert.match(app, /remoteControlApprove\('\$\{c\.id\}'\)/);
   assert.match(app, /remoteControlDeny\('\$\{c\.id\}'\)/);
 });
