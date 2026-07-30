@@ -45,7 +45,8 @@ test("friend-request rejection stays inside remote control and an active call en
   assert.match(source, /const wantRemoteControl=!!\(remoteControlAllowed/);
   assert.match(source, /if\(\(wantHang\|\|wantWxLogin\|\|wantRemoteControl\)[^\n]+hangupCall\(true/);
   assert.match(source, /else if\(wantRemoteControl\)setTimeout\([^\n]+remoteControlRequest/);
-  assert.match(source, /\['\u6700\u8fd1\u901a\u8bdd','\u77ed\u4fe1','\u8bed\u97f3\u7559\u8a00','\u901a\u8baf\u5f55'\]\.forEach/);
+  assert.match(source, /\['\u901a\u8baf\u5f55','phoneContacts'\]/);
+  assert.match(source, /target='newFriendList'/);
 });
 
 test("the role sees only visible pending requests and chooses instead of rejecting all", () => {

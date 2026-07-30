@@ -41,7 +41,7 @@ const en = fallbackContext.phVmFallback({ voice: { lang: "英" } }, "missed");
 const ja = fallbackContext.phVmFallback({ voice: { lang: "日" } }, "missed");
 const ko = fallbackContext.phVmFallback({ voice: { lang: "韩" } }, "missed");
 
-assert.match(zh, /我刚才打给你没接/);
+assert.match(zh, /刚给你打了电话|刚才没联系上你|电话没接到/);
 assert.doesNotMatch(zh, /[（(]/);
 assert.match(en, /^[A-Za-z].*\n（[\u3400-\u9fff]/s);
 assert.match(ja, /[ぁ-ヿ].*\n（[\u3400-\u9fff]/s);
@@ -57,7 +57,7 @@ assert.equal(roleContext.phVmRole({ roleId: "r1", num: "999" }).id, "r1");
 assert.equal(roleContext.phVmRole({ num: "100" }).id, "r1");
 assert.equal(roleContext.phVmRole({ num: "200" }), null);
 
-assert.match(source, /phAddVoicemail\(num,fallback,\{roleId:cid,lang,role:'assistant',type:'voice',pending:true\}\)/);
+assert.match(source, /phAddVoicemail\(num,fallback,\{roleId:cid,lang,role:'assistant',type:'voice',pending:true,reason:opt\.why,source:'incoming_missed_or_rejected'\}\)/);
 assert.match(source, /units\.some\(x=>!x\.orig\|\|!hasForeign\(x\.orig,lang\)\|\|!x\.trans\|\|!hasCN\(x\.trans\)\)/);
 assert.match(source, /async function phPlayVM\(id\)\{audioUnlock\(\)/);
 assert.match(source, /if\(!c\)\{toast\('语音留言：'.*return;\}/);
