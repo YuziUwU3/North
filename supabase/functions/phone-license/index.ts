@@ -33,6 +33,24 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
 
 type JsonMap = Record<string, unknown>;
 
+class LicenseHttpError extends Error {
+  status: number;
+  code: string;
+  permanent: boolean;
+
+  constructor(message: string, status: number, code: string, permanent = false) {
+    super(message);
+    this.name = 'LicenseHttpError';
+    this.status = status;
+    this.code = code;
+    this.permanent = permanent;
+  }
+}
+
+function temporaryLicenseError(message = '授权服务暂时不可用，请稍后重试') {
+  return new LicenseHttpError(message, 503, 'license-service-unavailable', false);
+}
+
 function requestOrigin(req: Request): string {
   const origin = req.headers.get('origin') || '';
   if (origin && ALLOWED_ORIGINS.has(origin)) return origin;
@@ -124,9 +142,21 @@ async function activeLicense(licenseId: string) {
     .select('id,status,epoch')
     .eq('id', licenseId)
     .maybeSingle();
-  if (error || !data || data.status !== 'active' || Number(data.epoch) !== LICENSE_EPOCH) {
-    throw new Error('手机授权已失效');
+  if (error) throw temporaryLicenseError();
+  if (!data) throw new LicenseHttpError('手机授权不存在', 403, 'license-not-found', true);
+  if (data.status !== 'active') {
+    const { data: blockAction, error: blockError } = await supabase
+      .from('phone_license_admin_actions')
+      .select('id')
+      .eq('license_id', licenseId)
+      .eq('action', 'block')
+      .limit(1)
+      .maybeSingle();
+    if (blockError) throw temporaryLicenseError();
+    if (blockAction) throw new LicenseHttpError('手机授权已被管理员移出', 403, 'license-admin-blocked', true);
+    throw new LicenseHttpError('手机授权正在等待管理员恢复', 409, 'license-awaiting-admin-restore');
   }
+  if (Number(data.epoch) !== LICENSE_EPOCH) throw new LicenseHttpError('手机授权需要管理员恢复', 409, 'license-epoch-mismatch');
   return data;
 }
 
@@ -140,7 +170,8 @@ async function sessionAuth(tokenValue: unknown) {
     .eq('token_hash', tokenHash)
     .is('revoked_at', null)
     .maybeSingle();
-  if (error || !data) throw new Error('本浏览器授权已失效');
+  if (error) throw temporaryLicenseError();
+  if (!data) throw new LicenseHttpError('本浏览器授权已失效', 401, 'license-session-invalid', true);
   await activeLicense(data.license_id);
   return { ...data, token };
 }
@@ -660,6 +691,48 @@ async function redeemRecovery(req: Request, body: JsonMap) {
   return { ok: true, session };
 }
 
+async function restoreLocalIdentity(req: Request, body: JsonMap) {
+  const phoneFriendId = cleanText(body.phoneFriendId, 16).toUpperCase();
+  const phoneFriendSecret = cleanText(body.phoneFriendSecret, 180);
+  if (!/^SP[A-Z0-9]{8}$/.test(phoneFriendId) || phoneFriendSecret.length < 16) {
+    throw new LicenseHttpError('本机恢复身份不完整', 400, 'license-local-identity-missing');
+  }
+  const { data: wave, error: waveError } = await supabase
+    .from('phone_license_incident_recovery')
+    .select('expires_at')
+    .eq('id', true)
+    .maybeSingle();
+  if (waveError) throw temporaryLicenseError();
+  if (!wave || new Date(wave.expires_at).getTime() <= Date.now()) {
+    throw new LicenseHttpError('当前没有开放批量恢复', 409, 'license-incident-recovery-closed');
+  }
+  const { data: verified, error: verifyError } = await supabase.rpc('phone_friend_check', {
+    p_phone_id: phoneFriendId,
+    p_secret: phoneFriendSecret,
+  });
+  if (verifyError) throw temporaryLicenseError();
+  if (verified !== true) {
+    throw new LicenseHttpError('本机恢复身份校验失败', 403, 'license-local-identity-invalid', true);
+  }
+  const { data: licenses, error: licenseError } = await supabase
+    .from('phone_licenses')
+    .select('id,status,epoch,updated_at')
+    .eq('phone_friend_id', phoneFriendId)
+    .order('updated_at', { ascending: false })
+    .limit(20);
+  if (licenseError) throw temporaryLicenseError();
+  if (!licenses?.length) {
+    throw new LicenseHttpError('没有找到可恢复的手机授权', 404, 'license-local-identity-unlinked');
+  }
+  const eligible = licenses.find((item) => item.status === 'active' && Number(item.epoch) === LICENSE_EPOCH);
+  if (!eligible) throw new LicenseHttpError('等待管理员执行一键恢复', 409, 'license-awaiting-admin-restore');
+  if (eligible.status !== 'active' || Number(eligible.epoch) !== LICENSE_EPOCH) {
+    throw new LicenseHttpError('等待管理员执行一键恢复', 409, 'license-awaiting-admin-restore');
+  }
+  const session = await createSession(eligible.id, req, body.deviceLabel);
+  return { ok: true, session, restoredBy: 'local-identity' };
+}
+
 async function syncAIIdentity(body: JsonMap) {
   const session = await sessionAuth(body.sessionToken);
   const proposedUserId = cleanText(body.userId, 140);
@@ -755,6 +828,7 @@ Deno.serve(async (req) => {
     else if (action === 'transfer_redeem') result = await redeemTransfer(req, body);
     else if (action === 'recovery_create') result = await createRecovery(body);
     else if (action === 'recovery_redeem') result = await redeemRecovery(req, body);
+    else if (action === 'local_identity_restore') result = await restoreLocalIdentity(req, body);
     else if (action === 'ai_identity_sync') result = await syncAIIdentity(body);
     else if (action === 'phone_friend_identity_sync') result = await syncPhoneFriendIdentity(body);
     else throw new Error('未知的授权操作');
@@ -762,7 +836,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : '授权操作失败';
     console.error('phone-license', message);
+    if (error instanceof LicenseHttpError) {
+      return reply(req, { ok: false, error: message, code: error.code, permanent: error.permanent }, error.status);
+    }
     const status = /频繁|尝试过多|稍后再试/.test(message) ? 429 : /无效|失效|过期|没有|缺少|校验|已经|请输入/.test(message) ? 400 : 500;
-    return reply(req, { ok: false, error: message }, status);
+    return reply(req, { ok: false, error: message, code: 'license-request-failed', permanent: false }, status);
   }
 });

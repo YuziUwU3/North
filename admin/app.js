@@ -312,6 +312,33 @@ window.confirmBlockLicense = async (id) => {
   }
 };
 
+window.openRestoreAllLicenses = () => {
+  if (adminAccessRole !== 'owner') return;
+  openSheet(`<h2>一键恢复异常授权</h2>
+    <p>系统会把全部授权（包括当前显示“已移出”的用户）恢复到当前版本，并开放 24 小时本机身份自动找回。</p>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="licenseRestoreAllConfirmBtn" onclick="confirmRestoreAllLicenses()">确认恢复</button></div>`);
+};
+
+window.confirmRestoreAllLicenses = async () => {
+  if (actionBusy || adminAccessRole !== 'owner') return;
+  actionBusy = true;
+  const button = $('licenseRestoreAllConfirmBtn');
+  if (button) { button.disabled = true; button.textContent = '正在安全恢复…'; }
+  try {
+    const data = await api('admin_license_restore_all');
+    await loadLicenseUsers(false);
+    const expires = data.expires_at ? fmtDateTime(data.expires_at) : '24 小时后';
+    openSheet(`<h2>恢复通道已开启</h2>
+      <p>全部授权共 <b>${Number(data.total || 0).toLocaleString()}</b> 条，本次修正 <b>${Number(data.restored || 0).toLocaleString()}</b> 条，已移出的用户也包含在内。</p>
+      <p>用户重新打开小手机后，会用本机身份自动找回授权；通道有效至 ${esc(expires)}。</p>
+      <div class="sheet-actions"><button class="btn approve" onclick="closeSheet()">完成</button></div>`);
+  } catch (error) {
+    alert('批量恢复失败：' + error.message);
+  } finally {
+    actionBusy = false;
+  }
+};
+
 window.openRecoverLicense = (id, phoneId, blocked) => {
   openSheet(`<h2>${blocked ? '放进来' : '生成恢复码'} · ${esc(phoneId)}</h2>
     <p>${blocked ? '系统会重新启用这条授权，' : ''}并生成一个 24 小时有效、只能使用一次的管理员恢复码。把号码私下发给本人，让对方在登录页选择“迁移码 / 备用恢复码”进入。</p>
@@ -595,7 +622,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=631', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=632', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -633,6 +660,7 @@ $('loginBtn').addEventListener('click', login);
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
 $('refreshBtn').addEventListener('click', () => workspaceView === 'licenses' ? loadLicenseUsers(true) : loadOrders(true));
 $('licenseRefreshBtn').addEventListener('click', () => loadLicenseUsers(true));
+$('licenseRestoreAllBtn').addEventListener('click', openRestoreAllLicenses);
 $('licenseSearch').addEventListener('input', () => {
   clearTimeout(licenseSearchTimer);
   licenseQuery = String($('licenseSearch').value || '').trim();
@@ -691,6 +719,6 @@ async function restoreSavedLogin() {
   showAuth('请重新进入');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=631', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=632', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();

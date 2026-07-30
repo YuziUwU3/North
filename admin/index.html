@@ -72,8 +72,9 @@
             <option value="blocked">已移出</option>
           </select>
           <button class="btn" id="licenseRefreshBtn">刷新</button>
+          <button class="btn approve" id="licenseRestoreAllBtn" data-owner-only>一键恢复异常授权</button>
         </div>
-        <div class="license-summary sub"><span>云端搜索，每页只读取50人；完整邀请码可查到所有使用者，已移出记录不会删除。</span><span id="licenseResultText">准备读取用户</span></div>
+        <div class="license-summary sub"><span>云端搜索，每页只读取50人；完整邀请码可查到所有使用者；一键恢复会把全部授权（包括已移出）恢复为可进入。</span><span id="licenseResultText">准备读取用户</span></div>
         <section id="licenseUsers" class="orders"></section>
         <div class="license-pager">
           <button class="btn" id="licensePrevBtn">上一页</button>
@@ -86,6 +87,6 @@
 
   <div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
   <div id="viewer" class="viewer hidden"><button class="icon" id="closeViewer" aria-label="关闭">×</button><img id="viewerImg" alt="付款截图大图"></div>
-  <script src="./app.js?v=631"></script>
+  <script src="./app.js?v=632"></script>
 </body>
 </html>

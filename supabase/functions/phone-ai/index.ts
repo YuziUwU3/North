@@ -1185,6 +1185,22 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "admin_license_restore_all") {
+      const identity = requireAdmin(req, body);
+      const { data, error } = await supabase.rpc("phone_license_restore_all_safe", {
+        p_epoch: LICENSE_EPOCH,
+        p_operator_id: identity.operatorId,
+      });
+      if (error) throw error;
+      const result = data && typeof data === "object" ? data : {};
+      return json({
+        ok: true,
+        restored: Math.max(0, Number(result.restored || 0)),
+        total: Math.max(0, Number(result.total || 0)),
+        expires_at: String(result.expires_at || ""),
+      });
+    }
+
     if (action === "admin_license_users") {
       requireLicenseAdmin(req, body);
       const pageSize = Math.min(100, Math.max(10, Math.trunc(Number(body.page_size || 50))));

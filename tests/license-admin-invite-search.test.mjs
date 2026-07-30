@@ -26,8 +26,8 @@ assert.match(adminHtml, /完整邀请码或授权编号/);
 assert.match(adminHtml, /完整邀请码可查到所有使用者/);
 assert.match(adminApp, /<b>使用邀请码<\/b>/);
 assert.match(adminApp, /user\.invite_code_hint \|\| '旧记录未保存'/);
-assert.match(adminHtml, /app\.js\?v=631/);
-assert.match(adminApp, /sw\.js\?v=631/g);
-assert.match(adminWorker, /north-admin-v631/);
+assert.match(adminHtml, /app\.js\?v=632/);
+assert.match(adminApp, /sw\.js\?v=632/g);
+assert.match(adminWorker, /north-admin-v632/);
 
 console.log('license admin invite search tests passed');

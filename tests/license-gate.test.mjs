@@ -101,6 +101,7 @@ context.fetch = async (_url, options) => {
     transfer_redeem: { ok: true, session: { token: 'token-3', licenseId: 'license-1', sessionId: 'session-3', activeCount: 3, evicted: [] } },
     recovery_create: { ok: true, code: 'ABCD-EFGH-JKLM-NPQR-STUV-WXYZ', expiresAt: '2027-07-23T00:00:00.000Z' },
     recovery_redeem: { ok: true, session: { token: 'token-4', licenseId: 'license-1', sessionId: 'session-4', activeCount: 3, evicted: [] } },
+    local_identity_restore: { ok: true, session: { token: 'token-5', licenseId: 'license-1', sessionId: 'session-5', activeCount: 1, evicted: [] } },
     phone_friend_identity_sync: { ok: true, phoneFriendId: 'SPABCDEFGH' },
   };
   const payload = responses[body.action];
@@ -157,6 +158,9 @@ assert.equal(license.meta().recoveryCount, 1);
 await license.redeemRecovery(recovery.code);
 assert.equal(license.session().token, 'token-4');
 assert.equal(license.meta().recoveryCount, 0);
+await license.restoreLocalIdentity('SPABCDEFGH', 'pfs_abcdefghijklmnopqrstuvwxyz123456');
+assert.equal(license.session().token, 'token-5');
+assert.equal(seen.some((item) => item.action === 'local_identity_restore' && item.phoneFriendId === 'SPABCDEFGH'), true);
 await license.syncPhoneFriendIdentity('SPABCDEFGH', 'pfs_abcdefghijklmnopqrstuvwxyz123456');
 assert.equal(seen.some((item) => item.action === 'phone_friend_identity_sync' && item.phoneFriendId === 'SPABCDEFGH'), true);
 

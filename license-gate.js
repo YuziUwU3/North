@@ -176,6 +176,8 @@
       const out = new Error((payload && payload.error) || ('授权服务器异常(' + response.status + ')'));
       out.status = response.status;
       out.server = true;
+      out.code = String(payload && payload.code || '');
+      out.permanent = !!(payload && payload.permanent);
       throw out;
     }
     return payload;
@@ -321,6 +323,21 @@
     return result;
   }
 
+  async function restoreLocalIdentity(phoneFriendId, phoneFriendSecret) {
+    const result = await api('local_identity_restore', {
+      phoneFriendId: phoneFriendId,
+      phoneFriendSecret: phoneFriendSecret,
+      deviceLabel: deviceLabel(),
+    });
+    saveSession(result.session, {
+      sessionCount: result.session.activeCount || 1,
+      passkeyCount: meta().passkeyCount || 0,
+      recoveryCount: meta().recoveryCount || 0,
+      evicted: result.session.evicted || [],
+    });
+    return result;
+  }
+
   async function relinkTransfer(transferCode) {
     const previous = session();
     const result = await redeemTransfer(transferCode);
@@ -393,6 +410,7 @@
     createRecovery,
     redeemTransfer,
     redeemRecovery,
+    restoreLocalIdentity,
     relinkTransfer,
     listSessions,
     revokeSession,
