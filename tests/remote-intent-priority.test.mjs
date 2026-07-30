@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 function fn(name){const markers=[`function ${name}(`,`async function ${name}(`];const start=Math.max(...markers.map(x=>source.indexOf(x)));assert.ok(start>=0,`missing ${name}`);const brace=source.indexOf('{',start);let depth=0,quote='',escaped=false;for(let i=brace;i<source.length;i++){const ch=source[i];if(quote){if(escaped)escaped=false;else if(ch==='\\')escaped=true;else if(ch===quote)quote='';continue;}if(ch==="'"||ch==='"'||ch==='`'){quote=ch;continue;}if(ch==='{')depth++;else if(ch==='}'&&--depth===0)return source.slice(start,i+1);}throw new Error(`unterminated ${name}`);}
 
-function context(intent){const sandbox={_remoteCtl:{cid:'r1',intentContext:'',declaredIntent:intent},remoteControlIntentContext:()=>'',phoneInspectionFriendRejectIntent:t=>/拒绝|驳回|不通过/.test(t),console};vm.createContext(sandbox);for(const name of ['remoteControlDeclaredIntent','remoteControlIntentFocus','remoteControlFocusedPlan','remoteControlIntentPriority'])vm.runInContext(`${fn(name)};globalThis.${name}=${name};`,sandbox);return sandbox;}
+function context(intent,purpose='inspect_phone'){const sandbox={_remoteCtl:{cid:'r1',purpose,intentContext:'',declaredIntent:intent},remoteControlIntentContext:()=>'',phoneInspectionFriendRejectIntent:t=>/拒绝|驳回|不通过/.test(t),console};vm.createContext(sandbox);for(const name of ['remoteControlDeclaredIntent','remoteControlIntentFocus','remoteControlFocusedPlan','remoteControlIntentPriority'])vm.runInContext(`${fn(name)};globalThis.${name}=${name};`,sandbox);return sandbox;}
 const rows=[
   {app:'x',targetType:'xPost'},
   {app:'phoneapp',targetType:'phoneCalls'},
@@ -27,7 +27,13 @@ test('the role-declared phone address book is the first actual target',()=>{
 });
 
 test('rejecting a friend request strictly starts from WeChat new friends',()=>{
-  const c=context('我最在意通讯录里的新朋友，先进去把那个人拒绝');
+  const c=context('我最在意好友里的新朋友，先进去把那个人拒绝','reject_friend_requests');
+  const planned=c.remoteControlFocusedPlan({id:'r1'},rows);
+  assert.deepEqual(JSON.parse(JSON.stringify(planned)),[{app:'wechat',targetType:'newFriendList'}]);
+});
+
+test('the dedicated rejection purpose cannot fall through to Phone contacts',()=>{
+  const c=context('先处理新朋友','reject_friend_requests');
   const planned=c.remoteControlFocusedPlan({id:'r1'},rows);
   assert.deepEqual(JSON.parse(JSON.stringify(planned)),[{app:'wechat',targetType:'newFriendList'}]);
 });

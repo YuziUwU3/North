@@ -29,26 +29,40 @@ function functionSource(name) {
 
 test("remote control opens contacts, then new friends, before rejecting selected requests", () => {
   const enter = functionSource("remoteControlEnterNewFriends");
+  assert.ok(enter.indexOf("wxTab='chats'") < enter.indexOf("wxTab='contacts'"));
   assert.ok(enter.indexOf("wxTab='contacts'") < enter.indexOf("remoteControlSetPage('newfriends')"));
   assert.match(enter, /\.tabbar \.tb/);
+  assert.match(enter, /===\s*'好友'/);
+  assert.doesNotMatch(enter, /includes\('通讯录'\)/);
   assert.match(enter, /===\s*'新的朋友'/);
   assert.match(source, /targetType:'newFriendList'/);
   assert.match(source, /remoteControlNewFriendChoicePlan\(c\)/);
   assert.match(source, /op:'reject_friend_request'/);
   assert.match(source, /fromNewFriendList:true/);
   assert.match(source, /remoteControlPrepareFriendReject\(a\)/);
+  assert.match(source, /targetType==='newFriendList'\)\{wxTab='chats';remoteControlSetPage\('wechat'\)/);
 });
 
 test("friend-request rejection stays inside remote control and an active call ends first", () => {
   assert.match(source, /# \u62d2\u7edd\u65b0\u7684\u670b\u53cb\u7533\u8bf7\uff08\u5165\u53e3\u786c\u89c4\u5219\uff09/);
-  assert.match(source, /\u62d2\u7edd\u5fae\u4fe1“\u901a\u8baf\u5f55 → \u65b0\u7684\u670b\u53cb”[\s\S]*?\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\][\s\S]*?\u7edd\u4e0d\u80fd\u4f7f\u7528 \[\u767b\u5f55\u5fae\u4fe1\]/);
+  assert.match(source, /\u62d2\u7edd\u5fae\u4fe1“\u597d\u53cb → \u65b0\u7684\u670b\u53cb”[\s\S]*?\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\][\s\S]*?\u7edd\u4e0d\u80fd\u4f7f\u7528 \[\u767b\u5f55\u5fae\u4fe1\]/);
   assert.match(source, /const wantRemoteControl=!!\(remoteControlAllowed/);
   assert.match(source, /if\(\(wantHang\|\|wantWxLogin\|\|wantRemoteControl\)[^\n]+hangupCall\(true/);
   assert.match(source, /else if\(wantRemoteControl\)setTimeout\([^\n]+remoteControlRequest/);
   assert.match(source, /\['\u901a\u8baf\u5f55','phoneContacts'\]/);
   assert.match(source, /target:'newFriendList'/);
   assert.match(source, /newFriendsOpenedAt=Date\.now\(\)/);
-  assert.match(source, /尚未真实经过“通讯录 → 新的朋友”，不能执行拒绝/);
+  assert.match(source, /尚未真实经过“好友 → 新的朋友”，不能执行拒绝/);
+  assert.match(source, /purpose==='reject_friend_requests'/);
+  assert.match(source, /remember\('reject_friend_requests'\)/);
+});
+
+test("WeChat friends and Phone contacts have distinct labels, and Me uses a line smile", () => {
+  assert.match(source, /const titles=\{chats:'微信',contacts:'好友',moments:'朋友圈',me:'我'\}/);
+  assert.match(source, /tb\('contacts',svgIc\('user',23\),'好友'\)/);
+  assert.match(source, /tb\('me',svgIc\('smile',23\),'我'\)/);
+  assert.match(source, /smile:'<circle cx="12" cy="12" r="8\.2"\/>/);
+  assert.match(source, /\['通讯录','phoneContacts'\]/);
 });
 
 test("the role sees only visible pending requests and chooses instead of rejecting all", () => {

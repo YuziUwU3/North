@@ -52,11 +52,11 @@ test('rejecting pending contacts is forced to remote control instead of WeChat l
   const forced = enabled.routePhoneInspectionTags(
     '\u6211\u53bb\u5904\u7406\u3002\n[\u767b\u5f55\u5fae\u4fe1]',
     { id: 'role-1' },
-    '\u5e2e\u6211\u62d2\u7edd\u901a\u8baf\u5f55\u91cc\u7684\u597d\u53cb\u7533\u8bf7'
+    '\u5e2e\u6211\u62d2\u7edd\u597d\u53cb\u91cc\u7684\u65b0\u670b\u53cb\u7533\u8bf7'
   );
   assert.doesNotMatch(forced, /\[\u767b\u5f55\u5fae\u4fe1\]/);
   assert.match(forced, /\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\]/);
-  assert.equal(enabled._remoteIntentPurpose['role-1'], 'inspect_phone');
+  assert.equal(enabled._remoteIntentPurpose['role-1'], 'reject_friend_requests');
 
   const daily = enabled.routePhoneInspectionTags(
     '\u6211\u8fdc\u7a0b\u770b\u770b\u3002\n[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7]',
