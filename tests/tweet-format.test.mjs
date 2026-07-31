@@ -15,8 +15,8 @@ test('tweet command tags never leak or duplicate the visible body',()=>{
   assert.doesNotMatch(context.cleanTweetText('[发推|只显示这一句]'),/发推|\[|【/);
 });
 
-test('all role and remote publishing paths clean tweet text',()=>{
+test('role publishing cleans tweet text while v727 remote publishing stays original',()=>{
   assert.match(fn('publishRoleTweet'),/text=cleanTweetText\(text\)/);
-  assert.match(fn('remoteControlExecute'),/a\.op==='post_x'[\s\S]*?tx=cleanTweetText\(a\.content\)/);
+  assert.match(fn('remoteControlExecute'),/a\.op==='post_x'[\s\S]*?tx=String\(a\.content\|\|''\)\.trim\(\)\.slice\(0,240\)/);
   assert.match(fn('openX'),/repairTweetTexts\(\)/);
 });

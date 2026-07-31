@@ -11,7 +11,7 @@ test('v728 autonomy is not replaced by a forced single-purpose planner',()=>{
   assert.doesNotMatch(app,/remoteControlForcedFriendRejectPlan/);
 });
 
-test('the role decides order while v737 guarantees the full inspection plan',()=>{
+test('the role decides order while v727 guarantees the full inspection plan',()=>{
   const start=app.indexOf('async function remoteControlOrderPlan');
   const end=app.indexOf('function remoteControlNormalizePlan',start);
   const body=app.slice(start,end);

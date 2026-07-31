@@ -27,7 +27,7 @@ test('remote viewing opens real apps and stores only viewed facts',()=>{
   assert.match(app,/targetType==='dySearchHistory'[\s\S]*?dyTab='search'/);
 });
 
-test('v737 inspection visits every available app in a role-chosen order',()=>{
+test('v727 inspection visits every available app in a role-chosen order',()=>{
   assert.match(app,/function remoteControlRequiredPlan\(c\)/);
   assert.match(app,/let required=remoteControlRequiredPlan\(c\);required=await remoteControlOrderPlan\(c,required\)/);
   assert.match(app,/async function remoteControlOrderPlan\(c,required\)/);
@@ -56,13 +56,14 @@ test('chat and DM detail choices remain role-driven',()=>{
   assert.match(app,/else if\(a\.fromDmList\)await remoteControlDmExitToList\(a\.app\)/);
 });
 
-test('remote subtitles are role-generated, quiet on list pages, and time-bounded',()=>{
+test('remote subtitles are role-generated and quiet on list pages',()=>{
   assert.match(app,/function remoteControlRoleLines\(c,a,r\)/);
   assert.match(app,/function remoteControlRoleReaction\(c,a,r\)/);
   assert.match(app,/\['wechatList','xDmList','dyDmList'\]\.includes\(a&&a\.targetType\)\)return\{lines:\[\],deleteIntent:false/);
   assert.match(app,/max:520,complete:true,temp:\.82,aux:false/);
-  assert.match(app,/remoteControlTimed\(remoteControlRoleReaction\(c,a,r\),6500/);
-  assert.match(app,/remoteControlTimed\(remoteControlRoleLines\(c,a,r\),5000/);
+  assert.match(app,/const reaction=await remoteControlRoleReaction\(c,a,r\)/);
+  assert.match(app,/await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
+  assert.doesNotMatch(app,/remoteControlTimed/);
   assert.doesNotMatch(app,/function remoteControlSayFallback/);
 });
 
@@ -73,7 +74,7 @@ test('the role can independently act only on allowlisted visible data',()=>{
   assert.match(app,/function deleteSocialDMThread\(app,id\)/);
   assert.match(app,/function remoteControlPrepareVisibleDelete\(a\)/);
   assert.match(app,/visibleDelete=await remoteControlPrepareVisibleDelete\(a\)[\s\S]*?remoteControlExecute\(a,c\)/);
-  assert.match(app,/reaction=await remoteControlTimed\(remoteControlRoleReaction\(c,a,r\),6500[\s\S]*?remoteControlReactionDeleteAction\(entry,reaction,c\)/);
+  assert.match(app,/reaction=await remoteControlRoleReaction\(c,a,r\)[\s\S]*?remoteControlReactionDeleteAction\(entry,reaction,c\)/);
   assert.match(app,/a\.op==='delete_phone_contact'/);
   assert.match(app,/a\.op==='delete_sms_thread'/);
 });

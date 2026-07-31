@@ -21,7 +21,7 @@ test('restore-all can continue with a context-driven inspection',()=>{
   assert.match(app,/wechat\.concat\(rest\)\.slice\(0,6\)/);
 });
 
-test('remote control keeps chat context and restores v737 role-chosen ordering',()=>{
+test('remote control keeps chat context and restores v727 role-chosen ordering',()=>{
   assert.match(app,/_remoteIntentContext/);
   assert.match(app,/intentContext=String\(_remoteIntentContext\[cid\]\|\|''\)\.slice\(-1600\)/);
   assert.match(app,/function remoteControlIntentContext\(c\)/);
