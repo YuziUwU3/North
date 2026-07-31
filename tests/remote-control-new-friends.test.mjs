@@ -60,7 +60,7 @@ test('rejection is gated to the currently logged-in character and uses the visib
 test('the login rejection cannot run before login or for another character',()=>{
   const actor={id:'actor',name:'Actor'};
   const other={id:'other',name:'Other'};
-  const visitor={id:'visitor',name:'Visitor'};
+  const visitor={id:'visitor',name:'Visitor',deleted:true,_friendPending:true};
   let ignoreCalls=0,recordCalls=0;
   const context=vm.createContext({
     Date,
@@ -88,8 +88,8 @@ test('the login rejection cannot run before login or for another character',()=>
   assert.equal(ignoreCalls,1);
 });
 
-test('the screenshot case resolves two visible names and rejects both real records',()=>{
-  const contacts={actor:{id:'actor',name:'先生'},he:{id:'he',name:'贺川'},cheng:{id:'cheng',name:'程野'},gu:{id:'gu',name:'顾言'}};
+test('the screenshot case resolves pending deleted contacts and rejects both real records',()=>{
+  const contacts={actor:{id:'actor',name:'先生'},he:{id:'he',name:'贺川',deleted:true,_friendPending:true},cheng:{id:'cheng',name:'程野',deleted:true,_friendPending:true},gu:{id:'gu',name:'顾言',deleted:true,_friendPending:true}};
   const S={wxLogin:{by:'actor',until:Date.now()+60000,processing:true,processingUntil:Date.now()+105000,did:[],actions:[]},friendRequests:[
     {id:'req-he',contactId:'he',status:'pending',time:3},
     {id:'req-cheng',contactId:'cheng',status:'pending',time:2},
@@ -99,6 +99,7 @@ test('the screenshot case resolves two visible names and rejects both real recor
   vm.runInContext(`${fn('wxLoginActive')};${fn('wxLoginPendingFriendRequests')};${fn('wxLoginResolvePendingFriend')};${fn('wxLoginRejectPendingFriend')};${fn('wxLoginFriendRejectRefs')};globalThis.refs=wxLoginFriendRejectRefs;globalThis.reject=wxLoginRejectPendingFriend;`,context);
   const refs=Array.from(context.refs('[拒绝新朋友|贺川、程野]','actor'));
   assert.deepEqual(refs,['贺川','程野']);
+  assert.deepEqual(Array.from(vm.runInContext('wxLoginPendingFriendRequests("actor").map(x=>x.name)',context)),['贺川','程野','顾言']);
   refs.forEach(ref=>context.reject('actor',ref));
   assert.equal(S.friendRequests.find(x=>x.id==='req-he').status,'rejected');
   assert.equal(S.friendRequests.find(x=>x.id==='req-cheng').status,'rejected');
