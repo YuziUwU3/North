@@ -38,13 +38,12 @@ test('remote viewing opens the matching real app and remembers only viewed facts
   assert.match(app, /targetType==='dySearchHistory'[\s\S]*?dyTab='search'/);
 });
 
-test('remote control lets the role choose a focused ordered plan and ends immediately', () => {
+test('remote control lets the role order an exhaustive plan and ends immediately', () => {
   assert.match(app, /function remoteControlRequiredPlan\(c\)/);
-  assert.match(app, /let required=remoteControlFocusedPlan\(c,remoteControlRequiredPlan\(c\)\);required=await remoteControlOrderPlan\(c,required\)/);
+  assert.match(app, /let required=remoteControlRequiredPlan\(c\);required=await remoteControlOrderPlan\(c,required\)/);
   assert.match(app, /function remoteControlOrderPlan\(c,required\)/);
-  assert.match(app, /最多选择5个/);
-  assert.match(app, /你刚才亲口说要先看、最在意或要处理的软件必须排第一/);
-  assert.match(app, /if\(order\.length<5&&seen\.has\(k\)&&!used\.has\(k\)\)/);
+  assert.match(app, /不能漏掉、增加或重复任何app/);
+  assert.match(app, /if\(seen\.has\(k\)&&!used\.has\(k\)\)/);
   assert.match(app, /离开后不能再返回查看，也不能开始第二轮巡查/);
   assert.match(app, /\.filter\(x=>x\.op&&x\.op!=='view'\)/);
   assert.match(app, /S\.me\.appLayout\.flat\(\)\.forEach/);
@@ -97,11 +96,10 @@ test('remote subtitles are one at a time and every visible line comes from the r
   assert.match(app, /\['wechatList','newFriendList','xDmList','dyDmList'\]\.includes\(a&&a\.targetType\)\)return\{lines:\[\],deleteIntent:false/);
   assert.match(app, /await chatAPI\(\[\{role:'system',content:buildSystem\(c\)\}/);
   assert.match(app, /max:520,complete:true,temp:\.82,aux:false/);
-  assert.match(app, /await remoteControlShowRoleLines\(await remoteControlTimed\(remoteControlRoleLines\(c,a,r\),6000,\[\]\)\)/);
+  assert.match(app, /await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
   assert.match(app, /replaceChildrenCompat\(cap,b\)/);
   assert.doesNotMatch(app, /function remoteControlSayFallback/);
-  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(2200,Math\.min\(4800/);
-  assert.match(app, /remoteControlPageExpired\(\)/);
+  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(4600/);
   assert.match(app, /默认保持安静继续操作/);
   assert.match(app, /lines返回空数组/);
   assert.match(app, /remoteControlRoleTextLines\(raw\)[\s\S]*?不说话[\s\S]*?return\[\]/);
@@ -129,7 +127,7 @@ test('the role can independently delete social content and DMs, declare ownershi
   assert.match(app, /function remoteControlPrepareVisibleDelete\(a\)/);
   assert.match(app, /visibleDelete=await remoteControlPrepareVisibleDelete\(a\)[\s\S]*?remoteControlExecute\(a,c\)[\s\S]*?remoteControlShowVisibleDeleteResult\(a\)/);
   assert.match(app, /function remoteControlReactionDeleteAction\(entry,reaction,c\)/);
-  assert.match(app, /reaction=await remoteControlTimed\(remoteControlRoleReaction\(c,a,r\),6500[\s\S]*?remoteControlReactionDeleteAction\(entry,reaction,c\)/);
+  assert.match(app, /reaction=await remoteControlRoleReaction\(c,a,r\)[\s\S]*?remoteControlReactionDeleteAction\(entry,reaction,c\)/);
   assert.match(app, /data-x-tweet-id="\$\{t\.id\}"/);
   assert.match(app, /else if\(a\.op==='delete_x'\)\{xTab='feed';_feedTab='follow';remoteControlSetPage\('x'\);\}/);
   assert.match(app, /角色当时亲口说/);

@@ -12,20 +12,14 @@ const routingSource = app.match(/const PHONE_NON_WECHAT_TARGET=[\s\S]*?(?=\nfunc
 const restoreAllSource = app.match(/function phoneInspectionRestoreAllPermissionsIntent\(text\)[\s\S]*?(?=\nfunction remoteControlIntentContext)/)?.[0] || '';
 
 function routingHarness(wxLoginAuth) {
-  let recent = [];
   const context = {
     S: { couple: { cid: 'role-1', wxLoginAuth } },
-    msgs: () => recent,
-    msgToText: m => String(m && m.content || ''),
     _remoteIntentPurpose: {},
     _remoteIntentContext: {},
-    _remoteIntentDeclared: {},
-    _remoteIntentIssuedAt: {},
   };
   vm.runInNewContext(`${restoreAllSource}
 ${routingSource}
 this.routePhoneInspectionTags = routePhoneInspectionTags;`, context);
-  context.setRecent = rows => { recent = rows; };
   return context;
 }
 
@@ -52,48 +46,6 @@ test('routing behavior no longer rewrites a single entry tag chosen by the role'
   assert.equal(disabled._remoteIntentPurpose['role-1'], undefined);
 });
 
-test('rejecting pending contacts is forced to remote control instead of WeChat login', () => {
-  const enabled = routingHarness(true);
-  const forced = enabled.routePhoneInspectionTags(
-    '\u6211\u53bb\u5904\u7406\u3002\n[\u767b\u5f55\u5fae\u4fe1]',
-    { id: 'role-1' },
-    '\u5e2e\u6211\u62d2\u7edd\u597d\u53cb\u91cc\u7684\u65b0\u670b\u53cb\u7533\u8bf7'
-  );
-  assert.doesNotMatch(forced, /\[\u767b\u5f55\u5fae\u4fe1\]/);
-  assert.match(forced, /\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\]/);
-  assert.equal(enabled._remoteIntentPurpose['role-1'], 'reject_friend_requests');
-
-  const daily = enabled.routePhoneInspectionTags(
-    '\u6211\u8fdc\u7a0b\u770b\u770b\u3002\n[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7]',
-    { id: 'role-1' },
-    '\u6211\u60f3\u65e5\u5e38\u67e5\u5c97\uff0c\u770b\u770b\u901a\u8baf\u5f55\u548c\u5176\u4ed6\u8f6f\u4ef6'
-  );
-  assert.match(daily, /\[\u7533\u8bf7\u8fdc\u7a0b\u64cd\u63a7\]/);
-  assert.equal(enabled._remoteIntentPurpose['role-1'], 'inspect_phone');
-});
-
-test('an explicit new-friend rejection request starts the dedicated remote route even when the role omits the tag', () => {
-  const enabled = routingHarness(true);
-  const forced = enabled.routePhoneInspectionTags(
-    '我知道了，等着。',
-    { id: 'role-1' },
-    '去好友里的新的朋友，把那个申请拒绝掉'
-  );
-  assert.match(forced, /\[申请远程操控\]/);
-  assert.equal(enabled._remoteIntentPurpose['role-1'], 'reject_friend_requests');
-});
-
-test('a correction after the role clicked the wrong place re-enters through WeChat instead of Phone', () => {
-  const enabled = routingHarness(true);
-  enabled.setRecent([
-    { role: 'user', content: '你根本没有点到，重新处理' },
-    { role: 'user', content: '那个在新的朋友里呢' },
-  ]);
-  const forced = enabled.routePhoneInspectionTags('我知道了，等着。', { id: 'role-1' }, '那个在新的朋友里呢');
-  assert.match(forced, /\[申请远程操控\]/);
-  assert.equal(enabled._remoteIntentPurpose['role-1'], 'reject_friend_requests');
-});
-
 test('a disabled WeChat login permission is restored through a consented narrow remote session', () => {
   assert.match(app, /remember\(restoreAll\?'restore_all_permissions':\(onlyWx&&!\(S\.couple&&S\.couple\.cid===c\.id&&S\.couple\.wxLoginAuth\)\)\?'restore_wx':'inspect_phone'\)/);
   assert.match(app, /purpose==='restore_wx'/);
@@ -113,7 +65,7 @@ test('disabled couple permissions remain visible and can be re-enabled by the ro
 
 test('turning off the remote-request switch does not bypass per-session consent', () => {
   assert.match(app, /function remoteControlAllowed\(cid\)\{return !!\(S\.couple&&S\.couple\.cid===cid\);\}/);
-  assert.match(app, /remoteControlRequest\(cid\)[\s\S]*?_remoteRequest=\{cid,ts:Date\.now\(\),purpose,intentIssuedAt,intentContext,declaredIntent\}/);
+  assert.match(app, /remoteControlRequest\(cid\)[\s\S]*?_remoteRequest=\{cid,ts:Date\.now\(\),purpose,intentContext\}/);
   assert.match(app, /remoteControlApprove\('\$\{c\.id\}'\)/);
   assert.match(app, /remoteControlDeny\('\$\{c\.id\}'\)/);
 });

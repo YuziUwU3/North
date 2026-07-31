@@ -34,9 +34,7 @@ test("remote control keeps the triggering chat context and uses it to prioritize
   assert.match(app, /function remoteControlIntentContext\(c\)/);
   assert.match(app, /function remoteControlMentionedWechatTargets\(c\)/);
   assert.match(app, /contextMentioned:true/);
-  assert.match(app, /if\(required\.some\(a=>a&&a\.contextMentioned\)\)\{const named=/);
-  assert.match(app, /sameApp=focus\?required\.filter\(a=>a&&a\.app===focus\.app\)/);
-  assert.match(app, /function remoteControlIntentPriority\(c,required\)/);
+  assert.match(app, /if\(required\.some\(a=>a&&a\.contextMentioned\)\)return required\.filter\(a=>a&&a\.app==='wechat'\)/);
 });
 
 test("phone contacts and SMS threads are actionable delete targets in remote control", () => {

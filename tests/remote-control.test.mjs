@@ -59,9 +59,9 @@ test('live overlay blocks the phone while preserving an emergency stop', () => {
   assert.match(html, /\.remote-live-dot\{[^}]*background:#ff2942/);
 });
 
-test('every action has bounded silent subtitles and persistent memory', () => {
+test('every action has slow silent subtitles and persistent memory', () => {
   const remote = app.match(/let _remoteCtl[\s\S]*?(?=\/\/ ===== 他登录我的微信)/)?.[0] || '';
-  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(2200,Math\.min\(4800/);
+  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(4600/);
   assert.doesNotMatch(remote, /SpeechSynthesisUtterance|speechSynthesis|remoteControlSpeak/);
   assert.match(app, /function remoteControlCaption\(say\)/);
   assert.match(app, /replaceChildrenCompat\(cap,b\)/);
