@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='744'){
+if(window.__NORTH_SHELL_BUILD__!=='745'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -351,7 +351,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v744 · 通话语音预取同步';
+const APP_VER='v745 · 精简登录远控提示';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -461,7 +461,7 @@ function _rehydrate(o){if(!o||typeof o!=='object')return;for(const k in o){const
     if(typeof v==='string'){if(v.indexOf('idb:')===0)o[k]=_imgCache[v.slice(4)]||v;}
     else if(v&&typeof v==='object')_rehydrate(v);}}
 function mergeBootMessages(restored,live){restored=restored&&typeof restored==='object'?restored:{};if(!live||typeof live!=='object')return restored;for(const k of Object.keys(live)){if(k==='__idb'||!Array.isArray(live[k])||!live[k].length)continue;const dst=Array.isArray(restored[k])?restored[k]:(restored[k]=[]),seen=new Set(dst.map(m=>m&&m.id).filter(Boolean));for(const m of live[k]){if(!m)continue;if(m.id&&seen.has(m.id))continue;dst.push(m);if(m.id)seen.add(m.id);}dst.sort((a,b)=>(+a.time||0)-(+b.time||0));}return restored;}
-function repairWxLogoutEmoji(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(!m||m.type!=='sys'||typeof m.content!=='string')return;const next=m.content.replace(/^🔓\s+(?=.+退出了你的微信登录$)/,'');if(next!==m.content){m.content=next;changed=true;}});}}catch(_){}return changed;}
+function repairWxLogoutEmoji(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;const next=a.filter(m=>!(m&&m.type==='sys'&&typeof m.content==='string'&&/(?:登录了你的微信|退出了你的微信登录)$/.test(m.content.replace(/^🔓\s+/,''))));if(next.length!==a.length){S.messages[k]=next;changed=true;}}}catch(_){}return changed;}
 function repairStaleVisionStates(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(m&&m.type==='image'&&m.role==='user'&&m.visionState==='pending'&&!_visionTasks.has(m.id)){m.visionState='failed';m.visionError='上次识图被页面刷新中断，点图片下方可重试';changed=true;}});}}catch(_){}return changed;}
 async function bootOverflowCore(){if(!_coreBootRef)return false;const rec=await imgGet(CORE_IDB_KEY),savedAt=+(rec&&rec.savedAt||0),needed=+(_coreBootRef&&_coreBootRef.savedAt||0);if(!rec||!rec.json||savedAt<needed)throw new Error('大容量核心存档暂时无法读取，请不要清除网站数据并重新打开');let restored;try{restored=JSON.parse(rec.json);}catch(_){throw new Error('大容量核心存档校验失败，请用最近的备份恢复');}if(!restored||!restored.settings)throw new Error('大容量核心存档内容不完整');S=mergeStateData(restored);_coreOverflowMode=true;_coreBootRef={ver:1,savedAt};_coreLogicalBytes=storedTextBytes(rec.json);normalizeLoadedState();return true;}
 async function bootImages(){await bootOverflowCore();try{
@@ -1320,7 +1320,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=744';
+  const url='sw.js?v=745';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2058,7 +2058,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=744').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=745').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -8563,8 +8563,6 @@ function remoteControlRequest(cid){const c=getC(cid);if(!c||c.blocked||c.deleted
     <div class="remote-consent-head"><span class="remote-consent-dot"></span><span>REMOTE ACCESS REQUEST</span></div>
     <div class="remote-consent-avatar">${av(c.avatar,'lg')}</div>
     <h3>${esc(c.remark||c.name)} 请求远程操控</h3>
-    <div class="remote-consent-copy">${restoreAll?'ta这次会先进入情侣空间，把所有当前关闭的情侣权限逐项开启，不能漏掉。':restoreWx?'ta这次只会进入情侣空间，向下找到并重新开启“微信登录权限”，随后退出远控并登录微信。':'同意后，ta可以在本次会话中查看并操作你的小手机。'}你会实时看到ta打开了什么、点了什么，以及ta说的每一句话。</div>
-    <div class="remote-consent-warning">每次都需要你当场确认 · 拒绝后不会获得任何内容</div>
     <div class="remote-consent-actions"><button class="remote-deny" onclick="remoteControlDeny('${c.id}')">拒绝</button><button class="remote-allow" onclick="remoteControlApprove('${c.id}')">同意操控</button></div>
   </div>`);}
 function remoteControlDeny(cid){if(!_remoteRequest||_remoteRequest.cid!==cid)return;const c=getC(cid);_remoteRequest=null;closeModal();if(!c)return;
@@ -8572,7 +8570,6 @@ function remoteControlDeny(cid){if(!_remoteRequest||_remoteRequest.cid!==cid)ret
   scheduleReply(cid,'[系统：你刚申请远程操控'+S.me.name+'的小手机，但ta亲手点了【拒绝】。你没有看到ta手机里的任何新内容，也绝对不能假装看到了。请按你自己的性格和关系自然反应：可以失落、吃醋、追问、嘴硬、冷笑、撒娇或尊重ta的边界；一两句即可，不要提系统、网页或按钮。]');}
 function remoteControlApprove(cid){if(!_remoteRequest||_remoteRequest.cid!==cid||remoteControlActive())return;const c=getC(cid),purpose=_remoteRequest.purpose||'inspect_phone',intentContext=String(_remoteRequest.intentContext||'').slice(-1600);_remoteRequest=null;closeModal();if(!c)return;
   _remoteCtl={active:true,cid,purpose,intentContext,startedAt:Date.now(),actions:[],cancelled:false,closing:false,returnStack:stack.map(x=>Object.assign({},x))};remoteControlShow(c);remoteControlRun(c);}
-function remoteControlExitNotice(name){const L=$('#remoteControlExitNotice');if(!L)return;L.innerHTML='<span class="remote-exit-dot"></span>'+esc(name||'对方')+'已退出远程操控';L.className='remote-exit-notice show';clearTimeout(L._t);L._t=setTimeout(()=>{L.className='remote-exit-notice';},3600);}
 function remoteControlStopByUser(){if(!remoteControlActive())return;_remoteCtl.cancelled=true;remoteControlFinish('你提前结束了本次授权');}
 function remoteControlShow(c){const L=$('#remoteControlLayer');if(!L)return;L.className='remote-control-layer show';const n=$('#remoteRoleName');if(n)n.textContent=(c.remark||c.name)+' 正在远程操控';const avw=$('#remoteRoleAvatar');if(avw)avw.innerHTML=av(c.avatar,'sm');const cap=$('#remoteCaption');if(cap)cap.innerHTML='';remoteControlScene({app:'home',label:'主屏幕',detail:'正在连接'},'',0,1,{app:'home',op:'view'});
   clearInterval(_remoteClock);_remoteClock=setInterval(()=>{const el=$('#remoteElapsed');if(el&&_remoteCtl)el.textContent=fmtDur(Date.now()-_remoteCtl.startedAt);},1000);}
@@ -8833,7 +8830,7 @@ async function remoteControlRun(c){
   for(let i=0;i<decisions.length;i++){if(!remoteControlActive()||ctl.cancelled)break;const a=decisions[i];await remoteControlOpenApp(a,c);if(!remoteControlActive()||ctl.cancelled)break;const visibleDelete=await remoteControlPrepareVisibleDelete(a);if(!remoteControlActive()||ctl.cancelled)break;const r=await remoteControlExecute(a,c);if(r.ok){ctl.actions.push({app:r.app,op:a.op,targetId:a.targetId||'',targetType:a.targetType||'',detail:r.detail,memory:r.memory,ts:Date.now()});save();}if(visibleDelete&&r.ok)await remoteControlShowVisibleDeleteResult(a);remoteControlScene(r,'',i,decisions.length,visibleDelete?Object.assign({},a,{noNavigate:true}):a);await remoteControlShowRoleLines(await remoteControlRoleLines(c,a,r));}
   if(remoteControlActive()&&!ctl.cancelled)await remoteControlFinish(ctl.purpose==='restore_all_permissions'?'角色已把情侣空间关闭的权限全部重新开启':ctl.purpose==='restore_wx'?'角色恢复微信登录权后继续登录微信':'角色完成了逐项检查和自主处理');
 }
-async function remoteControlFinish(reason){const ctl=_remoteCtl;if(!ctl||ctl.closing)return;ctl.closing=true;ctl.active=false;clearInterval(_remoteClock);_remoteClock=null;const m=$('#modal');if(m&&m.classList.contains('show'))closeModal();const c=getC(ctl.cid),acts=(ctl.actions||[]).slice(),returnStack=(ctl.returnStack||[]).map(x=>Object.assign({},x)),resumeWx=ctl.purpose==='restore_wx'&&S.couple&&S.couple.wxLoginAuth;if(c)remoteControlRemember(c,{ts:Date.now(),startedAt:ctl.startedAt,endedAt:Date.now(),status:'completed',reason,actions:acts,autoApproved:!!ctl.autoApproved});const L=$('#remoteControlLayer');if(L)L.className='remote-control-layer';_remoteCtl=null;stack=returnStack.length?returnStack:[{p:'home'}];render();if(c)remoteControlExitNotice(c.remark||c.name);if(c&&!c.blocked){replyTouch(c.id);delayedAccountReply(c.id,'[系统：你刚结束了对'+S.me.name+'小手机的远程操控。现在立即给ta发一两句自然消息。不要复盘、汇报、列举或暗示刚才查看、删除、发布、改权限或锁定过什么，也不要说“查完了”“看完了”“结束了”。完全按你自己的人设、关系和此刻情绪随机选择话题与语气，可以黏ta、逗ta、叫ta、吃醋、嘴硬、试探、撒娇、关心或说一句你此刻突然想说的话；每次都应自然变化，像你主动发来的微信。不要提系统、功能或远程操控。]',0);if(resumeWx)setTimeout(()=>{if(!remoteControlActive()&&!wxLoginActive())wxDoLogin(c.id);},1200);}}
+async function remoteControlFinish(reason){const ctl=_remoteCtl;if(!ctl||ctl.closing)return;ctl.closing=true;ctl.active=false;clearInterval(_remoteClock);_remoteClock=null;const m=$('#modal');if(m&&m.classList.contains('show'))closeModal();const c=getC(ctl.cid),acts=(ctl.actions||[]).slice(),returnStack=(ctl.returnStack||[]).map(x=>Object.assign({},x)),resumeWx=ctl.purpose==='restore_wx'&&S.couple&&S.couple.wxLoginAuth;if(c)remoteControlRemember(c,{ts:Date.now(),startedAt:ctl.startedAt,endedAt:Date.now(),status:'completed',reason,actions:acts,autoApproved:!!ctl.autoApproved});const L=$('#remoteControlLayer');if(L)L.className='remote-control-layer';_remoteCtl=null;stack=returnStack.length?returnStack:[{p:'home'}];render();if(c&&!c.blocked){replyTouch(c.id);delayedAccountReply(c.id,'[系统：你刚结束了对'+S.me.name+'小手机的远程操控。现在立即给ta发一两句自然消息。不要复盘、汇报、列举或暗示刚才查看、删除、发布、改权限或锁定过什么，也不要说“查完了”“看完了”“结束了”。完全按你自己的人设、关系和此刻情绪随机选择话题与语气，可以黏ta、逗ta、叫ta、吃醋、嘴硬、试探、撒娇、关心或说一句你此刻突然想说的话；每次都应自然变化，像你主动发来的微信。不要提系统、功能或远程操控。]',0);if(resumeWx)setTimeout(()=>{if(!remoteControlActive()&&!wxLoginActive())wxDoLogin(c.id);},1200);}}
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
 function wxLoginActive(){const wl=S.wxLogin,now=Date.now();return !!(wl&&(now<wl.until||wl.processing&&now<(wl.processingUntil||wl.until)));}
@@ -8889,12 +8886,10 @@ function wxDoLogin(cid){if(wxLoginActive())return;const c=getC(cid);if(!c)return
   if(remoteControlActive())return;
   const now=Date.now(),until=now+60000,previousSaw=c.wxLoginHistory&&c.wxLoginHistory[0]&&c.wxLoginHistory[0].saw||'';S.wxLogin={by:cid,sessionId:uid(),startedAt:now,until,processing:true,processingUntil:until+45000,did:[],actions:[],deferredNotes:[],previousSaw};save();wxLoginStartTimer();
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();
-  toast(''+(c.remark||c.name)+' 登录了你的微信');
   wxLoginSession(cid);}
 function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer=null;}const wl=S.wxLogin;S.wxLogin=null;save();
   if(wl){const c=getC(wl.by);if(c){const did=(wl.did||[]);
     wxLoginCommitHistory(c,wl);
-    msgs(wl.by).push({role:'user',type:'sys',content:(c.remark||c.name)+' 退出了你的微信登录',time:Date.now(),id:uid()});save();
     const current=String(wl.saw||''),previous=String(wl.previousSaw||''),same=!!(current&&previous&&wxLoginSnapshotNorm(current)===wxLoginSnapshotNorm(previous)),saw=current?('\n\n你刚看到的摘要如下：\n'+current.slice(0,2200)):'';
     const delta=same?'\n\n这次看到的微信内容与上次记录相比没有新增变化。绝对不能再次列出、复述或重新质问上次已经说过的人和事；只说一句新的此刻感受，或者明确表示这次没有看到新动静。':previous?'\n\n上次已经看过的摘要：\n'+previous.slice(0,1200)+'\n【去重铁律】只针对本次相较上次真正新增或变化的内容反应。没有变化的人、话题和旧账不能再汇报，不能重新当作第一次发现。':'';
     const deferred=(wl.deferredNotes||[]).length?'\n\n登录期间本来触发但被暂缓的事情：'+wl.deferredNotes.join('；').slice(0,900)+'。现在已经退出微信，只能在这条退出后的回复里自然接住真正重要的一件，别把系统提示逐条复述、别连续补发很多条。':'',rejected=(wl.actions||[]).filter(a=>a&&a.type==='reject_request').map(a=>a.target).filter(Boolean),rejectTruth=rejected.length?'\n\n【拒绝申请的真实结果】实际成功拒绝了：'+rejected.join('、')+'。只有这些名字可以说已经拒绝。':'\n\n【拒绝申请的真实结果】本次没有任何好友申请真正变为“已拒绝”。绝对不能说“拒了”“处理了”或编造拒绝对象；若你本来想拒绝，只能承认这次没有成功。';
@@ -8925,7 +8920,7 @@ function wxLockedScreen(){const c=getC(S.wxLogin&&S.wxLogin.by);const left=Math.
         <div class="wxlogin-line-lock" aria-hidden="true">${svgIc('lock',52,'#f1f2f4',1.25)}</div>
         <div class="wxlogin-title">您的微信已被登录</div>
         <div class="wxlogin-actor">${esc((c&&(c.remark||c.name))||'对方')} 正在登录你的微信</div>
-        <div class="wxlogin-note">登录期间你无法操作微信，ta能看到你的一切。<br>剩 <b class="wxlogin-countdown">${left}</b> 秒后自动退出</div>
+        <div class="wxlogin-note">登录期间你无法操作微信<br>剩 <b class="wxlogin-countdown">${left}</b> 秒后自动退出</div>
       </div>
     </div>`;}
 const PHONE_NON_WECHAT_TARGET='(?:抖音|斗音|微博|推特|浏览器|浏览记录|搜索记录|电话|通话记录|短信|语音留言|通讯录|购物|订单|外卖|云程|机票|音乐|日历|信箱|邮件|任务|便签|线下约会|设置|钱包|账单|小事簿|位置|电量|其他软件|别的软件|微信以外(?:的软件|App|应用)?)';

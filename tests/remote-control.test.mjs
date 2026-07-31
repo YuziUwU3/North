@@ -14,7 +14,8 @@ test('remote control always requires an explicit request and user choice', () =>
   assert.match(app, /function remoteControlRequest\(cid\)/);
   assert.match(app, /remoteControlDeny\('\$\{c\.id\}'\)/);
   assert.match(app, /remoteControlApprove\('\$\{c\.id\}'\)/);
-  assert.match(app, /拒绝后不会获得任何内容/);
+  const request = app.match(/function remoteControlRequest\(cid\)[\s\S]*?(?=\nfunction remoteControlDeny)/)?.[0] || '';
+  assert.doesNotMatch(request, /拒绝后不会获得任何内容|remote-consent-warning/);
 });
 
 test('remote control is exposed only through the bound couple space', () => {

@@ -51,7 +51,8 @@ test('a disabled WeChat login permission is restored through a consented narrow 
   assert.match(app, /purpose==='restore_wx'/);
   assert.match(app, /targetId:'wxLoginAuth'/);
   assert.match(app, /resumeWx[\s\S]*?wxDoLogin\(c\.id\)/);
-  assert.match(app, /restoreWx\?'ta这次只会进入情侣空间/);
+  const request = app.match(/function remoteControlRequest\(cid\)[\s\S]*?(?=\nfunction remoteControlDeny)/)?.[0] || '';
+  assert.doesNotMatch(request, /remote-consent-copy|ta这次只会进入情侣空间/);
 });
 
 test('disabled couple permissions remain visible and can be re-enabled by the role', () => {

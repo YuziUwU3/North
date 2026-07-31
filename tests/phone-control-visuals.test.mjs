@@ -42,9 +42,13 @@ test('phone viewing banner uses a red recording indicator without emoji', () => 
   assert.match(html, /@keyframes spyScan/);
 });
 
-test('wechat logout record has no unlock emoji residue', () => {
-  assert.doesNotMatch(app, /content:'🔓 '/);
-  assert.match(app, /退出了你的微信登录/);
-  assert.match(app, /function repairWxLogoutEmoji\(\)/);
-  assert.match(app, /replace\(\/\^🔓\\s\+/);
+test('wechat login and logout omit redundant visible notices', () => {
+  const login = app.match(/function wxDoLogin\(cid\)[\s\S]*?(?=\nfunction wxLogout\(\))/)?.[0] || '';
+  const logout = app.match(/function wxLogout\(\)[\s\S]*?(?=\nasync function wxLoginSession)/)?.[0] || '';
+  const screen = app.match(/function wxLockedScreen\(\)[\s\S]*?\n\}/)?.[0] || '';
+  assert.doesNotMatch(login, /toast\(/);
+  assert.doesNotMatch(logout, /type:'sys'/);
+  assert.doesNotMatch(screen, /ta能看到你的一切/);
+  assert.match(app, /function repairWxLogoutEmoji\(\)[\s\S]*?\.filter\(/);
+  assert.match(app, /登录了你的微信\|退出了你的微信登录/);
 });

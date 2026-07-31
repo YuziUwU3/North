@@ -28,10 +28,10 @@ test("auto-approve is exposed and restorable from couple permissions", () => {
   assert.match(app, /if\(key==='remoteControlAutoApprove'\)cp\.remoteControlAuth=true/);
 });
 
-test("remote control exit notice is shown after the remote session closes", () => {
-  assert.match(html, /id="remoteControlExitNotice"/);
-  assert.match(html, /\.remote-exit-notice/);
-  assert.match(app, /function remoteControlExitNotice\(name\)/);
-  assert.match(app, /已退出远程操控/);
-  assert.match(app, /remoteControlExitNotice\(c\.remark\|\|c\.name\)/);
+test("remote control omits the redundant exit notice", () => {
+  assert.doesNotMatch(html, /id="remoteControlExitNotice"/);
+  assert.doesNotMatch(app, /function remoteControlExitNotice\(name\)/);
+  assert.doesNotMatch(app, /remoteControlExitNotice\(c\.remark\|\|c\.name\)/);
+  assert.doesNotMatch(app, /remote-consent-copy/);
+  assert.doesNotMatch(app, /remote-consent-warning/);
 });
