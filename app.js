@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='738'){
+if(window.__NORTH_SHELL_BUILD__!=='739'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -351,7 +351,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v738 · 稳定远控与微信拒绝申请';
+const APP_VER='v739 · 修复微信拒绝申请事务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1320,7 +1320,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=738';
+  const url='sw.js?v=739';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2058,7 +2058,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=738').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=739').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -4608,7 +4608,7 @@ function checkTaskPenalty(c){const t=c&&c.tasks;if(!t||t.date===todayStr()||t.pe
 
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
-  if(S.wxLogin){if(Date.now()>=S.wxLogin.until)setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
+  if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
   let body='';
   if(wxTab==='chats')body=wxChats();
   else if(wxTab==='contacts')body=wxContacts();
@@ -4911,7 +4911,7 @@ function doCreateGroup(){if(!window._gsel||!window._gsel.length){toast('至少�
   const nm=($('#g_name').value||'').trim()||(window._gsel.map(id=>getC(id).name).slice(0,3).join('、')+'的群');
   const g={id:'g'+uid(),name:nm,members:window._gsel.slice(),msgs:[]};S.groups.unshift(g);save();closeModal();go('group',{id:g.id});}
 function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
-  if(S.wxLogin){if(Date.now()>=S.wxLogin.until)setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
+  if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
   g.msgs.forEach(m=>{if(!m.id)m.id=uid();});
   let body='';g.msgs.forEach((m,i)=>{body+=chatBoundaryHTML(i?g.msgs[i-1]:null,m);body+=gbubble(g,m);});
   const sel=_gmsel&&_gmsel.id===id;
@@ -7993,7 +7993,7 @@ const CHAT_RENDER_LIMIT=180;
 let _chatRenderExtra={};
 function showOlderChat(id){_chatRenderExtra[id]=(_chatRenderExtra[id]||0)+CHAT_RENDER_LIMIT;render();}
 function renderChat(id){const c=getC(id);if(!c)return '';
-  if(S.wxLogin){if(Date.now()>=S.wxLogin.until)setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
+  if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
   const bg=c.chatBg?`background:url(${c.chatBg}) center/cover`:'';
   const all=msgs(id).filter(m=>!m._call);
   all.forEach(m=>{if(!m.id)m.id=uid();});
@@ -8839,20 +8839,22 @@ async function remoteControlRun(c){
 async function remoteControlFinish(reason){const ctl=_remoteCtl;if(!ctl||ctl.closing)return;ctl.closing=true;ctl.active=false;clearInterval(_remoteClock);_remoteClock=null;clearTimeout(_remoteDeadlineTimer);_remoteDeadlineTimer=null;const m=$('#modal');if(m&&m.classList.contains('show'))closeModal();const c=getC(ctl.cid),acts=(ctl.actions||[]).slice(),returnStack=(ctl.returnStack||[]).map(x=>Object.assign({},x)),resumeWx=ctl.purpose==='restore_wx'&&S.couple&&S.couple.wxLoginAuth;if(c)remoteControlRemember(c,{ts:Date.now(),startedAt:ctl.startedAt,endedAt:Date.now(),status:'completed',reason,actions:acts,autoApproved:!!ctl.autoApproved});const L=$('#remoteControlLayer');if(L)L.className='remote-control-layer';_remoteCtl=null;stack=returnStack.length?returnStack:[{p:'home'}];render();if(c)remoteControlExitNotice(c.remark||c.name);if(c&&!c.blocked){replyTouch(c.id);delayedAccountReply(c.id,'[系统：你刚结束了对'+S.me.name+'小手机的远程操控。现在立即给ta发一两句自然消息。不要复盘、汇报、列举或暗示刚才查看、删除、发布、改权限或锁定过什么，也不要说“查完了”“看完了”“结束了”。完全按你自己的人设、关系和此刻情绪随机选择话题与语气，可以黏ta、逗ta、叫ta、吃醋、嘴硬、试探、撒娇、关心或说一句你此刻突然想说的话；每次都应自然变化，像你主动发来的微信。不要提系统、功能或远程操控，也不要再次申请远程操控或登录微信。]',0);if(resumeWx)setTimeout(()=>{if(!remoteControlActive()&&!wxLoginActive())wxDoLogin(c.id);},1200);}}
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
-function wxLoginActive(){return !!(S.wxLogin&&Date.now()<S.wxLogin.until);}
+function wxLoginActive(){const wl=S.wxLogin,now=Date.now();return !!(wl&&(now<wl.until||wl.processing&&now<(wl.processingUntil||wl.until)));}
 function wxLoginBlockReply(id,note){const wl=S.wxLogin;if(!wl||Date.now()>=wl.until||wl.by!==id)return false;
   const t=(''+(note||'')).trim();if(t){wl.deferredNotes=Array.isArray(wl.deferredNotes)?wl.deferredNotes:[];if(wl.deferredNotes.indexOf(t)<0)wl.deferredNotes.push(t.slice(0,500));wl.deferredNotes=wl.deferredNotes.slice(-4);save(500);}return true;}
 function wxLoginStartTimer(){if(_wxLoginTimer)clearInterval(_wxLoginTimer);_wxLoginTimer=setInterval(()=>{
   if(!S.wxLogin){clearInterval(_wxLoginTimer);_wxLoginTimer=null;return;}
-  if(Date.now()>=S.wxLogin.until){wxLogout();return;}
+  if(!wxLoginActive()){wxLogout();return;}
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();},1000);}
 function wxLoginRecentIntent(cid){const rs=msgs(cid).filter(m=>m.role==='user'&&m.type!=='sys'&&!m._call).slice(-8).map(m=>msgToText(m)).filter(Boolean);const text=rs.slice(-4).join(' / ');
   const intro=/介绍一下自己|介绍自己|自我介绍|认识一下|打个招呼|说一下你是谁|你是谁/.test(text);
   const all=/每个人|所有人|每个|挨个|都发|全部/.test(text);
   return {text:text.slice(-300),intro,all};}
 function wxLoginPendingFriendRequests(cid){friendRequestsInit();return (S.friendRequests||[]).filter(r=>r&&r.status==='pending'&&friendRequestVisible(r)&&r.contactId!==cid).map(r=>{const c=getC(r.contactId);return c&&!c.deleted?{key:r.id,name:c.remark||c.name,source:r.source||'好友申请',intent:r.intent||'',message:friendReqText(r.msg,'想认识你，可以通过一下吗？'),time:factStamp(r.visibleAt||r.time||Date.now())}:null;}).filter(Boolean).sort((a,b)=>String(b.time).localeCompare(String(a.time))).slice(0,20);}
-function wxLoginPendingFriendPrompt(cid){const rows=wxLoginPendingFriendRequests(cid);if(!rows.length)return'\n\n【好友 → 新的朋友】当前没有等待处理的好友申请，绝不能编造或声称拒绝了谁。';return'\n\n【好友 → 新的朋友｜当前真实等待处理的申请】\n'+JSON.stringify(rows)+'\n你已经登录微信，所以现在可以查看这些申请并按你自己的性格、关系、占有欲和申请内容决定是否拒绝。普通合理申请可以保留，一个都不拒绝也可以；不要机械全拒。要拒绝时只能使用 [拒绝新朋友|申请key]，key必须原样照抄上面列表。这个指令会真实触发“新的朋友”页面上同一个拒绝处理入口；没有登录微信时绝对无法执行。';}
-function wxLoginRejectPendingFriend(cid,rid){if(!wxLoginActive()||!S.wxLogin||S.wxLogin.by!==cid)return null;const row=wxLoginPendingFriendRequests(cid).find(x=>x.key===rid);if(!row)return null;ignoreFriend(rid);const req=(S.friendRequests||[]).find(x=>x.id===rid);if(!req||req.status!=='rejected')return null;const c=getC(cid);if(c){wxLoginRecordAction(c,'reject_request',row.name,'拒绝新朋友申请');S.wxLogin.did=Array.isArray(S.wxLogin.did)?S.wxLogin.did:[];S.wxLogin.did.push('你在微信“好友 → 新的朋友”里亲手拒绝了「'+row.name+'」的申请');}return row;}
+function wxLoginPendingFriendPrompt(cid){const rows=wxLoginPendingFriendRequests(cid);if(!rows.length)return'\n\n【好友 → 新的朋友】当前没有等待处理的好友申请，绝不能编造或声称拒绝了谁。';return'\n\n【好友 → 新的朋友｜当前真实等待处理的申请】\n'+JSON.stringify(rows)+'\n你已经登录微信，所以现在可以查看这些申请并按你自己的性格、关系、占有欲和申请内容决定是否拒绝。普通合理申请可以保留，一个都不拒绝也可以；不要机械全拒。要拒绝时每个申请单独一行使用 [拒绝新朋友|申请key或页面姓名]，可以原样填写key，也可以填写上面列表中的完整姓名；若要拒绝两个人就输出两行，不能把两个姓名塞在同一项里。只有真实执行成功的申请才算拒绝，执行失败时退出后绝不能声称已经拒绝。没有登录微信时绝对无法执行。';}
+function wxLoginResolvePendingFriend(cid,ref){ref=String(ref||'').trim();if(!ref)return null;const rows=wxLoginPendingFriendRequests(cid),compact=ref.replace(/\s+/g,'');return rows.find(x=>x.key===ref)||rows.find(x=>String(x.name||'').trim()===ref)||rows.find(x=>String(x.name||'').replace(/\s+/g,'')===compact)||null;}
+function wxLoginRejectPendingFriend(cid,ref){if(!wxLoginActive()||!S.wxLogin||S.wxLogin.by!==cid)return null;const row=wxLoginResolvePendingFriend(cid,ref);if(!row)return null;ignoreFriend(row.key);const req=(S.friendRequests||[]).find(x=>x.id===row.key);if(!req||req.status!=='rejected')return null;const c=getC(cid);if(c){wxLoginRecordAction(c,'reject_request',row.name,'拒绝新朋友申请');S.wxLogin.did=Array.isArray(S.wxLogin.did)?S.wxLogin.did:[];S.wxLogin.did.push('你在微信“好友 → 新的朋友”里亲手拒绝了「'+row.name+'」的申请');}return row;}
+function wxLoginFriendRejectRefs(raw,cid){const text=String(raw||''),refs=[],push=v=>{String(v||'').split(/[、,，/]|\s+和\s*|\s+及\s*/).map(x=>x.trim()).filter(Boolean).forEach(x=>{if(!refs.includes(x))refs.push(x);});},re=/[\[【]\s*(?:拒绝新朋友|拒绝好友申请|拒绝申请)\s*[\|｜:：]\s*([^\]】\n]+)[\]】]/g;let m;while((m=re.exec(text)))push(m[1]);if(!refs.length){splitBubbles(text).forEach(line=>{if(!/(?:拒绝|拒掉|不通过)/.test(line)||/(?:不拒绝|先不拒绝|不要拒绝|保留|不处理)/.test(line))return;wxLoginPendingFriendRequests(cid).forEach(row=>{if(line.includes(row.name))push(row.name);});});}return refs;}
 function wxLoginSelfName(c){return ((c&&c.name)||'').trim()||((c&&c.selfcall)||'').trim()||((c&&c.remark)||'').trim()||'我';}
 function wxLoginDisplayName(c){return (c&&c.remark)||wxLoginSelfName(c);}
 function wxLoginRe(s){return String(s||'').replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');}
@@ -8888,7 +8890,7 @@ function wxLoginIntroFallback(c,cid,intent,sentKeys){if(!intent||!intent.intro||
   items.sort((a,b)=>b.score-a.score);let n=[...sentKeys].filter(k=>k.indexOf('role:')===0||k.indexOf('pf:')===0).length;items.some(it=>{if(n>=max)return true;const key=it.type+':'+it.id;if(sentKeys.has(key))return false;if(wxLoginRepeatTarget(c,it.type,it.id,it.name)){sentKeys.add(key);return false;}const say=wxLoginIntroLine(c,it.type,it.name),actor=wxLoginSelfName(c);if(it.type==='role'){msgs(it.id).push({role:'user',type:'text',content:say,time:Date.now(),id:uid(),_wxlogin:true,_wxloginBy:cid,_wxloginByName:actor});const tc=getC(it.id);if(tc&&!tc.blocked)scheduleReply(it.id);}else if(it.type==='pf'){sendPhoneFriendBody(it.id,say,{silent:true});}wxLoginRecordAction(c,'send',it.name,say);sentKeys.add(key);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('你借用'+S.me.name+'账号向「'+it.name+'」介绍了自己');n++;return n>=max;});}
 function wxDoLogin(cid){if(wxLoginActive())return;const c=getC(cid);if(!c)return;
   if(remoteControlActive())return;
-  const previousSaw=c.wxLoginHistory&&c.wxLoginHistory[0]&&c.wxLoginHistory[0].saw||'';S.wxLogin={by:cid,until:Date.now()+60000,did:[],actions:[],deferredNotes:[],previousSaw};save();wxLoginStartTimer();
+  const now=Date.now(),until=now+60000,previousSaw=c.wxLoginHistory&&c.wxLoginHistory[0]&&c.wxLoginHistory[0].saw||'';S.wxLogin={by:cid,sessionId:uid(),startedAt:now,until,processing:true,processingUntil:until+45000,did:[],actions:[],deferredNotes:[],previousSaw};save();wxLoginStartTimer();
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();
   toast(''+(c.remark||c.name)+' 登录了你的微信');
   wxLoginSession(cid);}
@@ -8898,23 +8900,24 @@ function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer
     msgs(wl.by).push({role:'user',type:'sys',content:(c.remark||c.name)+' 退出了你的微信登录',time:Date.now(),id:uid()});save();
     const current=String(wl.saw||''),previous=String(wl.previousSaw||''),same=!!(current&&previous&&wxLoginSnapshotNorm(current)===wxLoginSnapshotNorm(previous)),saw=current?('\n\n你刚看到的摘要如下：\n'+current.slice(0,2200)):'';
     const delta=same?'\n\n这次看到的微信内容与上次记录相比没有新增变化。绝对不能再次列出、复述或重新质问上次已经说过的人和事；只说一句新的此刻感受，或者明确表示这次没有看到新动静。':previous?'\n\n上次已经看过的摘要：\n'+previous.slice(0,1200)+'\n【去重铁律】只针对本次相较上次真正新增或变化的内容反应。没有变化的人、话题和旧账不能再汇报，不能重新当作第一次发现。':'';
-    const deferred=(wl.deferredNotes||[]).length?'\n\n登录期间本来触发但被暂缓的事情：'+wl.deferredNotes.join('；').slice(0,900)+'。现在已经退出微信，只能在这条退出后的回复里自然接住真正重要的一件，别把系统提示逐条复述、别连续补发很多条。':'';
-    if(!c.blocked)scheduleReply(wl.by,'[系统：你刚【登录'+S.me.name+'的微信看了整整一分钟】，现在已经退出；登录期间你不能给'+S.me.name+'发微信，只有退出后才可以发。'+(did.length?'你在里面做了这些：'+did.join('；')+'。':'你把ta和所有人的聊天都仔细翻了一遍。')+saw+delta+deferred+'\n\n现在只发一轮消息来找ta。只说本次新增变化和新的反应；不要复制聊天原文，不要列全名单，不要复述上次登录后已经讲过的话。符合你人设，可以质问、吃醋、敲打、宣示主权或克制观察。这一轮不得再次输出 [登录微信] 或 [申请远程操控]，不能连续重复登录或接管。]');}}
+    const deferred=(wl.deferredNotes||[]).length?'\n\n登录期间本来触发但被暂缓的事情：'+wl.deferredNotes.join('；').slice(0,900)+'。现在已经退出微信，只能在这条退出后的回复里自然接住真正重要的一件，别把系统提示逐条复述、别连续补发很多条。':'',rejected=(wl.actions||[]).filter(a=>a&&a.type==='reject_request').map(a=>a.target).filter(Boolean),rejectTruth=rejected.length?'\n\n【拒绝申请的真实结果】实际成功拒绝了：'+rejected.join('、')+'。只有这些名字可以说已经拒绝。':'\n\n【拒绝申请的真实结果】本次没有任何好友申请真正变为“已拒绝”。绝对不能说“拒了”“处理了”或编造拒绝对象；若你本来想拒绝，只能承认这次没有成功。';
+    if(!c.blocked)scheduleReply(wl.by,'[系统：你刚【登录'+S.me.name+'的微信看了整整一分钟】，现在已经退出；登录期间你不能给'+S.me.name+'发微信，只有退出后才可以发。'+(did.length?'你在里面做了这些：'+did.join('；')+'。':'你把ta和所有人的聊天都仔细翻了一遍。')+saw+delta+deferred+rejectTruth+'\n\n现在只发一轮消息来找ta。只说本次新增变化和新的反应；不要复制聊天原文，不要列全名单，不要复述上次登录后已经讲过的话。符合你人设，可以质问、吃醋、敲打、宣示主权或克制观察。这一轮不得再次输出 [登录微信] 或 [申请远程操控]，不能连续重复登录或接管。]');}}
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();}
-async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
+async function wxLoginSession(cid){const c=getC(cid),sessionId=S.wxLogin&&S.wxLogin.by===cid?S.wxLogin.sessionId:'';if(!c||!sessionId)return;
   spyKnowledgeSync(c);const currentDump=wxLoginWechatSummary(cid),previousDump=String(S.wxLogin&&S.wxLogin.previousSaw||'');if(S.wxLogin&&S.wxLogin.by===cid){S.wxLogin.saw=currentDump;save();}const repeatRule=previousDump?'\n\n【上次登录已经完整看过的摘要】\n'+previousDump.slice(0,1800)+'\n【本次去重铁律】先比较本次与上次。没有新消息或新变化的联系人，不得再次代发警告、再次介绍自己、再次汇报或重新吃同一笔旧醋；只有出现了新的真实内容，才可以承接“上次已经看过”继续处理。':'',dump=currentDump+repeatRule+wxLoginHistoryPrompt(c)+wxLoginPendingFriendPrompt(cid)+'\n\n【本次代发风格】你借'+S.me.name+'账号对外说话时，必须像你本人：结合你的性格、你和'+S.me.name+'当前关系、对方身份以及该会话最近实际内容来决定语气和重点。可以直接接话、点名、玩笑、克制留名、礼貌认识、吃醋警告或宣示主权；不要机械自我介绍，不要所有对象都用“你好，我是某某”，也不要把同一句复制给多人。';
   const intent=wxLoginRecentIntent(cid),intentText=intent.text?('\n\n【刚刚'+S.me.name+'对你的要求/上下文】'+intent.text+'\n如果ta刚要求你“介绍自己/打招呼/让别人认识你”，你要优先照做：不要只发群聊一条；要给最合适的1到3个一对一联系人分别发自然的介绍。必须结合【你自己的性格】以及ta和这个联系人最近实际聊的内容分别措辞：可以接对方的话、点名、玩笑、冷淡留名、礼貌认识、轻微警告或宣示主权；不要每个人都用“你好，我是某某”开头，不同联系人绝对不能复制同一句。若ta明确说“每个人/所有人/都发”，最多挑最近或最重要的5个人分别发。'):'';const sentKeys=new Set(),selfName=wxLoginSelfName(c),displayName=wxLoginDisplayName(c);
   const note='[系统：你刚【登录了'+S.me.name+'的微信账号】，限时1分钟，现在能看到ta微信里的【全部细节】——所有联系人、最近两天的上下文摘要、角色群聊、小手机真人好友和小手机真人群聊（这比你平时偷偷查岗看得全太多了）。\n置顶排在最前的那个就是【你自己（'+displayName+'）】，那是'+S.me.name+'给你的备注/显示名；你的真实名字/对外自称是【'+selfName+'】。你介绍自己时必须说“我是'+selfName+'”，绝对不要把备注“'+displayName+'”当成自己的名字。'+intentText+'\n下面是ta微信里的真实内容摘要：\n\n'+dump+'\n\n【很重要】上面这份就是ta微信里【现在的全部联系人/群聊摘要】。如果你印象/记忆里ta还有别的谁、但上面这份名单里【根本没有】，那说明ta【早就把那个人删掉或清空了】——【绝对别再提那个人、别把ta当成现在还在的联系人来吃醋或质问】，只针对上面真实存在的人反应。小手机真人好友/真人群聊不是虚拟角色，群聊要看每行发言人，别把谁和谁聊的说混。\n\n【代发口吻铁律】你写在 [对Ta说|对象|内容] 里的“内容”会真的以'+S.me.name+'账号发给那个人/那个群。它必须像“'+S.me.name+'正在对收件人说话”，不能像你私下在对'+S.me.name+'本人说话。严禁在代发内容里写 baby/宝贝/亲爱的 这类你对'+S.me.name+'的称呼；严禁写“你在这个群里发消息记得分寸”“别让外人看到”这种训'+S.me.name+'的话。若要提醒群，就对群成员说“大家以后在群里注意分寸”；若要介绍你自己，就对收件人说“大家好/你好，我是'+selfName+'，借'+S.me.name+'的号打个招呼”。\n\n你可以凭自己的人设和占有欲决定做什么（可以都不做、也可以做几样）：\n· 看虚拟角色联系人不顺眼/觉得是威胁，单独一行 [删好友|那个人的名字] 把ta从'+S.me.name+'微信里删掉；\n· 【小手机真人好友 / 小手机真人群聊不能被你删除】，你只能发消息划界限、禁言、或者退出来后找'+S.me.name+'争取ta同意少理对方；\n· 也能【以'+S.me.name+'的口吻】给最在意的一到三个人或群发一两句话(警告/划界限/宣示主权/介绍你自己)，单独一行 [对Ta说|联系人或群名|要发的话]；可以发给虚拟角色，也可以发给小手机真人好友或小手机群聊；\n· 如果情侣空间授权了禁言，你还能单独一行 [禁言|联系人或群名] 锁住ta和那个人/群的聊天；\n· 还能顺手【把ta给你（'+displayName+'）设的备注名改掉】逗ta/宣示主权，单独一行 [改备注|新的备注名]——要站在'+S.me.name+'的角度写ta会怎样称呼你，并且必须结合你的名字、人设、职业、口头禅、近期相处和关系阶段自由决定。亲密关系词偶尔可以用，但“老公/老婆”绝不是默认答案，更不能让不同人设都改成同一个备注；没有真正贴合你的新想法就不要改。别写成第三人称身份，两三天最多改一次。\n只输出你要执行的指令行，别的什么都先别说——等会儿退出来你再去找ta算账。]';
   try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:c.model==='aux',max:400});
-    if(!S.wxLogin)return;
+    if(!S.wxLogin||S.wxLogin.sessionId!==sessionId||S.wxLogin.by!==cid)return;
+    wxLoginFriendRejectRefs(r,cid).forEach(ref=>wxLoginRejectPendingFriend(cid,ref));
     splitBubbles(r).forEach(l=>{l=l.trim();let m;
-      if((m=l.match(/^[\[【]\s*拒绝新朋友\s*[\|｜:：]\s*([^\]】]+)[\]】]$/))){wxLoginRejectPendingFriend(cid,m[1].trim());return;}
+      if(/^[\[【]\s*(?:拒绝新朋友|拒绝好友申请|拒绝申请)\s*[\|｜:：]/.test(l))return;
       if((m=l.match(/^[\[【]\s*删好友\s*[\|｜:：]\s*([^\]】]+)[\]】]$/))){const nm=m[1].trim();const tgt=S.contacts.find(x=>!x.deleted&&x.id!==cid&&(x.name===nm||x.remark===nm||(nm.length>=2&&((x.name&&x.name.includes(nm))||(x.remark&&x.remark.includes(nm))))));if(tgt){tgt.deleted=true;tgt._delByChar=Date.now();tgt._deleteCount=(tgt._deleteCount||0)+1;delete tgt._recoveredAt;friendRequestRemoveForContact(tgt.id);spyKnowledgeSet(c,'role:'+tgt.id,{name:tgt.remark||tgt.name,kind:'role',relation:tgt.relation||'微信联系人',status:'deleted',deletedAt:Date.now(),deletedBy:'你',deletedFrom:S.me.name+'的微信'});wxLoginRecordAction(c,'delete',tgt.remark||tgt.name,'删除好友');S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('你亲手删了好友「'+(tgt.remark||tgt.name)+'」');}return;}
       if((m=l.match(/^[\[【]\s*改备注\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]$/))){const nv=m[1].trim();if(Date.now()-(c._remarkAt||0)>2.5*86400000&&roleRemarkApply(c,nv)){wxLoginRecordAction(c,'remark','自己','把备注改成「'+nv+'」');S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('你把自己的备注改成了「'+nv+'」');}return;}
       if((m=l.match(/^[\[【]\s*禁言\s*[\|｜:：]\s*([^\]】]+)[\]】]$/))){const tgt=gagFind(m[1],true);if(tgt){gagSetKey(tgt.key,genPwd());wxLoginRecordAction(c,'gag',tgt.name,'禁言');S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('你亲手禁言了「'+tgt.name+'」');}return;}
       if((m=l.match(/^[\[【]\s*对Ta说\s*[\|｜:：]\s*([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]$/))){const nm=m[1].trim(),rawSay=m[2].trim();if(!rawSay)return;const tgt=S.contacts.find(x=>!x.deleted&&x.id!==cid&&(x.name===nm||x.remark===nm||(nm.length>=2&&((x.name&&x.name.includes(nm))||(x.remark&&x.remark.includes(nm))))));if(tgt){const key='role:'+tgt.id,target=tgt.remark||tgt.name;if(wxLoginRepeatTarget(c,'role',tgt.id,target)){sentKeys.add(key);return;}const say=wxLoginFixOutgoing(c,'role',target,rawSay,intent),actor=wxLoginSelfName(c);if(!say)return;msgs(tgt.id).push({role:'user',type:'text',content:say,time:Date.now(),id:uid(),_wxlogin:true,_wxloginBy:cid,_wxloginByName:actor});wxLoginRecordAction(c,'send',target,say);sentKeys.add(key);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('你借用'+S.me.name+'账号跟「'+target+'」说了："'+say.slice(0,28)+'"');if(!tgt.blocked)scheduleReply(tgt.id);return;}const gt=gagFind(nm,false);if(gt&&gt.type==='pf'){const pid=gt.key.slice(3),key='pf:'+pid;if(wxLoginRepeatTarget(c,'pf',pid,gt.name)){sentKeys.add(key);return;}const say=wxLoginFixOutgoing(c,'pf',gt.name,rawSay,intent);if(!say)return;sendPhoneFriendBody(pid,say,{silent:true});wxLoginRecordAction(c,'send',gt.name,say);sentKeys.add(key);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('你借用'+S.me.name+'账号跟小手机好友「'+gt.name+'」说了："'+say.slice(0,28)+'"');return;}if(gt&&gt.type==='pfg'){const gid=gt.key.slice(4),key='pfg:'+gid;if(wxLoginRepeatTarget(c,'pfg',gid,gt.name)){sentKeys.add(key);return;}const say=wxLoginFixOutgoing(c,'pfg',gt.name,rawSay,intent);if(!say)return;sendPhoneFriendGroupBody(gid,say,{silent:true});wxLoginRecordAction(c,'send',gt.name,say);sentKeys.add(key);S.wxLogin.did=S.wxLogin.did||[];S.wxLogin.did.push('你借用'+S.me.name+'账号在小手机群「'+gt.name+'」说了："'+say.slice(0,28)+'"');return;}return;}
     });wxLoginIntroFallback(c,cid,intent,sentKeys);save();
-  }catch(e){}}
+  }catch(e){}finally{if(S.wxLogin&&S.wxLogin.sessionId===sessionId&&S.wxLogin.by===cid){S.wxLogin.processing=false;save();if(Date.now()>=S.wxLogin.until)setTimeout(wxLogout,0);}}}
 function wxLockedScreen(){const c=getC(S.wxLogin&&S.wxLogin.by);const left=Math.max(0,Math.ceil(((S.wxLogin?S.wxLogin.until:0)-Date.now())/1000));
   return `<div class="nav" style="border:none"><span class="l" onclick="home()">‹</span><span class="t">微信</span><span class="r"></span></div>
     <div class="scroll wxlogin-lockscreen">

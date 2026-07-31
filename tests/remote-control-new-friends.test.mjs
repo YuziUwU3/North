@@ -41,7 +41,7 @@ test('WeChat login exposes only real pending requests',()=>{
   assert.match(pending,/r\.contactId!==cid/);
   assert.match(prompt,/wxLoginPendingFriendRequests\(cid\)/);
   assert.match(prompt,/JSON\.stringify\(rows\)/);
-  assert.match(prompt,/\[拒绝新朋友\|申请key\]/);
+  assert.match(prompt,/\[拒绝新朋友\|申请key或页面姓名\]/);
   assert.match(prompt,/一个都不拒绝也可以/);
   assert.match(prompt,/不要机械全拒/);
 });
@@ -49,10 +49,11 @@ test('WeChat login exposes only real pending requests',()=>{
 test('rejection is gated to the currently logged-in character and uses the visible button handler',()=>{
   const reject=fn('wxLoginRejectPendingFriend');
   assert.match(reject,/!wxLoginActive\(\)\|\|!S\.wxLogin\|\|S\.wxLogin\.by!==cid/);
-  assert.match(reject,/ignoreFriend\(rid\)/);
+  assert.match(reject,/wxLoginResolvePendingFriend\(cid,ref\)/);
+  assert.match(reject,/ignoreFriend\(row\.key\)/);
   assert.match(reject,/req\.status!=='rejected'/);
   assert.match(reject,/wxLoginRecordAction\(c,'reject_request'/);
-  assert.match(fn('wxLoginSession'),/wxLoginRejectPendingFriend\(cid,m\[1\]\.trim\(\)\)/);
+  assert.match(fn('wxLoginSession'),/wxLoginFriendRejectRefs\(r,cid\)\.forEach\(ref=>wxLoginRejectPendingFriend\(cid,ref\)\)/);
   assert.match(source,/onclick="event\.stopPropagation\(\);ignoreFriend\('\$\{r\.id\}'\)"/);
 });
 
@@ -72,7 +73,7 @@ test('the login rejection cannot run before login or for another character',()=>
     ignoreFriend:rid=>{ignoreCalls++;const r=context.S.friendRequests.find(x=>x.id===rid);if(r)r.status='rejected';},
     wxLoginRecordAction:()=>{recordCalls++;}
   });
-  vm.runInContext(`${fn('wxLoginActive')};${fn('wxLoginPendingFriendRequests')};${fn('wxLoginRejectPendingFriend')};globalThis.reject=wxLoginRejectPendingFriend;`,context);
+  vm.runInContext(`${fn('wxLoginActive')};${fn('wxLoginPendingFriendRequests')};${fn('wxLoginResolvePendingFriend')};${fn('wxLoginRejectPendingFriend')};globalThis.reject=wxLoginRejectPendingFriend;`,context);
   assert.equal(context.reject('actor','req-1'),null);
   context.S.wxLogin={by:'other',until:Date.now()+60000,did:[]};
   assert.equal(context.reject('actor','req-1'),null);
@@ -85,6 +86,41 @@ test('the login rejection cannot run before login or for another character',()=>
   assert.equal(recordCalls,1);
   assert.equal(context.reject('actor','req-1'),null);
   assert.equal(ignoreCalls,1);
+});
+
+test('the screenshot case resolves two visible names and rejects both real records',()=>{
+  const contacts={actor:{id:'actor',name:'先生'},he:{id:'he',name:'贺川'},cheng:{id:'cheng',name:'程野'},gu:{id:'gu',name:'顾言'}};
+  const S={wxLogin:{by:'actor',until:Date.now()+60000,processing:true,processingUntil:Date.now()+105000,did:[],actions:[]},friendRequests:[
+    {id:'req-he',contactId:'he',status:'pending',time:3},
+    {id:'req-cheng',contactId:'cheng',status:'pending',time:2},
+    {id:'req-gu',contactId:'gu',status:'pending',time:1}
+  ]};
+  const context=vm.createContext({Date,S,friendRequestsInit:()=>{},friendRequestVisible:()=>true,friendReqText:x=>x||'',factStamp:x=>String(x),getC:id=>contacts[id]||null,splitBubbles:text=>String(text||'').split('\n').map(x=>x.trim()).filter(Boolean),ignoreFriend:rid=>{const r=S.friendRequests.find(x=>x.id===rid&&x.status==='pending');if(r)r.status='rejected';},wxLoginRecordAction:(c,type,target,text)=>S.wxLogin.actions.push({type,target,text})});
+  vm.runInContext(`${fn('wxLoginActive')};${fn('wxLoginPendingFriendRequests')};${fn('wxLoginResolvePendingFriend')};${fn('wxLoginRejectPendingFriend')};${fn('wxLoginFriendRejectRefs')};globalThis.refs=wxLoginFriendRejectRefs;globalThis.reject=wxLoginRejectPendingFriend;`,context);
+  const refs=Array.from(context.refs('[拒绝新朋友|贺川、程野]','actor'));
+  assert.deepEqual(refs,['贺川','程野']);
+  refs.forEach(ref=>context.reject('actor',ref));
+  assert.equal(S.friendRequests.find(x=>x.id==='req-he').status,'rejected');
+  assert.equal(S.friendRequests.find(x=>x.id==='req-cheng').status,'rejected');
+  assert.equal(S.friendRequests.find(x=>x.id==='req-gu').status,'pending');
+  assert.deepEqual(S.wxLogin.actions.map(x=>x.target),['贺川','程野']);
+});
+
+test('a slow AI result keeps the same login session active only while processing',()=>{
+  const context=vm.createContext({Date,S:{wxLogin:{by:'actor',until:Date.now()-1000,processing:true,processingUntil:Date.now()+30000}}});
+  vm.runInContext(`${fn('wxLoginActive')};globalThis.active=wxLoginActive;`,context);
+  assert.equal(context.active(),true);
+  context.S.wxLogin.processing=false;
+  assert.equal(context.active(),false);
+  assert.match(fn('wxLoginSession'),/finally\{if\(S\.wxLogin&&S\.wxLogin\.sessionId===sessionId/);
+  assert.match(source,/processingUntil:until\+45000/);
+});
+
+test('logout truth is derived only from successful persisted rejection actions',()=>{
+  const logout=fn('wxLogout');
+  assert.match(logout,/filter\(a=>a&&a\.type==='reject_request'\)/);
+  assert.match(logout,/本次没有任何好友申请真正变为“已拒绝”/);
+  assert.match(logout,/绝对不能说“拒了”“处理了”/);
 });
 
 test('the rejection record remains idempotent and expires after 24 hours',()=>{
