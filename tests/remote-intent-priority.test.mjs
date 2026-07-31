@@ -17,8 +17,12 @@ test('the role still decides and orders the remote-control plan',()=>{
   const body=app.slice(start,end);
   assert.ok(start>=0&&end>start);
   assert.match(body,/chatAPI\(/);
-  assert.match(body,/temp:\.78/);
-  assert.match(body,/return order\.flatMap/);
+  assert.match(body,/temp:\.86/);
+  assert.match(body,/return order\.length\?order\.flatMap/);
+  assert.match(body,/picked\.forEach/);
+  assert.doesNotMatch(body,/picked\.concat\(apps\)/);
+  assert.match(body,/hintApps\.length\?hintApps:apps\.slice\(0,2\)/);
+  assert.match(body,/remoteControlContextWantsBroad\(ctx\)/);
 });
 
 test('mentioning a rejection never auto-injects a remote-control request',()=>{
