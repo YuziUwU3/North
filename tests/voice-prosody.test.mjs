@@ -191,7 +191,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(context.fishVoiceItems({ items: [{ _i
 assert.match(backend, /if \(action === "external_tts"\)/);
 assert.match(backend, /async function externalFishTTS/);
 assert.match(backend, /headers\.model = model/);
-assert.match(source, /通话语音同步/);
+assert.match(source, /通话字幕延后/);
 assert.match(source, /通话句间衔接/);
 assert.match(source, /function callPaceRate\(\)/);
 assert.doesNotMatch(source, /s\.playbackRate\.value=callPaceRate\(\)/);
@@ -200,6 +200,70 @@ assert.match(source, /u\.rate=\(\+v\.rate\|\|1\)\*vp\.speed/);
 assert.match(source, /await sleep\(callPaceMs\(360,220\)\)/);
 assert.match(source, /if\(video\)content=ensureVideoCallAction\(content,_callCueTag\)/);
 assert.match(source, /function phReleaseSimSub\(callId,line\)/);
-assert.match(source, /const off=phPhoneVoiceOffset\(\);if\(video&&followedAction\)show\(\);else if\(off<0\)preT=setTimeout\(show,Math.max\(0,600\+off\)\)/);
+assert.doesNotMatch(source, /preT=setTimeout|off<0/, "call subtitles must never race ahead from request time");
+assert.match(functionSource("phPhoneVoiceOffset"), /Math\.max\(0,Math\.min\(1200/, "saved negative offsets must be clamped to zero");
+assert.match(functionSource("callPrefetchSpeech"), /Math\.min\(2,rows\.length\)/, "call TTS prefetch must stay bounded to two workers");
+assert.match(functionSource("speakWait"), /prepared:?\s*opt\.prepared|opt\.prepared\?await opt\.prepared/, "call playback must accept prefetched audio");
+
+const playbackEvents = [];
+let playbackSource = null;
+const playbackAudio = {
+  state: "suspended",
+  destination: {},
+  async resume() {
+    playbackEvents.push("resume");
+    this.state = "running";
+  },
+  createBufferSource() {
+    playbackSource = {
+      connect() {},
+      start() {
+        playbackEvents.push("start");
+        queueMicrotask(() => this.onended && this.onended());
+      },
+      stop() {},
+    };
+    return playbackSource;
+  },
+  createGain() {
+    return { gain: { value: 1 }, connect() {} };
+  },
+};
+const playbackContext = vm.createContext({
+  _audio: playbackAudio,
+  _curSrc: null,
+  ensureAudio() {},
+  volMul: () => 1,
+  setTimeout,
+  clearTimeout,
+  queueMicrotask,
+});
+vm.runInContext("async " + functionSource("callAudioReady"), playbackContext);
+vm.runInContext("async " + functionSource("playBufWait"), playbackContext);
+assert.equal(await playbackContext.playBufWait({ duration: 0.01 }, () => playbackEvents.push("subtitle")), true);
+assert.deepEqual(playbackEvents.slice(0, 3), ["resume", "start", "subtitle"], "subtitle must follow a resumed context and a started source");
+
+let activePrefetch = 0, maxPrefetch = 0;
+const prefetchContext = vm.createContext({
+  Array,
+  Promise,
+  Math,
+  async prepareCallSpeech(text) {
+    activePrefetch++;
+    maxPrefetch = Math.max(maxPrefetch, activePrefetch);
+    await new Promise((resolve) => setTimeout(resolve, 12));
+    activePrefetch--;
+    return { buf: text };
+  },
+  async ttsRefundAudio() {},
+});
+vm.runInContext(functionSource("callPrefetchSpeech"), prefetchContext);
+const prefetched = await Promise.all(prefetchContext.callPrefetchSpeech(
+  ["one", "two", "three", "four"].map((spoken) => ({ spoken })),
+  {},
+  () => true,
+));
+assert.equal(prefetched.length, 4);
+assert.equal(maxPrefetch, 2, "prefetch must prepare ahead without unbounded parallel MiniMax requests");
 
 console.log("voice prosody tests passed");

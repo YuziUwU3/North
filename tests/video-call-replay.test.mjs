@@ -11,7 +11,7 @@ const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 assert.match(source, /async function callReplayStoreAudio\(m,ab,dur\)/);
 assert.match(source, /if\(!m\|\|!ab\|\|m\._ck!==\x27video\x27\)return/);
 assert.match(source, /cacheMessage:video\?callMsg:null/);
-assert.match(source, /if\(opt\.cacheMessage\)await callReplayStoreAudio\(opt\.cacheMessage,ab,buf\.duration\)/);
+assert.match(source, /if\(opt\.cacheMessage\)await callReplayStoreAudio\(opt\.cacheMessage,ready\.ab,ready\.buf\.duration\)/);
 assert.doesNotMatch(source, /callReplayStoreAudio[\s\S]{0,200}ttsArr/);
 
 // Original subtitle and translation stay paired instead of becoming duplicate replay clips.

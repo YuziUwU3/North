@@ -68,8 +68,9 @@ assert.match(source, /if\(mode==='single'\)\{const point=await offSummarySingleP
 assert.match(source, /整场一条<\/button>/);
 assert.match(source, /拆成多条<\/button>/);
 
-// An action stays readable, then the spoken line can replace it before TTS generation stalls the screen.
-assert.match(source, /if\(video&&followedAction\)show\(\)/);
+// A spoken subtitle waits for real audio playback; video mode must not reveal it while TTS is still preparing.
+assert.doesNotMatch(source, /if\(video&&followedAction\)show\(\)/);
+assert.match(source, /onAudioStart:\(\)=>\{if\(off\)setTimeout\(show,off\);else show\(\);\}/);
 assert.match(source, /if\(isAction\)[\s\S]{0,220}Math\.max\(1150,Array\.from\(u\.orig\)\.length\*105\),760/);
 
 console.log("experience fixes tests passed");
