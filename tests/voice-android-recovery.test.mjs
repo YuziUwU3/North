@@ -60,7 +60,7 @@ test('Android boot guard ignores anonymous injected errors and exposes native re
   listeners.error({message:'图片加载失败',filename:'',target:{tagName:'IMG',src:'/icon.png'}});
   assert.equal(app.innerHTML,'');
 
-  listeners.error({message:'Unexpected token',filename:'https://example.test/phone/app.js?v=746',target:window});
+  listeners.error({message:'Unexpected token',filename:'https://example.test/phone/app.js?v=747',target:window});
   assert.match(app.innerHTML,/<a class="bootbtn" href="\/phone\/小手机\.html\?reload=/);
   assert.match(app.innerHTML,/<a class="bootbtn secondary" href="\/phone\/repair\.html\?from=boot&v=708&t=/);
   assert.doesNotMatch(app.innerHTML,/onclick=/);
@@ -69,5 +69,5 @@ test('Android boot guard ignores anonymous injected errors and exposes native re
 test('boot recovery controls remain tappable in Android webviews',()=>{
   assert.match(html,/\.bootbtn\{[^}]*display:block[^}]*touch-action:manipulation/);
   assert.match(html,/function ownBootError\(e\)/);
-  assert.match(html,/^<script src="app\.js\?v=746"/m);
+  assert.match(html,/^<script src="app\.js\?v=747"/m);
 });
