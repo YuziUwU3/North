@@ -25,13 +25,15 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v740 · 修复待处理申请过滤'/);
+assert.match(source, /APP_VER='v741 · 精简好友拒绝提示'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);
 assert.match(source, /queueFriendRequest\(c,\{kind:'created',delay:10000/);
 assert.match(source, /status==='rejected'&&now-\(\+r\.decidedAt\|\|r\.time\)>=86400000/);
 assert.match(source, /r\.status='accepted';r\.decidedAt=now/);
+assert.match(functionSource("ignoreFriend"), /render\(\)/);
+assert.doesNotMatch(functionSource("ignoreFriend"), /toast\(/);
 assert.match(source, /friendRequestRemoveForContact\(id\);c\._friendPending=false/);
 assert.match(source, /friendRequestRemoveForContact\(tgt\.id\)/);
 assert.match(source, /r\.contactId===id&&r\.kind==='readd'&&r\.status==='pending'/);
