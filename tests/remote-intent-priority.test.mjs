@@ -11,18 +11,17 @@ test('v728 autonomy is not replaced by a forced single-purpose planner',()=>{
   assert.doesNotMatch(app,/remoteControlForcedFriendRejectPlan/);
 });
 
-test('the role still decides and orders the remote-control plan',()=>{
+test('the role decides order while v737 guarantees the full inspection plan',()=>{
   const start=app.indexOf('async function remoteControlOrderPlan');
   const end=app.indexOf('function remoteControlNormalizePlan',start);
   const body=app.slice(start,end);
   assert.ok(start>=0&&end>start);
   assert.match(body,/chatAPI\(/);
-  assert.match(body,/temp:\.86/);
-  assert.match(body,/return order\.length\?order\.flatMap/);
-  assert.match(body,/picked\.forEach/);
-  assert.doesNotMatch(body,/picked\.concat\(apps\)/);
-  assert.match(body,/hintApps\.length\?hintApps:apps\.slice\(0,2\)/);
-  assert.match(body,/remoteControlContextWantsBroad\(ctx\)/);
+  assert.match(body,/temp:\.78/);
+  assert.match(body,/return order\.flatMap/);
+  assert.match(body,/picked\.concat\(apps\)\.forEach/);
+  assert.doesNotMatch(body,/apps\.slice\(0,2\)/);
+  assert.match(body,/下面列出的软件都必须查看/);
 });
 
 test('mentioning a rejection never auto-injects a remote-control request',()=>{

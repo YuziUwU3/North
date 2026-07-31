@@ -12,24 +12,24 @@ test('restore-all sessions still enable every closed couple permission',()=>{
   assert.match(app,/ctl\.purpose==='restore_all_permissions'\?\[\]/);
 });
 
-test('restore-all can continue with a small context-driven inspection',()=>{
+test('restore-all can continue with a context-driven inspection',()=>{
   assert.match(app,/function remoteControlRunRestoreAll\(c\)/);
   assert.match(app,/function remoteControlAfterRestorePlan\(c\)/);
   assert.match(app,/remoteControlAfterRestorePlan\(c\)/);
   assert.match(app,/function remoteControlContextCandidates\(c\)/);
   assert.match(app,/targetType:'wechatList'/);
-  assert.match(app,/candidates\.slice\(0,2\)/);
+  assert.match(app,/wechat\.concat\(rest\)\.slice\(0,6\)/);
 });
 
-test('remote control keeps chat context but lets the role choose order',()=>{
+test('remote control keeps chat context and restores v737 role-chosen ordering',()=>{
   assert.match(app,/_remoteIntentContext/);
   assert.match(app,/intentContext=String\(_remoteIntentContext\[cid\]\|\|''\)\.slice\(-1600\)/);
   assert.match(app,/function remoteControlIntentContext\(c\)/);
   assert.match(app,/function remoteControlMentionedWechatTargets\(c\)/);
   assert.match(app,/contextMentioned:true/);
-  assert.doesNotMatch(app,/if\(required\.some\(a=>a&&a\.contextMentioned\)\)return required\.filter\(a=>a&&a\.app==='wechat'\)/);
-  assert.match(app,/async function remoteControlOrderPlan\(c,required\)[\s\S]*?remoteControlIntentContext\(c\)/);
-  assert.match(app,/picked\.forEach/);
+  assert.match(app,/if\(required\.some\(a=>a&&a\.contextMentioned\)\)return required\.filter\(a=>a&&a\.app==='wechat'\)/);
+  assert.match(app,/async function remoteControlOrderPlan\(c,required\)/);
+  assert.match(app,/picked\.concat\(apps\)\.forEach/);
 });
 
 test('phone contacts and SMS remain actionable remote targets',()=>{

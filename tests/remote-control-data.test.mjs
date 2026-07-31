@@ -27,14 +27,15 @@ test('remote viewing opens real apps and stores only viewed facts',()=>{
   assert.match(app,/targetType==='dySearchHistory'[\s\S]*?dyTab='search'/);
 });
 
-test('the role chooses a scoped app plan instead of an exhaustive pass',()=>{
+test('v737 inspection visits every available app in a role-chosen order',()=>{
   assert.match(app,/function remoteControlRequiredPlan\(c\)/);
   assert.match(app,/let required=remoteControlRequiredPlan\(c\);required=await remoteControlOrderPlan\(c,required\)/);
   assert.match(app,/async function remoteControlOrderPlan\(c,required\)/);
-  assert.match(app,/picked\.forEach\(k=>\{if\(seen\.has\(k\)&&!used\.has\(k\)\)/);
-  assert.match(app,/hintApps\.length\?hintApps:apps\.slice\(0,2\)/);
-  assert.match(app,/remoteControlContextWantsBroad\(ctx\)/);
-  assert.doesNotMatch(app,/picked\.concat\(apps\)/);
+  assert.match(app,/下面列出的软件都必须查看/);
+  assert.match(app,/只决定软件顺序，不能漏掉、增加或重复任何app/);
+  assert.match(app,/picked\.concat\(apps\)\.forEach/);
+  assert.match(app,/return order\.flatMap\(k=>required\.filter\(a=>a\.app===k\)\)/);
+  assert.doesNotMatch(app,/hintApps\.length\?hintApps:apps\.slice\(0,2\)/);
   assert.match(app,/\.filter\(x=>x\.op&&x\.op!=='view'\)/);
   assert.doesNotMatch(app,/remoteProgressFill/);
   assert.equal((html.match(/class="remote-live-dot"/g)||[]).length,1);

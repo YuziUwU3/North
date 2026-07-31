@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='741'){
+if(window.__NORTH_SHELL_BUILD__!=='742'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -351,7 +351,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v741 · 精简好友拒绝提示';
+const APP_VER='v742 · 恢复737远控巡查';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1320,7 +1320,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=741';
+  const url='sw.js?v=742';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2058,7 +2058,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=741').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=742').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -8632,7 +8632,7 @@ function remoteControlContextCandidates(c){const ctx=remoteControlIntentContext(
 async function remoteControlAfterRestorePlan(c){
   const ctl=_remoteCtl,ctx=remoteControlIntentContext(c);if(!ctl)return[];if(remoteControlContextWantsBroad(ctx)){const old=ctl.purpose;ctl.purpose='inspect_phone';let all=remoteControlRequiredPlan(c);ctl.purpose=old;return remoteControlOrderPlan(c,all);}
   const candidates=remoteControlContextCandidates(c);if(!candidates.length)return[];const listed=candidates.map((a,i)=>({key:'k'+i,app:a.app,targetName:a.targetName,targetType:a.targetType,reason:a.contextReason||''}));
-  const fallback=()=>candidates.slice(0,2);
+  const fallback=()=>{const wechat=candidates.filter(a=>a.app==='wechat'),rest=candidates.filter(a=>a.app!=='wechat');return wechat.concat(rest).slice(0,6);};
   try{const rules='你刚把'+S.me.name+'情侣空间里被关掉的权限都重新打开了。现在不要机械全查；请根据刚才吵架/微信上下文，作为'+(c.remark||c.name)+'本人，选择接下来你最在意、最符合逻辑的几个地方亲手查看。若上下文提到异性、某个角色或微信聊天，通常应先看微信列表/对应聊天；若你真的想查个遍，可以多选。最多8个，key必须照抄，只输出JSON：{"keys":["k0"]}。\n【触发上下文】\n'+ctx+'\n【可选检查点】\n'+JSON.stringify(listed);const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:rules}],{max:900,complete:true,temp:.75,aux:false}),o=parseObj(r),keys=Array.isArray(o&&o.keys)?o.keys.map(String):[],picked=keys.map(k=>{const m=k.match(/^k(\d+)$/);return m?candidates[+m[1]]:null;}).filter(Boolean);return picked.length?picked.slice(0,8):fallback();}catch(e){return fallback();}}
 function remoteControlRequiredPlan(c){
   const snap=remoteControlSnapshot(c),groups={},add=(app,targetName,extra)=>{groups[app]=groups[app]||[];groups[app].push(Object.assign({app,op:'view',targetName},extra||{}));};
@@ -8656,11 +8656,12 @@ function remoteControlRequiredPlan(c){
 }
 async function remoteControlOrderPlan(c,required){
   if(!Array.isArray(required)||required.length<2)return required||[];
+  if(required.some(a=>a&&a.contextMentioned))return required.filter(a=>a&&a.app==='wechat').concat(required.filter(a=>!a||a.app!=='wechat'));
   const apps=[],seen=new Set();required.forEach(a=>{if(a&&a.app&&!seen.has(a.app)){seen.add(a.app);apps.push(a.app);}});
   if(apps.length<2)return required;
-  const choices=apps.map(app=>({app,name:REMOTE_APP_NAMES[app]||app,contents:required.filter(a=>a.app===app).map(a=>a.targetName).filter(Boolean).slice(0,24)})),ctx=remoteControlIntentContext(c),broad=remoteControlContextWantsBroad(ctx),hintApps=[...new Set(remoteControlContextCandidates(c).map(x=>x.app).filter(x=>seen.has(x)))],fallback=()=>{const chosen=(hintApps.length?hintApps:apps.slice(0,2));return chosen.flatMap(k=>required.filter(a=>a.app===k));};
-  const rules='你将开始远程查看'+S.me.name+'的小手机。你不需要把所有软件机械检查一遍；请根据你作为'+(c.remark||c.name)+'的性格、关系、刚才的聊天和此刻真正想确认的事情，自主选择这次要看的软件并决定先后顺序。若你只想查一到两个软件，就只返回那一两个；只有你自己明确想全面检查时才扩大范围。不要为了展示功能而多选，也不要固定每次相同顺序。只输出JSON：{"apps":["app键"]}，不能重复或加入列表外的app。\n【刚才的上下文】\n'+ctx+'\n【是否明确要求全面检查】'+(broad?'是':'否')+'\n【本次可选择的软件】\n'+JSON.stringify(choices);
-  try{const r=await remoteControlTimed(chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:rules}],{max:700,complete:true,temp:.86,aux:false}),7500,''),o=parseObj(r),picked=Array.isArray(o&&o.apps)?o.apps.map(String):[],order=[],used=new Set();picked.forEach(k=>{if(seen.has(k)&&!used.has(k)){used.add(k);order.push(k);}});return order.length?order.flatMap(k=>required.filter(a=>a.app===k)):fallback();}catch(e){return fallback();}
+  const choices=apps.map(app=>({app,name:REMOTE_APP_NAMES[app]||app,contents:required.filter(a=>a.app===app).map(a=>a.targetName).filter(Boolean).slice(0,24)}));
+  const rules='你将开始远程查看'+S.me.name+'的小手机。下面列出的软件都必须查看，但跨软件的先后顺序不固定。请根据你作为'+(c.remark||c.name)+'的性格、关系、此刻最在意的方向和每个软件将要查看的栏目，自主决定先打开哪个、再打开哪个。只决定软件顺序，不能漏掉、增加或重复任何app；进入某个软件后的真实页面顺序由手机自己处理。只输出JSON：{"apps":["app键"]}。\n【本次可查看软件】\n'+JSON.stringify(choices);
+  try{const r=await remoteControlTimed(chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:rules}],{max:700,complete:true,temp:.78,aux:false}),7500,''),o=parseObj(r),picked=Array.isArray(o&&o.apps)?o.apps.map(String):[],order=[],used=new Set();picked.concat(apps).forEach(k=>{if(seen.has(k)&&!used.has(k)){used.add(k);order.push(k);}});return order.flatMap(k=>required.filter(a=>a.app===k));}catch(e){return required;}
 }
 function remoteControlNormalizePlan(raw,c,snap){let a=raw&&Array.isArray(raw.actions)?raw.actions:Array.isArray(raw)?raw:[];return a.slice(0,10).map(x=>{x=x||{};const op=String(x.op||'').trim(),rawApp=String(x.app||'home').trim(),app=op==='lock_app'||op==='unlock_app'?'home':(REMOTE_APP_NAMES[rawApp]?rawApp:remoteControlAppKey(rawApp)),mi=Number(x.messageIndex);return {app,op:REMOTE_ALLOWED_OPS.has(op)?op:'',targetId:String(x.targetId||'').slice(0,80),targetName:String(x.targetName||x.target||'').slice(0,100),targetType:String(x.targetType||'').slice(0,30),messageIndex:Number.isInteger(mi)?mi:-1,content:String(x.content||'').trim().slice(0,300),mode:String(x.mode||'').slice(0,20)};}).filter(x=>x.op&&x.op!=='view');}
 function remoteControlAppKey(s){s=String(s||'');if(/情侣空间|权限|授权/.test(s))return'couple';if(/微信|聊天/.test(s))return'wechat';if(/朋友圈/.test(s))return'moments';if(/推特|微博|X/i.test(s))return'x';if(/抖音|短视频/.test(s))return'douyin';if(/浏览/.test(s))return'browser';if(/电话|短信|通话|通讯录|陌生号码|语音留言/.test(s))return'phoneapp';if(/购物|网购|订单/.test(s))return'shop';if(/外卖/.test(s))return'food';if(/云程|机票|行程|航班/.test(s))return'travel';if(/音乐|一起听/.test(s))return'music';if(/日历|日程/.test(s))return'calendar';if(/信箱|邮件/.test(s))return'mail';if(/任务|便签/.test(s))return'tasks';if(/线下|约会/.test(s))return'offline';if(/设置|钱包|账单|位置|电量|小事簿/.test(s))return'settings';return'home';}
