@@ -35,7 +35,7 @@ test('game hall exposes the advanced draw-and-guess room',()=>{
 });
 
 test('setup has free topics, role-picked topics and a separate photo continuation mode',()=>{
-  const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew'),begin=functionSource('dgBeginState'),prepared=functionSource('dgStartPrepared'),render=functionSource('renderDrawGuess');
+  const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew'),begin=functionSource('dgBeginState'),prepared=functionSource('dgStartPrepared'),setter=functionSource('dgSetRoomTitle'),render=functionSource('renderDrawGuess');
   assert.doesNotMatch(setup,/id="dg_topic"/,'the title must not live outside the room');
   assert.match(setup,/我来画/);
   assert.match(setup,/TA 来画/);
@@ -45,6 +45,9 @@ test('setup has free topics, role-picked topics and a separate photo continuatio
   assert.match(start,/dgBeginState\(cid,mode\)/);
   assert.match(begin,/phase:'setup'/);
   assert.match(render,/id="dg_room_title"/);
+  assert.match(setter,/mode==='role'/,'normal guessing must reject player-authored titles');
+  assert.match(prepared,/g\.mode==='role'.*g\.answer=''/s,'TA-draws mode must always begin with a secret role-picked topic');
+  assert.match(render,/photo&&!done\|\|setup&&meDraw/,'only player-draw and free mode expose the room title editor');
   assert.match(render,/dgUploadRoleBase\(\)/);
   assert.match(render,/dgStartPrepared\(\)/);
   assert.doesNotMatch(prepared,/mode==='photo'&&!g\.background/,'free mode must also start on a blank canvas');
@@ -68,7 +71,7 @@ test('canvas controls and durable gallery saving do not depend on the mounted ca
 
 test('role drawing is recognizable vector work and animates at human pace without per-stroke API calls',()=>{
   const context=vm.createContext({Math});
-  for(const name of ['dgLine','dgEllipse','dgRect','dgFallbackPlan','dgNormalizePlan'])vm.runInContext(functionSource(name),context);
+  for(const name of ['dgLine','dgEllipse','dgRotEllipse','dgRect','dgHumanizePlan','dgFallbackPlan','dgNormalizePlan'])vm.runInContext(functionSource(name),context);
   const tree=context.dgFallbackPlan('大树');
   assert.ok(tree.length>=18,'tree fallback needs trunk outlines, branches, crown clusters and ground details');
   assert.ok(tree.every(s=>s.width>=6&&s.points.length>=2));
@@ -80,14 +83,16 @@ test('role drawing is recognizable vector work and animates at human pace withou
   assert.match(generated,/不要从固定词库随机抽/);
   assert.match(generated,/根据你和.*真实相处/);
   assert.match(generated,/finishSpeech/,'finish dialogue is generated in the same planning call');
-  assert.match(generated,/主轮廓线宽14到22/);
+  assert.match(generated,/主轮廓线宽12到18/);
   assert.match(generated,/最重要的唯一标准是“像”/);
   assert.match(generated,/绝不能只画椭圆脸加一根长身体/);
   assert.match(generated,/dgReferencePlan\(g\.answer\)/,'common subjects use a recognizable local reference when available');
-  assert.match(functionSource('dgNormalizePlan'),/Math\.max\(7,Math\.min\(30/);
+  assert.match(functionSource('dgNormalizePlan'),/broad\?32:20/,'hair and clothing fill strokes can cover an area');
   assert.match(animate,/drawMs/);
-  assert.match(animate,/360\+/,'there is a visible human pause between strokes');
+  assert.match(animate,/420\+/,'there is a visible human pause between strokes');
   assert.match(animate,/requestAnimationFrame/);
+  assert.match(animate,/dgBrushDip/,'TA visibly visits its palette before drawing a stroke');
+  assert.match(animate,/dgBrushFollow/,'the on-screen brush follows every rendered stroke');
   assert.doesNotMatch(animate,/chatAPI|visionAPI|imageAPI/,'animation must never call an API for each stroke');
 });
 
@@ -166,6 +171,9 @@ test('mobile layout keeps the player below the canvas and separates normal guess
   assert.match(render,/class="dg-tools-head"/);
   assert.ok(render.indexOf('dgFinishDrawing()')<render.indexOf('dg-palette'),'finish drawing must stay above the crowded tool row');
   assert.match(html,/\.dg-tools-head\{/);
+  assert.match(html,/\.dg-ai-palette\{/);
+  assert.match(html,/\.dg-ai-brush\{/);
+  assert.match(render,/id="dgAiBrush"/);
   assert.match(functionSource('dgMount'),/oncontextmenu/);
   assert.match(functionSource('dgMount'),/onselectstart/);
 });
