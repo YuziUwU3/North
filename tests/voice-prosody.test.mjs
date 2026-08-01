@@ -236,9 +236,12 @@ const playbackContext = vm.createContext({
   volMul: () => 1,
   setTimeout,
   clearTimeout,
+  setInterval,
+  clearInterval,
   queueMicrotask,
 });
 vm.runInContext("async " + functionSource("callAudioReady"), playbackContext);
+vm.runInContext(functionSource("stopBufSource"), playbackContext);
 vm.runInContext("async " + functionSource("playBufWait"), playbackContext);
 assert.equal(await playbackContext.playBufWait({ duration: 0.01 }, () => playbackEvents.push("subtitle")), true);
 assert.deepEqual(playbackEvents.slice(0, 3), ["resume", "start", "subtitle"], "subtitle must follow a resumed context and a started source");

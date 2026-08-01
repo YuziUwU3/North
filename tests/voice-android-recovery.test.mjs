@@ -69,5 +69,7 @@ test('Android boot guard ignores anonymous injected errors and exposes native re
 test('boot recovery controls remain tappable in Android webviews',()=>{
   assert.match(html,/\.bootbtn\{[^}]*display:block[^}]*touch-action:manipulation/);
   assert.match(html,/function ownBootError\(e\)/);
-  assert.match(html,/^<script src="app\.js\?v=754"/m);
+  const version=html.match(/__NORTH_SHELL_BUILD__='(\d+)'/)?.[1];
+  assert.ok(version);
+  assert.match(html,new RegExp(`^<script src="app\\.js\\?v=${version}"`,'m'));
 });
