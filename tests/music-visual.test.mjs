@@ -26,6 +26,11 @@ assert.match(source, /class="music-home-library"/);
 assert.match(source, /class="music-mini"/);
 assert.match(source, /function musicOpenPlayer\(/);
 assert.match(source, /function musicExpandPlayer\(/);
+assert.match(source, /function musicChatContacts\(\)[\s\S]*?filter\(c=>c&&!c\.deleted\)/);
+assert.match(source, /function musicChatRows\(cid\)/);
+assert.match(source, /function musicChatHistoryModal\(cid\)/);
+assert.match(source, /onchange="musicChatHistoryModal\(this\.value\)"/);
+assert.match(source, /已删除角色的记录不会在这里显示/);
 assert.match(source, /onclick="musicOpenHome\(\)" aria-label="缩小播放器"/);
 assert.match(source, /if\(_mView!==\'player\'\|\|!cur\)return renderMusicHome\(\)/);
 assert.match(source, /class="music-settings"/);
@@ -54,5 +59,11 @@ const menuStart = source.indexOf("function musicMenu(");
 const menuEnd = source.indexOf("function musicChatHistoryModal(", menuStart);
 assert.ok(menuStart >= 0 && menuEnd > menuStart, "music menu source must be present");
 assert.doesNotMatch(source.slice(menuStart, menuEnd), /[↩🎵🎧🖼]/u);
+
+const homeStart = source.indexOf("function renderMusicHome(");
+const homeEnd = source.indexOf("function renderMusic(", homeStart);
+assert.ok(homeStart >= 0 && homeEnd > homeStart, "music home source must be present");
+assert.doesNotMatch(source.slice(homeStart, homeEnd), /<em>\$\{chatCount/,
+  "history totals must not masquerade as an unread red badge");
 
 console.log("music visual tests passed");
