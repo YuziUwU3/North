@@ -92,8 +92,9 @@ test('game context uses independently configurable complete rounds and hands off
   assert.doesNotMatch(functionSource('gameContextRounds'),/offlineContextLimit|offHist/);
   assert.match(functionSource('gsReply'),/gameContextRows\(g\.msgs\)/);
   assert.match(functionSource('mgrRoleTurn'),/gameContextRows\(r\.msgs\|\|\[\]\)/);
-  assert.match(functionSource('openGames'),/游戏上下文回合数/);
-  assert.match(functionSource('openGames'),/id="game_hist"/);
+  assert.match(functionSource('openGames'),/gameshub/);
+  assert.match(functionSource('gameHubSettings'),/游戏上下文回合数/);
+  assert.match(functionSource('gameHubSettings'),/id="game_hist"/);
 
   const context=vm.createContext({S:{settings:{gameHistRounds:2}}});
   vm.runInContext(functionSource('gameContextRounds')+functionSource('gameContextRows'),context);
@@ -116,7 +117,7 @@ test('solo game exit preserves the draft while end clears it',()=>{
   assert.match(render,/onclick="gsExit\(\)"/);
   assert.match(render,/onclick="gsEnd\(\)"/);
   assert.match(render,/onclick="gsClear\(\)"/);
-  assert.match(functionSource('openGames'),/继续上次游戏/);
+  assert.match(functionSource('renderGameHub'),/继续游戏/);
   assert.match(functionSource('gsReply'),/const g=_gs/);
   assert.match(functionSource('gsReply'),/if\(_gs!==g\)return/,'a late reply from an exited game must not enter a newly opened game');
 
