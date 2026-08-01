@@ -124,6 +124,24 @@ test('role dialogue uses the same game context and never fabricates player speec
   assert.doesNotMatch(functionSource('dgSubmitGuess'),/还不是|不对，再|差一点/);
 });
 
+test('every role bubble in the drawing room is Chinese-only',()=>{
+  const context=vm.createContext({String}),ask=app.slice(app.indexOf('async function dgAskRoleGuess'),app.indexOf('function dgHintRole'));
+  vm.runInContext(functionSource('dgCleanSpeech'),context);
+  vm.runInContext(functionSource('dgChineseSpeech'),context);
+  assert.equal(context.dgChineseSpeech('It holds things together, baby.'),'');
+  assert.equal(context.dgChineseSpeech('这个 knot 可以把东西系在一起。'),'这个可以把东西系在一起');
+  assert.equal(context.dgChineseSpeech('这次只说中文。'),'这次只说中文。');
+  assert.match(functionSource('dgRoleSystem'),/只能使用简体中文/);
+  assert.match(functionSource('dgRoleSystem'),/禁止出现任何英文字母/);
+  assert.match(functionSource('dgAddDialogue'),/who==='ta'\?dgChineseSpeech/,'the final bubble write has a hard language gate');
+  assert.match(functionSource('dgLoadDraft'),/g\.roleSpeech=dgChineseSpeech/,'old English bubbles are removed when a draft resumes');
+  assert.match(functionSource('dgLoadDraft'),/x\.who==='ta'.*dgChineseSpeech\(x\.text\)/,'old role dialogue is cleaned too');
+  assert.match(functionSource('dgRoleHint'),/await dgEnsureChineseSpeech/,'hint replies are repaired before display');
+  assert.match(functionSource('dgSubmitGuess'),/await dgEnsureChineseSpeech/,'answer replies are repaired before display');
+  assert.match(ask,/await dgEnsureChineseSpeech/,'role guesses are repaired before display');
+  assert.match(functionSource('dgGenerateRoleDrawing'),/\[A-Za-z\]\/\.test\(candidate\)/,'role-picked topics reject English answers');
+});
+
 test('vision is limited to player drawings and failures stay invisible',()=>{
   const ask=app.slice(app.indexOf('async function dgAskRoleGuess'),app.indexOf('function dgHintRole')),guide=functionSource('dgGuideRole');
   assert.match(functionSource('dgTimeUp'),/dgFinishDrawing/);
