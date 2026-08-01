@@ -6,7 +6,7 @@ const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), '
 const app = read('app.js');
 const migration = read('supabase/migrations/202607300002_friend_sync_performance.sql');
 
-assert.match(app, /let _pfSyncBusy=false,_pfLastAuto=0,_pfSendBusy=\{\},_pfSyncQueued=null/);
+assert.match(app, /let _pfSyncBusy=false,_pfLastAuto=0,_pfSendBusy=\{\},_pfRespondBusy=\{\},_pfSyncQueued=null/);
 assert.match(app, /function pfQueueSync\(silent,forceProfile,forceFull\)/);
 assert.match(app, /if\(_pfSyncBusy\)\{pfQueueSync\(silent,forceProfile,forceFull\);return;\}/);
 assert.match(app, /const queued=_pfSyncQueued;_pfSyncQueued=null;if\(queued\)setTimeout\(\(\)=>phoneFriendSync/);

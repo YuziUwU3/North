@@ -207,13 +207,34 @@ create or replace function phone_friend_respond_request(
 language plpgsql security definer set search_path = public as $$
 declare
   v_to text := upper(trim(p_to_id));
+  v_from text;
+  v_status text;
 begin
   if not phone_friend_check(v_to, p_secret) then raise exception 'bad-secret'; end if;
+
+  select r.from_id, r.status into v_from, v_status
+  from phone_friend_requests r
+  where r.id = p_request_id and r.to_id = v_to
+  for update;
+
+  if v_from is null then return false; end if;
+
+  if v_status <> 'pending' then
+    return (p_accept and v_status = 'accepted') or (not p_accept and v_status = 'rejected');
+  end if;
+
   update phone_friend_requests
   set status = case when p_accept then 'accepted' else 'rejected' end,
       updated_at = now()
-  where id = p_request_id and to_id = v_to and status = 'pending';
-  return found;
+  where id = p_request_id and to_id = v_to;
+
+  if p_accept then
+    update phone_friend_requests
+    set status = 'accepted', updated_at = now()
+    where from_id = v_to and to_id = v_from and status = 'pending';
+  end if;
+
+  return true;
 end $$;
 
 create or replace function phone_friend_send_message(

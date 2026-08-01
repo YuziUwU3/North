@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='749'){
+if(window.__NORTH_SHELL_BUILD__!=='750'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -114,7 +114,7 @@ async function pfRpc(fn,args,ms){const r=await fetchT(GATE_URL+'/rest/v1/rpc/'+f
   if(!r.ok){let msg=(d&&d.message)||txt||('HTTP '+r.status);if(/Could not find the function|schema cache|404/i.test(msg))msg='好友云端表还没开通，先把 supabase_phone_friends.sql 执行一次';throw new Error(String(msg).slice(0,160));}
   return d;}
 function pfProfilePayload(){const p=phoneFriendState();return {p_phone_id:p.id,p_secret:p.secret,p_display_name:(S.me.name||'我').slice(0,40),p_avatar:(''+(S.me.avatar||'🙂')).slice(0,PHONE_FRIEND_AVATAR_MAX),p_allow_search:p.allowSearch!==false};}
-let _pfSyncBusy=false,_pfLastAuto=0,_pfSendBusy={},_pfSyncQueued=null;
+let _pfSyncBusy=false,_pfLastAuto=0,_pfSendBusy={},_pfRespondBusy={},_pfSyncQueued=null;
 function pfQueueSync(silent,forceProfile,forceFull){const q=_pfSyncQueued||{silent:true,forceProfile:false,forceFull:false};q.silent=q.silent&&!!silent;q.forceProfile=q.forceProfile||!!forceProfile;q.forceFull=q.forceFull||!!forceFull;_pfSyncQueued=q;}
 function pfFriendIds(p){return (p.friends||[]).map(f=>(''+(f.phone_id||f.id||'')).toUpperCase()).filter(Boolean);}
 function pfHasAnyFriendMessages(p){return Object.keys(p.messages||{}).some(k=>Array.isArray(p.messages[k])&&p.messages[k].length);}
@@ -197,8 +197,11 @@ function phoneFriendSearchFromWx(q){openPhoneFriends();setTimeout(()=>{const i=$
 async function phoneFriendRequest(toId){toId=(''+toId).toUpperCase();const p=phoneFriendState();if(toId===p.id){toast('这是你自己的小手机ID');return;}if(phoneFriendById(toId)){toast('你们已经是好友了');return;}
   try{await pfEnsure();await pfRpc('phone_friend_send_request',{p_from_id:p.id,p_secret:p.secret,p_to_id:toId,p_message:''},25000);toast('好友申请已发送');phoneFriendSync(true);}
   catch(e){toast(e.message||'发送失败');}}
-async function phoneFriendRespond(rid,ok){try{const p=phoneFriendState();await pfRpc('phone_friend_respond_request',{p_to_id:p.id,p_secret:p.secret,p_request_id:rid,p_accept:!!ok},25000);toast(ok?'已通过':'已忽略');phoneFriendSync(true);}
-  catch(e){toast(e.message||'操作失败');}}
+async function phoneFriendRespond(rid,ok){rid=''+(rid||'');if(!rid||_pfRespondBusy[rid])return;const p=phoneFriendState(),req=(p.requests||[]).find(r=>(''+r.id)===rid&&r.direction==='incoming');if(!req){toast('这条申请已经更新，请刷新后再看');phoneFriendSync(true,false,true);return;}_pfRespondBusy[rid]=true;req._responding=true;render();
+  try{await pfEnsure();const changed=await pfRpc('phone_friend_respond_request',{p_to_id:p.id,p_secret:p.secret,p_request_id:rid,p_accept:!!ok},25000);if(changed!==true){p.lastSync=0;await phoneFriendSync(false,false,true);const other=(''+(req.from_id||'')).toUpperCase();if(ok&&other&&phoneFriendById(other)){req.status='accepted';delete req._responding;save();render();toast('你们已经是好友了');return;}throw new Error('这条申请已失效或被处理，请刷新后重试');}
+    req.status=ok?'accepted':'rejected';delete req._responding;if(ok){const other=(''+(req.from_id||'')).toUpperCase();if(other&&!phoneFriendById(other))p.friends.unshift({phone_id:other,display_name:req.from_name||other,avatar:req.from_avatar||'🙂',since:new Date().toISOString()});}p.lastSync=0;save();render();toast(ok?'已通过':'已忽略');await phoneFriendSync(true,false,true);}
+  catch(e){delete req._responding;delete _pfRespondBusy[rid];render();toast(e.message||'操作失败');}
+  finally{delete _pfRespondBusy[rid];}}
 function openPhoneFriendChat(id){id=(''+id).toUpperCase();pfMarkRead(id);go('pfchat',{id});setTimeout(()=>{const p=phoneFriendState(),empty=!pfMsgList(p.messages,id).length;if(empty)phoneFriendSync(true,false,true);else phoneFriendMaybeSync(true);},60);}
 function phoneFriendChatMessages(id){const p=phoneFriendState();id=(''+id).toUpperCase();return pfVisibleMsgList(p.messages,id).slice().sort((x,y)=>(x.time||0)-(y.time||0));}
 async function sendPhoneFriendBody(id,body,opt){id=(''+id).toUpperCase();body=(''+(body||'')).trim();opt=opt||{};const silent=!!opt.silent,transport=!!opt.transport;if(!body)return;if(body.length>PHONE_FRIEND_BODY_MAX){if(!transport)toast('这条消息太大，发不出去');return;}if(!silent&&_pfSendBusy[id]){toast('上一条还在发送');return;}const p=phoneFriendState();if(!silent)_pfSendBusy[id]=true;const localId='local_'+uid();
@@ -351,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v749 · 游戏消息编辑与API路线快捷切换';
+const APP_VER='v750 · 真人好友通过修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1320,7 +1323,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=749';
+  const url='sw.js?v=750';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2058,7 +2061,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=749').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=750').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -4655,7 +4658,7 @@ function renderPhoneFriends(){const p=phoneFriendState();phoneFriendMaybeSync(fa
       <div style="display:flex;gap:8px;padding:6px 14px 12px"><input id="pf_search" value="${esc(search.q||'')}" placeholder="输入对方小手机ID，如 SPXXXXXX" style="flex:1;border:1px solid #38383a;border-radius:9px;padding:9px;background:#2c2c2e;color:#eee;text-transform:uppercase">${(search.q||(search.items&&search.items.length))?'<button class="minibtn" onclick="phoneFriendSearchClear()">清空</button>':''}<button class="send" onclick="phoneFriendSearch()">搜索</button></div>
       ${search.busy?'<div class="empty" style="padding:14px;color:#888">搜索中…</div>':search.err?`<div class="hint" style="color:#e8a85b">${esc(search.err)}</div>`:(found||((search.q||'')?'<div class="empty" style="padding:14px;color:#888">没搜到这个ID</div>':''))}
     </div>
-    ${incoming.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#ffb6d0;font-weight:700">新的申请</div>${incoming.map(r=>`<div class="it">${av(r.from_avatar||'🙂','sm')}<span style="flex:1">${esc(r.from_name||r.from_id)}</span><button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRespond('${r.id}',true)">通过</button><button class="minibtn" onclick="phoneFriendRespond('${r.id}',false)">忽略</button></div>`).join('')}</div>`:''}
+    ${incoming.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#ffb6d0;font-weight:700">新的申请</div>${incoming.map(r=>{const busy=!!_pfRespondBusy[r.id]||!!r._responding;return `<div class="it">${av(r.from_avatar||'🙂','sm')}<span style="flex:1">${esc(r.from_name||r.from_id)}</span><button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRespond('${r.id}',true)" ${busy?'disabled':''}>${busy?'处理中…':'通过'}</button><button class="minibtn" onclick="phoneFriendRespond('${r.id}',false)" ${busy?'disabled':''}>忽略</button></div>`;}).join('')}</div>`:''}
     ${outgoing.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#aaa;font-weight:700">已发送申请</div>${outgoing.map(r=>`<div class="it"><span>${esc(r.to_name||r.to_id)}</span><span class="v">等待通过</span></div>`).join('')}</div>`:''}
     <div class="section" style="margin:12px">
       <div class="it" onclick="phoneFriendCreateGroupModal()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('users',18,'#c3c6d2')}新建小手机群</span><span class="v">›</span></div>
