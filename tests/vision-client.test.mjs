@@ -39,7 +39,7 @@ function functionSource(name) {
 const calls = [];
 const context = vm.createContext({
   URL,
-  S: { settings: { chat: { base: "https://relay.test/v1", key: "secret", model: "claude-opus-4-6" }, vision: { base: "https://relay.test/v1", key: "secret", model: "claude-opus-4-6", protocols: {} } } },
+  S: { settings: { chat: { base: "https://relay.test/v1", key: "secret", model: "claude-opus-4-6" }, vision: { base: "https://relay.test/v1", key: "secret", model: "gemini-2.5-pro", protocols: {} } } },
   aiCoreOn: () => false,
   fetchT: async (url, options) => {
     calls.push({ url, options, body: JSON.parse(options.body) });
@@ -50,9 +50,11 @@ vm.runInContext("let _visionLast={},_visionModelCache={};", context);
 
 for (const name of [
   "uniq", "visionModels", "visionImagePart", "visionNoImageText", "roleImageFailureText", "visionText",
-  "visionData", "visionNativeURL", "visionIsClaude", "visionErrKind",
+  "visionData", "visionNativeURL", "visionIsClaude", "visionErrKind", "visionConfigured", "visionRouteKey",
+  "visionChatRouteKey", "visionBackupSameAsChat", "visionFailure", "visionRelayFailure", "visionCacheableFailure",
+  "visionMarkChatFailure", "visionClearChatFailure", "visionChatSkipped", "visionRelayMessages",
   "visionPostOpenAI", "visionPostAnthropic", "visionAvailableModels", "visionFallbackModels",
-  "visionTryModel", "visionAPI", "quoteContextText", "msgToText",
+  "visionTryModel", "visionTryChat", "visionTryBackup", "visionAPI", "quoteContextText", "msgToText",
 ]) vm.runInContext(functionSource(name), context);
 
 assert.equal(context.visionNativeURL("https://vg.v1api.cc/v1"), "https://vg.v1api.cc/v1/messages");
@@ -83,6 +85,11 @@ assert.equal(calls[1].body.messages[0].content[0].source.data, "QUJD");
 assert.equal(calls[1].body.messages[0].content[1].type, "text");
 assert.equal(calls[1].options.headers["anthropic-version"], "2023-06-01");
 
+const directBefore = calls.length;
+assert.ok(await context.visionAPI(dataURL, "先由聊天模型直接看图"));
+assert.equal(calls.length - directBefore, 1, "a successful chat vision route must not call the backup route");
+assert.equal(vm.runInContext("_visionLast.route", context), "chat");
+
 const fallbackCalls = [];
 context.fetchT = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : null;
@@ -94,11 +101,46 @@ context.fetchT = async (url, options = {}) => {
 };
 assert.equal(await context.visionAPI(dataURL, "描述图片"), "备用模型看到了白猫");
 assert.equal(context.S.settings.vision.lastGoodModel, "gemini-2.5-pro");
-assert.equal(context.S.settings.vision.primaryImageFailedModel, "claude-opus-4-6");
+assert.match(context.S.settings.vision.chatImageFailedKey, /claude-opus-4-6/);
 assert.equal(fallbackCalls.filter(x => x.body?.model === "claude-opus-4-6").length, 2);
 const beforeSecond = fallbackCalls.length;
 assert.equal(await context.visionAPI(dataURL, "再描述一次"), "备用模型看到了白猫");
 assert.equal(fallbackCalls.slice(beforeSecond).filter(x => x.body?.model === "claude-opus-4-6").length, 0);
 assert.equal(fallbackCalls.slice(beforeSecond).filter(x => x.body?.model === "gemini-2.5-pro").length, 1);
+
+const relayCalls = [];
+context.aiCoreOn = () => true;
+context.S.settings.vision = { base: "", key: "", model: "", protocols: {} };
+context.S.settings.chat.model = "gpt-4o-mini";
+context.aiRelay = async (action, payload) => {
+  relayCalls.push({ action, payload });
+  return { data: { choices: [{ message: { content: "验证码是 A7K9" } }] } };
+};
+assert.equal(await context.visionAPI(dataURL, "只回复验证码", { forceChat: true }), "验证码是 A7K9");
+assert.deepEqual(relayCalls.map(x => x.action), ["chat"]);
+assert.equal(relayCalls[0].payload.messages[0].content.filter(x => x.type === "image_url").length, 1);
+assert.equal(vm.runInContext("_visionLast.route", context), "chat");
+
+relayCalls.length = 0;
+context.aiRelay = async (action, payload) => {
+  relayCalls.push({ action, payload });
+  if (action === "chat") return { data: { choices: [{ message: { content: "no image attached" } }] } };
+  return { data: { choices: [{ message: { content: "备用识图看到了 A7K9" } }] } };
+};
+assert.equal(await context.visionAPI(dataURL, "只回复验证码", { forceChat: true }), "备用识图看到了 A7K9");
+assert.deepEqual(relayCalls.map(x => x.action), ["chat", "vision"]);
+assert.equal(vm.runInContext("_visionLast.fallback", context), true);
+
+relayCalls.length = 0;
+assert.equal(await context.visionAPI(dataURL, "再次回复验证码"), "备用识图看到了 A7K9");
+assert.deepEqual(relayCalls.map(x => x.action), ["vision"], "cached unsupported chat model must not be charged/tested again");
+
+context.aiCoreOn = () => false;
+context.S.settings.chat = { base: "https://same.test/v1", key: "same", model: "gpt-4o-mini" };
+context.S.settings.vision = { base: "https://same.test/v1", key: "same", model: "gpt-4o-mini", protocols: {} };
+assert.equal(context.visionBackupSameAsChat(context.S.settings.vision, context.S.settings.chat), true);
+const duplicateBefore = fallbackCalls.length;
+await assert.rejects(context.visionTryBackup(dataURL, "不应重复请求", "gpt-4o-mini"), /阻止重复识别/);
+assert.equal(fallbackCalls.length, duplicateBefore, "an identical backup must be rejected before any HTTP request");
 
 console.log("vision client protocol tests passed");
