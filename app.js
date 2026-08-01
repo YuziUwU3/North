@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='756'){
+if(window.__NORTH_SHELL_BUILD__!=='757'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v756 · 内置音色优先修正';
+const APP_VER='v757 · 英文语音语言修正';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1173,6 +1173,7 @@ const CJK_RE=/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g;
 const CN_PUNCT_RE=/[（）()「」『』【】《》〈〉、，。．！？；：…—～·“”‘’]/g;
 function normVoiceLang(lang){const s=String(lang||'').trim().toLowerCase();if(!s||s==='zh'||s==='cn'||s==='中文'||s==='chinese')return 'zh';if(s==='英'||s==='英语'||s==='英文'||s==='en'||s==='eng'||s==='english')return '英';if(s==='日'||s==='日语'||s==='日文'||s==='jp'||s==='ja'||s==='japanese')return '日';if(s==='韩'||s==='韩语'||s==='韩文'||s==='kr'||s==='ko'||s==='korean')return '韩';return lang||'zh';}
 function ttsContentLang(c){const t=ttsCfg(),role=(c&&c.voice&&c.voice.lang)||'zh';return normVoiceLang(ttsUseRelay()&&t.relayLang?t.relayLang:role);}
+function ttsLanguageBoost(c){const lang=ttsContentLang(c);return {zh:'Chinese','英':'English','日':'Japanese','韩':'Korean'}[lang]||'auto';}
 function normVoiceAccent(o){const v=o&&o.voice?o.voice:(o||{}),a=String(v.accent||'auto').trim().toLowerCase();if(a==='en-gb'||a==='gb'||a==='uk'||a==='british'||a==='英式')return'en-GB';if(a==='en-us'||a==='us'||a==='american'||a==='美式')return'en-US';return'auto';}
 function voiceEnglishPrompt(o){const v=o&&o.voice?o.voice:(o||{});if(normVoiceLang(v.lang)!=='英')return'';const a=normVoiceAccent(v);if(a==='en-GB')return'\n- 英语口音：使用自然地道的英式英语（British English）措辞、拼写和语气，例如 colour、favourite、holiday、flat；不要混用明显的美式说法，也不要刻意堆砌俚语。';if(a==='en-US')return'\n- 英语口音：使用自然地道的美式英语（American English）措辞、拼写和语气，例如 color、favorite、vacation、apartment；不要混用明显的英式说法，也不要刻意堆砌俚语。';return'';}
 function applySystemVoice(u,v){if(!u||!v)return;const accent=normVoiceAccent(v);if(accent!=='auto')u.lang=accent;let vs=v.voiceURI?_voices.find(x=>x.voiceURI===v.voiceURI):null;if(!vs&&accent!=='auto')vs=_voices.find(x=>String(x.lang||'').toLowerCase()===accent.toLowerCase())||_voices.find(x=>String(x.lang||'').toLowerCase().startsWith(accent.slice(0,2).toLowerCase()));if(vs)u.voice=vs;}
@@ -1259,8 +1260,8 @@ async function ttsRefundError(e,reason){const id=ttsLedgerFromError(e);if(!id||e
 function ttsVoiceAccessErrorText(s){return /tts-private-voice-not-owned|tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access|permission|forbidden|unauthorized|401|403|404/i.test(String(s||''));}
 function ttsRelayVoiceIds(tts){const selected=String(tts&&tts.voice||'').trim();return[selected||DEFAULT_TTS_VOICE];}
 async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
-async function _ttsOnce(t,vid,tts,opt){let r;
-  if(ttsUseRelay()){let d,ledger='';try{const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(t,null),setting={speed:1,vol:1,pitch:0};if(cue==='tense')setting.emotion='angry';else if(cue==='soft')setting.emotion='sad';else if(cue==='laugh')setting.emotion='happy';else if(cue==='surprised')setting.emotion='surprised';else if(cue==='fearful')setting.emotion='fearful';else if(cue==='disgusted')setting.emotion='disgusted';d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:setting});const data=d&&d.data;ledger=d&&(d.ledger_id||d.ledgerId||d.request_id);const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab){await ttsRefundLedger(ledger,'tts-no-audio');return {err:'内置AI无音频'};}return {buf:ttsLedgerSet(ab,ledger)};}catch(e){if(ledger){await ttsRefundLedger(ledger,'tts-audio-fetch-failed');try{e._ttsRefunded=true;}catch(_){};}else await ttsRefundError(e,'tts-relay-error');throw e;}}
+async function _ttsOnce(t,vid,tts,opt){let r;const languageBoost=String(opt&&opt.languageBoost||'auto');
+  if(ttsUseRelay()){let d,ledger='';try{const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(t,null),setting={speed:1,vol:1,pitch:0};if(cue==='tense')setting.emotion='angry';else if(cue==='soft')setting.emotion='sad';else if(cue==='laugh')setting.emotion='happy';else if(cue==='surprised')setting.emotion='surprised';else if(cue==='fearful')setting.emotion='fearful';else if(cue==='disgusted')setting.emotion='disgusted';d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo',language_boost:languageBoost,voice_setting:setting});const data=d&&d.data;ledger=d&&(d.ledger_id||d.ledgerId||d.request_id);const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab){await ttsRefundLedger(ledger,'tts-no-audio');return {err:'内置AI无音频'};}return {buf:ttsLedgerSet(ab,ledger)};}catch(e){if(ledger){await ttsRefundLedger(ledger,'tts-audio-fetch-failed');try{e._ttsRefunded=true;}catch(_){};}else await ttsRefundError(e,'tts-relay-error');throw e;}}
   if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
     if(aiCoreUrl()){try{const d=await aiRelay('external_tts',{provider:'fish',base:tts.base,key:tts.key,model:tts.model||'s2.1-pro-free',voice_id:vid,text:t});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(ab)return {buf:ab};return {err:'Fish中转无音频'};}catch(e){if(!/unknown-action/i.test(String((e&&e.message)||e)))return {err:String((e&&e.message)||e).replace(/^内置AI失败：/,'')};}}
     r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
@@ -1269,7 +1270,7 @@ async function _ttsOnce(t,vid,tts,opt){let r;
     r=await fetch(url,{method:'POST',headers:{'X-Hume-Api-Key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({utterances:[{text:t,voice:{id:vid}}],format:{type:'mp3'},num_generations:1,split_utterances:false,version})});}
   else if(/minimax/i.test(tts.base)){const gid=(tts.group||'').trim(),vp=ttsVoiceProfile(t,opt,tts);
     const url=tts.base.replace(/\/+$/,'')+'/v1/t2a_v2'+(gid?('?GroupId='+encodeURIComponent(gid)):'');
-    r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'speech-02-turbo',text:t,stream:false,language_boost:'auto',voice_setting:{voice_id:vid||'male-qn-qingse',speed:vp.speed,vol:vp.vol,pitch:vp.pitch,emotion:vp.emotion},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}})});
+    r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'speech-02-turbo',text:t,stream:false,language_boost:languageBoost,voice_setting:{voice_id:vid||'male-qn-qingse',speed:vp.speed,vol:vp.vol,pitch:vp.pitch,emotion:vp.emotion},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}})});
     if(r.ok){const j=await r.json();const audio=j&&j.data&&(j.data.audio||j.data.audio_file||j.data.audio_url);
       const ab=await audioDataToBuf(audio);if(ab)return {buf:ab};
       return {err:(j&&j.base_resp&&j.base_resp.status_msg)||'无音频'};}
@@ -1280,7 +1281,7 @@ async function _ttsOnce(t,vid,tts,opt){let r;
   let detail='';try{const j=await r.clone().json();const d=j&&j.detail;detail=(d&&(d.status||d.message))||(typeof d==='string'?d:'')||(j&&j.message)||'';}catch(e){try{detail=(await r.text()||'').slice(0,80);}catch(_){}}
   return {err:r.status+(detail?(' · '+detail):'')};}
 // 语音自动重试：偶发的 401/429/网络抖动(尤其 ElevenLabs 免费版)会让头一两条没声，这里悄悄退避重试，最多3次都失败才弹提示
-async function ttsArr(text,o,opt){opt=opt||{};const tts=ttsCfg(),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;
+async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=ttsCfg(),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;
   if(!ttsApiOn())return null;const vid=(v&&v.ttsVoice)||(tts&&tts.voice)||'';
   if(ttsUseRelay()){
     const ids=ttsRelayVoiceIds(tts);let lastMsg='';
@@ -1324,7 +1325,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=756';
+  const url='sw.js?v=757';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;

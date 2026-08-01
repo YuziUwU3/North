@@ -1015,7 +1015,12 @@ function safeTTSVoiceSetting(input: TTSVoiceSetting | null | undefined) {
   return out;
 }
 
-async function minimaxTTS(text: string, voiceId: string, model: string, setting?: TTSVoiceSetting) {
+function safeTTSLanguageBoost(input: unknown) {
+  const value = String(input || "auto");
+  return new Set(["auto", "Chinese", "English", "Japanese", "Korean"]).has(value) ? value : "auto";
+}
+
+async function minimaxTTS(text: string, voiceId: string, model: string, setting?: TTSVoiceSetting, languageBoost?: unknown) {
   const base = (Deno.env.get("MINIMAX_BASE_URL") || "https://api.minimaxi.com").replace(/\/+$/, "");
   const key = Deno.env.get("MINIMAX_API_KEY") || "";
   const groupId = Deno.env.get("MINIMAX_GROUP_ID") || "";
@@ -1028,7 +1033,7 @@ async function minimaxTTS(text: string, voiceId: string, model: string, setting?
       model,
       text,
       stream: false,
-      language_boost: "auto",
+      language_boost: safeTTSLanguageBoost(languageBoost),
       voice_setting: { voice_id: voiceId, ...safeTTSVoiceSetting(setting) },
       audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
     }),
@@ -1911,7 +1916,7 @@ Deno.serve(async (req) => {
       const voiceId = requestedVoiceId;
       let data;
       try {
-        data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
+        data = await minimaxTTS(text, voiceId, model, body.voice_setting || null, body.language_boost);
       } catch (e) {
         if (isTtsVoiceAccessError(e)) {
           return json({

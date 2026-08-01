@@ -284,7 +284,7 @@ async function aiTestVoice(){const text=aiVoiceTestText();
       if(!ab){_aiVoiceTestStatus='没有拿到语音，请检查音色或接口';toast('没有拿到语音');return;}
       const buf=await decodeBuf(ab);if(buf){playBuf(buf);_aiVoiceTestStatus='外置语音测试成功';toast('外置语音测试成功');}else{_aiVoiceTestStatus='拿到语音数据，但播放失败';toast('拿到语音数据，但播放失败');}return;
     }
-    const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||AI_DEFAULT_TTS_VOICE,model:'speech-02-turbo'}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
+    const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||AI_DEFAULT_TTS_VOICE,model:'speech-02-turbo',language_boost:typeof ttsLanguageBoost==='function'?ttsLanguageBoost(null):'auto'}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(d==='__T_O__'){_aiVoiceTestStatus='语音测试超时，未完成生成';toast('语音测试超时');return;}
     const ledger=d&&(d.ledger_id||d.ledgerId||d.request_id),audio=aiRelayVoiceAudio(d);if(!audio){if(typeof ttsRefundLedger==='function')await ttsRefundLedger(ledger,'tts-test-no-audio');_aiVoiceTestStatus='音色绑定仍在，但后台没有返回音频，已退回本次AI点数';toast('后台没有返回音频，绑定没有丢失');setTimeout(()=>aiAccountRefresh(true,true),600);return;}
     let raw;try{raw=typeof audioDataToBuf==='function'?await audioDataToBuf(audio):await fetch(audio).then(x=>{if(!x.ok)throw new Error('HTTP '+x.status);return x.arrayBuffer();});if(!raw)throw new Error('empty-audio');}catch(_){if(typeof ttsRefundLedger==='function')await ttsRefundLedger(ledger,'tts-test-fetch-failed');_aiVoiceTestStatus='语音文件读取失败，已退回本次AI点数；音色绑定没有丢失';toast('语音读取失败，已退回本次AI点数');setTimeout(()=>aiAccountRefresh(true,true),800);return;}

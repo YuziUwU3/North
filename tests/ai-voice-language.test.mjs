@@ -18,6 +18,8 @@ assert.match(account, /relayLang=\['zh','英','日','韩'\]\.includes\(lang\)\?l
 assert.match(account, /function aiVoiceTestText\(\)/);
 assert.match(account, /'英':'Hi, I am testing the cost and sound of this voice\.'/);
 assert.match(app, /function ttsContentLang\(c\)/);
+assert.match(app, /function ttsLanguageBoost\(c\)/);
+assert.match(account, /language_boost:typeof ttsLanguageBoost==='function'\?ttsLanguageBoost\(null\):'auto'/);
 assert.match(app, /ttsUseRelay\(\)&&t\.relayLang\?t\.relayLang:role/);
 assert.match(app, /_vlang=ttsContentLang\(c\)/);
 assert.match(app, /const _lang=ttsContentLang\(c\)/);

@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false, ttsCfg: () => ({}), DEFAULT_TTS_VOICE: "male-qn-qingse" });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "ttsLanguageBoost", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
@@ -75,8 +75,10 @@ assert.equal(context.requestedVoiceNeedsFix("[语音|I miss you.|我想你了]\n
 context.ttsUseRelay = () => true;
 context.ttsCfg = () => ({ relayLang: "英" });
 assert.equal(context.ttsContentLang({ voice: { lang: "zh" } }), "英", "built-in language must override the role language");
+assert.equal(context.ttsLanguageBoost({ voice: { lang: "zh" } }), "English", "built-in English must be explicit in the TTS request");
 context.ttsUseRelay = () => false;
 assert.equal(context.ttsContentLang({ voice: { lang: "英" } }), "英", "external voice must keep the role language");
+assert.equal(context.ttsLanguageBoost({ voice: { lang: "日" } }), "Japanese");
 assert.equal(context.voiceTagNeedsLangFix("[语音|Tell me why.|为什么这样？|语气:质问]", { voice: { lang: "英" } }), false);
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "british" }), "en-GB");
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "en-US" }), "en-US");
@@ -132,7 +134,7 @@ for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted",
   assert.equal(profile.vol, 1, `${cue} changed volume`);
 }
 
-assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:setting\}\)/);
+assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',language_boost:languageBoost,voice_setting:setting\}\)/);
 assert.match(source, /if\(cue==='laugh'\)setting\.emotion='happy'/);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds({ voice: "account-clone" }))), ["account-clone"]);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds({ voice: "" }))), ["male-qn-qingse"]);
@@ -144,6 +146,8 @@ assert.doesNotMatch(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
 assert.match(source, /function ttsUseRelay\(\)\{const t=ttsCfg\(\);return !!\(ttsEnabled\(t\)&&ttsRelayOn\(t\)\);\}/);
 assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
 assert.match(backend, /model = "speech-02-turbo"/);
+assert.match(backend, /language_boost: safeTTSLanguageBoost\(languageBoost\)/);
+assert.match(backend, /body\.voice_setting \|\| null, body\.language_boost/);
 assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSetting\(setting\) \}/);
 assert.match(backend, /if \(allowed\.has\(emotion\)\) out\.emotion = emotion/);
 assert.doesNotMatch(backend, /: "neutral";/);
