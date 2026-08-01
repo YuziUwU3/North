@@ -86,10 +86,25 @@ test('memory and summary actions use separated larger hit targets',()=>{
   assert.match(functionSource('editSummary'),/aria-label="删除对话总结"/);
 });
 
-test('game context follows the existing offline context limit and hands off invisibly to WeChat',()=>{
-  assert.match(functionSource('gameContextLimit'),/offlineContextLimit/);
-  assert.match(functionSource('gsReply'),/slice\(-gameContextLimit\(\)\)/);
-  assert.match(functionSource('mgrRoleTurn'),/slice\(-gameContextLimit\(\)\)/);
+test('game context uses independently configurable complete rounds and hands off invisibly to WeChat',()=>{
+  assert.match(functionSource('gameContextRounds'),/gameHistRounds/);
+  assert.match(functionSource('gameContextRounds'),/Math\.min\(100,n\)/);
+  assert.doesNotMatch(functionSource('gameContextRounds'),/offlineContextLimit|offHist/);
+  assert.match(functionSource('gsReply'),/gameContextRows\(g\.msgs\)/);
+  assert.match(functionSource('mgrRoleTurn'),/gameContextRows\(r\.msgs\|\|\[\]\)/);
+  assert.match(functionSource('openGames'),/游戏上下文回合数/);
+  assert.match(functionSource('openGames'),/id="game_hist"/);
+
+  const context=vm.createContext({S:{settings:{gameHistRounds:2}}});
+  vm.runInContext(functionSource('gameContextRounds')+functionSource('gameContextRows'),context);
+  const rows=[
+    {who:'ta',text:'开场'},
+    {who:'me',text:'第一轮第一句'},{who:'me',text:'第一轮补充'},
+    {who:'ta',text:'第一轮回答一'},{who:'ta',text:'第一轮回答二'},
+    {who:'me',text:'第二轮'},{who:'ta',text:'第二轮回答'},
+    {who:'me',text:'第三轮'},{who:'ta',text:'第三轮回答'},
+  ];
+  assert.deepEqual(Array.from(context.gameContextRows(rows),x=>x.text),['第二轮','第二轮回答','第三轮','第三轮回答']);
   assert.match(functionSource('gsEnd'),/gameSetHandoff\(g\.cid,g\.title,g\.msgs\)/);
   assert.match(functionSource('gameWechatHandoffPrompt'),/不属于长期记忆或对话总结/);
   assert.match(functionSource('gameWechatHandoffPrompt'),/不要把它写成新的长期记忆/);
