@@ -12,7 +12,8 @@ assert.match(app,/function aiImageRelayOn\(\)\{return !!\(aiImageInit\(\)\.enabl
 assert.match(app,/if\(aiImageRelayOn\(\)\)\{const d=await aiRelay\('image'/);
 assert.match(app,/function imageGenerationAvailable\(\)/);
 assert.doesNotMatch(app,/if\(aiCoreOn\(\)\)\{const d=await aiRelay\('image'/);
-assert.match(app,/function imageGenerateExternal\(base,key,model,prompt,size\)/);
+assert.match(app,/function imageGenerateExternal\(base,key,model,prompt,size,quality\)/);
+assert.match(app,/q=quality==='low'\?'low':quality==='high'\?'high':'medium'/,'callers keep medium quality unless they explicitly request a faster or higher tier');
 assert.match(app,/const urls=\/\\\/v1\$\/i\.test\(b\)\?\[b\+path\]:\[b\+'\/v1'\+path,b\+path\]/);
 assert.match(app,/接口返回网页HTML，不是API JSON/);
 assert.match(app,/function imageCollectValues\(v,out\)/);

@@ -34,7 +34,7 @@ test('game hall exposes the advanced draw-and-guess room',()=>{
   assert.match(html,/\.dg-canvas-shell/);
 });
 
-test('setup has free topics, role-picked topics and a separate photo continuation mode',()=>{
+test('setup has free topics, role-picked topics and a blank-canvas free mode',()=>{
   const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew'),begin=functionSource('dgBeginState'),prepared=functionSource('dgStartPrepared'),setter=functionSource('dgSetRoomTitle'),render=functionSource('renderDrawGuess');
   assert.doesNotMatch(setup,/id="dg_topic"/,'the title must not live outside the room');
   assert.match(setup,/我来画/);
@@ -48,7 +48,9 @@ test('setup has free topics, role-picked topics and a separate photo continuatio
   assert.match(setter,/mode==='role'/,'normal guessing must reject player-authored titles');
   assert.match(prepared,/g\.mode==='role'.*g\.answer=''/s,'TA-draws mode must always begin with a secret role-picked topic');
   assert.match(render,/photo&&!done\|\|setup&&meDraw/,'only player-draw and free mode expose the room title editor');
-  assert.match(render,/dgUploadRoleBase\(\)/);
+  assert.doesNotMatch(app,/function dgUploadRoleBase/,'TA no longer imports a source image to continue drawing');
+  assert.doesNotMatch(render,/dgUploadRoleBase|上传图片/);
+  assert.match(setup,/TA 在空白画布自由创作/);
   assert.match(render,/dgStartPrepared\(\)/);
   assert.doesNotMatch(prepared,/mode==='photo'&&!g\.background/,'free mode must also start on a blank canvas');
   assert.match(prepared,/mode==='photo'&&!g\.answer/,'free mode still needs the player-authored title');
@@ -56,7 +58,7 @@ test('setup has free topics, role-picked topics and a separate photo continuatio
 
 test('canvas controls and durable gallery saving do not depend on the mounted canvas',()=>{
   const render=functionSource('renderDrawGuess'),archive=functionSource('dgArchive');
-  assert.match(render,/相册底图/);
+  assert.match(render,/相册底图/,'the player may still place a personal reference under their own drawing');
   assert.match(render,/撤回一笔/);
   assert.match(render,/清空画布/);
   assert.match(render,/dgSetWidth\(13,this\)/);
@@ -122,7 +124,7 @@ test('role dialogue uses the same game context and never fabricates player speec
   assert.doesNotMatch(functionSource('dgSubmitGuess'),/还不是|不对，再|差一点/);
 });
 
-test('vision is limited to player drawings or free mode and failures stay invisible',()=>{
+test('vision is limited to player drawings and failures stay invisible',()=>{
   const ask=app.slice(app.indexOf('async function dgAskRoleGuess'),app.indexOf('function dgHintRole')),guide=functionSource('dgGuideRole');
   assert.match(functionSource('dgTimeUp'),/dgFinishDrawing/);
   assert.match(functionSource('dgTimeUp'),/phase='done'/);
@@ -141,13 +143,8 @@ test('vision is limited to player drawings or free mode and failures stay invisi
   assert.match(guide,/action.*append或replace/);
   assert.match(guide,/换颜色/);
   assert.match(guide,/chatAPI/);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/mode==='photo'&&g\.background.*visionAPI/s);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/regions/);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/landmarks/);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/backgroundRect/);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/发际线/);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/不能漂浮、错位/);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/当前没有上传底图/);
+  assert.doesNotMatch(functionSource('dgGenerateRoleDrawing'),/visionAPI/,'TA drawing begins from a blank canvas and never waits for image recognition');
+  assert.match(functionSource('dgGenerateRoleDrawing'),/请直接在空白画布上/);
   assert.doesNotMatch(functionSource('dgSubmitGuess'),/aiStrokeIndex</);
   assert.doesNotMatch(functionSource('dgRoleHint'),/aiStrokeIndex</);
   assert.doesNotMatch(guide,/aiStrokeIndex</);
@@ -192,12 +189,13 @@ test('mobile layout keeps the player below the canvas and separates normal guess
   assert.match(functionSource('dgMount'),/onselectstart/);
 });
 
-test('free photo continuation has no guessing and the hall usage badge stays hidden',()=>{
+test('blank-canvas free mode has no guessing and the hall usage badge stays hidden',()=>{
   const render=functionSource('renderDrawGuess'),tick=functionSource('usageTick'),next=functionSource('dgNewRound');
   assert.match(render,/photo\?'我说你画':'你画我猜'/);
   assert.match(render,/photo\?`<button[^`]+>发送<\/button>`/);
   assert.doesNotMatch(render,/photo\?`[^`]*提交答案/s);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/activity=g\.mode==='photo'&&g\.background\?'正在识图并构思':'正在构思'/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/g\.activity='正在构思'/);
+  assert.doesNotMatch(render,/上传图片|重新上传图片/);
   assert.match(tick,/cur\(\)\.p==='drawguess'\?'none':'block'/);
   assert.match(next,/dgOpenSetup\(cid\)/,'a new round must reopen the three-mode chooser');
   assert.doesNotMatch(next,/mode=_dg\.mode|dgBeginState\(cid,mode\)/);
@@ -221,18 +219,23 @@ test('configured role drawing uses one generated image and reveals it without vi
   const reveal=functionSource('dgRevealPlan');
   const animate=functionSource('dgAnimateNext');
   const snapshot=functionSource('dgSnapshotData');
-  assert.match(generate,/precisionArt=dgImageConfigured\(\).*g\.mode==='role'.*g\.mode==='photo'&&!g\.background/s);
+  assert.match(generate,/precisionArt=dgImageConfigured\(\).*g\.mode==='role'.*g\.mode==='photo'/s);
   assert.match(generate,/max:precisionArt\?700:6500/,'fine art skips the slow coordinate-planning response');
-  assert.match(generate,/artPromise=precisionArt&&g\.mode==='photo'&&!g\.background/,'blank free-mode art generation starts in parallel with its metadata call');
+  assert.match(generate,/artPromise=precisionArt&&g\.mode==='photo'/,'blank free-mode art generation starts in parallel with its metadata call');
   assert.ok(generate.indexOf('artPromise=')<generate.indexOf('const raw=await chatAPI'));
   assert.match(generate,/await dgGenerateArt\(g\.answer,g\.instruction\)/);
   assert.match(generate,/g\.plan=dgRevealPlan\(\)/);
   assert.doesNotMatch(generate,/g\.mode==='role'.*visionAPI/);
   assert.match(art,/source:'draw_guess'/);
+  assert.match(art,/quality:'low'/,'the drawing room asks the image provider for its faster generation tier');
+  assert.match(art,/imageGenerateExternal\([^)]*'1024x1536','low'/,'direct image providers use the same fast tier');
   assert.match(art,/imageGenerateExternal/);
   assert.match(art,/Never give it rabbit ears/);
   assert.doesNotMatch(art,/visionAPI/);
   assert.match(reveal,/reveal:true/);
+  assert.match(reveal,/curve=Math\.sin/,'the reveal follows hand-wobbled curves instead of straight scanlines');
+  assert.match(reveal,/slope=/,'alternating strokes have a slight natural diagonal');
+  assert.match(reveal,/width:90\+\(row%3\)\*7/,'reveal brush pressure varies between strokes');
   assert.match(animate,/s\.reveal/);
   assert.doesNotMatch(animate,/imageGenerateExternal|aiRelay|visionAPI/);
   assert.match(snapshot,/g\.generatedArt/);

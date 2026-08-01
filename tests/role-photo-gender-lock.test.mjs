@@ -56,7 +56,7 @@ assert.match(app, /“恋人、对象、用户、我、收照片的人”都不�
 assert.match(app, /function rolePhotoLatestUserImageRequest\(c\)/);
 assert.match(app, /const directUserRequest=rolePhotoContextRequest\(c\)\|\|rolePhotoLatestUserImageRequest\(c\)/);
 assert.match(app, /只有用户亲口提出的要求可以授权女性入镜/);
-assert.match(app, /imageGenerateExternal\(base,key,model,prompt,size\)\{const p=\(prompt\|\|'一张生活照'\)\.slice\(0,3200\)/);
+assert.match(app, /imageGenerateExternal\(base,key,model,prompt,size,quality\)\{const p=\(prompt\|\|'一张生活照'\)\.slice\(0,3200\)/);
 assert.match(app, /const rawPrompt=String\(prompt\|\|''\)/);
 
 assert.match(backend, /final image must contain ZERO women, girls, female bodies, female hands/i);
