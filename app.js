@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='747'){
+if(window.__NORTH_SHELL_BUILD__!=='748'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -351,7 +351,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v747 · 优化一起听邀请卡片';
+const APP_VER='v748 · 恢复微信600版输入';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1320,7 +1320,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=747';
+  const url='sw.js?v=748';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2058,7 +2058,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=747').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=748').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -8030,9 +8030,9 @@ function renderChat(id){const c=getC(id);if(!c)return '';
     </div>`}
     </div>
     ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(_replying===id||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':(_replying===id?'回复中…':'▶ 让ta回')}</button></div>`:'')+qbar+`<div class="inputbar">`+`
-      <button type="button" class="plus voice-toggle ${_voiceMode?'on':''}" aria-label="${_voiceMode?'切回文字输入':'切换到按住说话'}" onclick="toggleChatVoiceMode()">${svgIc(_voiceMode?'keyboard':'mic',19)}</button>
-      ${_voiceMode?`<button type="button" id="holdbtn" class="holdtalk" ${c.blocked?'disabled':''} oncontextmenu="return false" onpointerdown="recDown(event,'${id}')" onpointerup="recUp(event,'${id}',false)" onpointercancel="recUp(event,'${id}',true)">${c.blocked?'已拉黑，发不出去':'按住 说话'}</button>`:`<textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':'发消息…'}" ${c.blocked?'disabled':''}></textarea>
-      <button class="send" onclick="sendText('${id}')">发送</button>`}
+      <span class="plus" style="background:${_voiceMode?'linear-gradient(145deg,#5a5c61,#303236)':'transparent'};box-shadow:${_voiceMode?'0 3px 9px rgba(0,0,0,.32)':'none'};color:${_voiceMode?'#f3f3f4':'#9b9ca0'}" onclick="_voiceMode=!_voiceMode;render()">${svgIc('mic',19,_voiceMode?'#f3f3f4':'#9b9ca0')}</span>
+      <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入文字，发送为语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
+      <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
       <span class="plus" onclick="_panelPage='fn';$('#panel').classList.toggle('show')">＋</span>
     </div>`}`;}
 function bubbleRow(c,m){
@@ -8190,31 +8190,13 @@ function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid()
   if(m.role==='user'){behaviorOnUserMsg(id,m);lifeNoteOnUserMsg(id,m);emotionOnUserMsg(id,m);}
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)cb.scrollTop=cb.scrollHeight;}}}
 
-let _voiceMode=false;let _panelPage='fn',_chatRecPress=null,_chatRecProcessing=false;
-function toggleChatVoiceMode(){if(_chatRecPress||_rec||_chatRecProcessing){toast(_chatRecProcessing?'正在识别这条语音':'请先松开发送');return;}_voiceMode=!_voiceMode;render();}
-function chatRecButton(active,preparing,processing){const b=$('#holdbtn');if(!b)return;b.classList.toggle('recording',!!active);b.classList.toggle('preparing',!!preparing);b.toggleAttribute('aria-busy',!!processing);b.textContent=processing?'正在识别…':preparing?'正在打开麦克风…':active?'松开 发送':'按住 说话';}
-function finishChatRec(id,cancel,tooShort){if(!_rec)return;_chatRecProcessing=true;chatRecButton(false,false,true);
-  stopRec(cancel||tooShort,async m=>{try{if(!m){if(tooShort&&!cancel)toast('按住时间太短');return;}
-      const mid=uid();let audio=m.audio||'';if(audio){try{await imgPut('__audio_'+mid,audio);audio='idb-audio:'+mid;}catch(_){}}
-      const heard=!!String(m.content||'').trim();if(m.error)toast('语音文字没有生成；原语音已正常发送');else if(!heard)toast('原语音已发送；当前浏览器没有生成文字，角色无法理解内容');
-      const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;
-      pushMsg(id,{role:'user',type:'voice',audio,content:m.content||'',showText:heard,dur:m.dur,audioTs:Date.now(),id:mid,quote:q});
-      scheduleReply(id,heard?'':'[系统：'+S.me.name+'刚发来一条真实语音，但这台设备没有转写出可听懂的内容。你不能假装听清了，更不能编造ta说过什么；请按你的人设自然地说没听清，或请ta再说一次。]');
-    }finally{_chatRecProcessing=false;chatRecButton(false,false,false);}});}
-function recDown(ev,id){if(ev&&ev.preventDefault)ev.preventDefault();if(ev&&ev.stopPropagation)ev.stopPropagation();if(ev&&ev.button!=null&&ev.button!==0)return;
-  if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(!c||c.blocked)return;if(_chatRecProcessing){toast('正在识别上一条语音');return;}if(_chatRecPress||_rec){toast('正在录音');return;}
-  audioUnlock();const press={id,down:true,started:false,pointerId:ev&&ev.pointerId};_chatRecPress=press;
-  try{if(ev&&ev.currentTarget&&ev.currentTarget.setPointerCapture&&ev.pointerId!=null)ev.currentTarget.setPointerCapture(ev.pointerId);}catch(_){}
-  chatRecButton(false,true);
-  Promise.resolve(startRec(()=>{press.started=true;if(_chatRecPress!==press||!press.down){stopRec(true,()=>{});return;}chatRecButton(true,false);},{hint:'按住说话，松开发送（最长60秒）',onLimit:()=>{if(_chatRecPress!==press||!_rec)return;press.down=false;_chatRecPress=null;toast('已到60秒，自动发送');finishChatRec(id,false,false);}})).finally(()=>{if(!_rec&&_chatRecPress===press){_chatRecPress=null;chatRecButton(false,false);}});}
-function recUp(ev,id,cancel){if(ev&&ev.preventDefault)ev.preventDefault();if(ev&&ev.stopPropagation)ev.stopPropagation();const press=_chatRecPress;if(!press||press.id!==id)return;press.down=false;chatRecButton(false,false);
-  if(!_rec)return;_chatRecPress=null;const tooShort=Date.now()-_rec.start<600;
-  finishChatRec(id,!!cancel,tooShort);}
+let _voiceMode=false;let _panelPage='fn';
 function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
   if(c._cbTries)c._cbTries=0;// 她主动发消息=重新搭理ta，回拨追逐结束、计数清零
   const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
   const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;
-  pushMsg(id,{role:'user',type:'text',content:t,quote:q});
+  if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,dur:Math.max(1,Math.round(t.length/3)),id:uid(),quote:q});
+  else pushMsg(id,{role:'user',type:'text',content:t,quote:q});
   maybeFollowup(id,t);// 检测ta提到的将来要做的事，之后主动来关心
   scheduleReply(id);}
 /* ===== 聊天引用 ===== */

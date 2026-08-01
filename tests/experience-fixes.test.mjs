@@ -21,7 +21,7 @@ const mood = moodContext.moodInnerMonologue({}, "眼神冷下来了，敢骂我�
 assert.doesNotMatch(mood, /眼神|目光|视线/);
 assert.match(mood, /敢骂我/);
 
-// Voice lengths are logical, capped at 60 seconds, and actual over-limit audio is rejected.
+// Voice lengths are logical and capped; WeChat v600 input sends typed or handwritten text as a voice bubble.
 const voiceContext = vm.createContext({ VOICE_MAX_SECONDS: 60 });
 vm.runInContext(functionSource("stripSpoken"), voiceContext);
 vm.runInContext(functionSource("ttsCleanBase"), voiceContext);
@@ -30,9 +30,9 @@ assert.ok(voiceContext.voiceEstimatedSeconds("我马上回来，等我一下。"
 assert.equal(voiceContext.voiceEstimatedSeconds("很长的话。".repeat(200)), 60);
 assert.match(source, /if\(dec\.duration>VOICE_MAX_SECONDS\+\.25\)/);
 assert.match(source, /if\(dur>VOICE_MAX_SECONDS\)/);
-assert.match(source, /pushMsg\(id,\{role:'user',type:'voice',audio/);
-assert.match(source, /dur:m\.dur/);
-assert.doesNotMatch(source, /if\(_voiceMode\)pushMsg\(id,\{role:'user',type:'voice',content:t/);
+assert.match(source, /if\(_voiceMode\)pushMsg\(id,\{role:'user',type:'voice',content:t/);
+assert.match(source, /dur:Math\.max\(1,Math\.round\(t\.length\/3\)\)/);
+assert.doesNotMatch(source, /id="holdbtn"|onpointerdown="recDown\(event/);
 const loadingRule = html.match(/\.voiceb\.loading\{([^}]*)\}/)?.[1] || "";
 assert.doesNotMatch(loadingRule, /background|color|opacity/);
 
