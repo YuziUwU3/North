@@ -135,4 +135,8 @@
       '<div class="dy-profile-name">'+esc(dyNick())+'</div><div class="dy-profile-id">抖音号：'+esc(handle)+'</div><div class="dy-profile-bio">'+esc(profile.bio||'记录生活，也记录喜欢。')+'</div><div class="dy-profile-stats"><button class="dy-profile-stat" onclick="dyFollowList()"><b>'+following+'</b>关注</button><button class="dy-profile-stat"><b>'+fans+'</b>粉丝</button><button class="dy-profile-stat"><b>'+totalLikes+'</b>获赞</button></div></section>'+
       '<div class="dy-profile-tabs"><button class="dy-profile-tab '+(dyProfilePane==='mine'?'on':'')+'" onclick="dyProfileSwitch(\'mine\')">'+svgIc('video',16,'currentColor')+' 作品 '+mine.length+'</button><button class="dy-profile-tab '+(dyProfilePane==='liked'?'on':'')+'" onclick="dyProfileSwitch(\'liked\')">'+svgIc('heart',16,'currentColor')+' 喜欢 '+liked.length+'</button></div>'+grid+'</div>';
   };
+  var dyFeedViewWithHomeButton=window.dyFeedView;
+  window.dyFeedView=function(){
+    return dyFeedViewWithHomeButton.apply(this,arguments).replace('<div class="dy-topbar">','<div class="dy-topbar"><button class="dy-home-back" onclick="home()" aria-label="返回主屏幕"><svg viewBox="0 0 24 24" width="22" height="22"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>');
+  };
 })();
