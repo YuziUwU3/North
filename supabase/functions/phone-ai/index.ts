@@ -1908,44 +1908,22 @@ Deno.serve(async (req) => {
       await requireBalance(userId, clientSecret, "tts", ttsCost);
       model = "speech-02-turbo";
       const requestedVoiceId = authorizedVoice.voiceId;
-      let voiceId = requestedVoiceId;
-      let voiceFallback = false;
+      const voiceId = requestedVoiceId;
       let data;
       try {
         data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
       } catch (e) {
-        if (!authorizedVoice.privateVoice && voiceId !== DEFAULT_TTS_VOICE && errText(e).includes("invalid-voice-id")) {
-          voiceId = DEFAULT_TTS_VOICE;
-          voiceFallback = true;
-          try {
-            data = await minimaxTTS(text, voiceId, model, body.voice_setting || null);
-          } catch (fallbackError) {
-            if (isTtsVoiceAccessError(fallbackError)) {
-              return json({
-                ok: false,
-                error: "tts-voice-not-accessible: " + errText(fallbackError),
-                charged: 0,
-                refunded: 0,
-                billed: false,
-                requested_voice_id: requestedVoiceId,
-                fallback_voice_id: DEFAULT_TTS_VOICE,
-              }, 400);
-            }
-            throw fallbackError;
-          }
-        } else {
-          if (isTtsVoiceAccessError(e)) {
-            return json({
-              ok: false,
-              error: "tts-voice-not-accessible: " + errText(e),
-              charged: 0,
-              refunded: 0,
-              billed: false,
-              requested_voice_id: requestedVoiceId,
-            }, 400);
-          }
-          throw e;
+        if (isTtsVoiceAccessError(e)) {
+          return json({
+            ok: false,
+            error: "tts-voice-not-accessible: " + errText(e),
+            charged: 0,
+            refunded: 0,
+            billed: false,
+            requested_voice_id: requestedVoiceId,
+          }, 400);
         }
+        throw e;
       }
       const c = await charge(userId, clientSecret, "tts", ttsCost);
       const cnyPerChar = Number(Deno.env.get("TTS_CNY_PER_CHAR") || 0.0002) || 0.0002;
@@ -1953,7 +1931,7 @@ Deno.serve(async (req) => {
         model,
         voice_id: voiceId,
         requested_voice_id: requestedVoiceId,
-        voice_fallback: voiceFallback,
+        voice_fallback: false,
         char_count: chars,
         chars_per_point: TTS_CHARS_PER_POINT,
         charged_points: ttsCost,

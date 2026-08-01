@@ -134,9 +134,12 @@ for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted",
 
 assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:setting\}\)/);
 assert.match(source, /if\(cue==='laugh'\)setting\.emotion='happy'/);
-assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("bad-role-voice", { voice: "account-default" }))), ["bad-role-voice", "account-default", "male-qn-qingse"]);
-assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds("account-default", { voice: "account-default" }))), ["account-default", "male-qn-qingse"]);
+assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds({ voice: "account-clone" }))), ["account-clone"]);
+assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds({ voice: "" }))), ["male-qn-qingse"]);
 assert.equal(context.ttsVoiceAccessErrorText("you don't have access to this voice_id"), true);
+assert.equal(context.ttsVoiceAccessErrorText("tts-private-voice-not-owned"), true);
+assert.match(source, /const ids=ttsRelayVoiceIds\(tts\)/);
+assert.doesNotMatch(source, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
 assert.doesNotMatch(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
 assert.match(source, /function ttsUseRelay\(\)\{const t=ttsCfg\(\);return !!\(ttsEnabled\(t\)&&ttsRelayOn\(t\)\);\}/);
 assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);

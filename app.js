@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='755'){
+if(window.__NORTH_SHELL_BUILD__!=='756'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v755 · 通话语音续播保护';
+const APP_VER='v756 · 内置音色优先修正';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1256,8 +1256,8 @@ function ttsLedgerFromError(e){const d=e&&e.data;return String((e&&(e.ledger_id|
 async function ttsRefundLedger(id,reason){try{if(!id||!ttsUseRelay())return false;const d=await aiRelay('tts_refund',{ledger_id:id,reason:reason||'tts-client-failed'}),ok=!!(d&&(Number(d.refunded)>0||d.reason==='already-refunded'));if(ok&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),400);return ok;}catch(_){return false;}}
 async function ttsRefundAudio(ab,reason){const id=ttsLedgerGet(ab);return id?await ttsRefundLedger(id,reason):false;}
 async function ttsRefundError(e,reason){const id=ttsLedgerFromError(e);if(!id||e&&e._ttsRefunded)return false;const ok=await ttsRefundLedger(id,reason);if(!ok)return false;try{e._ttsRefunded=true;}catch(_){}return true;}
-function ttsVoiceAccessErrorText(s){return /tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access|permission|forbidden|unauthorized|401|403|404/i.test(String(s||''));}
-function ttsRelayVoiceIds(roleVoice,tts){const ids=[],add=x=>{x=String(x||'').trim();if(x&&!ids.includes(x))ids.push(x);};add(roleVoice);add(tts&&tts.voice);add(DEFAULT_TTS_VOICE);return ids;}
+function ttsVoiceAccessErrorText(s){return /tts-private-voice-not-owned|tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access|permission|forbidden|unauthorized|401|403|404/i.test(String(s||''));}
+function ttsRelayVoiceIds(tts){const selected=String(tts&&tts.voice||'').trim();return[selected||DEFAULT_TTS_VOICE];}
 async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
 async function _ttsOnce(t,vid,tts,opt){let r;
   if(ttsUseRelay()){let d,ledger='';try{const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(t,null),setting={speed:1,vol:1,pitch:0};if(cue==='tense')setting.emotion='angry';else if(cue==='soft')setting.emotion='sad';else if(cue==='laugh')setting.emotion='happy';else if(cue==='surprised')setting.emotion='surprised';else if(cue==='fearful')setting.emotion='fearful';else if(cue==='disgusted')setting.emotion='disgusted';d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo',voice_setting:setting});const data=d&&d.data;ledger=d&&(d.ledger_id||d.ledgerId||d.request_id);const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab){await ttsRefundLedger(ledger,'tts-no-audio');return {err:'内置AI无音频'};}return {buf:ttsLedgerSet(ab,ledger)};}catch(e){if(ledger){await ttsRefundLedger(ledger,'tts-audio-fetch-failed');try{e._ttsRefunded=true;}catch(_){};}else await ttsRefundError(e,'tts-relay-error');throw e;}}
@@ -1283,9 +1283,8 @@ async function _ttsOnce(t,vid,tts,opt){let r;
 async function ttsArr(text,o,opt){opt=opt||{};const tts=ttsCfg(),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;
   if(!ttsApiOn())return null;const vid=(v&&v.ttsVoice)||(tts&&tts.voice)||'';
   if(ttsUseRelay()){
-    const ids=ttsRelayVoiceIds(v&&v.ttsVoice,tts);let lastMsg='',usedFallback=false;
-    for(let i=0;i<ids.length;i++){try{const res=await _ttsOnce(t,ids[i],tts,opt);if(res&&res.buf){if(i>0)usedFallback=true;return res.buf;}lastMsg=(res&&res.err)||'无音频';if(!ttsVoiceAccessErrorText(lastMsg))break;}catch(e){lastMsg=String((e&&e.message)||'网络').replace(/^内置AI失败：/,'');if(ttsVoiceAccessErrorText(lastMsg)&&i<ids.length-1){usedFallback=true;continue;}const refunded=await ttsRefundError(e,'tts-client-error');if((ttsVoiceAccessErrorText(lastMsg)||refunded)&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);if(!opt.quiet)toast('语音API错误 '+lastMsg+(ttsVoiceAccessErrorText(lastMsg)?'（未扣AI点数，请检查音色ID权限）':refunded?'（已退回本次AI点数）':''));return null;}}
-    if(usedFallback&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);
+    const ids=ttsRelayVoiceIds(tts);let lastMsg='';
+    for(let i=0;i<ids.length;i++){try{const res=await _ttsOnce(t,ids[i],tts,opt);if(res&&res.buf)return res.buf;lastMsg=(res&&res.err)||'无音频';if(!ttsVoiceAccessErrorText(lastMsg))break;}catch(e){lastMsg=String((e&&e.message)||'网络').replace(/^内置AI失败：/,'');const refunded=await ttsRefundError(e,'tts-client-error');if((ttsVoiceAccessErrorText(lastMsg)||refunded)&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);if(!opt.quiet)toast('语音API错误 '+lastMsg+(ttsVoiceAccessErrorText(lastMsg)?'（未扣AI点数，请重新选择当前账户的音色）':refunded?'（已退回本次AI点数）':''));return null;}}
     if(!opt.quiet)toast('语音API错误 '+(lastMsg||'无音频'));return null;
   }
   let lastErr='',tries=Math.max(1,Math.min(3,+opt.tries||3));
@@ -1325,7 +1324,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=755';
+  const url='sw.js?v=756';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2064,7 +2063,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=755').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=756').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -9559,14 +9558,14 @@ function circleObj(id){const v=(S.x.circle||{})[id];if(!v)return{name:'',desc:''
 function voiceOptions(sel){loadVoices();if(!_voices.length)return '<option value="">（系统语音加载中，重开一次设置）</option>';
   return '<option value="">默认</option>'+_voices.map(v=>`<option value="${esc(v.voiceURI)}" ${sel===v.voiceURI?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('');}
 function editVoice(id){const c=getC(id);const v=getVoice(c);openModal(`<h3>${esc(c.remark||c.name)} 的音色</h3>
-  <div class="hint">用手机自带语音合成，每个角色可选不同音色；想用克隆/更高级，在 设置→语音API 里填接口并把引擎切成 API。</div>
+  <div class="hint">打开AI账户的“内置语音”后，只使用AI账户里当前选择的音色；这里的外置音色ID不会覆盖它。关闭内置语音、改用自己填写的外置接口时，才使用角色的外置音色ID。</div>
   <div class="field"><label>引擎</label><select id="v_eng"><option value="system" ${v.engine!=='api'?'selected':''}>系统音色(免费)</option><option value="api" ${v.engine==='api'?'selected':''}>语音API(可克隆)</option></select></div>
   <div class="field"><label>系统音色</label><select id="v_uri">${voiceOptions(v.voiceURI)}</select></div>
   <div class="field"><label>语速 ${(+v.rate||1).toFixed(1)}</label><input id="v_rate" type="range" min="0.5" max="1.8" step="0.1" value="${v.rate||1}" style="width:100%"></div>
   <div class="field"><label>音调 ${(+v.pitch||1).toFixed(1)}</label><input id="v_pitch" type="range" min="0.5" max="1.6" step="0.1" value="${v.pitch||1}" style="width:100%"></div>
   <div class="field"><label>语言（外语会带中文翻译）</label><select id="v_lang"><option value="zh" ${v.lang==='zh'?'selected':''}>中文</option><option value="英" ${v.lang==='英'?'selected':''}>英语</option><option value="日" ${v.lang==='日'?'selected':''}>日语</option><option value="韩" ${v.lang==='韩'?'selected':''}>韩语</option></select></div>
   <div class="field"><label>英语口音（仅英语有效）<small style="display:block;color:#888">API克隆音色仍以原始录音口音为主</small></label><select id="v_accent"><option value="auto" ${normVoiceAccent(v)==='auto'?'selected':''}>自动 · 跟随音色</option><option value="en-GB" ${normVoiceAccent(v)==='en-GB'?'selected':''}>英式英语 · British</option><option value="en-US" ${normVoiceAccent(v)==='en-US'?'selected':''}>美式英语 · American</option></select></div>
-  <div class="field"><label>API音色名(用API时填，如克隆ID/alloy)</label><input id="v_tv" value="${esc(v.ttsVoice||'')}" placeholder="不用API可留空"></div>
+  <div class="field"><label>外置API音色ID<small style="display:block;color:#888">仅关闭内置语音、使用外置接口时生效</small></label><input id="v_tv" value="${esc(v.ttsVoice||'')}" placeholder="外置接口需要时填写，如克隆ID/alloy"></div>
   <div class="btns" style="margin-bottom:8px"><button class="btn g" onclick="previewVoice('${id}')">试听</button><button class="btn g" onclick="cloneVoiceModal('${id}')">克隆声音(国内·硅基流动)</button></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveVoice('${id}')">保存</button></div>`);}
 function readVoiceForm(){return {engine:$('#v_eng').value,voiceURI:$('#v_uri').value,rate:+$('#v_rate').value||1,pitch:+$('#v_pitch').value||1,lang:$('#v_lang').value,accent:$('#v_accent').value,ttsVoice:$('#v_tv').value.trim()};}

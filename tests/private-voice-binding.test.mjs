@@ -11,6 +11,7 @@ const migration = fs.readFileSync(
 );
 const account = fs.readFileSync(path.join(root, 'ai-account.js'), 'utf8');
 const admin = fs.readFileSync(path.join(root, 'admin/app.js'), 'utf8');
+const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 
 assert.match(migration, /create table if not exists public\.phone_ai_private_voices/);
 assert.match(migration, /voice_id text not null unique/);
@@ -44,6 +45,11 @@ assert.match(backend, /if \(data\.user_id !== userId\) throw new Error\("tts-pri
 assert.match(backend, /const available = await minimaxVoices\(\)/);
 assert.match(backend, /async function minimaxVoices\(force = false\)/);
 assert.match(backend, /await minimaxVoices\(true\)/);
+assert.match(app, /function ttsRelayVoiceIds\(tts\)/);
+assert.match(app, /const selected=String\(tts&&tts\.voice\|\|''\)\.trim\(\);return\[selected\|\|DEFAULT_TTS_VOICE\]/);
+assert.match(app, /const ids=ttsRelayVoiceIds\(tts\)/);
+assert.doesNotMatch(app, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
+assert.match(app, /仅关闭内置语音、使用外置接口时生效/);
 assert.match(backend, /\{ id: "qingshouyin20260726", name: "青受音", clone: true, preset: true \}/);
 assert.match(backend, /\{ id: "xiayizhou20260725", name: "夏以昼", clone: true, preset: true \}/);
 

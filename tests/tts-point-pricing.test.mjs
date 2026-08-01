@@ -50,6 +50,8 @@ const generateAt = backend.indexOf("data = await minimaxTTS(text, voiceId, model
 const chargeAt = backend.indexOf('const c = await charge(userId, clientSecret, "tts", ttsCost)');
 assert.ok(generateAt >= 0 && chargeAt > generateAt, "TTS must charge only after usable audio is generated");
 assert.match(backend, /tts-voice-not-accessible:[\s\S]*?charged:\s*0,[\s\S]*?billed:\s*false/);
+const ttsRoute=backend.slice(backend.indexOf('if (action === "tts")'),backend.indexOf('if (action === "tts_refund")'));
+assert.doesNotMatch(ttsRoute,/fallback_voice_id|voiceId\s*=\s*DEFAULT_TTS_VOICE/,'an explicitly selected voice must never silently become the system voice');
 
 assert.match(account, /aiTtsEstimatedCount\(p\.points,100\)/);
 assert.match(account, /条100字普通语音/);
