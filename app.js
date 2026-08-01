@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='772'){
+if(window.__NORTH_SHELL_BUILD__!=='773'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v772 · 画作提速与题目去重';
+const APP_VER='v773 · 沉浸音乐播放器';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1360,7 +1360,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=772';
+  const url='sw.js?v=773';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2346,7 +2346,7 @@ async function cinemaEnd(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c)re
 let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=false;
 let _mBub={l:null,r:null};// 一起听字幕气泡：l=她(左) r=他(右)，说完一句自动消失
 let _mReplyBusy=false,_mSendT=0;// 防止一起听聊天回复重复触发（发两遍）
-function _mBubHTML(o){if(!o||!o.text)return '';const pink=o.side==='l';const bgc=pink?'rgba(255,143,171,.96)':'rgba(255,255,255,.96)';
+function _mBubHTML(o){if(!o||!o.text)return '';const pink=o.side==='l';const bgc=pink?'rgba(235,77,87,.96)':'rgba(255,255,255,.96)';
   const tail=`<div style="position:absolute;top:-6px;${pink?'right:18px':'left:18px'};width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:7px solid ${bgc}"></div>`;
   return `<div style="position:relative;max-width:160px;padding:8px 13px;border-radius:15px;font-size:13px;line-height:1.4;word-break:break-word;background:${bgc};color:${pink?'#fff':'#333'};box-shadow:0 3px 12px rgba(0,0,0,.42);animation:csin .3s ease">${tail}${esc(o.text)}</div>`;}
 function mShowBub(side,text){if(!text)return;if(_mBub[side]&&_mBub[side]._t)clearTimeout(_mBub[side]._t);
@@ -2446,7 +2446,7 @@ function musicLoop(){musicInit();S.music.loop=!S.music.loop;if(_ma)_ma.loop=!!S.
 function mEnded(){if(S.music&&S.music.loop){if(_ma){_ma.currentTime=0;_ma.play().catch(()=>{});}}else musicNext();}
 function mFmt(s){s=Math.floor(s||0);if(!isFinite(s))s=0;return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function mBtns(){const b=$('#m_play');if(b)b.innerHTML=_mPlaying?SVG_PAUSE:SVG_PLAY;const d=$('#m_disk');if(d)d.style.animationPlayState=_mPlaying?'running':'paused';const a=$('#m_arm');if(a)a.style.transform='rotate('+(_mPlaying?'26deg':'6deg')+')';}
-function mTick(){if(!_ma)return;const pb=$('#m_prog');if(pb)pb.style.width=(_ma.duration?(_ma.currentTime/_ma.duration*100):0)+'%';const tt=$('#m_time');if(tt)tt.textContent=mFmt(_ma.currentTime)+' / '+mFmt(_ma.duration||0);mLyricTick();}
+function mTick(){if(!_ma)return;const pb=$('#m_prog');if(pb)pb.style.width=(_ma.duration?(_ma.currentTime/_ma.duration*100):0)+'%';const elapsed=mFmt(_ma.currentTime),duration=mFmt(_ma.duration||0),tt=$('#m_time'),a=$('#m_elapsed'),b=$('#m_duration');if(tt)tt.textContent=elapsed+' / '+duration;if(a)a.textContent=elapsed;if(b)b.textContent=duration;mLyricTick();}
 function musicSeek(ev){if(!_ma||!_ma.duration)return;const r=ev.currentTarget.getBoundingClientRect();const p=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width));_ma.currentTime=p*_ma.duration;}
 function parseLyrics(l){if(!l)return[];const out=[];const re=/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,2}))?\]/g;
   l.split('\n').forEach(ln=>{let m;const times=[];re.lastIndex=0;while((m=re.exec(ln))){times.push(+m[1]*60+(+m[2])+(m[3]?+('0.'+m[3]):0));}const txt=ln.replace(/\[[^\]]*\]/g,'').trim();if(times.length)times.forEach(t=>out.push({t,txt}));else if(txt)out.push({t:null,txt});});
@@ -2454,7 +2454,7 @@ function parseLyrics(l){if(!l)return[];const out=[];const re=/\[(\d{1,2}):(\d{2}
 function mLyricTick(){const box=document.getElementById('m_lyrics');if(!box||!_ma||!_mCur)return;const s=S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);if(!lines.length)return;
   if(lines.some(x=>x.t!=null)){// 带时间轴：高亮当前句并居中
     let idx=-1;for(let i=0;i<lines.length;i++){if(lines[i].t!=null&&lines[i].t<=_ma.currentTime)idx=i;}
-    const els=box.querySelectorAll('.mlrc');els.forEach((el,i)=>{el.style.color=i===idx?'#ffd6e8':'#7d7d88';el.style.fontWeight=i===idx?'700':'400';el.style.transform=i===idx?'scale(1.08)':'scale(1)';});
+    const els=box.querySelectorAll('.mlrc');els.forEach((el,i)=>{el.style.color=i===idx?'#ffffff':'rgba(255,255,255,.28)';el.style.fontWeight=i===idx?'700':'400';el.style.transform=i===idx?'scale(1.08)':'scale(1)';});
     if(idx>=0&&els[idx])box.scrollTop=Math.max(0,els[idx].offsetTop-box.clientHeight/2+els[idx].clientHeight/2);}
   else if(_ma.duration){// 纯文本歌词：跟着进度匀速滚动
     const max=box.scrollHeight-box.clientHeight;if(max>0)box.scrollTop=(_ma.currentTime/_ma.duration)*max;}}
@@ -2523,8 +2523,8 @@ async function musicClearChat(){musicInit();const sess=S.music.session;const n=s
   else{S.music.chat=[];Object.keys(S.messages||{}).forEach(k=>{S.messages[k]=(S.messages[k]||[]).filter(m=>!m._musicCtx);});}
   _mBub={l:null,r:null};save();closeModal();render();toast('已清空一起听聊天');}
 function musicListModal(){musicInit();const songs=S.music.songs;
-  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee;display:flex;align-items:center;gap:7px" onclick="closeModal();musicPlay('${s.id}')">${svgIc('note',15,s.id===_mCur&&_mPlaying?'#2bd66a':'#9a9aa2')}${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicSync('${s.id}')" style="color:#2bd66a;cursor:pointer;padding:0 7px;font-size:12.5px">打轴</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点下面 ＋ 添加</div>';
-  openModal(`<h3>歌单（${songs.length}）</h3><div class="section" style="max-height:50vh;overflow:auto">${list}</div><div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();musicAdd()">＋ 添加歌曲</button></div>`);}
+  const list=songs.length?songs.map(s=>{const cover=s.cover?`background-image:url(${s.cover})`:'',initial=esc(Array.from(s.title||'音')[0]||'音'),playing=s.id===_mCur;return `<div class="music-library-row${playing?' current':''}"><div class="music-library-cover" style="${cover}" onclick="closeModal();musicPlay('${s.id}')">${s.cover?'':initial}</div><div class="music-library-copy" onclick="closeModal();musicPlay('${s.id}')"><b>${esc(s.title||'未命名')}${playing?' <i style="color:#eb5962;font-size:8px;font-style:normal">PLAYING</i>':''}</b><span>${esc(s.artist||'未知歌手')} · ${s.lyrics?'已有歌词':'暂无歌词'}</span></div><div class="music-library-actions"><button onclick="musicSync('${s.id}')" title="歌词打轴">轴</button><button onclick="musicEdit('${s.id}')" title="编辑歌曲">✎</button><button class="danger" onclick="musicDel('${s.id}')" title="删除歌曲">×</button></div></div>`;}).join(''):'<div class="empty" style="padding:34px 20px;color:#777;text-align:center">歌单还是空的<br><small>添加第一首喜欢的歌吧</small></div>';
+  openModal(`<h3 style="display:flex;align-items:end;gap:8px">我的歌单 <small style="color:#777;font-size:11px;font-weight:400">${songs.length} 首</small></h3><div class="music-library-list" style="max-height:52vh;overflow:auto">${list}</div><div class="btns" style="margin-top:12px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();musicAdd()">添加歌曲</button></div>`);}
 const SVG_LOOP='<svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 7h9v2.5L20 6l-4-3.5V5H5v6h2zm10 10H8v-2.5L4 18l4 3.5V19h11v-6h-2z" fill="#fff"/></svg>';
 async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||c.blocked)return;musicInit();_mReplyBusy=true;
   const s=S.music.songs.find(x=>x.id===(S.music.session&&S.music.session.songId));
@@ -2541,62 +2541,12 @@ async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||
     S.music.chat=S.music.chat||[];
     lines.forEach((ln,i)=>setTimeout(()=>{const ss=S.music.session;if(!ss||ss.cid!==cid)return;S.music.chat.push({cid,role:'assistant',content:ln,time:Date.now()});musicMirrorToWechat(cid,'assistant',ln);if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',ln);save();},i*850));
   }catch(e){}finally{_mReplyBusy=false;}}
-function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
-  const bg=S.music.bg?`background:#000 url(${S.music.bg}) center/cover no-repeat`:'background:radial-gradient(ellipse at 50% 28%,#1d1733,#0a0a12 72%)';
-  const navBar=`<div style="position:relative;z-index:3;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px">
-      <span onclick="back()" style="font-size:26px;line-height:1;cursor:pointer;color:#eee">⌄</span>
-      <div style="flex:1;min-width:0;text-align:center;padding:0 8px"><div style="font-size:16px;font-weight:600;color:#f2f2f2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cur?cur.title:'一起听')}</div><div style="font-size:12px;color:#b8b8c0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cur?(cur.artist||''):'')}</div></div>
-      <span onclick="musicMenu()" style="font-size:22px;line-height:1;cursor:pointer;color:#eee">⋯</span></div>`;
-  if(!cur){
-    return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;color:#eee;${bg}">${navBar}
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:3">
-        <div style="font-size:54px;opacity:.8">🎧</div><div style="color:#cfcfd6">还没在放歌～去歌单选一首吧</div>
-        <button class="btn p" style="width:auto;padding:10px 22px" onclick="musicListModal()">打开歌单</button></div></div>`;}
-  // 头像（圆形·贴一起·耳机线）
-  const meAv=S.music.meAvatar||S.me.avatar;const taAv=S.music.taAvatar||(sc&&sc.avatar)||'🙂';
-  const taBlock=sess?_mAvHTML(taAv,'ta',66):`<div onclick="musicInvite()" style="width:66px;height:66px;border-radius:50%;border:2px dashed rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-size:11px;color:#cfcfd6;cursor:pointer;text-align:center;line-height:1.25">+ 邀请<br>一起听</div>`;
-  const avatars=`<div style="position:relative;width:230px;height:98px;margin:2px auto 0">
-      <svg width="230" height="98" viewBox="0 0 230 98" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">
-        <path d="M62 28 C50 41 43 62 48 86" fill="none" stroke="rgba(238,241,247,.58)" stroke-width="1.15" stroke-linecap="round"/>
-        <path d="M168 28 C180 41 187 62 182 86" fill="none" stroke="rgba(238,241,247,.58)" stroke-width="1.15" stroke-linecap="round"/>
-      </svg>
-      <div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center">
-        <div style="position:relative;z-index:1">${_mAvHTML(meAv,'me',66)}</div>
-        <div style="position:relative;z-index:2;margin-left:-12px">${taBlock}</div></div>
-      <div onclick="${sess?'musicEndSession()':'musicInvite()'}" title="一起听" style="position:absolute;left:50%;bottom:2px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#ff9ec4,#ff6fa5);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.45);cursor:pointer;z-index:4">⏻</div>
-    </div>
-    <div style="display:flex;justify-content:center;gap:14px;align-items:flex-start;min-height:38px;margin-top:8px;padding:0 12px">
-      <div id="m_bub_l" style="flex:1;display:flex;justify-content:flex-end">${_mBubHTML(_mBub.l,'l')}</div>
-      <div id="m_bub_r" style="flex:1;display:flex;justify-content:flex-start">${_mBubHTML(_mBub.r,'r')}</div>
-    </div>
-    <div onclick="editMusicDistance()" style="text-align:center;color:#d2d2da;font-size:13px;margin-top:4px;cursor:pointer">相距 <span id="musicDistanceValue">${musicDistanceText(S.music.distance)}</span> 公里，一起听了 <span id="m_sesstime">${fmtListen(((S.music.totalSec)||0)+(sess&&sess.startTs?Math.floor((Date.now()-sess.startTs)/1000):0))}</span></div>`;
-  const lyr=parseLyrics(cur.lyrics);
-  // 大转盘（封面在中间·扩大）
-  const cover=cur.cover;
-  const disk=`<div style="position:relative;width:248px;height:248px">
-      <div id="m_disk" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(225,232,255,.16);background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.12) 0,rgba(255,255,255,.035) 15%,transparent 31%),repeating-radial-gradient(circle at center,rgba(255,255,255,.035) 0 1px,rgba(0,0,0,.22) 1.5px 2.4px,rgba(255,255,255,.018) 2.8px 3.5px),radial-gradient(circle at center,#1a1b1f 0,#0c0d0f 42%,#070708 72%,#030304 100%);box-shadow:0 0 0 1px rgba(255,255,255,.045),0 0 18px rgba(190,205,255,.2),0 18px 46px rgba(0,0,0,.68),inset 0 0 30px rgba(0,0,0,.78),inset 0 0 0 12px rgba(255,255,255,.018);animation:dyspin 14s linear infinite;animation-play-state:${_mPlaying?'running':'paused'}">
-        <div onclick="setMusicCover()" style="position:absolute;inset:34px;border-radius:50%;overflow:hidden;cursor:pointer;${cover?`background:url(${cover}) center/cover`:'background:linear-gradient(135deg,#33415e,#1f2a40)'};box-shadow:inset 0 0 14px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center">${cover?'':'<span style="color:rgba(255,255,255,.65);font-size:13px;text-align:center;line-height:1.5">点这里<br>上传封面</span>'}</div>
-        <div style="position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);z-index:2;box-shadow:0 0 0 3px rgba(0,0,0,.45)"></div>
-      </div></div>`;
-  const rbtn='width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.92';
-  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;color:#eee;${bg}">
-    ${S.music.bg?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.4);pointer-events:none"></div>':''}
-    ${navBar}
-    <div style="position:relative;z-index:3;flex:0 0 auto">${avatars}</div>
-    <div style="position:relative;z-index:3;flex:1;display:flex;align-items:center;justify-content:center;min-height:0">${disk}</div>
-    <div id="m_lyrics" style="position:relative;z-index:3;flex:0 0 auto;height:60px;overflow:hidden;text-align:center;padding:2px 20px;-webkit-mask-image:linear-gradient(transparent,#000 28%,#000 72%,transparent);mask-image:linear-gradient(transparent,#000 28%,#000 72%,transparent)">${lyr.length?lyr.map((x,i)=>`<div class="mlrc" onclick="mLyricTap(${i})" style="font-size:13px;line-height:2.05;color:#7d7d88;transition:color .3s,transform .3s;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.txt)||'&nbsp;'}</div>`).join(''):'<div style="color:#777;font-size:12px;line-height:60px">这首歌还没歌词，点歌单里的 ✎ 加进来</div>'}</div>
-    <div style="position:relative;z-index:3;flex:0 0 auto;padding:2px 20px 12px">
-      <div onclick="musicSeek(event)" style="height:4px;background:rgba(255,255,255,.18);border-radius:3px;cursor:pointer;margin:6px 0 4px"><div id="m_prog" style="height:100%;width:0;background:linear-gradient(90deg,#ff8fab,#c08ce0);border-radius:3px"></div></div>
-      <div id="m_time" style="text-align:center;color:#b9b9c2;font-size:11px">0:00 / 0:00</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 4px 6px">
-        <span onclick="musicLoop()" style="${rbtn};${S.music.loop?'background:rgba(255,143,171,.35)':''}" title="单曲循环">${SVG_LOOP}</span>
-        <span onclick="musicPrev()" style="${rbtn}">${SVG_PREV}</span>
-        <span id="m_play" onclick="musicToggle()" style="width:60px;height:60px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff8fab,#c08ce0);box-shadow:0 6px 18px rgba(0,0,0,.5);cursor:pointer">${_mPlaying?SVG_PAUSE:SVG_PLAY}</span>
-        <span onclick="musicNext()" style="${rbtn}">${SVG_NEXT}</span>
-        <span onclick="musicListModal()" style="${rbtn}">${SVG_LIST}</span>
-      </div>
-      <div class="inputbar" style="position:static;background:rgba(255,255,255,.1);border:none;border-radius:22px;padding:5px 6px 5px 14px;margin-top:2px"><textarea id="m_chat" rows="1" placeholder="${sess?'对ta说点什么…':'先邀请谁一起听 →'}" style="background:transparent;color:#eee" ${sess?'':'disabled'}></textarea><button class="send" onclick="musicChatSend()" style="border-radius:18px;${sess?'':'opacity:.5'}">发</button></div>
-    </div></div>`;}
+function renderMusic(){musicInit();const songs=S.music.songs,cur=songs.find(s=>s.id===_mCur),sess=S.music.session,sc=sess&&getC(sess.cid),ambient=(S.music.bg||(cur&&cur.cover)||''),nav=`<div class="music-topbar"><button class="music-iconbtn" onclick="back()" aria-label="返回"><svg viewBox="0 0 24 24" width="20" height="20"><path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="music-topcopy"><small>NOW PLAYING</small><b>${esc(cur?cur.title:'我的音乐')}</b><span>${esc(cur?(cur.artist||'未知歌手'):(songs.length+' 首歌曲'))}</span></div><button class="music-iconbtn" onclick="musicMenu()" aria-label="音乐设置"><svg viewBox="0 0 24 24" width="20" height="20"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></button></div>`;
+  if(!cur)return `<div class="music-empty">${nav}<div class="music-empty-body"><div class="music-empty-art"><i class="music-empty-record"></i></div><small>YOUR PRIVATE MUSIC ROOM</small><h2>让喜欢的歌住进来</h2><p>上传歌曲、封面和歌词，建立自己的收藏。</p><button class="music-primary" onclick="musicListModal()">打开我的歌单</button></div></div>`;
+  const meAv=S.music.meAvatar||S.me.avatar,taAv=S.music.taAvatar||(sc&&sc.avatar)||'·',listenSec=((S.music.totalSec)||0)+(sess&&sess.startTs?Math.floor((Date.now()-sess.startTs)/1000):0),partner=sess?(sc&&(sc.remark||sc.name)||'TA'):'还没有连接',taBlock=sess?_mAvHTML(taAv,'ta',34):`<div onclick="musicInvite()" style="width:34px;height:34px;border:1px dashed rgba(255,255,255,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:16px;cursor:pointer">+</div>`,lyr=parseLyrics(cur.lyrics),cover=cur.cover,initial=esc(Array.from(cur.title||'音')[0]||'音');
+  const together=`<div class="music-together-card"><div class="music-together-avatars"><div>${_mAvHTML(meAv,'me',34)}</div><div>${taBlock}</div></div><div class="music-together-copy" onclick="editMusicDistance()"><b>${sess?'与 '+esc(partner)+' 一起听':'邀请一个人共享此刻'}</b><span>${sess?'相距 ':'当前累计聆听 '}<i id="musicDistanceValue" style="font-style:normal">${sess?musicDistanceText(S.music.distance):fmtListen(listenSec)}</i>${sess?' 公里 · 已连接 '+`<i id="m_sesstime" style="font-style:normal">${fmtListen(listenSec)}</i>`:''}</span></div><button class="music-together-action" onclick="${sess?'musicEndSession()':'musicInvite()'}">${sess?'结束':'邀请'}</button></div><div class="music-bubbles"><div id="m_bub_l" style="display:flex;justify-content:flex-end">${_mBubHTML(_mBub.l,'l')}</div><div id="m_bub_r" style="display:flex;justify-content:flex-start">${_mBubHTML(_mBub.r,'r')}</div></div>`;
+  const coverStyle=cover?`background-image:url(${cover})`:'';
+  return `<div class="music-premium">${ambient?`<div class="music-ambient" style="background-image:url(${ambient})"></div>`:''}${nav}${together}<div class="music-stage"><div class="music-vinyl-wrap"><div id="m_disk" class="music-vinyl" style="animation-play-state:${_mPlaying?'running':'paused'}"><div class="music-vinyl-cover" onclick="setMusicCover()" style="${coverStyle}">${cover?'':`<span>${initial}</span>`}</div><i class="music-vinyl-hole"></i></div><div id="m_arm" class="music-arm" style="transform:rotate(${_mPlaying?'26deg':'6deg'})"><i></i></div></div></div><div class="music-meta"><b>${esc(cur.title||'未命名')}</b><span>${esc(cur.artist||'未知歌手')} · 私人收藏</span></div><div id="m_lyrics" class="music-lyrics">${lyr.length?lyr.map((x,i)=>`<div class="mlrc" onclick="mLyricTap(${i})">${esc(x.txt)||'&nbsp;'}</div>`).join(''):'<div style="color:rgba(255,255,255,.26);font-size:10px;line-height:60px">暂无歌词，可在歌单中添加</div>'}</div><div class="music-controls"><div class="music-seek" onclick="musicSeek(event)"><div class="music-seek-track"><div id="m_prog" class="music-seek-fill"></div></div></div><div class="music-time"><span id="m_elapsed">0:00</span><span id="m_duration">0:00</span></div><div class="music-control-row"><button class="music-ctl${S.music.loop?' on':''}" onclick="musicLoop()" aria-label="单曲循环">${SVG_LOOP}</button><button class="music-ctl" onclick="musicPrev()" aria-label="上一首">${SVG_PREV}</button><button id="m_play" class="music-play" onclick="musicToggle()" aria-label="播放或暂停">${_mPlaying?SVG_PAUSE:SVG_PLAY}</button><button class="music-ctl" onclick="musicNext()" aria-label="下一首">${SVG_NEXT}</button><button class="music-ctl" onclick="musicListModal()" aria-label="歌单">${SVG_LIST}</button></div><div class="inputbar music-chatbar"><textarea id="m_chat" rows="1" placeholder="${sess?'和 '+esc(partner)+' 说点什么…':'邀请后可以边听边聊'}" ${sess?'':'disabled'}></textarea><button class="send" onclick="musicChatSend()" style="${sess?'':'opacity:.42'}">发送</button></div></div></div>`;}
 function musicInvite(){if(!_mCur){toast('先点一首歌');return;}pickTarget(musicInviteTo);}
 function musicInviteTo(cid){musicInit();const c=getC(cid);const s=S.music.songs.find(x=>x.id===_mCur);if(!c||!s)return;
   S.music.session={cid,songId:_mCur,startTs:Date.now()};
@@ -2620,7 +2570,7 @@ function musicChatSend(){const sess=S.music.session;if(!sess)return;if(_mReplyBu
   save();aiMusicReply(sess.cid);}
 function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);const ln=lines[i];if(!ln)return;
   if(ln.t!=null&&_ma){_ma.currentTime=ln.t;if(_ma.paused)_ma.play().catch(()=>{});}
-  const box=document.getElementById('m_lyrics');if(box){box.querySelectorAll('.mlrc').forEach((el,k)=>{el.style.color=k===i?'#ffd6e8':'#7d7d88';el.style.fontWeight=k===i?'700':'400';el.style.transform=k===i?'scale(1.1)':'scale(1)';});}}
+  const box=document.getElementById('m_lyrics');if(box){box.querySelectorAll('.mlrc').forEach((el,k)=>{el.style.color=k===i?'#ffffff':'rgba(255,255,255,.28)';el.style.fontWeight=k===i?'700':'400';el.style.transform=k===i?'scale(1.1)':'scale(1)';});}}
 let _homePage=0,_homeSnapTimer=null;
 function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
