@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='752'){
+if(window.__NORTH_SHELL_BUILD__!=='753'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v752 · 双角色并发回复';
+const APP_VER='v753 · 游戏退出保留记录';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1324,7 +1324,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=752';
+  const url='sw.js?v=753';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2063,7 +2063,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=752').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=753').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -3083,6 +3083,15 @@ function settingsDataToolsHTML(){return `${quickJumpBar([['手机授权',"settin
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
     <div style="height:20px"></div>`;}
 const CHAT_ROUTE_NAMES=['路线一','路线二','路线三','路线四'];
+const MANUAL_REPLY_SCENE_OPTIONS=[
+  {key:'wechat',label:'微信聊天',tip:'发完微信后点「让ta回」'},
+  {key:'games',label:'游戏大厅',tip:'单人聊天游戏里点「让TA回应」'},
+  {key:'roleplay',label:'角色扮演',tip:'记下台词后手动推进剧情'},
+  {key:'offline',label:'线下约会',tip:'记下当面说的话后手动回应'}
+];
+function manualReplyScenes(){S.settings=S.settings||{};let m=S.settings.manualReplyScenes;if(!m||typeof m!=='object'||Array.isArray(m)){const legacy=S.settings.manualReply!==false;m={wechat:legacy,games:legacy,roleplay:legacy,offline:legacy};S.settings.manualReplyScenes=m;}const fallback=S.settings.manualReply!==false;MANUAL_REPLY_SCENE_OPTIONS.forEach(x=>{if(typeof m[x.key]!=='boolean')m[x.key]=fallback;});S.settings.manualReply=!!m.wechat;return m;}
+function manualReplySceneOn(key){return manualReplyScenes()[key]===true;}
+function manualReplySceneToggle(key){const m=manualReplyScenes();if(!Object.prototype.hasOwnProperty.call(m,key))return;m[key]=!m[key];if(key==='wechat')S.settings.manualReply=m[key];save();render();}
 function chatRouteCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),temp:x.temp==null?0.8:x.temp,maxTokens:x.maxTokens==null?900:x.maxTokens};}
 function chatRoutesInit(){S.settings=S.settings||{};let raw=S.settings.chatRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[chatRouteCopy(S.settings.chat||{})]:raw.slice(0,CHAT_ROUTE_NAMES.length).map(chatRouteCopy);
   while(rs.length<CHAT_ROUTE_NAMES.length)rs.push(chatRouteCopy());S.settings.chatRoutes=rs;S.settings.chatRouteActive=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.chatRouteActive,10)||0));return rs;}
@@ -3175,7 +3184,9 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     <div class="section" id="set_prefs">
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
-      <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
+      <div style="padding:11px 14px 5px;font-weight:700;color:#ffafc9">手动回复场景（可多选）</div>
+      <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
+      ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
       <div class="it"><span>通用活人感增强<br><small style="color:#888">理解上下文、按性格决定策略和消息节奏，并减少复述与重复模板</small></span><span class="sw ${S.settings.humanLike!==false?'on':''}" onclick="S.settings.humanLike=(S.settings.humanLike===false);save();render()"></span></div>
       <div class="it"><span>主动消息与自然回访<br><small style="color:#888">日常见闻优先分享照片；没开图片就只发文字。位置只用于出发、到达、通勤或行程报备</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
@@ -5159,7 +5170,8 @@ function gameSetHandoff(cid,title,rows){const c=getC(cid);if(!c)return false;row
 function gameHandoffRecallQuery(text){text=String(text||'').replace(/\s+/g,'');return/(?:游戏|刚才那局|上一局|海龟汤|小黑屋|你说我猜|谁是卧底|真心话|默契考验|小剧场|快问快答).{0,18}(?:最后|刚才|说了什么|发生了什么|玩了什么|还记得)|还记得.{0,18}(?:游戏|那局|刚才玩)/.test(text);}
 function gameWechatHandoffPrompt(c,query){const h=c&&c._gameHandoff,explicit=gameHandoffRecallQuery(query),active=h&&h.turns>0&&Date.now()<=(h.expiresAt||0),recent=h&&Date.now()-(h.ts||0)<=30*86400000;if(!h||!h.text||(!active&&!(explicit&&recent)))return'';return '\n\n# 刚结束的游戏大厅上下文（微信隐藏承接·不属于长期记忆或对话总结）\n你和'+S.me.name+'刚结束「'+h.title+'」。下面是按现有上下文条数设置保留的最后 '+h.count+' 条真实游戏记录：\n'+h.text+'\n你已经参与并理解这局发生的内容。回到微信后只用普通微信文字自然承接；不要把游戏记录逐条复述，不要继续假装还在游戏房间，不要输出编号、旁白格式或系统提示，也不要把它写成新的长期记忆。'+(explicit?' 用户正在核对这局内容，只能依据上面的真实记录回答，记录没有的细节不要猜。':'');}
 function gameWechatHandoffConsume(c){const h=c&&c._gameHandoff;if(!h)return;h.turns=Math.max(0,(+h.turns||0)-1);save();}
-function openGames(){openModal(`<h3>游戏大厅</h3><div class="hint">单人邀请保留原玩法；海龟汤、你说我猜、谁是卧底、小剧场新增「多人房」入口，可邀请小手机真人好友。第一版先完整接通小剧场，其它先验证等待室。</div>
+function openGames(){const drafts=gsDraftList();openModal(`<h3>游戏大厅</h3><div class="hint">单人邀请保留原玩法；海龟汤、你说我猜、谁是卧底、小剧场新增「多人房」入口，可邀请小手机真人好友。第一版先完整接通小剧场，其它先验证等待室。</div>
+  ${drafts.length?`<div class="section" style="border-color:rgba(255,111,165,.28)"><div style="padding:10px 14px 4px;color:#ff9fbd;font-weight:700">继续上次游戏</div>${drafts.map((d,i)=>`<div class="it" onclick="gsResumeDraft(${i})"><span style="flex:1">${esc(d.title||'未结束的游戏')}<small style="display:block;color:#888;margin-top:2px">和 ${esc(((getC(d.cid)||{}).remark||(getC(d.cid)||{}).name||'角色'))} · 记录 ${(d.msgs||[]).length} 条</small></span><span class="v">继续 ›</span></div>`).join('')}</div>`:''}
   ${GAMES.map(g=>`<div class="section"><div class="it"><span style="flex:1;cursor:pointer" onclick="pickGameChar('${g.k}')">${g.e} ${g.n}</span>${MIX_GAME_KEYS.indexOf(g.k)>=0?`<button class="minibtn" style="background:#243447;color:#fff" onclick="event.stopPropagation();openMixedGamePicker('${g.k}')">多人房</button>`:''}<span class="v" onclick="pickGameChar('${g.k}')">›</span></div></div>`).join('')}
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function pickGameChar(k){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
@@ -5252,28 +5264,37 @@ function renderMGRoom(id){const r=mgrRoom(id);if(!r)return nav('游戏房间')+'
   return `<div class="nav"><span class="l" onclick="mgrQuit()">‹</span><span class="t">${esc(r.title||g.n)}</span><span class="r">${r.host?'房主':''}</span></div><div class="chatbg" id="mgrbg">${dramaCard}${body||'<div class="empty" style="padding:32px">游戏刚开始</div>'}</div>${isDrama?`<div class="inputbar"><textarea id="mgr_in" rows="1" placeholder="在小剧场里说一句…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();mgrSend('${id}')}"></textarea><button class="send" onclick="mgrSend('${id}')">发送</button></div>`:`<div class="inputbar" style="justify-content:center;color:#aaa;font-size:13px;padding:16px;text-align:center">这个游戏的多人专属规则后续接入；当前先验证邀请、准备和房间同步。</div>`}`;}
 /* ===== 单独游戏空间 ===== */
 let _gs=null;
+function gsDraftStore(){S.me=S.me||{};if(!S.me.gameDrafts||typeof S.me.gameDrafts!=='object'||Array.isArray(S.me.gameDrafts))S.me.gameDrafts={};return S.me.gameDrafts;}
+function gsDraftKey(kind,cid){return String(kind||'game')+'|'+String(cid||'');}
+function gsDraftList(){return Object.values(gsDraftStore()).filter(d=>d&&d.cid&&getC(d.cid)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,12);}
+function gsSaveDraft(g){if(!g||!g.cid)return false;const store=gsDraftStore(),key=gsDraftKey(g.kind,g.cid);store[key]={cid:g.cid,kind:g.kind,title:g.title,intro:g.intro,msgs:(g.msgs||[]).map(m=>({id:m.id||uid(),who:m.who,text:String(m.text||'')})),t:Math.max(0,+g.t||0),updatedAt:Date.now()};const keys=Object.keys(store);if(keys.length>12)keys.sort((a,b)=>(store[b].updatedAt||0)-(store[a].updatedAt||0)).slice(12).forEach(k=>delete store[k]);save();return true;}
+function gsDropDraft(g){if(!g)return false;const store=gsDraftStore(),key=gsDraftKey(g.kind,g.cid);if(!store[key])return false;delete store[key];save();return true;}
+function gsLoadDraft(kind,cid){const d=gsDraftStore()[gsDraftKey(kind,cid)];return d?{cid:d.cid,kind:d.kind,title:d.title||'游戏',intro:d.intro||'',msgs:(d.msgs||[]).map(m=>({id:m.id||uid(),who:m.who,text:String(m.text||'')})),t:Math.max(0,+d.t||30*60),busy:false,_tm:null}:null;}
+function gsOpenDraft(d){if(!d)return false;if(_gs&&_gs._tm)clearInterval(_gs._tm);_gs={cid:d.cid,kind:d.kind,title:d.title||'游戏',intro:d.intro||'',msgs:(d.msgs||[]).map(m=>({id:m.id||uid(),who:m.who,text:String(m.text||'')})),t:Math.max(0,+d.t||30*60),busy:false,_tm:null};closeModal();go('gs');gsTimer();if(_gs.msgs.length)gsRender();else gsKick();return true;}
+function gsResumeDraft(index){return gsOpenDraft(gsDraftList()[Math.max(0,+index||0)]);}
 function openGameSpace(kind,cid,intro,title){const c=getC(cid);if(!c)return;
-  if(_gs)clearInterval(_gs._tm);
+  if(_gs){clearInterval(_gs._tm);gsSaveDraft(_gs);}const old=gsLoadDraft(kind,cid);if(old)return gsOpenDraft(old);
   _gs={cid,kind,title:title||'游戏',intro,msgs:[],t:30*60,busy:false,_tm:null};
-  go('gs');gsTimer();gsKick();}
+  gsSaveDraft(_gs);go('gs');gsTimer();gsKick();}
 function gsSystem(){const c=getC(_gs.cid);
   return buildSystem(c,{worldbookScope:'games'})+'\n\n# 现在你在和'+S.me.name+'玩游戏：'+_gs.title+'\n你们在一个【独立的小游戏空间】里玩，这不是日常微信聊天。\n- 用中文，轻松口语，沉浸在游戏里当好玩伴/主持人。\n- 游戏规则：'+_gs.intro+'\n- 别发[转账][红包][语音]这类卡片/标签，专心玩。\n- 当'+S.me.name+'说"游戏结束/不玩了/结束/退出"时，温柔地收个尾、道个别即可。';}
 function gsAbsorb(r){if(!_gs)return;splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(l)splitActions(l).forEach(p=>{if(p.trim())_gs.msgs.push({id:uid(),who:'ta',text:p.trim()});});});}
-async function gsKick(){if(!_gs)return;_gs.busy=true;gsRender();
-  try{const r=await chatAPI([{role:'system',content:gsSystem()},{role:'user',content:'[游戏开始，请你作为主持人/玩伴先开场。]'}],{aux:true});if(!_gs)return;gsAbsorb(r);}
-  catch(e){if(_gs)_gs.msgs.push({id:uid(),who:'ta',text:'（信号好像不太好…再戳我一下？）'});}
-  if(_gs)_gs.busy=false;gsRender();}
-async function gsReply(){if(!_gs)return;_gs.busy=true;gsRender();
-  try{const hist=_gs.msgs.slice(-gameContextLimit()).map(m=>({role:m.who==='me'?'user':'assistant',content:m.text}));
-    const r=await chatAPI([{role:'system',content:gsSystem()},...hist],{aux:true});if(!_gs)return;gsAbsorb(r);}
-  catch(e){if(_gs)_gs.msgs.push({id:uid(),who:'ta',text:'（…信号断了一下，再说一遍？）'});}
-  if(_gs)_gs.busy=false;gsRender();}
+async function gsKick(){if(!_gs)return;const g=_gs;g.busy=true;gsRender();
+  try{const r=await chatAPI([{role:'system',content:gsSystem()},{role:'user',content:'[游戏开始，请你作为主持人/玩伴先开场。]'}],{aux:true});if(_gs!==g)return;gsAbsorb(r);}
+  catch(e){if(_gs===g)g.msgs.push({id:uid(),who:'ta',text:'（信号好像不太好…再戳我一下？）'});}
+  if(_gs===g){g.busy=false;gsSaveDraft(g);}gsRender();}
+async function gsReply(){if(!_gs)return;const g=_gs;g.busy=true;gsRender();
+  try{const hist=g.msgs.slice(-gameContextLimit()).map(m=>({role:m.who==='me'?'user':'assistant',content:m.text}));
+    const r=await chatAPI([{role:'system',content:gsSystem()},...hist],{aux:true});if(_gs!==g)return;gsAbsorb(r);}
+  catch(e){if(_gs===g)g.msgs.push({id:uid(),who:'ta',text:'（…信号断了一下，再说一遍？）'});}
+  if(_gs===g){g.busy=false;gsSaveDraft(g);}gsRender();}
 function gsSend(){if(!_gs||_gs.busy)return;const ta=$('#gs_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
-  _gs.msgs.push({id:uid(),who:'me',text:v});gsReply();}
-function gsDice(){if(!_gs||_gs.busy)return;const v=1+Math.floor(Math.random()*6);_gs.msgs.push({id:uid(),who:'me',text:'🎲 我掷出了 '+v+' 点'});gsReply();}
+  _gs.msgs.push({id:uid(),who:'me',text:v});gsSaveDraft(_gs);if(manualReplySceneOn('games'))gsRender();else gsReply();}
+function gsDice(){if(!_gs||_gs.busy)return;const v=1+Math.floor(Math.random()*6);_gs.msgs.push({id:uid(),who:'me',text:'🎲 我掷出了 '+v+' 点'});gsSaveDraft(_gs);if(manualReplySceneOn('games'))gsRender();else gsReply();}
+function gsManualReply(){if(!_gs||_gs.busy)return;gsReply();}
 function gsMsgMenu(mid){if(!_gs)return;const m=(_gs.msgs||[]).find(x=>x.id===mid);if(!m)return;openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="gs_e" rows="3">${esc(m.text)}</textarea></div><div class="btns"><button class="btn d" onclick="gsDelMsg('${mid}')">删除</button><button class="btn p" onclick="gsEditMsg('${mid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-function gsEditMsg(mid){if(!_gs)return;const m=(_gs.msgs||[]).find(x=>x.id===mid),v=(($('#gs_e')||{}).value||'').trim();if(!m||!v)return;m.text=v;closeModal();gsRender();}
-function gsDelMsg(mid){if(!_gs)return;_gs.msgs=(_gs.msgs||[]).filter(x=>x.id!==mid);closeModal();gsRender();}
+function gsEditMsg(mid){if(!_gs)return;const m=(_gs.msgs||[]).find(x=>x.id===mid),v=(($('#gs_e')||{}).value||'').trim();if(!m||!v)return;m.text=v;gsSaveDraft(_gs);closeModal();gsRender();}
+function gsDelMsg(mid){if(!_gs)return;_gs.msgs=(_gs.msgs||[]).filter(x=>x.id!==mid);gsSaveDraft(_gs);closeModal();gsRender();}
 function gsFmt(){const t=Math.max(0,_gs?_gs.t:0);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
 function gsTimer(){if(!_gs)return;clearInterval(_gs._tm);const tm=setInterval(()=>{if(!_gs||cur().p!=='gs'){clearInterval(tm);return;}_gs.t--;const e=document.getElementById('gstime');if(e)e.textContent=gsFmt();if(_gs.t<=0){clearInterval(tm);toast('时间到啦～想继续玩也行，不玩就点结束');}},1000);_gs._tm=tm;}
 function gsRender(){if(cur().p==='gs')render();}
@@ -5282,10 +5303,15 @@ function renderGS(){if(!_gs)return '';const c=getC(_gs.cid);(_gs.msgs||[]).forEa
     ?`<div class="msg me" onclick="gsMsgMenu('${m.id}')"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`
     :`<div class="msg them" onclick="gsMsgMenu('${m.id}')">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`).join('')
     +(_gs.busy?`<div class="msg them">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
-  return `<div class="nav"><span class="l" onclick="gsQuit()">‹ 退出</span><span class="t">${esc(_gs.title)} <span id="gstime" style="color:#fa5151;font-size:13px">${gsFmt()}</span></span><span class="r" onclick="gsQuit()" style="color:#fa5151">结束</span></div>
+  return `<div class="nav"><span class="l" onclick="gsExit()">‹ 退出</span><span class="t">${esc(_gs.title)} <span id="gstime" style="color:#fa5151;font-size:13px">${gsFmt()}</span></span><span class="r" onclick="gsEnd()" style="color:#fa5151">结束</span></div>
     <div class="scroll" id="gsbg" style="background:#000">${body||'<div class="empty" style="padding:30px">开场中…</div>'}</div>
+    ${manualReplySceneOn('games')?`<div class="manual-reply-row" style="background:#111"><button class="manual-reply-chip" ${_gs.busy?'disabled':''} onclick="gsManualReply()">${_gs.busy?'回应中…':'▶ 让TA回应'}</button></div>`:''}
+    <div style="padding:6px 12px 0;background:#111;text-align:right"><button class="minibtn" onclick="gsClear()" style="color:#d58b9e;border-color:#563744">清空记录</button></div>
     <div class="inputbar"><button class="send" style="background:#3a3a3c;margin-right:6px" onclick="gsDice()" title="掷骰子"></button><textarea id="gs_in" rows="1" placeholder='说点什么…（🎲掷骰子；说"游戏结束"或点右上「结束」随时退出）' onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gsSend();}"></textarea><button class="send" onclick="gsSend()">发</button></div>`;}
-function gsQuit(){const g=_gs;if(g){clearInterval(g._tm);gameSetHandoff(g.cid,g.title,g.msgs);} _gs=null;home();}
+function gsExit(){const g=_gs;if(g){clearInterval(g._tm);g.busy=false;gsSaveDraft(g);}_gs=null;home();}
+function gsEnd(){const g=_gs;if(g){clearInterval(g._tm);gameSetHandoff(g.cid,g.title,g.msgs);gsDropDraft(g);}_gs=null;home();}
+async function gsClear(){if(!_gs)return;if(_gs.busy){toast('等这条回复完成后再清空');return;}if(!(_gs.msgs||[]).length){toast('没有游戏记录');return;}if(!await uiConfirm('清空这局游戏的全部聊天记录？\n游戏不会结束，可以继续玩。'))return;_gs.msgs=[];gsSaveDraft(_gs);gsRender();toast('游戏记录已清空');}
+function gsQuit(){gsExit();}
 /* ===== 谁是卧底 ===== */
 let _uc=null;
 const UC_BOTS=['小鹿','阿白','团子','西西','阿七','麦麦','楠楠','糖糖','可可','豆豆'];
@@ -5654,9 +5680,9 @@ async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData
   if(_off)_off.busy=false;offRender();}
 function offRender(){if(cur().p==='off')render();}
 function offSay(){if(!_off||_off.busy)return;const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
-  offData(_off.id).msgs.push({id:uid(),who:'me',text:v});save();offRender();}
+  offData(_off.id).msgs.push({id:uid(),who:'me',text:v});save();offRender();if(!manualReplySceneOn('offline'))offAI();}
 function offNarrate(){if(!_off||_off.busy)return;const t=prompt('加一段旁白（第三人称，用 他/她/两人 描写动作/场景/剧情）：','');if(t==null)return;const v=t.trim();if(!v)return;
-  offData(_off.id).msgs.push({id:uid(),who:'旁白',source:'me',text:v});save();offRender();}
+  offData(_off.id).msgs.push({id:uid(),who:'旁白',source:'me',text:v});save();offRender();if(!manualReplySceneOn('offline'))offAI();}
 function offReply(){if(!_off||_off.busy)return;offAI();}
 let _offSel=null;
 function offReKeep(){const b=$('#offbg');const st=b?b.scrollTop:null;render();const g=$('#offbg');if(g&&st!=null)g.scrollTop=st;}
@@ -5851,9 +5877,9 @@ async function rpAI(note){if(!_rp)return;const c=getC(_rp.id);const d=rpData(_rp
   }catch(e){d.msgs.push({id:uid(),who:'旁白',text:'（场景停顿了一下，剧情还可以继续。）'});save();playDing();}
   if(_rp)_rp.busy=false;rpRender();}
 function rpRender(){if(cur().p==='rp')render();}
-function rpSay(){if(!_rp||_rp.busy)return;const ta=$('#rp_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';rpData(_rp.id).msgs.push({id:uid(),who:'me',text:v});save();playDing();rpRender();}
-function rpNarrate(){if(!_rp||_rp.busy)return;openModal(`<h3>动作描写</h3><div class="hint">写动作、环境、神态或剧情推进。先写完整，再决定是否让角色继续。</div><div class="field"><textarea id="rp_act" rows="4" placeholder="比如：他合上病历，指节停在桌面，房间里安静到只剩窗外的雨声。"></textarea></div><div class="btns"><button class="btn g" onclick="rpSaveNarrate(0)">只记下</button><button class="btn p" style="background:#243447" onclick="rpSaveNarrate(1)">记下并继续</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-function rpSaveNarrate(goOn){if(!_rp||_rp.busy)return;const ta=$('#rp_act');const v=(ta&&ta.value||'').trim();if(!v)return;const d=rpData(_rp.id);d.msgs.push({id:uid(),who:'旁白',source:'me',text:v});save();closeModal();playDing();rpRender();if(goOn)rpAI('[系统：'+S.me.name+'刚补充了一段动作/场景描写。请等ta这段动作成立后，再让最该回应的1到2个角色自然接着演，不要替'+S.me.name+'说话。]');}
+function rpSay(){if(!_rp||_rp.busy)return;const ta=$('#rp_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';rpData(_rp.id).msgs.push({id:uid(),who:'me',text:v});save();playDing();rpRender();if(!manualReplySceneOn('roleplay'))rpAI();}
+function rpNarrate(){if(!_rp||_rp.busy)return;const manual=manualReplySceneOn('roleplay');openModal(`<h3>动作描写</h3><div class="hint">写动作、环境、神态或剧情推进。${manual?'先写完整，再决定是否让角色继续。':'保存后角色会自动接着演。'}</div><div class="field"><textarea id="rp_act" rows="4" placeholder="比如：他合上病历，指节停在桌面，房间里安静到只剩窗外的雨声。"></textarea></div><div class="btns">${manual?'<button class="btn g" onclick="rpSaveNarrate(0)">只记下</button>':''}<button class="btn p" style="background:#243447" onclick="rpSaveNarrate(1)">${manual?'记下并继续':'保存并继续'}</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function rpSaveNarrate(goOn){if(!_rp||_rp.busy)return;const ta=$('#rp_act');const v=(ta&&ta.value||'').trim();if(!v)return;const d=rpData(_rp.id);d.msgs.push({id:uid(),who:'旁白',source:'me',text:v});save();closeModal();playDing();rpRender();if(goOn||!manualReplySceneOn('roleplay'))rpAI('[系统：'+S.me.name+'刚补充了一段动作/场景描写。请等ta这段动作成立后，再让最该回应的1到2个角色自然接着演，不要替'+S.me.name+'说话。]');}
 function rpReply(){if(!_rp||_rp.busy)return;rpAI();}
 function rpReKeep(){const b=$('#rpbg');const st=b?b.scrollTop:null;render();const g=$('#rpbg');if(g&&st!=null)g.scrollTop=st;}
 function rpSelToggle(){_rpSel=_rpSel?null:[];rpReKeep();}
@@ -5875,7 +5901,7 @@ function renderRP(id){const c=getC(id);if(!c)return '';const d=rpData(id);const 
   return `<div class="rpstage"><div class="nav rpnav"><span class="l" onclick="go('rphub')">‹</span><span class="t">${esc(d.title||'角色扮演')}</span><span class="r" onclick="rpEnd('${id}')">结束</span></div>
    <div class="rpmeta"><span>${esc(rpMemberSummary(id)+(d.myRole?(' / '+d.myRole):''))}<small>${esc(rpWhenText(d)||'')}</small></span><span><button onclick="go('rpset',{id:'${id}'})">${svgIc('gear',14,'#aebdca')} 设定</button><button onclick="rpMemory('${id}')">${svgIc('book',14,'#aebdca')} 存档</button><button onclick="rpSelToggle()">${sel?'取消':'多选'}</button><button onclick="rpClearMsgs('${id}')">清空</button></span></div>
    <div class="scroll rpscroll" id="rpbg">${body||'<div class="empty" style="padding:34px;line-height:1.9;color:#646d76">先记下一句台词或一段动作，再让对方进入剧情。</div>'}</div>
-   ${sel?`<div class="rpselect"><button onclick="rpSelToggle()">取消</button><button class="danger" onclick="rpDelSel('${id}')">删除选中 (${sel.length})</button></div>`:`<div class="rpactions"><button class="rpcontinue" ${_rp&&_rp.busy?'disabled':''} onclick="rpReply()">${_rp&&_rp.busy?'剧情展开中':(multi?'让他们继续':'让TA回应')}</button></div><div class="inputbar rpinput"><button class="send rp-narrate" onclick="rpNarrate()" title="添加动作">${svgIc('thought',16,'#aebdca')}</button><textarea id="rp_in" rows="1" placeholder="写下本局台词…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();rpSay();}"></textarea><button class="send rp-note" onclick="rpSay()">记下</button></div>`}</div>`;}
+   ${sel?`<div class="rpselect"><button onclick="rpSelToggle()">取消</button><button class="danger" onclick="rpDelSel('${id}')">删除选中 (${sel.length})</button></div>`:`${manualReplySceneOn('roleplay')?`<div class="rpactions"><button class="rpcontinue" ${_rp&&_rp.busy?'disabled':''} onclick="rpReply()">${_rp&&_rp.busy?'剧情展开中':(multi?'让他们继续':'让TA回应')}</button></div>`:''}<div class="inputbar rpinput"><button class="send rp-narrate" onclick="rpNarrate()" title="添加动作">${svgIc('thought',16,'#aebdca')}</button><textarea id="rp_in" rows="1" placeholder="写下本局台词…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();rpSay();}"></textarea><button class="send rp-note" onclick="rpSay()">记下</button></div>`}</div>`;}
 
 /* ===== 云程 · 出行（机票 / 行程待约会 / 护照 / 回忆）—— 无emoji·高级简约 ===== */
 const TV_CITIES=[
@@ -6448,7 +6474,7 @@ function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);if(o
    <div class="nav offnav"><span class="l" onclick="offQuit()">‹</span><span class="t">${esc(c.remark||c.name)}</span><span class="r" onclick="offEnd('${id}')">结束</span></div>
    <div class="offmeta"><span><b>${esc(o.loc||'未定')}</b> · ${esc(o.daypart||o.when||'现在')}</span><span><button onclick="offSelToggle()">${sel?'取消':'多选'}</button><button onclick="offSetting('${id}')">设定</button><button onclick="offMemory('${id}')">记忆</button></span></div>
    <div class="scroll offscroll" id="offbg">${body||'<div class="empty" style="padding:30px;color:#5f5b55">等待这场见面的第一句话</div>'}</div>
-   ${sel?`<div class="offselect"><button onclick="offSelToggle()">取消</button><button class="danger" onclick="offDelSel('${id}')">删除选中 (${sel.length})</button></div>`:`<div class="offactions"><button class="offcontinue" ${_off&&_off.busy?'disabled':''} onclick="offReply()">${_off&&_off.busy?'正在回应':'继续这一刻'}</button></div>
+   ${sel?`<div class="offselect"><button onclick="offSelToggle()">取消</button><button class="danger" onclick="offDelSel('${id}')">删除选中 (${sel.length})</button></div>`:`${manualReplySceneOn('offline')?`<div class="offactions"><button class="offcontinue" ${_off&&_off.busy?'disabled':''} onclick="offReply()">${_off&&_off.busy?'正在回应':'让TA回应'}</button></div>`:''}
    <div class="inputbar offinput"><button class="send off-narrate" onclick="offNarrate()" title="加入你的动作旁白">旁白</button><textarea id="off_in" rows="1" placeholder="当面对他说…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea><button class="send off-note" onclick="offSay()">记下</button></div>`}
    </div>`;}
 /* ===== 信箱 ===== */
@@ -8063,7 +8089,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="enterSelect('${id}')"><div class="b">${svgIc('forward',26,'#e6e6ee')}</div><span>多选转发</span></div>
     </div>`}
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(replyGenState||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':replyGenState==='active'?'回复中…':replyGenState==='queued'?'排队中…':'▶ 让ta回'}</button></div>`:'')+qbar+`<div class="inputbar">`+`
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(manualReplySceneOn('wechat')&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(replyGenState||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':replyGenState==='active'?'回复中…':replyGenState==='queued'?'排队中…':'▶ 让ta回'}</button></div>`:'')+qbar+`<div class="inputbar">`+`
       <span class="plus" style="background:${_voiceMode?'linear-gradient(145deg,#5a5c61,#303236)':'transparent'};box-shadow:${_voiceMode?'0 3px 9px rgba(0,0,0,.32)':'none'};color:${_voiceMode?'#f3f3f4':'#9b9ca0'}" onclick="_voiceMode=!_voiceMode;render()">${svgIc('mic',19,_voiceMode?'#f3f3f4':'#9b9ca0')}</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入文字，发送为语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
@@ -9420,7 +9446,7 @@ function scheduleReply(id,note,onDone){
     if(typeof onDone==='function')onDone(true);return true;
   }
   // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
-  if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();if(typeof onDone==='function')onDone(false);return false;}
+  if(!note&&manualReplySceneOn('wechat')){if(cur().p==='chat'&&cur().id===id)render();if(typeof onDone==='function')onDone(false);return false;}
   const aid=actId(),k=replyStateKey(id,aid),token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);if(_replyDone[k]){const prev=_replyDone[k];delete _replyDone[k];try{prev(false);}catch(_){}}delete _replyDeferred[k];if(typeof onDone==='function')_replyDone[k]=onDone;_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];const done=_replyDone[k];delete _replyDone[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);if(done)done(false);return;}Promise.resolve(aiReply(id,note,token,aid)).then(ok=>{if(done)done(ok===true);}).catch(()=>{if(done)done(false);});},(Number(S.settings.replyDelay)||0)*1000);return true;}
 function manualReplyRetryAllowed(id,aid,token){const c=getC(id);return !!(c&&!c.blocked&&!c.deleted&&actId()===aid&&!replyStale(id,token,aid)&&!offlineFocusActive()&&!cinemaRoleOccupied(id)&&!wxLoginBlockReply(id));}
 function manualReply(id){

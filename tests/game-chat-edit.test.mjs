@@ -32,6 +32,7 @@ test('solo game bubbles from both sides open the same edit/delete menu',()=>{
   const context=vm.createContext({
     _gs:{msgs:[{id:'mine',who:'me',text:'原来的话'},{id:'role',who:'ta',text:'角色原话'}]},
     $:s=>fields[String(s).replace(/^#/,'')]||null,
+    gsSaveDraft:()=>{context.saved=(context.saved||0)+1;},
     closeModal:()=>{context.closed=(context.closed||0)+1;},
     gsRender:()=>{context.rendered=(context.rendered||0)+1;},
   });
@@ -89,8 +90,45 @@ test('game context follows the existing offline context limit and hands off invi
   assert.match(functionSource('gameContextLimit'),/offlineContextLimit/);
   assert.match(functionSource('gsReply'),/slice\(-gameContextLimit\(\)\)/);
   assert.match(functionSource('mgrRoleTurn'),/slice\(-gameContextLimit\(\)\)/);
-  assert.match(functionSource('gsQuit'),/gameSetHandoff\(g\.cid,g\.title,g\.msgs\)/);
+  assert.match(functionSource('gsEnd'),/gameSetHandoff\(g\.cid,g\.title,g\.msgs\)/);
   assert.match(functionSource('gameWechatHandoffPrompt'),/不属于长期记忆或对话总结/);
   assert.match(functionSource('gameWechatHandoffPrompt'),/不要把它写成新的长期记忆/);
   assert.doesNotMatch(functionSource('gameSetHandoff'),/summaries|memoryList|rememberForChar/);
+});
+
+test('solo game exit preserves the draft while end clears it',()=>{
+  const render=functionSource('renderGS');
+  assert.match(render,/onclick="gsExit\(\)"/);
+  assert.match(render,/onclick="gsEnd\(\)"/);
+  assert.match(render,/onclick="gsClear\(\)"/);
+  assert.match(functionSource('openGames'),/继续上次游戏/);
+  assert.match(functionSource('gsReply'),/const g=_gs/);
+  assert.match(functionSource('gsReply'),/if\(_gs!==g\)return/,'a late reply from an exited game must not enter a newly opened game');
+
+  const draft={cid:'c1',kind:'quiz',title:'默契考验',msgs:[{id:'m1',who:'me',text:'第一句'}],_tm:7,busy:true};
+  const exitContext=vm.createContext({
+    _gs:draft,
+    clearInterval:()=>{exitContext.cleared=true;},
+    gsSaveDraft:g=>{exitContext.saved=g;},
+    home:()=>{exitContext.homed=true;},
+  });
+  vm.runInContext(functionSource('gsExit'),exitContext);
+  exitContext.gsExit();
+  assert.equal(exitContext.saved,draft,'exit must save the current game draft');
+  assert.equal(exitContext._gs,null);
+  assert.equal(exitContext.homed,true);
+
+  const ending={cid:'c1',kind:'quiz',title:'默契考验',msgs:[{id:'m1',who:'me',text:'第一句'}],_tm:8};
+  const endContext=vm.createContext({
+    _gs:ending,
+    clearInterval:()=>{},
+    gameSetHandoff:()=>{endContext.handoff=true;},
+    gsDropDraft:g=>{endContext.dropped=g;},
+    home:()=>{endContext.homed=true;},
+  });
+  vm.runInContext(functionSource('gsEnd'),endContext);
+  endContext.gsEnd();
+  assert.equal(endContext.dropped,ending,'end must delete the saved draft');
+  assert.equal(endContext.handoff,true);
+  assert.equal(endContext._gs,null);
 });

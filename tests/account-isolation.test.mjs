@@ -27,6 +27,7 @@ const timers = [];
 const calls = [];
 const sandbox = {
   S: { settings: { replyDelay: 0, manualReply: false } },
+  manualReplySceneOn: () => false,
   actId: () => active,
   accountMessageKey: (id, aid) => (aid === "main" ? id : `${id}#${aid}`),
   offlineFocusActive: () => false,
