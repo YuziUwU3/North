@@ -24,64 +24,105 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('game hall is a real app page with draw-and-guess as the featured game',()=>{
+test('game hall exposes the advanced draw-and-guess room',()=>{
   assert.match(app,/\{k:'drawguess',e:'',n:'你画我猜'/);
   assert.match(app,/else if\(c\.p==='gameshub'\)html=renderGameHub\(\)/);
   assert.match(app,/else if\(c\.p==='drawguess'\)html=renderDrawGuess\(\)/);
-  assert.match(functionSource('renderGameHub'),/全部游戏/);
   assert.match(functionSource('renderGameHub'),/我的画作/);
   assert.match(functionSource('startGame'),/k==='drawguess'/);
   assert.match(html,/\.gamehub-grid/);
   assert.match(html,/\.dg-canvas-shell/);
 });
 
-test('drawing canvas supports thick pencil controls, undo, upload, save and delete',()=>{
-  const render=functionSource('renderDrawGuess');
+test('setup has free topics, role-picked topics and a separate photo continuation mode',()=>{
+  const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew');
+  assert.match(setup,/id="dg_topic"/);
+  assert.match(setup,/让我画/);
+  assert.match(setup,/让 TA 画/);
+  assert.match(setup,/上传图片让 TA 画/);
+  assert.doesNotMatch(setup,/dg_duration|每轮作画时间/);
+  assert.doesNotMatch(start,/dgPickWord|DG_WORDS/,'new rounds must not draw from the old fixed word list');
+  assert.match(start,/mode==='photo'/);
+  assert.match(start,/dgBeginState\(cid,'photo'/);
+});
+
+test('canvas controls and durable gallery saving do not depend on the mounted canvas',()=>{
+  const render=functionSource('renderDrawGuess'),archive=functionSource('dgArchive');
   assert.match(render,/相册底图/);
   assert.match(render,/撤回一笔/);
   assert.match(render,/清空画布/);
-  assert.match(render,/dgSetWidth\(13,this\)/,'reference-style medium thick pencil is the default');
+  assert.match(render,/dgSetWidth\(13,this\)/);
   assert.match(render,/保存画作/);
-  assert.match(functionSource('dgArchive'),/gallery\.unshift/);
+  assert.match(functionSource('dgSnapshotData'),/document\.createElement\('canvas'\)/);
+  assert.match(archive,/dgSnapshotData/);
+  assert.match(archive,/primeImageForSave/);
+  assert.match(archive,/saveNowAsync/);
+  assert.match(archive,/savedRevision===g\.revision/);
   assert.match(functionSource('dgDeleteArtwork'),/gallery=x\.gallery\.filter/);
-  assert.match(functionSource('dgUploadBase'),/background=src/);
-  assert.match(functionSource('dgUndo'),/strokes\.pop\(\)/);
 });
 
-test('role drawing uses vector strokes and falls back to built-in cute sketches without image generation',()=>{
+test('role drawing is recognizable vector work and animates at human pace without per-stroke API calls',()=>{
   const context=vm.createContext({Math});
   for(const name of ['dgLine','dgEllipse','dgRect','dgFallbackPlan','dgNormalizePlan'])vm.runInContext(functionSource(name),context);
-  for(const word of ['太阳','房子','小猫','雨伞','苹果','小鱼','汽车','花朵','眼镜','杯子','蝴蝶','雪人','闹钟','大树','月亮','蛋糕']){
-    const strokes=context.dgFallbackPlan(word);
-    assert.ok(strokes.length>=3,`${word} needs a usable fallback drawing`);
-    assert.ok(strokes.every(s=>s.width>=10&&s.points.length>=2),`${word} keeps rounded thick strokes`);
-  }
-  const generated=functionSource('dgGenerateRoleDrawing');
-  assert.match(generated,/可爱简笔画/);
-  assert.match(generated,/深灰粗圆轮廓/);
-  assert.doesNotMatch(generated,/imageAPI|aiImage|生图/);
-  assert.match(functionSource('dgAnimateNext'),/requestAnimationFrame/);
+  const tree=context.dgFallbackPlan('大树');
+  assert.ok(tree.length>=18,'tree fallback needs trunk outlines, branches, crown clusters and ground details');
+  assert.ok(tree.every(s=>s.width>=6&&s.points.length>=2));
+  const generated=functionSource('dgGenerateRoleDrawing'),animate=functionSource('dgAnimateNext');
+  assert.match(generated,/完整具体的物体结构/);
+  assert.match(generated,/不要从固定词库随机抽/);
+  assert.match(generated,/根据你和.*真实相处/);
+  assert.match(generated,/finishSpeech/,'finish dialogue is generated in the same planning call');
+  assert.match(animate,/drawMs/);
+  assert.match(animate,/240\+/,'there is a visible human pause between strokes');
+  assert.match(animate,/requestAnimationFrame/);
+  assert.doesNotMatch(animate,/chatAPI|visionAPI|imageAPI/,'animation must never call an API for each stroke');
 });
 
-test('both guessing directions, timer, hints and one-pass vision reuse are wired',()=>{
-  const ask=app.slice(app.indexOf('async function dgAskRoleGuess'),app.indexOf('function dgHintRole'));
+test('role dialogue uses the same game context and never fabricates player speech',()=>{
+  const system=functionSource('dgRoleSystem'),messages=functionSource('dgRoleChatMessages');
+  assert.match(system,/buildSystem\(c/);
+  assert.match(system,/gameContextRounds\(\)/);
+  assert.match(system,/绝不能替/);
+  assert.match(messages,/msgs\(c\.id\)/,'wechat history is carried into the drawing room');
+  assert.match(functionSource('dgAddDialogue'),/who==='ta'.*roleSpeech.*else.*meSpeech/);
+  assert.doesNotMatch(functionSource('dgBeginState'),/我来猜|我画好了|题目只有我知道/);
+  assert.doesNotMatch(functionSource('dgTimeUp'),/roleSpeech\s*=|meSpeech\s*=/);
+  assert.doesNotMatch(functionSource('dgSubmitGuess'),/还不是|不对，再|差一点/);
+});
+
+test('guessing reuses one vision description and role feedback or edits come from the model',()=>{
+  const ask=app.slice(app.indexOf('async function dgAskRoleGuess'),app.indexOf('function dgHintRole')),guide=functionSource('dgGuideRole');
   assert.match(functionSource('dgTimeUp'),/dgFinishDrawing/);
-  assert.match(functionSource('dgTimeUp'),/画布还是空的/,'an empty timed round must not become a stuck guessing state');
-  assert.match(ask,/visionAPI/);
+  assert.match(functionSource('dgTimeUp'),/phase='done'/);
   assert.match(ask,/if\(!g\.visionDesc\)/);
-  assert.match(ask,/chatAPI/,'later hints reuse the first vision description');
-  assert.match(functionSource('dgHintRole'),/给TA一点提示/);
-  assert.match(functionSource('dgRoleHint'),/第一个字/);
-  assert.match(functionSource('dgSubmitGuess'),/dgCorrect/);
+  assert.match(ask,/visionAPI/);
+  assert.match(ask,/chatAPI/);
+  assert.match(functionSource('dgSubmitGuess'),/chatAPI/);
+  assert.match(functionSource('dgRoleHint'),/chatAPI/);
+  assert.match(guide,/action.*append或replace/);
+  assert.match(guide,/换颜色/);
+  assert.match(guide,/chatAPI/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/mode==='photo'.*visionAPI/s);
 });
 
-test('invites and completed drawing memories survive outside the room',()=>{
+test('mobile layout keeps the player below the canvas and all action buttons hittable',()=>{
+  const render=functionSource('renderDrawGuess');
+  assert.ok(render.indexOf('dg-canvas-shell')<render.indexOf('dg-person me'));
+  assert.match(render,/type="button" class="primary" onclick="dgGuideRole\(\)"/);
+  assert.match(html,/\.dg-person\.me\{margin-top:6px/);
+  assert.match(html,/\.dg-rolebar\{flex-wrap:wrap/);
+  assert.match(html,/touch-action:manipulation/);
+  assert.match(html,/\.dg-finish button\{min-width:0/);
+});
+
+test('invites and only genuine drawing-room dialogue survive into memory',()=>{
   assert.match(app,/\[你画我猜\]/);
   assert.match(functionSource('roleGameInvite'),/role:'assistant',type:'gameinvite'/);
-  assert.match(functionSource('roleGameInviteDecide'),/status!=='pending'/);
   assert.match(functionSource('dgRecordMemory'),/drawGuessMemory/);
   assert.match(functionSource('dgRecordMemory'),/gameSetHandoff/);
+  assert.match(functionSource('dgRecordMemory'),/_dg\.dialogue/);
+  assert.doesNotMatch(functionSource('dgRecordMemory'),/这一轮画的是/);
   assert.match(app,/# 你们的你画我猜画作记忆/);
   assert.match(functionSource('clearContactMemoryData'),/drawGuessMemory/);
-  assert.match(html,/\.dg-invite-lines/,'invitation uses a line-art card');
+  assert.match(html,/\.dg-invite-lines/);
 });
