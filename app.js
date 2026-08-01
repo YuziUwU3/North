@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='768'){
+if(window.__NORTH_SHELL_BUILD__!=='769'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v768 · 聊天识图与精细猜画';
+const APP_VER='v769 · 沉浸式图片识别';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -465,7 +465,7 @@ function _rehydrate(o){if(!o||typeof o!=='object')return;for(const k in o){const
     else if(v&&typeof v==='object')_rehydrate(v);}}
 function mergeBootMessages(restored,live){restored=restored&&typeof restored==='object'?restored:{};if(!live||typeof live!=='object')return restored;for(const k of Object.keys(live)){if(k==='__idb'||!Array.isArray(live[k])||!live[k].length)continue;const dst=Array.isArray(restored[k])?restored[k]:(restored[k]=[]),seen=new Set(dst.map(m=>m&&m.id).filter(Boolean));for(const m of live[k]){if(!m)continue;if(m.id&&seen.has(m.id))continue;dst.push(m);if(m.id)seen.add(m.id);}dst.sort((a,b)=>(+a.time||0)-(+b.time||0));}return restored;}
 function repairWxLogoutEmoji(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;const next=a.filter(m=>!(m&&m.type==='sys'&&typeof m.content==='string'&&/(?:登录了你的微信|退出了你的微信登录)$/.test(m.content.replace(/^🔓\s+/,''))));if(next.length!==a.length){S.messages[k]=next;changed=true;}}}catch(_){}return changed;}
-function repairStaleVisionStates(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(m&&m.type==='image'&&m.role==='user'&&m.visionState==='pending'&&!_visionTasks.has(m.id)){m.visionState='failed';m.visionError='上次识图被页面刷新中断，点图片下方可重试';changed=true;}});}}catch(_){}return changed;}
+function repairStaleVisionStates(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(m&&m.type==='image'&&m.role==='user'&&m.visionState==='pending'&&!_visionTasks.has(m.id)){m.visionState='failed';m.visionError='上次图片理解被页面刷新中断';changed=true;}});}}catch(_){}return changed;}
 async function bootOverflowCore(){if(!_coreBootRef)return false;const rec=await imgGet(CORE_IDB_KEY),savedAt=+(rec&&rec.savedAt||0),needed=+(_coreBootRef&&_coreBootRef.savedAt||0);if(!rec||!rec.json||savedAt<needed)throw new Error('大容量核心存档暂时无法读取，请不要清除网站数据并重新打开');let restored;try{restored=JSON.parse(rec.json);}catch(_){throw new Error('大容量核心存档校验失败，请用最近的备份恢复');}if(!restored||!restored.settings)throw new Error('大容量核心存档内容不完整');S=mergeStateData(restored);_coreOverflowMode=true;_coreBootRef={ver:1,savedAt};_coreLogicalBytes=storedTextBytes(rec.json);normalizeLoadedState();return true;}
 async function bootImages(){await bootOverflowCore();try{
     // 回填搬进大空间的聊天记录
@@ -1360,7 +1360,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=768';
+  const url='sw.js?v=769';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8310,8 +8310,7 @@ function buildPart(c,m,me){
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
     if(!m.src)return `<div class="imgmsg imgfail"${m.failed&&m.genPrompt?` onclick="event.stopPropagation();retryGeneratedImage('${c.id}','${m.id}')" style="cursor:pointer"`:''}>[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.68">${m.failed?esc(generatedImageFailureLabel(m.errText))+(m.genPrompt?' · 点这里重试':''):''}</small></div>`;
-    const vs=m.role==='user'?(m.visionState==='pending'?`<div style="font-size:10px;color:#999;text-align:right;margin-top:3px">正在让聊天模型看图片…</div>`:m.visionState==='failed'?`<div onclick="event.stopPropagation();retryVisionMessage('${c.id}','${m.id}')" style="font-size:10px;color:#b9a6a6;text-align:right;margin-top:3px;cursor:pointer">图片理解失败 · 点这里重试</div>`:m.visionState==='success'?`<div style="font-size:10px;color:#888;text-align:right;margin-top:3px">已看清${m.visionFallback&&m.visionModel?' · 备用 '+esc(m.visionModel):' · 聊天模型'}</div>`:''):'';
-    return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>${vs}`;
+    return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>`;
   }
   if(m.type==='transfer')return payCard('t',m,me);
   if(m.type==='redpacket')return payCard('r',m,me);
@@ -8500,7 +8499,7 @@ function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',asyn
   const _vp='请仔细、客观地用中文描述这张图片。有人物时说清人数、年龄段、表情、发型穿着、动作和场景；是聊天截图、表情包或梗图时，读出关键文字并说明表达的意思；是物品、风景、动物或食物时，说清主体、颜色、细节和氛围。用2到3句自然白话描述，让没看过图的人也能理解，不要评价或攻击人物。';
   const okv=await runVisionForMessage(id,m,async()=>{let v=await visionPhotoSource(f,1280,.76);if(v.length>1400000)v=await visionPhotoSource(f,1000,.7);return v;},_vp);
   if(okv){suspicionFulfillRequest(getC(id),m);if(m.visionFallback)toast('聊天模型没能看图，已按顺序由备用 '+m.visionModel+' 接管；没有并发重复识别');scheduleReply(id);}
-  else toast('识图失败：'+(m.visionError||'检查识图线路').slice(0,90)+'（可点图片下方重试）');});}
+  else toast('图片理解失败：'+(m.visionError||'请检查图片理解线路').slice(0,90)+'（检查设置后可重新发送）');});}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
 function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>转账</h3>
   <div class="field"><label>金额</label><input id="tf_a" type="number" step="0.01" placeholder="5.20"></div>
@@ -9387,7 +9386,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
   if(cinemaRoleOccupied(id))return;/* 正在一起看剧或看书时，角色只在放映室回应 */
   if(wxLoginBlockReply(id,note))return;/* 角色登录用户微信期间不能同时给用户发消息；退出后合并承接 */
   if(initiativeNoteActive(note)&&!initiativeReplyFresh(c,note))return false;/* 主动任务排队后若用户又说话或争吵状态改变，旧任务立即作废 */
-  if(hasPendingVision(id)){const ready=await awaitPendingVision(id,150000);if(replyStale(id,replyToken,replyAccount))return;if(replyAccountChanged(id,note,replyToken,replyAccount))return;if(!ready){toast('图片还在识别，等“已看清”后再让ta回复');return;}}
+  if(hasPendingVision(id)){const ready=await awaitPendingVision(id,150000);if(replyStale(id,replyToken,replyAccount))return;if(replyAccountChanged(id,note,replyToken,replyAccount))return;if(!ready){toast('图片还在识别，等识别结束后再让ta回复');return;}}
   const _idleNote=!!(note&&/没有打开小手机|没来找你/.test(note));
   if(_idleNote)idleDebugPatch({aiStatus:'生成中',aiResult:'等待AI返回',aiStartedAt:Date.now(),apiStatus:idleApiStatus(),blockedBy:''});
   // typing
@@ -9656,7 +9655,7 @@ function manualReplyRetryAllowed(id,aid,token){const c=getC(id);return !!(c&&!c.
 function manualReply(id){
   if(offlineFocusActive()){toast('线下约会进行中，微信消息已暂停');return false;}
   const aid=actId(),key=replyGenerationKey(id,aid);if(replyGenerationBusy(id,aid))return false;
-  if(hasPendingVision(id)){toast('图片还在识别，看到“已看清”后再点');return false;}
+  if(hasPendingVision(id)){toast('图片还在识别，等识别结束后再点');return false;}
   const c=getC(id);if(!c||c.blocked||c.deleted)return false;
   if(replyGenerationCount()>=MANUAL_REPLY_LIMIT){_replyQueue.push({id,aid,key});replyGenerationRefresh(id,aid);toast('已排队，前面的回复完成后自动生成');return true;}
   replyGenerationRun(id,aid);return true;
