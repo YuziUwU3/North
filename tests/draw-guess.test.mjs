@@ -35,15 +35,18 @@ test('game hall exposes the advanced draw-and-guess room',()=>{
 });
 
 test('setup has free topics, role-picked topics and a separate photo continuation mode',()=>{
-  const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew');
-  assert.match(setup,/id="dg_topic"/);
-  assert.match(setup,/让我画/);
-  assert.match(setup,/让 TA 画/);
-  assert.match(setup,/上传图片让 TA 画/);
+  const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew'),begin=functionSource('dgBeginState'),render=functionSource('renderDrawGuess');
+  assert.doesNotMatch(setup,/id="dg_topic"/,'the title must not live outside the room');
+  assert.match(setup,/我来画/);
+  assert.match(setup,/TA 来画/);
+  assert.match(setup,/我说你画/);
   assert.doesNotMatch(setup,/dg_duration|每轮作画时间/);
   assert.doesNotMatch(start,/dgPickWord|DG_WORDS/,'new rounds must not draw from the old fixed word list');
-  assert.match(start,/mode==='photo'/);
-  assert.match(start,/dgBeginState\(cid,'photo'/);
+  assert.match(start,/dgBeginState\(cid,mode\)/);
+  assert.match(begin,/phase:'setup'/);
+  assert.match(render,/id="dg_room_title"/);
+  assert.match(render,/dgUploadRoleBase\(\)/);
+  assert.match(render,/dgStartPrepared\(\)/);
 });
 
 test('canvas controls and durable gallery saving do not depend on the mounted canvas',()=>{
@@ -68,12 +71,12 @@ test('role drawing is recognizable vector work and animates at human pace withou
   assert.ok(tree.length>=18,'tree fallback needs trunk outlines, branches, crown clusters and ground details');
   assert.ok(tree.every(s=>s.width>=6&&s.points.length>=2));
   const generated=functionSource('dgGenerateRoleDrawing'),animate=functionSource('dgAnimateNext');
-  assert.match(generated,/完整具体的物体结构/);
+  assert.match(generated,/物体必须结构完整/);
   assert.match(generated,/不要从固定词库随机抽/);
   assert.match(generated,/根据你和.*真实相处/);
   assert.match(generated,/finishSpeech/,'finish dialogue is generated in the same planning call');
   assert.match(animate,/drawMs/);
-  assert.match(animate,/240\+/,'there is a visible human pause between strokes');
+  assert.match(animate,/360\+/,'there is a visible human pause between strokes');
   assert.match(animate,/requestAnimationFrame/);
   assert.doesNotMatch(animate,/chatAPI|visionAPI|imageAPI/,'animation must never call an API for each stroke');
 });
@@ -103,16 +106,41 @@ test('guessing reuses one vision description and role feedback or edits come fro
   assert.match(guide,/换颜色/);
   assert.match(guide,/chatAPI/);
   assert.match(functionSource('dgGenerateRoleDrawing'),/mode==='photo'.*visionAPI/s);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/regions/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/backgroundRect/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/发际线/);
+  assert.doesNotMatch(functionSource('dgSubmitGuess'),/aiStrokeIndex</);
+  assert.doesNotMatch(functionSource('dgRoleHint'),/aiStrokeIndex</);
+  assert.doesNotMatch(guide,/aiStrokeIndex</);
+  assert.match(guide,/if\(g\.mode!=='photo'\)g\.answer=/,'photo revisions must keep the player-authored room title');
 });
 
 test('mobile layout keeps the player below the canvas and all action buttons hittable',()=>{
   const render=functionSource('renderDrawGuess');
   assert.ok(render.indexOf('dg-canvas-shell')<render.indexOf('dg-person me'));
-  assert.match(render,/type="button" class="primary" onclick="dgGuideRole\(\)"/);
-  assert.match(html,/\.dg-person\.me\{margin-top:6px/);
+  assert.match(render,/>发送<\/button>/);
+  assert.match(render,/>发送修改<\/button>/);
+  assert.doesNotMatch(render,/<time id="dgtime"/);
+  assert.doesNotMatch(render,/av\(c\.avatar|av\(S\.me\.avatar/);
   assert.match(html,/\.dg-rolebar\{flex-wrap:wrap/);
   assert.match(html,/touch-action:manipulation/);
   assert.match(html,/\.dg-finish button\{min-width:0/);
+  assert.match(html,/-webkit-touch-callout:none/);
+  assert.match(html,/\.dg-person\.role \.dg-speech\{color:#4e84bd/);
+  assert.match(html,/\.dg-person\.me \.dg-speech\{[^}]*color:#d67d9f/);
+  assert.match(html,/\.dg-speech\{[^}]*background:#fff/);
+  assert.match(functionSource('dgMount'),/oncontextmenu/);
+  assert.match(functionSource('dgMount'),/onselectstart/);
+});
+
+test('free photo continuation has no guessing and the hall usage badge stays hidden',()=>{
+  const render=functionSource('renderDrawGuess'),tick=functionSource('usageTick'),next=functionSource('dgNewRound');
+  assert.match(render,/photo\?'我说你画':'你画我猜'/);
+  assert.match(render,/photo\?`<button[^`]+>发送<\/button>`/);
+  assert.doesNotMatch(render,/photo\?`[^`]*提交答案/s);
+  assert.match(tick,/cur\(\)\.p==='drawguess'\?'none':'block'/);
+  assert.match(next,/mode=_dg\.mode/);
+  assert.match(next,/dgBeginState\(cid,mode\)/);
 });
 
 test('invites and only genuine drawing-room dialogue survive into memory',()=>{
