@@ -26,6 +26,8 @@ function functionSource(name) {
 
 assert.match(source, /const CHAT_ROUTE_NAMES=\['路线一','路线二','路线三','路线四'\]/);
 assert.match(source, /data-chat-route="\$\{i\}"/);
+assert.match(source, /onclick="chatRouteQuickOpen\(\)"/);
+assert.match(source, /svgIc\('route',26,'#e6e6ee'\)/);
 assert.match(source, /每条路线独立保存接口地址、Key、模型、随机度和回复长度/);
 assert.match(source, /routes\[routeActive\]=chatRouteCopy\(S\.settings\.chat\)/);
 
@@ -44,8 +46,12 @@ const context = vm.createContext({
   document: { querySelectorAll: () => [] },
   save: () => { context.saved = (context.saved || 0) + 1; },
   toast: (text) => { context.toastText = text; },
+  openModal: (html) => { context.modalHtml = html; },
+  closeModal: () => { context.closed = (context.closed || 0) + 1; },
+  render: () => { context.rendered = (context.rendered || 0) + 1; },
+  esc: (text) => String(text ?? ""),
 });
-for (const name of ["chatRouteCopy", "chatRoutesInit", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch"]) {
+for (const name of ["chatRouteCopy", "chatRoutesInit", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch", "chatRouteQuickOpen", "chatRouteQuickSwitch"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -77,5 +83,18 @@ context.chatRouteSwitch(0);
 assert.equal(context.S.settings.chat.model, "model-one-edited", "clicking the active route must not restore stale values");
 assert.equal(fields.s_cmodel.value, "model-one-edited");
 assert.equal(context.saved, 3);
+
+context.S.settings.chatRoutes[2] = { base: "https://three.example/v1", key: "sk-three", model: "model-three", temp: 0.4, maxTokens: 700 };
+context.chatRouteQuickOpen();
+assert.match(context.modalHtml, /API/);
+assert.equal(context.chatRouteQuickSwitch(2), true);
+assert.equal(context.S.settings.chatRouteActive, 2);
+assert.equal(context.S.settings.chat.model, "model-three");
+assert.equal(context.closed, 1);
+assert.equal(context.rendered, 1);
+
+context.S.settings.chatRoutes[3] = { base: "", key: "", model: "" };
+assert.equal(context.chatRouteQuickSwitch(3), false, "blank quick routes must not replace a working route");
+assert.equal(context.S.settings.chatRouteActive, 2);
 
 console.log("api route tests passed");

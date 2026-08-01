@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='748'){
+if(window.__NORTH_SHELL_BUILD__!=='749'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -351,7 +351,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v748 · 恢复微信600版输入';
+const APP_VER='v749 · 游戏消息编辑与API路线快捷切换';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1320,7 +1320,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=748';
+  const url='sw.js?v=749';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1740,7 +1740,7 @@ function buildSystem(c,opt){
   if(_main&&c._lastCallEnded&&Date.now()-c._lastCallEnded.ts<45*60000){const lc=c._lastCallEnded;const dir=lc.dir==='incoming'?'那通最初是你主动打给'+S.me.name+'的。':'那通最初是'+S.me.name+'主动打给你的。';const endedBy=(lc.endedBy==='role'||lc.byAI)?'【是你主动挂断的，不是'+S.me.name+'挂的】。':'【是'+S.me.name+'挂断的，不是你挂的】。';const why=lc.reason==='wxlogin'?'你当时是为了登录'+S.me.name+'的微信才主动结束通话，重新打来时绝不能反过来怪ta挂你电话。':lc.reason==='remotecontrol'?'你当时是为了申请远程操控才主动结束通话，远控只能在电话挂断后开始。':'';s+='\n\n# 最近通话状态\n上一通'+(lc.kind==='video'?'视频':'语音')+'电话已经在 '+hm(lc.ts)+' 结束，现在没有正在通话。'+dir+endedBy+why+'如果ta现在说打电话/打视频，这是要重新开始一通，不要说已经在打了。';}
   const _off=S.offline&&S.offline[c.id],_offAll=_off&&_off.memory||[];
   if(_main&&_offAll.length)s+='\n\n# 线下约会的承接规则\n线下约会都是【已经发生过的过去式】。具体约会只能使用本轮已选中的一条相关记忆，绝不能再把线下记忆库里的同一场重复计为另一次约会。只有本轮相关记忆里出现了具体约会，或'+S.me.name+'主动提起时，才自然回味；不要把已结束的事当成正在进行去反复追问。微信里用普通文字聊天，别用旁白【】格式。';
-  if(_main){const _oh=offWechatHandoffPrompt(c,(_lastU&&msgToText(_lastU))||'');if(_oh)s+=_oh;}
+  if(_main){const _oh=offWechatHandoffPrompt(c,(_lastU&&msgToText(_lastU))||'');if(_oh)s+=_oh;const _gh=gameWechatHandoffPrompt(c,(_lastU&&msgToText(_lastU))||'');if(_gh)s+=_gh;}
   if(_main&&S.travel&&S.travel.trips){const mineT=S.travel.trips.filter(x=>x.cid===c.id&&x.status==='upcoming');const ups=mineT.filter(x=>x.meet!==false);const soloT=mineT.filter(x=>x.meet===false&&(x.payer==='ta'||x._seenByChar));
     if(ups.length)s+='\n\n# 你和'+S.me.name+'定好的出行·待约会（还没发生·你记着也期待）\n'+ups.map(tr=>{const dd=tvDays(tr.date);const w=dd==null?'':(dd>0?'（还有'+dd+'天）':dd===0?'（就是今天）':'（日子已到）');return '· '+tvMD(tr.date)+w+'，在「'+tr.to+'」见面（'+(tr.flier==='me'?S.me.name+'飞过来找你':'你飞过去找ta')+'）'+(tr.no?' · 航班'+tr.no:'');}).join('\n')+'\n这些是你俩【约好但还没到】的线下见面。你心里记着、可以自然提起、期待或叮嘱（路上小心、带什么、想不想见），别当成已经发生过的事、也别说自己没这回事。';
     if(soloT.length)s+='\n\n# '+S.me.name+'要独自去旅行（不是来见你，就是ta自己出去玩）\n'+soloT.map(tr=>{const dd=tvDays(tr.date);const w=dd==null?'':(dd>0?'（还有'+dd+'天）':dd===0?'（就是今天）':'（日子已到）');return '· '+tvMD(tr.date)+w+'，ta一个人去「'+tr.to+'」玩'+(tr.payer==='ta'?'（机票是你请客/你出的钱）':'');}).join('\n')+'\n这【不是来见你】、是ta自己去玩。你可以关心行程、叮嘱路上小心、撒娇想跟着、或吃醋ta一个人跑那么远，但别把它当成你俩要见面。';
@@ -2058,7 +2058,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=748').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=749').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -2898,6 +2898,7 @@ const ICONS={
   spyphone:'<rect x="6" y="3" width="12" height="18" rx="2.5"/><circle cx="11.5" cy="11" r="2.4"/><path d="M13.4 12.9 15.6 15"/>',
   card:'<rect x="3" y="6" width="18" height="12" rx="2.2"/><path d="M3 10h18M6.5 14.5h4"/>',
   dice:'<rect x="4" y="4" width="16" height="16" rx="3.2"/><path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01"/>',
+  route:'<path d="M5 7h12"/><path d="m14 4 3 3-3 3"/><path d="M19 17H7"/><path d="m10 14-3 3 3 3"/>',
   forward:'<path d="M13 5l7 7-7 7v-4.2C7 14.6 4 16.6 3.2 20 3.6 12.5 7.2 9.2 13 9.2z"/>',
   smile:'<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.6 11a6.4 6.4 0 0 0 12.8 0M12 17.4V21M8.6 21h6.8"/>',
@@ -3086,6 +3087,8 @@ function chatRouteCaptureForm(){const rs=chatRoutesInit(),i=S.settings.chatRoute
 function chatRouteFillForm(c){c=chatRouteCopy(c);[['s_cbase','base'],['s_ckey','key'],['s_cmodel','model'],['s_ctemp','temp'],['s_cmax','maxTokens']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=c[x[1]];});const out=$('#testC');if(out)out.textContent='';}
 function chatRouteRefreshUI(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;try{document.querySelectorAll('[data-chat-route]').forEach((btn,i)=>{const on=i===active;btn.style.background=on?'#07c160':'#24242a';btn.style.borderColor=on?'#07c160':'rgba(255,255,255,.1)';btn.style.color=on?'#fff':'#ddd';const sm=btn.querySelector('small');if(sm)sm.textContent=chatRouteSummary(rs[i]);});}catch(_){}}
 function chatRouteSwitch(i){chatRoutesInit();chatRouteCaptureForm();const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));S.settings.chatRouteActive=i;S.settings.chat=chatRouteCopy(rs[i]);chatRouteFillForm(S.settings.chat);save();chatRouteRefreshUI();toast('已切换到'+CHAT_ROUTE_NAMES[i]);}
+function chatRouteQuickOpen(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;openModal(`<h3>API 路线</h3><div class="hint">在微信里直接切换聊天接口。这里只切换已有路线，不会修改地址、Key 或模型。</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px">${rs.map((r,i)=>{const ready=!!(r.base&&r.key&&r.model),on=i===active;return `<button type="button" onclick="chatRouteQuickSwitch(${i})" style="min-width:0;border:1px solid ${on?'#74d8ef':ready?'rgba(255,255,255,.12)':'rgba(255,255,255,.06)'};border-radius:12px;padding:11px 10px;background:${on?'linear-gradient(145deg,rgba(38,115,139,.72),rgba(24,67,84,.72))':'#222328'};color:${ready?'#edf9fc':'#74777d'};text-align:left;cursor:pointer"><span style="display:flex;align-items:center;justify-content:space-between;gap:6px"><b style="font-size:13px">${CHAT_ROUTE_NAMES[i]}</b>${on?`<span style="font-size:10px;color:#bdeffa">使用中</span>`:''}</span><small style="display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`;}).join('')}</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
+function chatRouteQuickSwitch(i){const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));const r=rs[i];if(!(r&&r.base&&r.key&&r.model)){toast('这条路线还没配置，请先去设置填写');return false;}S.settings.chatRouteActive=i;S.settings.chat=chatRouteCopy(r);save();closeModal();render();toast('已切换到'+CHAT_ROUTE_NAMES[i]);return true;}
 function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive,a=S.settings.chat,v=S.settings.vision;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">设置</span><span class="r"></span></div>
   <div class="scroll" id="settingsscroll" style="padding:12px;background:#000">
@@ -5143,6 +5146,12 @@ const GAMES=[
   {k:'drama',e:'🎭',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境/开场白，然后我们一起把剧情演下去。开场吧～'},
   {k:'quick',e:'⚡',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始！'}
 ];
+function gameContextLimit(){return typeof offlineContextLimit==='function'?offlineContextLimit():Math.max(10,Math.min(80,+(S.settings&&S.settings.offHist)||30));}
+function gameHandoffWho(row,c){if(row.who==='me'||row.kind==='me')return S.me.name;if(row.kind==='sys'||row.who==='sys')return'游戏事件';return row.name||row.roleName||(c&&(c.remark||c.name))||'角色';}
+function gameSetHandoff(cid,title,rows){const c=getC(cid);if(!c)return false;rows=(rows||[]).filter(x=>x&&String(x.text||'').trim()&&x.kind!=='sys'&&x.who!=='sys');const limit=gameContextLimit(),picked=rows.slice(-limit).map((x,i)=>(i+1)+'. '+gameHandoffWho(x,c)+'：'+String(x.text||'').replace(/\s+/g,' ').trim().slice(0,700));if(!picked.length)return false;c._gameHandoff={ts:Date.now(),expiresAt:Date.now()+12*3600000,turns:3,title:String(title||'游戏').slice(0,80),count:picked.length,text:picked.join('\n')};save();return true;}
+function gameHandoffRecallQuery(text){text=String(text||'').replace(/\s+/g,'');return/(?:游戏|刚才那局|上一局|海龟汤|小黑屋|你说我猜|谁是卧底|真心话|默契考验|小剧场|快问快答).{0,18}(?:最后|刚才|说了什么|发生了什么|玩了什么|还记得)|还记得.{0,18}(?:游戏|那局|刚才玩)/.test(text);}
+function gameWechatHandoffPrompt(c,query){const h=c&&c._gameHandoff,explicit=gameHandoffRecallQuery(query),active=h&&h.turns>0&&Date.now()<=(h.expiresAt||0),recent=h&&Date.now()-(h.ts||0)<=30*86400000;if(!h||!h.text||(!active&&!(explicit&&recent)))return'';return '\n\n# 刚结束的游戏大厅上下文（微信隐藏承接·不属于长期记忆或对话总结）\n你和'+S.me.name+'刚结束「'+h.title+'」。下面是按现有上下文条数设置保留的最后 '+h.count+' 条真实游戏记录：\n'+h.text+'\n你已经参与并理解这局发生的内容。回到微信后只用普通微信文字自然承接；不要把游戏记录逐条复述，不要继续假装还在游戏房间，不要输出编号、旁白格式或系统提示，也不要把它写成新的长期记忆。'+(explicit?' 用户正在核对这局内容，只能依据上面的真实记录回答，记录没有的细节不要猜。':'');}
+function gameWechatHandoffConsume(c){const h=c&&c._gameHandoff;if(!h)return;h.turns=Math.max(0,(+h.turns||0)-1);save();}
 function openGames(){openModal(`<h3>游戏大厅</h3><div class="hint">单人邀请保留原玩法；海龟汤、你说我猜、谁是卧底、小剧场新增「多人房」入口，可邀请小手机真人好友。第一版先完整接通小剧场，其它先验证等待室。</div>
   ${GAMES.map(g=>`<div class="section"><div class="it"><span style="flex:1;cursor:pointer" onclick="pickGameChar('${g.k}')">${g.e} ${g.n}</span>${MIX_GAME_KEYS.indexOf(g.k)>=0?`<button class="minibtn" style="background:#243447;color:#fff" onclick="event.stopPropagation();openMixedGamePicker('${g.k}')">多人房</button>`:''}<span class="v" onclick="pickGameChar('${g.k}')">›</span></div></div>`).join('')}
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
@@ -5216,12 +5225,15 @@ function mgrAllReady(r){return !!(r&&r.readyMe&&(r.pfIds||[]).every(pid=>r.membe
 async function mgrBuildDrama(r){const ps=mgrPlayers(r),fallbackRoles=['误入后台的临时演员','掌握线索的旅店前台','嘴硬心软的委托人','偷偷改剧本的人','把气氛弄乱的路人'];let out={scene:'午夜的旧剧院忽然亮灯，所有人收到同一张没有署名的入场券。舞台上只剩一封信：今晚必须演完，门才会打开。',goal:'找到是谁改掉了结局，并把故事演到谢幕。',roles:{}};ps.forEach((p,i)=>out.roles[p.key]=fallbackRoles[i%fallbackRoles.length]);try{const raw=await chatAPI([{role:'system',content:'你是多人即兴小剧场的编剧。生成中文 JSON，不要解释。字段：scene 一段有画面感的开场，goal 一个共同目标，roles 对象，key 必须使用我给的玩家 key。roles 的每个值必须是短字符串，不要写对象。角色要有戏剧冲突但别太长。'},{role:'user',content:'玩家：\n'+ps.map(p=>p.key+' = '+p.name+'（'+p.kind+'）').join('\n')+'\n请生成适合手机聊天扮演的原创小剧场设定。'}],{max:600,aux:true});const m=(''+raw).match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);if(j&&j.scene&&j.roles)out={scene:String(j.scene).slice(0,220),goal:String(j.goal||out.goal).slice(0,140),roles:Object.assign(out.roles,j.roles||{})};}}catch(_){}return mgrNormalizeDrama(out);}
 async function mgrStart(id){const r=mgrRoom(id);if(!r||!r.host||r._starting)return;if(!mgrAllReady(r)){toast('要等所有真人好友都准备好');return;}r._starting=true;render();r.status='started';r.startedAt=Date.now();r.turnOrder=mgrBuildTurnOrder(r);r.turnIndex=0;r.drama=r.game==='drama'?await mgrBuildDrama(r):{scene:'房间已开始。',goal:'按规则完成这一局。',roles:{}};delete r._starting;if(r.game!=='drama')mgrSystem(r,'房间已开始，这个游戏的多人规则后续继续补全。');save();mgrBroadcast(r,Object.assign(mgrStatePayload(r),{type:'game_room_start',eid:uid()}));mgrRoomCue('start');render();if(r.game==='drama')setTimeout(()=>mgrRoleTurn(id),500);}
 function mgrSend(id){const r=mgrRoom(id);if(!r||r.status!=='started')return;const myKey=mgrLocalTurnKey(r),ta=$('#mgr_in'),text=(ta&&ta.value||'').trim();if(!text)return;if(ta)ta.value='';const msg={id:uid(),kind:'me',pid:phoneFriendId(),name:S.me.name,text,time:Date.now(),roleName:mgrDramaRole(r,myKey)};mgrAddRoomMsg(r,msg);save();if(r.host){mgrBroadcast(r,{type:'game_room_chat',eid:msg.id,playerId:msg.pid,playerKind:'me',playerName:msg.name,roleName:msg.roleName,text:msg.text,time:msg.time});if(r.game==='drama'){mgrAdvanceTurn(r);mgrBroadcastState(r);setTimeout(()=>mgrRoleTurn(id),500);}}else mgrSendPf(r.hostId,r,{type:'game_room_chat',eid:msg.id,playerId:msg.pid,playerKind:'pf',playerName:msg.name,roleName:msg.roleName,text:msg.text,time:msg.time});render();}
-async function mgrRoleTurn(id){const r=mgrRoom(id);if(!r||!r.host||r.busy||r.status!=='started'||r.game!=='drama')return;const key=mgrCurrentTurn(r);if(!key||key.indexOf('role:')!==0)return;const cid=key.slice(5),c=getC(cid);if(!c){mgrAdvanceTurn(r);mgrBroadcastState(r);return;}r.busy=true;save();render();const roleName=mgrDramaRole(r,key),hist=(r.msgs||[]).slice(-26).map(m=>(m.kind==='sys'?'系统':((m.roleName?m.roleName+'｜':'')+m.name))+'：'+m.text).join('\n');
+async function mgrRoleTurn(id){const r=mgrRoom(id);if(!r||!r.host||r.busy||r.status!=='started'||r.game!=='drama')return;const key=mgrCurrentTurn(r);if(!key||key.indexOf('role:')!==0)return;const cid=key.slice(5),c=getC(cid);if(!c){mgrAdvanceTurn(r);mgrBroadcastState(r);return;}r.busy=true;save();render();const roleName=mgrDramaRole(r,key),hist=(r.msgs||[]).slice(-gameContextLimit()).map(m=>(m.kind==='sys'?'系统':((m.roleName?m.roleName+'｜':'')+m.name))+'：'+m.text).join('\n');
   try{const sys=buildSystem(c,{worldbookScope:'games'})+'\n\n# 多人游戏房：即兴小剧场\n这是独立游戏房，不是微信日常聊天。你正在扮演系统分配给你的剧场身份：「'+roleName+'」。\n剧情开场：'+((r.drama&&r.drama.scene)||'')+'\n共同目标：'+((r.drama&&r.drama.goal)||'')+'\n真人好友是真人玩家，只能由他们自己发言；你绝对不要替真人说话、不要编他们的动作或台词。\n现在轮到你发言：只说你这个角色的一小段台词或动作，1到2句，有画面感，推动剧情，但别写旁白标题。';const out=cleanReply(await chatAPI([{role:'system',content:sys},{role:'user',content:'房间最近记录：\n'+hist+'\n接住上一句，轮到你。'}],{max:180,aux:c.model==='aux'}));if(out){const msg={id:uid(),kind:'role',pid:cid,name:c.remark||c.name,roleName,text:out,time:Date.now()};mgrAddRoomMsg(r,msg);mgrBroadcast(r,{type:'game_room_chat',eid:msg.id,playerId:cid,playerKind:'role',playerName:msg.name,roleName:msg.roleName,text:msg.text,time:msg.time});}}catch(e){mgrSystem(r,(c.remark||c.name)+'卡了一下，舞台灯光闪了闪。');}
   r.busy=false;mgrAdvanceTurn(r);mgrBroadcastState(r);save();if(cur().p==='mgroom'&&cur().id===id)render();setTimeout(()=>mgrRoleTurn(id),650);}
-function mgrQuit(){const r=cur().p==='mgroom'?mgrRoom(cur().id):null;if(r&&!r.host&&r._joined){mgrSendPf(r.hostId,r,{type:'game_room_leave',eid:uid(),playerId:phoneFriendId(),playerName:S.me.name,time:Date.now()});r._joined=false;save();}back();}
+function mgrQuit(){const r=cur().p==='mgroom'?mgrRoom(cur().id):null;if(r){(r.roleIds||[]).forEach(cid=>gameSetHandoff(cid,r.title||mgrGame(r.game).n,r.msgs||[]));if(!r.host&&r._joined){mgrSendPf(r.hostId,r,{type:'game_room_leave',eid:uid(),playerId:phoneFriendId(),playerName:S.me.name,time:Date.now()});r._joined=false;save();}}back();}
 setInterval(()=>{try{const c=cur();if(c&&c.p==='mgroom')phoneFriendMaybeSync(false);}catch(_){}},5000);
 function mgrSysHTML(t){t=''+(t||'');return `<div class="mgrsys"><span>${esc(t)}</span></div>`;}
+function mgrMsgMenu(id,mid){const r=mgrRoom(id),m=r&&(r.msgs||[]).find(x=>x.id===mid);if(!m||m.kind==='sys')return;openModal(`<h3>编辑 / 删除</h3><div class="hint">修改只影响你手机里这间游戏房的聊天记录。</div><div class="field"><textarea id="mgr_e" rows="3">${esc(m.text)}</textarea></div><div class="btns"><button class="btn d" onclick="mgrDelMsg('${id}','${mid}')">删除</button><button class="btn p" onclick="mgrEditMsg('${id}','${mid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function mgrEditMsg(id,mid){const r=mgrRoom(id),m=r&&(r.msgs||[]).find(x=>x.id===mid),v=(($('#mgr_e')||{}).value||'').trim();if(!m||m.kind==='sys'||!v)return;m.text=v;save();closeModal();render();}
+function mgrDelMsg(id,mid){const r=mgrRoom(id);if(!r)return;r.msgs=(r.msgs||[]).filter(x=>x.id!==mid||x.kind==='sys');save();closeModal();render();}
 function renderMGRoom(id){const r=mgrRoom(id);if(!r)return nav('游戏房间')+'<div class="scroll"><div class="empty">房间不存在</div></div>';const g=mgrGame(r.game),isDrama=r.game==='drama';
   const roleRows=(r.roleIds&&r.roleIds.length?r.roleIds.map(cid=>{const c=getC(cid),key=mgrPlayerKey('role',cid),nm=(c&&(c.remark||c.name))||cid;return `<div class="it">${c?av(c.avatar,'sm'):av('🙂','sm')}<span style="flex:1">${esc(nm)}${mgrDramaRole(r,key)?`<small style="display:block;color:#9aa2b5;margin-top:2px">饰：${esc(mgrDramaRole(r,key))}</small>`:''}</span><span class="v" style="color:#19a463">角色已入场</span></div>`;}):(r.roleNames||[]).map(n=>`<div class="it"><span style="flex:1">${esc(n)}</span><span class="v">虚拟角色</span></div>`)).join('')||'<div class="hint" style="padding:8px 14px">没有虚拟角色</div>';
   const pfRows=(r.pfIds&&r.pfIds.length?r.pfIds.map(pid=>{const m=r.members&&r.members[mgrPlayerKey('pf',pid)]||{},f=phoneFriendById(pid);return `<div class="it">${f?pfAvatarHTML(f,'sm'):av('🙂','sm')}<span style="flex:1">${esc(m.name||mgrPfName(pid))}</span><span class="v" style="color:${m.ready?'#19a463':'#999'}">${m.ready?'已准备':'等待准备'}</span></div>`;}):(r.pfNames||[]).map(n=>`<div class="it"><span style="flex:1">${esc(n)}</span><span class="v">真人玩家</span></div>`)).join('')||'<div class="hint" style="padding:8px 14px">没有小手机真人好友</div>';
@@ -5229,7 +5241,7 @@ function renderMGRoom(id){const r=mgrRoom(id);if(!r)return nav('游戏房间')+'
   const turn=mgrCurrentTurn(r),turnIsRole=turn&&turn.indexOf('role:')===0,turnText=turn?(turnIsRole?('角色回合：'+mgrMemberName(r,turn)+(mgrDramaRole(r,turn)?'（'+mgrDramaRole(r,turn)+'）':'')):('真人自由发言中，建议 '+mgrMemberName(r,turn)+' 接话')):'自由发言';
   const cast=(r.turnOrder||[]).map(k=>mgrMemberName(r,k)+(mgrDramaRole(r,k)?' 饰 '+mgrDramaRole(r,k):'')).join('；');
   const dramaCard=isDrama&&r.drama?`<div style="padding:10px 12px;background:#12151e;border-bottom:.5px solid #2a2e3c"><div style="border:1px solid #3d4866;background:linear-gradient(145deg,#151b28,#211a2d);border-radius:12px;padding:11px 12px;color:#dfe7ff"><div style="font-size:12px;color:#9db0d8;margin-bottom:5px">${svgIc('mask',13,'#9db0d8')} 小剧场设定</div><div style="font-size:13px;line-height:1.55">${esc(r.drama.scene||'')}</div>${r.drama.goal?`<div style="font-size:12px;color:#b8c0d4;margin-top:6px">目标：${esc(r.drama.goal)}</div>`:''}${cast?`<div style="font-size:12px;color:#9ea8c2;margin-top:6px;line-height:1.55">演员表：${esc(cast)}</div>`:''}<div style="font-size:12px;color:#ffb6d0;margin-top:6px">${esc(turnText)}</div></div></div>`:'';
-  const body=(r.msgs||[]).map(m=>m.kind==='sys'?mgrSysHTML(m.text):`<div class="msg ${m.kind==='me'?'me':'them'}"><div class="col"><div style="font-size:11px;color:#888;margin:0 0 2px 4px">${m.roleName?`<span style="color:#9ec5fe">${esc(m.roleName)}</span>｜`:''}${esc(m.name||'玩家')}</div><div class="bubble">${esc(m.text)}</div></div></div>`).join('')+(r.busy?mgrSysHTML('角色思考中…'):'');
+  const body=(r.msgs||[]).map(m=>m.kind==='sys'?mgrSysHTML(m.text):`<div class="msg ${m.kind==='me'?'me':'them'}" onclick="mgrMsgMenu('${id}','${m.id}')"><div class="col"><div style="font-size:11px;color:#888;margin:0 0 2px 4px">${m.roleName?`<span style="color:#9ec5fe">${esc(m.roleName)}</span>｜`:''}${esc(m.name||'玩家')}</div><div class="bubble">${esc(m.text)}</div></div></div>`).join('')+(r.busy?mgrSysHTML('角色思考中…'):'');
   return `<div class="nav"><span class="l" onclick="mgrQuit()">‹</span><span class="t">${esc(r.title||g.n)}</span><span class="r">${r.host?'房主':''}</span></div><div class="chatbg" id="mgrbg">${dramaCard}${body||'<div class="empty" style="padding:32px">游戏刚开始</div>'}</div>${isDrama?`<div class="inputbar"><textarea id="mgr_in" rows="1" placeholder="在小剧场里说一句…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();mgrSend('${id}')}"></textarea><button class="send" onclick="mgrSend('${id}')">发送</button></div>`:`<div class="inputbar" style="justify-content:center;color:#aaa;font-size:13px;padding:16px;text-align:center">这个游戏的多人专属规则后续接入；当前先验证邀请、准备和房间同步。</div>`}`;}
 /* ===== 单独游戏空间 ===== */
 let _gs=null;
@@ -5239,31 +5251,34 @@ function openGameSpace(kind,cid,intro,title){const c=getC(cid);if(!c)return;
   go('gs');gsTimer();gsKick();}
 function gsSystem(){const c=getC(_gs.cid);
   return buildSystem(c,{worldbookScope:'games'})+'\n\n# 现在你在和'+S.me.name+'玩游戏：'+_gs.title+'\n你们在一个【独立的小游戏空间】里玩，这不是日常微信聊天。\n- 用中文，轻松口语，沉浸在游戏里当好玩伴/主持人。\n- 游戏规则：'+_gs.intro+'\n- 别发[转账][红包][语音]这类卡片/标签，专心玩。\n- 当'+S.me.name+'说"游戏结束/不玩了/结束/退出"时，温柔地收个尾、道个别即可。';}
-function gsAbsorb(r){if(!_gs)return;splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(l)splitActions(l).forEach(p=>{if(p.trim())_gs.msgs.push({who:'ta',text:p.trim()});});});}
+function gsAbsorb(r){if(!_gs)return;splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(l)splitActions(l).forEach(p=>{if(p.trim())_gs.msgs.push({id:uid(),who:'ta',text:p.trim()});});});}
 async function gsKick(){if(!_gs)return;_gs.busy=true;gsRender();
   try{const r=await chatAPI([{role:'system',content:gsSystem()},{role:'user',content:'[游戏开始，请你作为主持人/玩伴先开场。]'}],{aux:true});if(!_gs)return;gsAbsorb(r);}
-  catch(e){if(_gs)_gs.msgs.push({who:'ta',text:'（信号好像不太好…再戳我一下？）'});}
+  catch(e){if(_gs)_gs.msgs.push({id:uid(),who:'ta',text:'（信号好像不太好…再戳我一下？）'});}
   if(_gs)_gs.busy=false;gsRender();}
 async function gsReply(){if(!_gs)return;_gs.busy=true;gsRender();
-  try{const hist=_gs.msgs.slice(-30).map(m=>({role:m.who==='me'?'user':'assistant',content:m.text}));
+  try{const hist=_gs.msgs.slice(-gameContextLimit()).map(m=>({role:m.who==='me'?'user':'assistant',content:m.text}));
     const r=await chatAPI([{role:'system',content:gsSystem()},...hist],{aux:true});if(!_gs)return;gsAbsorb(r);}
-  catch(e){if(_gs)_gs.msgs.push({who:'ta',text:'（…信号断了一下，再说一遍？）'});}
+  catch(e){if(_gs)_gs.msgs.push({id:uid(),who:'ta',text:'（…信号断了一下，再说一遍？）'});}
   if(_gs)_gs.busy=false;gsRender();}
 function gsSend(){if(!_gs||_gs.busy)return;const ta=$('#gs_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
-  _gs.msgs.push({who:'me',text:v});gsReply();}
-function gsDice(){if(!_gs||_gs.busy)return;const v=1+Math.floor(Math.random()*6);_gs.msgs.push({who:'me',text:'🎲 我掷出了 '+v+' 点'});gsReply();}
+  _gs.msgs.push({id:uid(),who:'me',text:v});gsReply();}
+function gsDice(){if(!_gs||_gs.busy)return;const v=1+Math.floor(Math.random()*6);_gs.msgs.push({id:uid(),who:'me',text:'🎲 我掷出了 '+v+' 点'});gsReply();}
+function gsMsgMenu(mid){if(!_gs)return;const m=(_gs.msgs||[]).find(x=>x.id===mid);if(!m)return;openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="gs_e" rows="3">${esc(m.text)}</textarea></div><div class="btns"><button class="btn d" onclick="gsDelMsg('${mid}')">删除</button><button class="btn p" onclick="gsEditMsg('${mid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function gsEditMsg(mid){if(!_gs)return;const m=(_gs.msgs||[]).find(x=>x.id===mid),v=(($('#gs_e')||{}).value||'').trim();if(!m||!v)return;m.text=v;closeModal();gsRender();}
+function gsDelMsg(mid){if(!_gs)return;_gs.msgs=(_gs.msgs||[]).filter(x=>x.id!==mid);closeModal();gsRender();}
 function gsFmt(){const t=Math.max(0,_gs?_gs.t:0);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
 function gsTimer(){if(!_gs)return;clearInterval(_gs._tm);const tm=setInterval(()=>{if(!_gs||cur().p!=='gs'){clearInterval(tm);return;}_gs.t--;const e=document.getElementById('gstime');if(e)e.textContent=gsFmt();if(_gs.t<=0){clearInterval(tm);toast('时间到啦～想继续玩也行，不玩就点结束');}},1000);_gs._tm=tm;}
 function gsRender(){if(cur().p==='gs')render();}
-function renderGS(){if(!_gs)return '';const c=getC(_gs.cid);
+function renderGS(){if(!_gs)return '';const c=getC(_gs.cid);(_gs.msgs||[]).forEach(m=>{if(!m.id)m.id=uid();});
   const body=_gs.msgs.map(m=>m.who==='me'
-    ?`<div class="msg me"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`
-    :`<div class="msg them">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`).join('')
+    ?`<div class="msg me" onclick="gsMsgMenu('${m.id}')"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`
+    :`<div class="msg them" onclick="gsMsgMenu('${m.id}')">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`).join('')
     +(_gs.busy?`<div class="msg them">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
   return `<div class="nav"><span class="l" onclick="gsQuit()">‹ 退出</span><span class="t">${esc(_gs.title)} <span id="gstime" style="color:#fa5151;font-size:13px">${gsFmt()}</span></span><span class="r" onclick="gsQuit()" style="color:#fa5151">结束</span></div>
     <div class="scroll" id="gsbg" style="background:#000">${body||'<div class="empty" style="padding:30px">开场中…</div>'}</div>
     <div class="inputbar"><button class="send" style="background:#3a3a3c;margin-right:6px" onclick="gsDice()" title="掷骰子"></button><textarea id="gs_in" rows="1" placeholder='说点什么…（🎲掷骰子；说"游戏结束"或点右上「结束」随时退出）' onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gsSend();}"></textarea><button class="send" onclick="gsSend()">发</button></div>`;}
-function gsQuit(){if(_gs)clearInterval(_gs._tm);_gs=null;home();}
+function gsQuit(){const g=_gs;if(g){clearInterval(g._tm);gameSetHandoff(g.cid,g.title,g.msgs);} _gs=null;home();}
 /* ===== 谁是卧底 ===== */
 let _uc=null;
 const UC_BOTS=['小鹿','阿白','团子','西西','阿七','麦麦','楠楠','糖糖','可可','豆豆'];
@@ -5296,7 +5311,7 @@ async function ucStart(){const sel=[...document.querySelectorAll('[data-uc].on')
   let bi=0;for(let i=0;i<nbots;i++)players.push({id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,bot:true,trait:traits[i%traits.length],alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});
   const N=players.length;
   const ridx=[...Array(N).keys()].sort(()=>Math.random()-.5).slice(0,U);ridx.forEach(i=>players[i].role='undercover');
-  _uc={players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null,_botDescDone:false};
+  _uc={cid,players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null,_botDescDone:false};
   go('uc');render();
   let pair=null;
   if(cat!=='ai'&&UC_WORDS[cat]){const list=UC_WORDS[cat];pair=list[Math.floor(Math.random()*list.length)];if(window._ucLast===pair.join()&&list.length>1){pair=list[(list.indexOf(pair)+1)%list.length];}window._ucLast=pair.join();if(Math.random()<.5)pair=[pair[1],pair[0]];}
@@ -5371,8 +5386,11 @@ function ucTally(){if(!_uc)return;const alive=ucAlive();const tally={};
 function ucNextRound(){if(!_uc)return;_uc.round++;_uc.players.forEach(p=>{p._said=false;p.desc='';p.vote=null;});
   _uc.order=_uc.players.map((p,i)=>i).filter(i=>_uc.players[i].alive).sort(()=>Math.random()-.5);
   _uc.turn=0;_uc.phase='desc';_uc.lastOut=null;_uc._botDescDone=false;render();ucStep();}
+function ucMsgMenu(pid){if(!_uc)return;const p=(_uc.players||[]).find(x=>x.id===pid);if(!p||!p.desc)return;openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="uc_e" rows="3">${esc(p.desc)}</textarea></div><div class="btns"><button class="btn d" onclick="ucDelMsg('${pid}')">删除</button><button class="btn p" onclick="ucEditMsg('${pid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function ucEditMsg(pid){if(!_uc)return;const p=(_uc.players||[]).find(x=>x.id===pid),v=(($('#uc_e')||{}).value||'').trim();if(!p||!v)return;p.desc=v.slice(0,80);closeModal();render();}
+function ucDelMsg(pid){if(!_uc)return;const p=(_uc.players||[]).find(x=>x.id===pid);if(!p)return;p.desc='';closeModal();render();}
 function ucPill(p){const me=_uc.players.find(x=>x.isMe);const dead=!p.alive;
-  return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:${dead?'#1a1a1c':'#202022'};opacity:${dead?'.55':'1'}">
+  return `<div ${p.desc?`onclick="ucMsgMenu('${p.id}')"`:''} style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:${dead?'#1a1a1c':'#202022'};opacity:${dead?'.55':'1'};${p.desc?'cursor:pointer':''}">
     ${av(p.avatar,'sm')}<div style="flex:1;min-width:0"><div style="font-weight:600;${dead?'text-decoration:line-through':''}">${esc(p.name)}${p.isMe?'（你）':''} ${dead?'<span style="color:#fa5151">'+(p.role==='undercover'?'🕵️卧底':'🙂平民')+' 出局</span>':''}</div>
     ${p.desc?`<div style="font-size:13px;color:#bbb;margin-top:2px">「${esc(p.desc)}」</div>`:'<div style="font-size:12px;color:#666;margin-top:2px">…</div>'}</div></div>`;}
 function renderUC(){if(!_uc)return '';const me=_uc.players.find(p=>p.isMe);
@@ -5409,9 +5427,10 @@ function renderUC(){if(!_uc)return '';const me=_uc.players.find(p=>p.isMe);
     <div class="scroll" style="background:#000">${wordBox}
       <div style="display:flex;flex-direction:column;gap:6px;padding:0 10px">${_uc.players.map(ucPill).join('')}</div>
       <div style="margin-top:6px">${panel}</div><div style="height:20px"></div></div>`;}
-function ucReplay(){const lead=_uc.players.find(p=>!p.isMe&&p.id.indexOf('p_')===0);const cid=lead?lead.id.slice(2):(S.contacts.filter(c=>!c.deleted)[0]||{}).id;_uc=null;if(cid)ucConfig(cid);else home();}
+function ucSetHandoff(){if(!_uc)return;const rows=(_uc.players||[]).filter(p=>p.desc).map(p=>({who:p.isMe?'me':'ta',name:p.name,text:p.desc}));if(_uc.lastOut)rows.push({who:'sys',text:_uc.lastOut.name+'被票出局'});gameSetHandoff(_uc.cid,'谁是卧底',rows);}
+function ucReplay(){const lead=_uc.players.find(p=>!p.isMe&&p.id.indexOf('p_')===0);const cid=_uc.cid||(lead?lead.id.slice(2):(S.contacts.filter(c=>!c.deleted)[0]||{}).id);ucSetHandoff();_uc=null;if(cid)ucConfig(cid);else home();}
 function ucToggleWord(){if(!_uc)return;_uc.showWord=!_uc.showWord;render();}
-function ucQuit(){_uc=null;home();}
+function ucQuit(){ucSetHandoff();_uc=null;home();}
 /* ===== 通话记录（可删改）===== */
 let _clTab='all';
 let _callReplay=null,_callReplayExporting=false,_callReplayOutput=null;
@@ -6771,8 +6790,10 @@ function escStart(cid){const r=$('#esc_r').value.trim()||'屋里有线索，需�
   openGameSpace('escape',cid,'你来当游戏主持人（GM）：我被困在一间上锁的小黑屋，'+r+' 门一开就通关。你描述场景、根据我每一步行动推进剧情，只有我真正达成开门条件时才宣布「🔓门开了，通关！」，否则不能放我出去。先描述一下场景吧～','🚪 小黑屋');}
 /* ===== 你说我猜 ===== */
 let _wg=null;
-function startWG(cid){_wg={cid,round:1,score:{me:0,ta:0},phase:'idle',word:'',desc:'',guesses:[],t:0,showWord:false};go('wg');wgRound('ai');}
-async function wgRound(who){if(!_wg)return;const c=getC(_wg.cid);_wg.phase='loading';_wg.who=who;_wg.guesses=[];_wg.word='';_wg.desc='';wgRender();
+function wgCurrentRows(){if(!_wg)return[];const rows=[];if(_wg.desc)rows.push({who:'ta',name:(getC(_wg.cid)||{}).name||'角色',text:_wg.desc});if(_wg.myDesc)rows.push({who:'me',text:_wg.myDesc});(_wg.guesses||[]).forEach(g=>rows.push({who:g&&g.who==='ta'?'ta':'me',text:wgItemText(g)}));return rows;}
+function wgArchiveRound(){if(!_wg||!_wg.word)return;const rows=wgCurrentRows();if(!rows.length)return;_wg.history=(_wg.history||[]).concat(rows).slice(-160);}
+function startWG(cid){_wg={cid,round:1,score:{me:0,ta:0},phase:'idle',word:'',desc:'',myDesc:'',guesses:[],history:[],t:0,showWord:false};go('wg');wgRound('ai');}
+async function wgRound(who){if(!_wg)return;wgArchiveRound();const c=getC(_wg.cid);_wg.phase='loading';_wg.who=who;_wg.guesses=[];_wg.word='';_wg.desc='';_wg.myDesc='';wgRender();
   try{if(who==='ai'){const r=await chatAPI([{role:'system',content:'你在玩"你描述我猜词"。请你选一个常见、好描述的中文词语(2到4个字)，然后用一两句话描述它但绝对不能出现这个词或它包含的任何一个字。严格用格式：词语:::字数:::描述。只输出这一行。'},{role:'user',content:'出一个词来描述'}],{max:200});
     const p=(r||'').split(/:::|：：：/).map(x=>x.trim());_wg.word=p[0]||'苹果';_wg.len=_wg.word.length;_wg.desc=p[2]||p[1]||'一种东西';
   }else{const r=await chatAPI([{role:'system',content:'给我一个适合"描述猜词"游戏的常见中文词语(2到4个字)，只输出这个词，别的不要。'},{role:'user',content:'出一个词'}],{max:30});_wg.word=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,4)||'西瓜';_wg.len=_wg.word.length;}
@@ -6782,23 +6803,28 @@ async function wgRound(who){if(!_wg)return;const c=getC(_wg.cid);_wg.phase='load
 function wgRetry(){if(_wg)wgRound(_wg.who||'ai');}
 function wgStartTimer(sec){if(!_wg)return;clearInterval(_wg._tm);_wg.t=sec;const tm=setInterval(()=>{if(!_wg||cur().p!=='wg'){clearInterval(tm);return;}_wg.t--;const e=document.getElementById('wgtime');if(e)e.textContent=_wg.t+'s';if(_wg.t<=0){clearInterval(tm);wgTimeout();}},1000);_wg._tm=tm;}
 function wgTimeout(){if(!_wg)return;const c=getC(_wg.cid);if(_wg.who==='ai'){_wg.score.ta++;toast('超时，没猜出来！答案：'+_wg.word);}else{_wg.score.me++;toast('超时，ta没猜出来');}_wg.round++;wgRound(_wg.who==='ai'?'me':'ai');}
+function wgItemText(x){return typeof x==='string'?x:String(x&&x.text||'');}
+function wgItemId(x,i){return typeof x==='object'&&x&&x.id?x.id:'wg_'+i;}
+function wgMsgMenu(kind,id){if(!_wg)return;let text='';if(kind==='desc')text=_wg.desc||'';else if(kind==='mydesc')text=_wg.myDesc||'';else{const i=(_wg.guesses||[]).findIndex((x,n)=>wgItemId(x,n)===id);if(i>=0)text=wgItemText(_wg.guesses[i]);}if(!text)return;openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="wg_e" rows="3">${esc(text)}</textarea></div><div class="btns"><button class="btn d" onclick="wgDelMsg('${kind}','${id}')">删除</button><button class="btn p" onclick="wgEditMsg('${kind}','${id}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function wgEditMsg(kind,id){if(!_wg)return;const v=(($('#wg_e')||{}).value||'').trim();if(!v)return;if(kind==='desc')_wg.desc=v;else if(kind==='mydesc')_wg.myDesc=v;else{const i=(_wg.guesses||[]).findIndex((x,n)=>wgItemId(x,n)===id);if(i>=0)_wg.guesses[i]={id,who:_wg.guesses[i]&&_wg.guesses[i].who||'',text:v};}closeModal();wgRender();}
+function wgDelMsg(kind,id){if(!_wg)return;if(kind==='desc')_wg.desc='';else if(kind==='mydesc')_wg.myDesc='';else _wg.guesses=(_wg.guesses||[]).filter((x,n)=>wgItemId(x,n)!==id);closeModal();wgRender();}
 function renderWG(){if(!_wg)return '';const c=getC(_wg.cid);
   let mid='';
   if(_wg.phase==='loading')mid='<div class="empty" style="padding:40px">出题中…</div>';
   else if(_wg.phase==='error')mid=`<div class="empty" style="padding:36px;line-height:1.8">出题失败了😣<br>可能是网络或接口不稳<div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn p" style="max-width:120px" onclick="wgRetry()">重新出题</button><button class="btn g" style="max-width:120px" onclick="wgQuit()">退出</button></div></div>`;
-  else if(_wg.phase==='meGuess')mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">${esc(c?c.name:'ta')} 描述（${_wg.len}个字）</div><div style="font-size:17px;color:#eee;margin:10px 0;line-height:1.6">「${esc(_wg.desc)}」</div><div style="font-size:13px;color:#888">你来猜👇</div></div>${_wg.guesses.map(g=>`<div style="text-align:center;color:#aaa;font-size:14px">${esc(g)} ❌</div>`).join('')}`;
-  else if(_wg.phase==='meDesc'){const show=!!_wg.showWord;mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">轮到你描述这个词（${esc(c?c.name:'ta')}来猜）：</div><div onclick="wgToggleWord()" style="display:inline-block;min-width:120px;margin:10px 0;padding:10px 16px;border-radius:14px;background:#20242d;color:${show?'#ffd6e8':'#bfc6d2'};font-size:${show?'24':'18'}px;font-weight:800;letter-spacing:${show?'0':'4px'};cursor:pointer">${show?esc(_wg.word):'••••'}</div><div style="font-size:12px;color:#888">点词卡查看/隐藏，描述时别说出这个字～</div></div>${_wg.guesses.map(g=>`<div style="text-align:center;color:#9ec5fe;font-size:14px">ta猜：${esc(g)} <span onclick="wgJudge(true)" style="color:#2bd66a;cursor:pointer">对✓</span> <span onclick="wgJudge(false)" style="color:#fa5151;cursor:pointer">错✗</span></div>`).join('')}`;}
+  else if(_wg.phase==='meGuess')mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">${esc(c?c.name:'ta')} 描述（${_wg.len}个字）</div><div onclick="wgMsgMenu('desc','desc')" style="font-size:17px;color:#eee;margin:10px 0;line-height:1.6;cursor:pointer">「${esc(_wg.desc)}」</div><div style="font-size:13px;color:#888">你来猜👇</div></div>${_wg.guesses.map((g,i)=>`<div onclick="wgMsgMenu('guess','${wgItemId(g,i)}')" style="text-align:center;color:#aaa;font-size:14px;cursor:pointer">${esc(wgItemText(g))} ❌</div>`).join('')}`;
+  else if(_wg.phase==='meDesc'){const show=!!_wg.showWord;mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">轮到你描述这个词（${esc(c?c.name:'ta')}来猜）：</div><div onclick="wgToggleWord()" style="display:inline-block;min-width:120px;margin:10px 0;padding:10px 16px;border-radius:14px;background:#20242d;color:${show?'#ffd6e8':'#bfc6d2'};font-size:${show?'24':'18'}px;font-weight:800;letter-spacing:${show?'0':'4px'};cursor:pointer">${show?esc(_wg.word):'••••'}</div><div style="font-size:12px;color:#888">点词卡查看/隐藏，描述时别说出这个字～</div>${_wg.myDesc?`<div onclick="wgMsgMenu('mydesc','mydesc')" style="font-size:14px;color:#d9dce3;margin-top:10px;cursor:pointer">我描述：${esc(_wg.myDesc)}</div>`:''}</div>${_wg.guesses.map((g,i)=>`<div onclick="wgMsgMenu('guess','${wgItemId(g,i)}')" style="text-align:center;color:#9ec5fe;font-size:14px;cursor:pointer">ta猜：${esc(wgItemText(g))} <span onclick="event.stopPropagation();wgJudge(true)" style="color:#2bd66a;cursor:pointer">对✓</span> <span onclick="event.stopPropagation();wgJudge(false)" style="color:#fa5151;cursor:pointer">错✗</span></div>`).join('')}`;}
   return `<div class="nav"><span class="l" onclick="wgQuit()">‹</span><span class="t">🤐 你说我猜 <span id="wgtime" style="color:#fa5151">${_wg.t}s</span></span><span class="r">你${_wg.score.me}:${_wg.score.ta}ta</span></div>
     <div class="scroll" style="background:#000">${mid}</div>
     <div class="inputbar"><textarea id="wg_in" rows="1" placeholder="${_wg.phase==='meGuess'?'输入你猜的词…':_wg.phase==='meDesc'?'描述这个词…':'…'}"></textarea><button class="send" onclick="wgInput()">${_wg.phase==='meGuess'?'猜':'发'}</button></div>`;}
 function wgRender(){if(cur().p==='wg')render();}
 function wgInput(){if(!_wg)return;const ta=$('#wg_in');const v=ta.value.trim();if(!v)return;ta.value='';
-  if(_wg.phase==='meGuess'){if(v===_wg.word||v.includes(_wg.word)){clearInterval(_wg._tm);_wg.score.me++;toast('猜对了！'+_wg.word);_wg.round++;wgRound('me');}else{_wg.guesses.push(v);wgRender();}}
+  if(_wg.phase==='meGuess'){if(v===_wg.word||v.includes(_wg.word)){clearInterval(_wg._tm);_wg.score.me++;toast('猜对了！'+_wg.word);_wg.round++;wgRound('me');}else{_wg.guesses.push({id:uid(),who:'me',text:v});wgRender();}}
   else if(_wg.phase==='meDesc'){wgAIGuess(v);}}
-async function wgAIGuess(myDesc){if(!_wg)return;try{const r=await chatAPI([{role:'system',content:'我们在玩猜词，对方描述一个'+_wg.len+'个字的词，你来猜，只回答你猜的那一个词，别的不要。'},{role:'user',content:'描述：'+myDesc}],{max:30});const g=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,6);_wg.guesses.push(g);wgRender();}catch(e){}}
+async function wgAIGuess(myDesc){if(!_wg)return;_wg.myDesc=myDesc;wgRender();try{const r=await chatAPI([{role:'system',content:'我们在玩猜词，对方描述一个'+_wg.len+'个字的词，你来猜，只回答你猜的那一个词，别的不要。'},{role:'user',content:'描述：'+myDesc}],{max:30});const g=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,6);_wg.guesses.push({id:uid(),who:'ta',text:g});wgRender();}catch(e){}}
 function wgJudge(ok){if(!_wg)return;clearInterval(_wg._tm);if(ok){_wg.score.ta++;toast('ta猜对啦🎉');}else{toast('那继续描述呗～');wgStartTimer(_wg.t>0?_wg.t:30);return;}_wg.round++;wgRound('ai');}
 function wgToggleWord(){if(!_wg)return;_wg.showWord=!_wg.showWord;wgRender();}
-function wgQuit(){const cid=_wg&&_wg.cid;if(_wg){clearInterval(_wg._tm);}_wg=null;if(cid&&getC(cid))openChat(cid);else home();}
+function wgQuit(){const cid=_wg&&_wg.cid;if(_wg){clearInterval(_wg._tm);wgArchiveRound();gameSetHandoff(cid,'你说我猜',_wg.history||[]);}_wg=null;if(cid&&getC(cid))openChat(cid);else home();}
 let _couTab=1;
 function couTab(n){_couTab=n;const p1=$('#coupage1'),p2=$('#coupage2'),t1=$('#coutab1'),t2=$('#coutab2');if(!p1||!p2)return;
   p1.style.display=n===2?'none':'block';p2.style.display=n===2?'block':'none';
@@ -7712,7 +7738,7 @@ function clearContactMemoryData(c,id){const now=Date.now();c._memoryResetAt=now;
   Object.keys(S.messages||{}).forEach(k=>{if(!contactMemoryThreadKey(k,id))return;(S.messages[k]||[]).forEach(clearVoiceAudio);delete S.messages[k];});
   c.memory=[];c.summaries=[];c.grudges=[];c._lifeNotesClearedAt=now;
   ['summary','tasks','taskHist','_accountMemory','_memoryMeta','_memoryConflicts','_memoryLastPick','_sumCount','_summaryCursorV2','_dialogueEmotion','_jailHandoff','gamesPlayed','wxLoginHistory','remoteControlHistory','suspicion','_spyKnowledge','_loginCode','_lastCallEnded','_gotFromMe','_pushedToMe','_initiative','_initiativeLast','_distressCallAt','_affGain','_affAt','emotionTailUntil','emotionTailReason','_altReportAt','_recoveredAt','_deleteDur','_recoverCount','_friendReqRetry','_blockedAt','_readdedAt','_readdKnown','_blockDur','_friendMeta'].forEach(k=>delete c[k]);
-  delete c._offlineHandoff;
+  delete c._offlineHandoff;delete c._gameHandoff;
   c.mood='';c.moodVal=70;c.moodAt=now;c.coldUntil=0;c._esc={stage:0};
   if(S.offline&&S.offline[id])delete S.offline[id];if(S.offlineFocus&&(S.offlineFocus===id||S.offlineFocus.cid===id))S.offlineFocus=null;
   if(S.music&&S.music.chat)S.music.chat=S.music.chat.filter(m=>m.cid!==id);
@@ -8025,7 +8051,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="cSpyGrant('${id}')"><div class="b">${svgIc('spyphone',26,'#e6e6ee')}</div><span>授权查手机</span></div>
       <div class="it" onclick="cNamecard('${id}')"><div class="b">${svgIc('idcard',26,'#e6e6ee')}</div><span>名片</span></div>
       <div class="it" onclick="cFamily('${id}')"><div class="b">${svgIc('card',26,'#e6e6ee')}</div><span>亲属卡</span></div>
-      <div class="it" onclick="cDice('${id}')"><div class="b">${svgIc('dice',26,'#e6e6ee')}</div><span>骰子</span></div>
+      <div class="it" onclick="chatRouteQuickOpen()"><div class="b">${svgIc('route',26,'#e6e6ee')}</div><span>API路线</span></div>
       <div class="it" onclick="enterSelect('${id}')"><div class="b">${svgIc('forward',26,'#e6e6ee')}</div><span>多选转发</span></div>
     </div>`}
     </div>
@@ -9291,7 +9317,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     if(_hlPlan&&got){hlRecord(c,_hlPlan,content);save();}
     if(got)relationshipCommit(c,_relIntent,content);
     if(got)suspicionOnAssistantReply(c);
-    if(got)offWechatHandoffConsume(c);delivered=got;
+    if(got)offWechatHandoffConsume(c);if(got)gameWechatHandoffConsume(c);delivered=got;
     if(_idleNote){idleDiag(got?'AI回复已生成':'AI回复为空');idleDebugPatch({aiStatus:'已调用',aiResult:got?'已生成角色消息':'AI回复为空',aiFinishedAt:Date.now(),blockedBy:got?'':'AI回复为空'});}
   }catch(e){if(typingEl)typingEl.remove();if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)return;
     if(_idleNote){const em=((e&&e.message)||'未知错误').slice(0,160);idleDiag('AI回复失败：'+em.slice(0,60));idleDebugPatch({aiStatus:'调用失败',aiResult:'未生成',aiError:em,aiErrorKind:idleErrorKind(em),blockedBy:idleErrorKind(em),aiFinishedAt:Date.now()});}
@@ -9456,7 +9482,7 @@ function editMemory(id){const c=getC(id),list=memoryList(c);
     <div class="hint">这里保存长期记忆。聊天时只会取当前话题真正相关的少量内容，不会把全部旧事硬塞进回复。</div>
     <div class="field"><textarea id="mem_new" rows="2" placeholder="手动添加一条记忆…"></textarea></div>
     <button class="btn p" style="margin-bottom:12px" onclick="memoryManualAdd('${id}',$('#mem_new').value.trim())">添加</button>
-    ${list.length?list.map((m,i)=>`<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1">${esc(memoryText(m))}</div><div style="white-space:nowrap"><span onclick="editMemItem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="memoryDeleteAt('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join(''):'<div class="empty">还没有记忆</div>'}
+    ${list.length?list.map((m,i)=>`<div class="bill" style="border-radius:8px;margin-bottom:8px"><div style="flex:1">${esc(memoryText(m))}</div><div style="display:flex;align-items:center;gap:12px;white-space:nowrap;margin-left:12px"><button type="button" aria-label="编辑记忆" onclick="editMemItem('${id}',${i})" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(84,160,255,.28);background:rgba(84,160,255,.1);color:#6eb2ff;cursor:pointer;font-size:18px">✎</button><button type="button" aria-label="删除记忆" onclick="memoryDeleteAt('${id}',${i})" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(250,81,81,.28);background:rgba(250,81,81,.09);color:#ff7474;cursor:pointer;font-size:18px">✕</button></div></div>`).join(''):'<div class="empty">还没有记忆</div>'}
     <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 function editMemItem(id,i){const c=getC(id),list=memoryList(c);openModal(`<h3>编辑记忆</h3><div class="field"><textarea id="mi_t" rows="3">${esc(memoryText(list[i]))}</textarea></div>
   <div class="btns"><button class="btn g" onclick="editMemory('${id}')">返回</button><button class="btn p" onclick="memoryEditAt('${id}',${i},$('#mi_t').value.trim())">保存</button></div>`);}
@@ -9515,7 +9541,7 @@ function editSummary(id){const c=getC(id),o=S.offline&&S.offline[id]||{};c.summa
     <div class="it"><span>当前 ${c.summaries.length} 条</span><span class="v"><button class="minibtn" onclick="(function(){var cc=getC('${id}');pruneSummaries(cc);save();editSummary('${id}');toast('已清理低星记忆');})()">立即清理低星</button></span></div></div>
   <div class="field"><textarea id="sm_new" rows="2" placeholder="手动加一条概要…"></textarea></div>
   <button class="btn p" style="margin-bottom:12px" onclick="(function(){var v=$('#sm_new').value.trim();if(v){getC('${id}').summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:v,imp:3});save();editSummary('${id}');}})()">添加</button>
-  ${c.summaries.length?c.summaries.slice().reverse().map((x,ri)=>{const i=c.summaries.length-1-ri,oh=x&&x.offlineId&&(o.history||[]).find(h=>offHistoryHasMemory(h,x.offlineId)&&h.msgs&&h.msgs.length),head=oh&&offHistoryMemoryIds(oh)[0]===x.offlineId,clean=summaryCleanText(c,x.text),body=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#8f9fb2">${oh?'查看这条约会重点':'查看这条总结'}（${Array.from(clean).length}字）</summary><div style="padding-top:6px;white-space:pre-wrap">${esc(clean)}</div></details>`;return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1;min-width:0"><small style="color:#888">${esc(x.time)}　<span onclick="sumSetImp('${id}',${i})" style="color:#f5b301;cursor:pointer" title="点击改重要度">${stars(x.imp)}</span></small>${body}${head?`<button class="minibtn" style="margin-top:7px" onclick="offRetrySummary('${id}','${oh.id}')">重新总结这场约会</button>`:''}</div><div style="white-space:nowrap"><span onclick="editSumItem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="getC('${id}').summaries.splice(${i},1);save();editSummary('${id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;}).join(''):'<div class="empty">还没有总结</div>'}
+  ${c.summaries.length?c.summaries.slice().reverse().map((x,ri)=>{const i=c.summaries.length-1-ri,oh=x&&x.offlineId&&(o.history||[]).find(h=>offHistoryHasMemory(h,x.offlineId)&&h.msgs&&h.msgs.length),head=oh&&offHistoryMemoryIds(oh)[0]===x.offlineId,clean=summaryCleanText(c,x.text),body=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#8f9fb2">${oh?'查看这条约会重点':'查看这条总结'}（${Array.from(clean).length}字）</summary><div style="padding-top:6px;white-space:pre-wrap">${esc(clean)}</div></details>`;return `<div class="bill" style="border-radius:8px;margin-bottom:8px"><div style="flex:1;min-width:0"><small style="color:#888">${esc(x.time)}　<span onclick="sumSetImp('${id}',${i})" style="color:#f5b301;cursor:pointer" title="点击改重要度">${stars(x.imp)}</span></small>${body}${head?`<button class="minibtn" style="margin-top:7px" onclick="offRetrySummary('${id}','${oh.id}')">重新总结这场约会</button>`:''}</div><div style="display:flex;align-items:center;gap:12px;white-space:nowrap;margin-left:12px"><button type="button" aria-label="编辑对话总结" onclick="editSumItem('${id}',${i})" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(84,160,255,.28);background:rgba(84,160,255,.1);color:#6eb2ff;cursor:pointer;font-size:18px">✎</button><button type="button" aria-label="删除对话总结" onclick="getC('${id}').summaries.splice(${i},1);save();editSummary('${id}')" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(250,81,81,.28);background:rgba(250,81,81,.09);color:#ff7474;cursor:pointer;font-size:18px">✕</button></div></div>`;}).join(''):'<div class="empty">还没有总结</div>'}
   <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 function sumSetImp(id,i){const c=getC(id);const x=c.summaries&&c.summaries[i];if(!x)return;const v=prompt('这条记忆的重要度（1-5，5最珍贵·永久保留）：',x.imp||3);if(v==null)return;const n=Math.max(1,Math.min(5,parseInt(v,10)||3));x.imp=n;if(x.offlineId){const o=S.offline&&S.offline[id],m=o&&(o.memory||[]).find(v=>v&&typeof v==='object'&&v.id===x.offlineId);if(m)m.imp=n;}saveNow();editSummary(id);}
 function summaryEditAt(id,i,text){const c=getC(id),x=c&&c.summaries&&c.summaries[i];if(!x)return;const v=(''+(text||'')).replace(/\s+/g,' ').trim();if(!v){toast('内容为空，未保存');return;}x.text=summaryCleanText(c,v);x.ts=Date.now();x.time=x.time||sumStamp();saveNow();editSummary(id);toast('概要已保存');}
