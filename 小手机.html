@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='771';</script>
+<script>window.__NORTH_SHELL_BUILD__='772';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-771';
+  var key='north-sw-reloaded-772';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=771';
+  var url='sw.js?v=772';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -897,7 +897,7 @@ body{min-height:0}
 .dg-hintbar{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 10px;border-top:1px solid rgba(67,57,52,.09);background:#f8f4ed}.dg-hintbar input{width:min(58%,380px);min-width:0;height:34px;padding:0 12px;border:1px solid #d8cdc3;border-radius:13px;outline:0;background:#fff;color:#3d3938;font-size:11px;text-align:center}.dg-hintbar button{height:34px;flex:none;padding:0 10px;border:1px solid #d8cdc3;border-radius:12px;background:#fff;color:#756c67;font-size:9px;touch-action:manipulation}.dg-hintbar button.primary{border-color:#bd7b89;background:#bd7b89;color:#fff}.dg-hintbar button:disabled{opacity:.42}
 .dg-tools-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 0 6px}.dg-tools-head span{color:#8a817c;font-size:9px}.dg-tools-head button{height:32px;min-width:82px;padding:0 18px;border:1px solid #bd7b89;border-radius:12px;background:#bd7b89;color:#fff;font-size:10px;font-weight:700;touch-action:manipulation}.dg-tools-head+.dg-palette{padding-top:0}
 .dg-setupbar{flex-wrap:wrap}.dg-setupbar small{flex:0 0 100%;color:#9a8f88;font-size:9px;text-align:center}
-.dg-ai-palette{position:absolute;right:9px;top:10px;z-index:5;display:grid;grid-template-columns:repeat(5,12px);gap:5px;padding:7px 8px;border:1px solid rgba(96,80,71,.12);border-radius:14px;background:rgba(255,252,247,.9);box-shadow:0 6px 18px rgba(75,58,49,.1);pointer-events:none}.dg-ai-swatch{width:12px;height:12px;border:2px solid rgba(255,255,255,.9);border-radius:50%;background:var(--c);box-shadow:0 0 0 1px rgba(50,42,38,.16);transition:transform .18s,box-shadow .18s}.dg-ai-swatch.on{transform:scale(1.34);box-shadow:0 0 0 2px rgba(77,64,58,.48)}.dg-ai-brush{--brush-color:#29282b;position:absolute;left:89%;top:14%;z-index:7;width:34px;height:8px;border-radius:7px;background:linear-gradient(90deg,#70503e 0 60%,#c8a56f 61% 78%,var(--brush-color) 79%);box-shadow:0 2px 5px rgba(56,42,34,.25);transform:translate(-9px,-4px) rotate(-34deg);transform-origin:80% 50%;transition:left .1s linear,top .1s linear,transform .18s ease;pointer-events:none}.dg-ai-brush:after{content:"";position:absolute;right:-7px;top:1px;border-left:8px solid var(--brush-color);border-top:3px solid transparent;border-bottom:3px solid transparent}.dg-ai-brush.dipping{transform:translate(-9px,-4px) rotate(-58deg) scale(.92);transition:left .48s cubic-bezier(.2,.75,.2,1),top .48s cubic-bezier(.2,.75,.2,1),transform .22s ease}.dg-ai-brush.rest{opacity:0;transition:opacity .3s}.dg-busy~.dg-ai-brush{opacity:.72}
+.dg-ai-palette{position:absolute;right:9px;top:10px;z-index:5;display:grid;grid-template-columns:repeat(5,12px);gap:5px;padding:7px 8px;border:1px solid rgba(96,80,71,.12);border-radius:14px;background:rgba(255,252,247,.9);box-shadow:0 6px 18px rgba(75,58,49,.1);pointer-events:none}.dg-ai-swatch{width:12px;height:12px;border:2px solid rgba(255,255,255,.9);border-radius:50%;background:var(--c);box-shadow:0 0 0 1px rgba(50,42,38,.16);transition:transform .18s,box-shadow .18s}.dg-ai-swatch.on{transform:scale(1.2);box-shadow:0 0 0 3px #77746f,0 0 0 5px rgba(255,255,255,.88)}.dg-ai-brush{--brush-color:#29282b;position:absolute;left:89%;top:14%;z-index:7;width:34px;height:8px;border-radius:7px;background:linear-gradient(90deg,var(--brush-color) 0 21%,#c8a56f 22% 39%,#70503e 40%);box-shadow:0 2px 5px rgba(56,42,34,.25);transform:translate(8px,-4px) rotate(-34deg);transform-origin:20% 50%;transition:left .1s linear,top .1s linear,transform .18s ease;pointer-events:none}.dg-ai-brush:after{content:"";position:absolute;left:-7px;top:1px;border-right:8px solid var(--brush-color);border-top:3px solid transparent;border-bottom:3px solid transparent}.dg-ai-brush.dipping{transform:translate(8px,-4px) rotate(-58deg) scale(.92);transition:left .4s cubic-bezier(.2,.75,.2,1),top .4s cubic-bezier(.2,.75,.2,1),transform .2s ease}.dg-ai-brush.rest{opacity:0;transition:opacity .3s}.dg-busy~.dg-ai-brush{opacity:.72}
 </style>
 <style>
 .lmview{background-color:#06101a;background-image:radial-gradient(circle at 53% 43%,rgba(35,76,108,.2),transparent 29%),linear-gradient(rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(rgba(116,158,194,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.02) 1px,transparent 1px)!important;background-size:auto,40px 40px,40px 40px,160px 160px,160px 160px!important}.lmview:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 0 42%,rgba(126,185,236,.05) 50%,transparent 58%);mix-blend-mode:screen}.lmzones path{fill:rgba(72,107,137,.055);stroke:rgba(154,190,222,.18);stroke-width:1.1;vector-effect:non-scaling-stroke}.lmroutes path{fill:none;stroke:url(#lmRoute);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:9 15;vector-effect:non-scaling-stroke}.lmregionnames text{fill:rgba(191,216,235,.28);font:700 10px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:1.7px;text-anchor:middle}.lmmeridians path{stroke:rgba(150,188,222,.065)!important}.lmlands path{fill:rgba(72,107,137,.035)!important;stroke:rgba(154,190,222,.08)!important;filter:none!important}.lmcity i{background:#a6c0d7;box-shadow:0 0 0 3px rgba(166,192,215,.1),0 0 12px rgba(116,178,232,.2)}.lmtrail{border-color:rgba(148,197,239,.38);background:linear-gradient(145deg,rgba(9,21,34,.93),rgba(14,24,36,.84));box-shadow:0 12px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05)}.lmtrail i{background:linear-gradient(145deg,#f2f6fb,#a8c7e7);color:#0b1722}.lmfootrow>i{background:linear-gradient(145deg,rgba(112,163,209,.24),rgba(63,99,132,.12));color:#c8e1f5}
@@ -960,9 +960,9 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=771" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=771" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=771" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=771"></script>
+<script src="license-gate.js?v=772" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=772" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=772" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=772"></script>
 </body>
 </html>

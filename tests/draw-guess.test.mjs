@@ -70,8 +70,8 @@ test('canvas controls and durable gallery saving do not depend on the mounted ca
 });
 
 test('role drawing is recognizable vector work and animates at human pace without per-stroke API calls',()=>{
-  const context=vm.createContext({Math});
-  for(const name of ['dgLine','dgEllipse','dgRotEllipse','dgRect','dgHumanizePlan','dgFallbackPlan','dgNormalizePlan'])vm.runInContext(functionSource(name),context);
+  const context=vm.createContext({Math,DG_COLORS:['#29282b','#7b6358','#d76576','#e99055','#e4bd4f','#70a878','#4f98ba','#6577b3','#8e69a5','#d68eaa']});
+  for(const name of ['dgLine','dgEllipse','dgRotEllipse','dgRect','dgHumanizePlan','dgFallbackPlan','dgPaletteColor','dgNormalizePlan'])vm.runInContext(functionSource(name),context);
   const tree=context.dgFallbackPlan('大树');
   assert.ok(tree.length>=18,'tree fallback needs trunk outlines, branches, crown clusters and ground details');
   assert.ok(tree.every(s=>s.width>=6&&s.points.length>=2));
@@ -89,11 +89,25 @@ test('role drawing is recognizable vector work and animates at human pace withou
   assert.match(generated,/dgReferencePlan\(g\.answer\)/,'common subjects use a recognizable local reference when available');
   assert.match(functionSource('dgNormalizePlan'),/broad\?32:20/,'hair and clothing fill strokes can cover an area');
   assert.match(animate,/drawMs/);
-  assert.match(animate,/420\+/,'there is a visible human pause between strokes');
+  assert.match(animate,/360\+/,'there is a visible human pause between strokes');
   assert.match(animate,/requestAnimationFrame/);
-  assert.match(animate,/dgBrushDip/,'TA visibly visits its palette before drawing a stroke');
+  assert.match(animate,/g\._brushColor!==brushColor&&dgBrushDip/,'TA visits its palette only when the drawing color changes');
   assert.match(animate,/dgBrushFollow/,'the on-screen brush follows every rendered stroke');
+  assert.equal(context.dgPaletteColor('#2a292c'),'#29282b');
+  assert.equal(context.dgPaletteColor('#d990aa'),'#d68eaa');
+  assert.equal(context.dgNormalizePlan({strokes:Array.from({length:8},(_,i)=>({color:'#d990aa',width:13,points:[[10+i,20],[30+i,40]]}))},'cat')[0].color,'#d68eaa');
   assert.doesNotMatch(animate,/chatAPI|visionAPI|imageAPI/,'animation must never call an API for each stroke');
+});
+
+test('role-picked topics are remembered and repeated choices are retried',()=>{
+  const generate=functionSource('dgGenerateRoleDrawing');
+  assert.match(functionSource('dgUsedTopics'),/recentTopics/);
+  assert.match(functionSource('dgUsedTopics'),/drawGuessMemory/);
+  assert.match(functionSource('dgUsedTopics'),/gallery/);
+  assert.match(generate,/usedTopics=dgUsedTopics\(c\)/);
+  assert.match(generate,/dgTopicRepeated\(candidate,usedTopics\)/);
+  assert.match(generate,/retryRequest/);
+  assert.match(generate,/dgRememberTopic\(g\.answer\)/);
 });
 
 test('role dialogue uses the same game context and never fabricates player speech',()=>{
@@ -207,18 +221,24 @@ test('configured role drawing uses one generated image and reveals it without vi
   const reveal=functionSource('dgRevealPlan');
   const animate=functionSource('dgAnimateNext');
   const snapshot=functionSource('dgSnapshotData');
-  assert.match(generate,/g\.mode==='role'&&dgImageConfigured\(\)/);
+  assert.match(generate,/precisionArt=dgImageConfigured\(\).*g\.mode==='role'.*g\.mode==='photo'&&!g\.background/s);
+  assert.match(generate,/max:precisionArt\?700:6500/,'fine art skips the slow coordinate-planning response');
+  assert.match(generate,/artPromise=precisionArt&&g\.mode==='photo'&&!g\.background/,'blank free-mode art generation starts in parallel with its metadata call');
+  assert.ok(generate.indexOf('artPromise=')<generate.indexOf('const raw=await chatAPI'));
   assert.match(generate,/await dgGenerateArt\(g\.answer,g\.instruction\)/);
   assert.match(generate,/g\.plan=dgRevealPlan\(\)/);
   assert.doesNotMatch(generate,/g\.mode==='role'.*visionAPI/);
   assert.match(art,/source:'draw_guess'/);
   assert.match(art,/imageGenerateExternal/);
+  assert.match(art,/Never give it rabbit ears/);
   assert.doesNotMatch(art,/visionAPI/);
   assert.match(reveal,/reveal:true/);
   assert.match(animate,/s\.reveal/);
   assert.doesNotMatch(animate,/imageGenerateExternal|aiRelay|visionAPI/);
   assert.match(snapshot,/g\.generatedArt/);
   assert.match(snapshot,/filter\(s=>!s\.reveal\)/);
+  assert.match(html,/\.dg-ai-swatch\.on\{[^}]*#77746f/);
+  assert.match(html,/\.dg-ai-brush:after\{[^}]*left:-7px[^}]*border-right:8px/);
 });
 
 test('game hall drawing draft reopens the mode chooser directly',()=>{
