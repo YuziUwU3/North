@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const context = vm.createContext({ ttsUseRelay: () => false, ttsCfg: () => ({}), DEFAULT_TTS_VOICE: "male-qn-qingse" });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "ttsLanguageBoost", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
+for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "voiceRate", "voicePitch", "voiceApiPitch", "voicePauseSeconds", "ttsSentencePauseText", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "ttsLanguageBoost", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
@@ -127,6 +127,10 @@ assert.equal(context.ttsVoiceProfile("Come here.", { cue: "亲亲" }, minimax28)
 assert.equal(context.ttsVoiceProfile("I miss you.", { cue: "warm" }, minimax28).emotion, undefined);
 assert.equal(JSON.stringify({ emotion: context.ttsVoiceProfile("I miss you.", { cue: "warm" }, minimax28).emotion }), "{}");
 assert.equal(JSON.parse(JSON.stringify({ emotion: context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax28).emotion })).emotion, "angry");
+const tunedProfile = context.ttsVoiceProfile("Slow down.", {}, minimax28, { rate: 0.6, pitch: 0.5 });
+assert.equal(tunedProfile.speed, 0.6);
+assert.equal(tunedProfile.pitch, -12);
+assert.match(context.ttsSentencePauseText("One. Two.", { pause: 1 }), /One\. …+ Two\./);
 for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted", "whisper", "kiss"]) {
   const profile = context.ttsVoiceProfile("Keep my voice.", { cue }, minimax28);
   assert.equal(profile.pitch, 0, `${cue} changed pitch`);
@@ -204,7 +208,8 @@ assert.match(source, /function callPaceRate\(\)/);
 assert.doesNotMatch(source, /s\.playbackRate\.value=callPaceRate\(\)/);
 assert.doesNotMatch(source, /u\.rate=\(\+v\.rate\|\|1\)\*vp\.speed\*callPaceRate\(\)/);
 assert.match(source, /u\.rate=\(\+v\.rate\|\|1\)\*vp\.speed/);
-assert.match(source, /await sleep\(callPaceMs\(360,220\)\)/);
+assert.match(source, /hasNextSpoken&&voicePauseMs\(c\)>0/);
+assert.match(source, /await sleep\(voicePauseMs\(c\)\)/);
 assert.match(source, /if\(video\)content=ensureVideoCallAction\(content,_callCueTag\)/);
 assert.match(source, /function phReleaseSimSub\(callId,line\)/);
 assert.doesNotMatch(source, /preT=setTimeout|off<0/, "call subtitles must never race ahead from request time");
