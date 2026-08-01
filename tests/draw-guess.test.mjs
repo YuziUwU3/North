@@ -35,7 +35,7 @@ test('game hall exposes the advanced draw-and-guess room',()=>{
 });
 
 test('setup has free topics, role-picked topics and a separate photo continuation mode',()=>{
-  const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew'),begin=functionSource('dgBeginState'),render=functionSource('renderDrawGuess');
+  const setup=functionSource('dgOpenSetup'),start=functionSource('dgStartNew'),begin=functionSource('dgBeginState'),prepared=functionSource('dgStartPrepared'),render=functionSource('renderDrawGuess');
   assert.doesNotMatch(setup,/id="dg_topic"/,'the title must not live outside the room');
   assert.match(setup,/我来画/);
   assert.match(setup,/TA 来画/);
@@ -47,6 +47,8 @@ test('setup has free topics, role-picked topics and a separate photo continuatio
   assert.match(render,/id="dg_room_title"/);
   assert.match(render,/dgUploadRoleBase\(\)/);
   assert.match(render,/dgStartPrepared\(\)/);
+  assert.doesNotMatch(prepared,/mode==='photo'&&!g\.background/,'free mode must also start on a blank canvas');
+  assert.match(prepared,/mode==='photo'&&!g\.answer/,'free mode still needs the player-authored title');
 });
 
 test('canvas controls and durable gallery saving do not depend on the mounted canvas',()=>{
@@ -71,10 +73,12 @@ test('role drawing is recognizable vector work and animates at human pace withou
   assert.ok(tree.length>=18,'tree fallback needs trunk outlines, branches, crown clusters and ground details');
   assert.ok(tree.every(s=>s.width>=6&&s.points.length>=2));
   const generated=functionSource('dgGenerateRoleDrawing'),animate=functionSource('dgAnimateNext');
-  assert.match(generated,/物体必须结构完整/);
+  assert.match(generated,/结构完整/);
   assert.match(generated,/不要从固定词库随机抽/);
   assert.match(generated,/根据你和.*真实相处/);
   assert.match(generated,/finishSpeech/,'finish dialogue is generated in the same planning call');
+  assert.match(generated,/主轮廓线宽14到22/);
+  assert.match(functionSource('dgNormalizePlan'),/Math\.max\(7,Math\.min\(30/);
   assert.match(animate,/drawMs/);
   assert.match(animate,/360\+/,'there is a visible human pause between strokes');
   assert.match(animate,/requestAnimationFrame/);
@@ -93,33 +97,46 @@ test('role dialogue uses the same game context and never fabricates player speec
   assert.doesNotMatch(functionSource('dgSubmitGuess'),/还不是|不对，再|差一点/);
 });
 
-test('guessing reuses one vision description and role feedback or edits come from the model',()=>{
+test('vision is limited to player drawings or free mode and failures stay invisible',()=>{
   const ask=app.slice(app.indexOf('async function dgAskRoleGuess'),app.indexOf('function dgHintRole')),guide=functionSource('dgGuideRole');
   assert.match(functionSource('dgTimeUp'),/dgFinishDrawing/);
   assert.match(functionSource('dgTimeUp'),/phase='done'/);
   assert.match(ask,/if\(!g\.visionDesc\)/);
   assert.match(ask,/visionAPI/);
   assert.match(ask,/chatAPI/);
+  assert.match(ask,/真实答案是/,'vision failure silently gives the answer to the role');
+  assert.match(ask,/guess=visionFallback\?String\(g\.answer/,'the silent fallback must actually submit the known answer');
+  assert.doesNotMatch(ask,/toast\(/,'vision failure must never surface a failure toast');
+  assert.doesNotMatch(ask,/识图失败/,'the player must not be told that vision failed');
   assert.match(functionSource('dgSubmitGuess'),/chatAPI/);
+  assert.doesNotMatch(functionSource('dgSubmitGuess'),/visionAPI/,'the role already knows its own drawing answer');
   assert.match(functionSource('dgRoleHint'),/chatAPI/);
   assert.match(guide,/action.*append或replace/);
   assert.match(guide,/换颜色/);
   assert.match(guide,/chatAPI/);
-  assert.match(functionSource('dgGenerateRoleDrawing'),/mode==='photo'.*visionAPI/s);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/mode==='photo'&&g\.background.*visionAPI/s);
   assert.match(functionSource('dgGenerateRoleDrawing'),/regions/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/landmarks/);
   assert.match(functionSource('dgGenerateRoleDrawing'),/backgroundRect/);
   assert.match(functionSource('dgGenerateRoleDrawing'),/发际线/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/不能漂浮、错位/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/当前没有上传底图/);
   assert.doesNotMatch(functionSource('dgSubmitGuess'),/aiStrokeIndex</);
   assert.doesNotMatch(functionSource('dgRoleHint'),/aiStrokeIndex</);
   assert.doesNotMatch(guide,/aiStrokeIndex</);
-  assert.match(guide,/if\(g\.mode!=='photo'\)g\.answer=/,'photo revisions must keep the player-authored room title');
+  assert.match(guide,/g\.mode!=='photo'/,'editing is exclusive to free mode');
+  assert.doesNotMatch(guide,/g\.answer=/,'free-mode revisions must keep the player-authored room title');
 });
 
-test('mobile layout keeps the player below the canvas and all action buttons hittable',()=>{
-  const render=functionSource('renderDrawGuess');
+test('mobile layout keeps the player below the canvas and separates normal guessing from free editing',()=>{
+  const render=functionSource('renderDrawGuess'),hint=functionSource('dgHintRole'),busyCss=html.slice(html.lastIndexOf('.dg-busy{'),html.indexOf('}',html.lastIndexOf('.dg-busy{'))+1);
   assert.ok(render.indexOf('dg-canvas-shell')<render.indexOf('dg-person me'));
   assert.match(render,/>发送<\/button>/);
-  assert.match(render,/>发送修改<\/button>/);
+  assert.doesNotMatch(render,/>发送修改<\/button>/);
+  assert.doesNotMatch(render,/>发送答案<\/button>/);
+  assert.match(render,/id="dg_hint_input"/);
+  assert.match(render,/dgSendHint\(\)/);
+  assert.doesNotMatch(hint,/openModal/,'player hints must stay inline');
   assert.doesNotMatch(render,/<time id="dgtime"/);
   assert.doesNotMatch(render,/av\(c\.avatar|av\(S\.me\.avatar/);
   assert.match(html,/\.dg-rolebar\{flex-wrap:wrap/);
@@ -129,6 +146,11 @@ test('mobile layout keeps the player below the canvas and all action buttons hit
   assert.match(html,/\.dg-person\.role \.dg-speech\{color:#4e84bd/);
   assert.match(html,/\.dg-person\.me \.dg-speech\{[^}]*color:#d67d9f/);
   assert.match(html,/\.dg-speech\{[^}]*background:#fff/);
+  assert.match(busyCss,/left:12px/);
+  assert.match(busyCss,/top:12px/);
+  assert.match(busyCss,/inset:auto/);
+  assert.match(busyCss,/backdrop-filter:none/);
+  assert.match(html,/\.dg-hintbar\{/);
   assert.match(functionSource('dgMount'),/oncontextmenu/);
   assert.match(functionSource('dgMount'),/onselectstart/);
 });
@@ -138,6 +160,7 @@ test('free photo continuation has no guessing and the hall usage badge stays hid
   assert.match(render,/photo\?'我说你画':'你画我猜'/);
   assert.match(render,/photo\?`<button[^`]+>发送<\/button>`/);
   assert.doesNotMatch(render,/photo\?`[^`]*提交答案/s);
+  assert.match(render,/busyText=.*正在识图并构思.*正在构思.*正在识图/);
   assert.match(tick,/cur\(\)\.p==='drawguess'\?'none':'block'/);
   assert.match(next,/mode=_dg\.mode/);
   assert.match(next,/dgBeginState\(cid,mode\)/);
