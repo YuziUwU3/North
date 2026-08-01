@@ -1151,6 +1151,83 @@ async function externalFishTTS(body: Record<string, unknown>) {
   return { audio: `data:${type};base64,${arrayBufferToBase64(ab)}`, model, voice_id: voiceId };
 }
 
+function mosslandApiBase(raw: unknown) {
+  const input = String(raw || "https://api.mosi.cn/v1").trim();
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch (_) {
+    throw new Error("invalid-mossland-base-url");
+  }
+  if (url.protocol !== "https:" || url.hostname.toLowerCase() !== "api.mosi.cn") {
+    throw new Error("invalid-mossland-base-url");
+  }
+  let path = url.pathname.replace(/\/+$/, "");
+  path = path.replace(/\/audio\/(?:speech|voices)$/i, "");
+  if (!/\/v1$/i.test(path)) path = (path || "") + "/v1";
+  return url.origin + path;
+}
+
+async function externalMosslandVoices(body: Record<string, unknown>) {
+  const base = mosslandApiBase(body.base);
+  const key = String(body.key || "").trim();
+  if (!key) throw new Error("missing-mossland-key");
+  const r = await fetch(base + "/audio/voices?limit=200", {
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  const data = await r.json().catch(() => null);
+  if (!r.ok) {
+    const detail = String(data?.error?.message || data?.message || "").slice(0, 180);
+    throw new Error(`mossland-voices-http-${r.status}${detail ? `: ${detail}` : ""}`);
+  }
+  const rows = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+  const voices = rows.map((voice: any) => ({
+    id: String(voice?.id || "").trim(),
+    name: String(voice?.name || voice?.id || "").trim(),
+  })).filter((voice: { id: string }) => voice.id);
+  return { voices };
+}
+
+async function externalMosslandTTS(body: Record<string, unknown>) {
+  const base = mosslandApiBase(body.base);
+  const key = String(body.key || "").trim();
+  const text = String(body.text || "").trim();
+  const voiceId = String(body.voice_id || "").trim();
+  const model = String(body.model || "moss-tts").trim() || "moss-tts";
+  if (!key) throw new Error("missing-mossland-key");
+  if (!voiceId) throw new Error("missing-mossland-voice");
+  if (!text) throw new Error("missing-tts-text");
+  if ([...text].length > 300) throw new Error("tts-text-too-long");
+  const r = await fetch(base + "/audio/speech", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model,
+      input: text,
+      voice_id: voiceId,
+      response_format: "mp3",
+      delivery_method: "audio",
+    }),
+  });
+  if (!r.ok) {
+    const detail = await r.text().catch(() => "");
+    throw new Error(`mossland-tts-http-${r.status}: ${detail.slice(0, 180)}`);
+  }
+  const type = r.headers.get("Content-Type") || "audio/mpeg";
+  if (/json/i.test(type)) {
+    const data = await r.json().catch(() => null);
+    const audio = data?.audio || data?.audio_file || data?.audio_url || data?.url;
+    if (!audio) throw new Error("mossland-no-audio");
+    return { audio, model, voice_id: voiceId };
+  }
+  const ab = await r.arrayBuffer();
+  if (!ab.byteLength) throw new Error("mossland-no-audio");
+  return { audio: `data:${type};base64,${arrayBufferToBase64(ab)}`, model, voice_id: voiceId };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -1961,8 +2038,12 @@ Deno.serve(async (req) => {
 
     if (action === "external_tts") {
       const provider = String(body.provider || "").toLowerCase();
-      if (provider !== "fish") throw new Error("unsupported-external-tts-provider");
-      const data = await externalFishTTS(body);
+      let data;
+      if (provider === "fish") data = await externalFishTTS(body);
+      else if (provider === "mossland") data = body.operation === "list_voices"
+        ? await externalMosslandVoices(body)
+        : await externalMosslandTTS(body);
+      else throw new Error("unsupported-external-tts-provider");
       return json({ ok: true, data });
     }
 
