@@ -116,6 +116,24 @@ test('role drawing is recognizable vector work and animates at human pace withou
   assert.doesNotMatch(animate,/chatAPI|visionAPI|imageAPI/,'animation must never call an API for each stroke');
 });
 
+test('fast line planning keeps the detailed hand-drawn finish',()=>{
+  const generate=functionSource('dgGenerateRoleDrawing'),guide=functionSource('dgGuideRole');
+  assert.match(app,/DG_LINE_MAX=3600/,'line JSON has a firm shorter response budget');
+  assert.match(generate,/28\u523048\u7b14/,'new line drawings keep enough strokes for recognizable structure');
+  assert.match(generate,/3\u52308\u4e2a\u70b9/,'the model sends compact anchors instead of dense repeated coordinates');
+  assert.match(generate,/\u672c\u5730\u753b\u7b14\u4f1a\u6839\u636e\u951a\u70b9\u81ea\u52a8\u5706\u6ed1/,'local rendering owns smoothing and human wobble');
+  assert.ok((generate.match(/max:precisionArt\?700:DG_LINE_MAX/g)||[]).length>=2,'initial and retry planning share the fast line budget');
+  assert.match(generate,/max:DG_LINE_MAX,temp:\.52/,'image fallback also uses compact line planning');
+  assert.match(guide,/24\u523044\u7b14/,'free-mode revisions use the compact plan too');
+  assert.match(guide,/max:DG_LINE_MAX/);
+  const context=vm.createContext({Math});
+  vm.runInContext(functionSource('dgHumanizePlan'),context);
+  const anchors=[{part:'outline',color:'#29282b',width:15,points:[[120,520],[250,220],[500,140],[750,220],[880,520]]}];
+  const finished=context.dgHumanizePlan(anchors)[0];
+  assert.equal(finished.width,15,'compact planning does not thin the chosen brush');
+  assert.ok(finished.points.length>anchors[0].points.length*5,'local smoothing restores dense natural playback points');
+});
+
 test('role-picked topics are remembered and repeated choices are retried',()=>{
   const generate=functionSource('dgGenerateRoleDrawing');
   assert.match(functionSource('dgUsedTopics'),/recentTopics/);
@@ -253,7 +271,7 @@ test('configured role drawing uses one generated image and reveals it without vi
   const animate=functionSource('dgAnimateNext');
   const snapshot=functionSource('dgSnapshotData');
   assert.match(generate,/precisionArt=dgImageConfigured\(\).*g\.mode==='role'.*g\.mode==='photo'/s);
-  assert.match(generate,/max:precisionArt\?700:6500/,'fine art skips the slow coordinate-planning response');
+  assert.match(generate,/max:precisionArt\?700:DG_LINE_MAX/,'fine art skips coordinate planning while line mode uses the compact budget');
   assert.match(generate,/artPromise=precisionArt&&g\.mode==='photo'/,'blank free-mode art generation starts in parallel with its metadata call');
   assert.ok(generate.indexOf('artPromise=')<generate.indexOf('const raw=await chatAPI'));
   assert.match(generate,/await dgGenerateArt\(g\.answer,g\.instruction\)/);
