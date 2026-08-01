@@ -56,6 +56,21 @@ test('setup has free topics, role-picked topics and a blank-canvas free mode',()
   assert.match(prepared,/mode==='photo'&&!g\.answer/,'free mode still needs the player-authored title');
 });
 
+test('drawing creation style is selectable without leaking the secret category',()=>{
+  const setup=functionSource('dgOpenSetup'),begin=functionSource('dgBeginState'),render=functionSource('renderDrawGuess');
+  assert.match(setup,/data-dg-art-style="fine"/);
+  assert.match(setup,/data-dg-art-style="line"/);
+  assert.match(setup,/v759/,'the legacy line-by-line style stays selectable');
+  assert.match(begin,/artStyle:dgArtStyle\(\)/,'each new round snapshots the selected creation style');
+  assert.match(functionSource('dgSerializable'),/artStyle:/,'drafts preserve the selected creation style');
+  assert.match(functionSource('dgImageConfigured'),/_dg&&_dg\.artStyle==='line'/,'line mode must bypass image generation even when configured');
+  assert.doesNotMatch(render,/_dg\.category\?/,'the secret-title row must not leak the category hint');
+  assert.doesNotMatch(app,/\u6b63\u5728\u751f\u6210\u7cbe\u7ec6\u753b\u4f5c/,'fine generation must use the neutral creating status');
+  assert.ok((app.match(/\u6b63\u5728\u521b\u4f5c/g)||[]).length>=2,'all fine-art generation phases say only creating');
+  assert.match(html,/\.dg-art-style\{/);
+  assert.match(html,/\.dg-art-style button\.on\{/);
+});
+
 test('canvas controls and durable gallery saving do not depend on the mounted canvas',()=>{
   const render=functionSource('renderDrawGuess'),archive=functionSource('dgArchive');
   assert.match(render,/相册底图/,'the player may still place a personal reference under their own drawing');
