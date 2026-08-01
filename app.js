@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='776'){
+if(window.__NORTH_SHELL_BUILD__!=='777'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v776 · 音乐首页与迷你播放';
+const APP_VER='v777 · 游戏大厅模型切换';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -873,7 +873,9 @@ async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new E
 function joinAIContinuation(first,more){first=''+(first||'');more=''+(more||'');if(!first)return more.trim();if(!more)return first.trim();const a=first.replace(/\s+$/,''),b=more.replace(/^\s+/,'');let overlap=0,max=Math.min(60,a.length,b.length);for(let n=max;n>=2;n--){if(a.slice(-n)===b.slice(0,n)){overlap=n;break;}}return(a+b.slice(overlap)).trim();}
 async function chatResultText(messages,opt,data){const ch=data&&data.choices&&data.choices[0],text=(ch&&ch.message&&ch.message.content||'').trim(),reason=''+(ch&&ch.finish_reason||'');if(opt.complete&&text&&/length|max_tokens/i.test(reason)){const follow=await chatAPI([...messages,{role:'assistant',content:text},{role:'user',content:'[系统：你刚才因为输出长度上限，最后一句被截断了。请从断掉的位置直接接着写完，只补全没说完的内容；不要重头重复，不要解释原因。]'}],Object.assign({},opt,{complete:false,max:Math.max(400,Math.min(900,+opt.max||600))}));return joinAIContinuation(text,follow);}return text;}
 function chatRouteSessionPage(){try{return ['off','rp','gs','mgroom','uc','wg','dread','tale'].includes(cur().p);}catch(_){return false;}}
-async function chatAPI(messages,opt){opt=opt||{};if(chatRouteSessionPage())opt.aux=false;let a=S.settings.chat;
+function gameModelSessionPage(){try{return ['gameshub','gs','drawguess','mgroom','uc','wg'].includes(cur().p);}catch(_){return false;}}
+function gameModelUseAux(){return !!(S.settings&&S.settings.gameUseAux);}
+async function chatAPI(messages,opt){opt=opt||{};if(gameModelSessionPage())opt.aux=gameModelUseAux();else if(chatRouteSessionPage())opt.aux=false;let a=S.settings.chat;
   if(aiCoreOn()&&!opt.noRelay){const d=await aiRelay('chat',{messages,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,model:opt.model||''});return chatResultText(messages,opt,d.data);}
   if(opt.aux&&S.settings.aux&&S.settings.aux.model){const x=S.settings.aux;a={base:x.base||a.base,key:x.key||a.key,model:x.model,temp:a.temp,maxTokens:a.maxTokens};}
   if(!a.base||!a.key)throw new Error('还没设置聊天 API（去 设置→API）');
@@ -1360,7 +1362,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=776';
+  const url='sw.js?v=777';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -5178,8 +5180,9 @@ function gameWechatHandoffPrompt(c,query){const h=c&&c._gameHandoff,explicit=gam
 function gameWechatHandoffConsume(c){const h=c&&c._gameHandoff;if(!h)return;h.turns=Math.max(0,(+h.turns||0)-1);save();}
 function gameLineIcon(k){const paths={drawguess:'<path d="M5 17.5 14.8 7.7l2.5 2.5L7.5 20H5v-2.5Z"/><path d="m13.7 8.8 1.7-1.7a1.8 1.8 0 0 1 2.5 0l.9.9a1.8 1.8 0 0 1 0 2.5l-1.7 1.7"/><path d="M4 5.5h6M4 9h3"/>',soup:'<path d="M4 10h16c0 5-3.2 8-8 8s-8-3-8-8Z"/><path d="M8 6c0-1 1-1.3 1-2.3M12 6c0-1 1-1.3 1-2.3M16 6c0-1 1-1.3 1-2.3"/>',escape:'<path d="M6 3h12v18H6z"/><path d="M10 7h8v10h-8z"/><circle cx="15" cy="12" r=".8"/>',wordguess:'<path d="M4 5h16v11H9l-5 4V5Z"/><path d="M8 9h8M8 12h5"/>',undercover:'<path d="M7 9c1-4 9-4 10 0M5 10h14"/><path d="M8 14c1.3 2 2.5 3 4 3s2.7-1 4-3"/><circle cx="9" cy="12.5" r="1"/><circle cx="15" cy="12.5" r="1"/>',tod:'<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8" cy="8" r="1"/><circle cx="16" cy="8" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/>',quiz:'<path d="M9.4 9a2.8 2.8 0 1 1 4.5 2.2c-1.2.9-1.9 1.4-1.9 2.8"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="9"/>',drama:'<path d="M5 5c3 0 5 1 7 3v10c-2-2-4-3-7-3V5Z"/><path d="M19 5c-3 0-5 1-7 3v10c2-2 4-3 7-3V5Z"/>',quick:'<path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/>'};return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[k]||paths.quiz}</svg>`;}
 function openGames(){closeModal();if(cur().p==='gameshub')render();else go('gameshub');}
+function gameModelToggle(){S.settings=S.settings||{};S.settings.gameUseAux=!gameModelUseAux();save();render();if(S.settings.gameUseAux&&!(S.settings.aux&&S.settings.aux.model))toast('已选副模型，但还没配置副模型，暂时仍会使用主模型');else toast(S.settings.gameUseAux?'游戏大厅已切换到副模型':'游戏大厅已切换到主模型');}
 function gameHubSettings(){openModal(`<h3>游戏设置</h3><div class="hint">上下文按完整回合保留，只影响需要文字对话的游戏。</div><div class="section"><div class="it"><span style="flex:1">游戏上下文回合数</span><input id="game_hist" type="number" min="2" max="100" step="1" value="${gameContextRounds()}" style="width:68px;text-align:center;border:1px solid #444;border-radius:8px;padding:6px;background:#202024;color:#fff"></div></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="gameContextSave();closeModal()">保存</button></div>`);}
-function renderGameHub(){const drafts=gsDraftList(),dd=dgDraftList();return `<div class="gamehub"><div class="nav gamehub-nav"><span class="l" onclick="home()">‹</span><span class="t">游戏大厅<small>GAME STUDIO</small></span><span class="r" onclick="gameHubSettings()">设置</span></div><div class="gamehub-scroll">
+function renderGameHub(){const drafts=gsDraftList(),dd=dgDraftList(),aux=gameModelUseAux();return `<div class="gamehub"><div class="nav gamehub-nav"><span class="l" onclick="home()">‹</span><span class="t">游戏大厅<small>GAME STUDIO</small></span><span class="r gamehub-actions"><button type="button" class="gamehub-model ${aux?'aux':''}" onclick="gameModelToggle()" title="切换游戏回复模型" aria-label="切换游戏回复模型，当前${aux?'副模型':'主模型'}">${svgIc('route',13,aux?'#d9c4f1':'#cbd4df')}<b>${aux?'副模型':'主模型'}</b></button><button type="button" class="gamehub-settings" onclick="gameHubSettings()">设置</button></span></div><div class="gamehub-scroll">
   <section class="gamehub-hero"><div><small>PLAY TOGETHER</small><h2>选一场游戏</h2><p>邀请角色进入独立游戏空间。第一版优先保证保存、退出和记忆稳定。</p></div><i>${gameLineIcon('drawguess')}</i></section>
   ${(drafts.length||dd.length)?`<div class="gamehub-title"><b>继续游戏</b><span>点开可继续画布或重新选模式</span></div><div class="gamehub-drafts">${dd.map((d,i)=>{const c=getC(d.cid);return `<button onclick="dgOpenSetup('${d.cid}')"><i>${gameLineIcon('drawguess')}</i><span><b>继续画作</b><small>${esc((c&&(c.remark||c.name))||'角色')} · 可继续或重新选择</small></span></button>`;}).join('')}${drafts.map((d,i)=>`<button onclick="gsResumeDraft(${i})"><i>${gameLineIcon(d.kind)}</i><span><b>${esc(d.title||'未结束的游戏')}</b><small>${esc(((getC(d.cid)||{}).remark||(getC(d.cid)||{}).name||'角色'))} · ${(d.msgs||[]).length} 条记录</small></span></button>`).join('')}</div>`:''}
   <div class="gamehub-title"><b>全部游戏</b><span>点按后选择搭档</span></div><div class="gamehub-grid">${GAMES.map(g=>`<article class="gamehub-card ${g.k==='drawguess'?'featured':''}" onclick="pickGameChar('${g.k}')"><i>${gameLineIcon(g.k)}</i><div><b>${esc(g.n)}</b><small>${esc(g.tag||(MIX_GAME_KEYS.indexOf(g.k)>=0?'支持单人 / 多人房':'单人游戏'))}</small></div>${MIX_GAME_KEYS.indexOf(g.k)>=0?`<button onclick="event.stopPropagation();openMixedGamePicker('${g.k}')">多人</button>`:'<span>›</span>'}</article>`).join('')}</div>
