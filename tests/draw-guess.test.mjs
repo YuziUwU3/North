@@ -144,7 +144,10 @@ test('mobile layout keeps the player below the canvas and separates normal guess
   assert.doesNotMatch(render,/>发送答案<\/button>/);
   assert.match(render,/id="dg_hint_input"/);
   assert.match(render,/dgSendHint\(\)/);
-  assert.match(render,/meDraw\?\(_dg\.visionDesc\?'正在猜':'正在识图'\):photo\?'正在构思':'正在回应'/);
+  assert.match(render,/busyText=_dg\.activity\|\|'正在处理'/);
+  assert.match(functionSource('dgSubmitGuess'),/activity='正在回应'/);
+  assert.match(functionSource('dgRoleHint'),/activity='正在回应'/);
+  assert.match(app.slice(app.indexOf('async function dgAskRoleGuess'),app.indexOf('function dgHintRole')),/activity=g\.visionDesc\?'正在猜':'正在识图'/);
   assert.doesNotMatch(hint,/openModal/,'player hints must stay inline');
   assert.doesNotMatch(render,/<time id="dgtime"/);
   assert.doesNotMatch(render,/av\(c\.avatar|av\(S\.me\.avatar/);
@@ -172,7 +175,7 @@ test('free photo continuation has no guessing and the hall usage badge stays hid
   assert.match(render,/photo\?'我说你画':'你画我猜'/);
   assert.match(render,/photo\?`<button[^`]+>发送<\/button>`/);
   assert.doesNotMatch(render,/photo\?`[^`]*提交答案/s);
-  assert.match(render,/busyText=.*正在识图并构思.*正在构思.*正在识图/);
+  assert.match(functionSource('dgGenerateRoleDrawing'),/activity=g\.mode==='photo'&&g\.background\?'正在识图并构思':'正在构思'/);
   assert.match(tick,/cur\(\)\.p==='drawguess'\?'none':'block'/);
   assert.match(next,/dgOpenSetup\(cid\)/,'a new round must reopen the three-mode chooser');
   assert.doesNotMatch(next,/mode=_dg\.mode|dgBeginState\(cid,mode\)/);
@@ -188,4 +191,31 @@ test('invites and only genuine drawing-room dialogue survive into memory',()=>{
   assert.match(app,/# 你们的你画我猜画作记忆/);
   assert.match(functionSource('clearContactMemoryData'),/drawGuessMemory/);
   assert.match(html,/\.dg-invite-lines/);
+});
+
+test('configured role drawing uses one generated image and reveals it without vision',()=>{
+  const generate=functionSource('dgGenerateRoleDrawing');
+  const art=functionSource('dgGenerateArt');
+  const reveal=functionSource('dgRevealPlan');
+  const animate=functionSource('dgAnimateNext');
+  const snapshot=functionSource('dgSnapshotData');
+  assert.match(generate,/g\.mode==='role'&&dgImageConfigured\(\)/);
+  assert.match(generate,/await dgGenerateArt\(g\.answer,g\.instruction\)/);
+  assert.match(generate,/g\.plan=dgRevealPlan\(\)/);
+  assert.doesNotMatch(generate,/g\.mode==='role'.*visionAPI/);
+  assert.match(art,/source:'draw_guess'/);
+  assert.match(art,/imageGenerateExternal/);
+  assert.doesNotMatch(art,/visionAPI/);
+  assert.match(reveal,/reveal:true/);
+  assert.match(animate,/s\.reveal/);
+  assert.doesNotMatch(animate,/imageGenerateExternal|aiRelay|visionAPI/);
+  assert.match(snapshot,/g\.generatedArt/);
+  assert.match(snapshot,/filter\(s=>!s\.reveal\)/);
+});
+
+test('game hall drawing draft reopens the mode chooser directly',()=>{
+  const hub=functionSource('renderGameHub');
+  assert.match(hub,/继续画作/);
+  assert.match(hub,/dgOpenSetup\('\$\{d\.cid\}'\)/);
+  assert.match(hub,/可继续或重新选择/);
 });
