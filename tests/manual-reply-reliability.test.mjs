@@ -23,7 +23,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-const manual = functionSource("manualReply");
+const manual = functionSource("replyGenerationRun");
 assert.match(source, /function replyVisibleAssistantCount\(id,aid\)/);
 assert.match(source, /function manualReplyRetryAllowed\(id,aid,token\)/);
 assert.match(manual, /before=replyVisibleAssistantCount\(id,aid\)/);

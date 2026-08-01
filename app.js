@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='751'){
+if(window.__NORTH_SHELL_BUILD__!=='752'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v751 · 局内API路线切换';
+const APP_VER='v752 · 双角色并发回复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1324,7 +1324,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=751';
+  const url='sw.js?v=752';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2063,7 +2063,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=751').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(!_cinMp4Module)_cinMp4Module=import('./vendor/mp4box.all.mjs?v=752').catch(e=>{_cinMp4Module=null;throw e;});return _cinMp4Module;}
 function cinemaMp4ForEachBox(bytes,start,end,visit){const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let pos=start;while(pos+8<=end){let size=view.getUint32(pos),head=8;if(size===1&&pos+16<=end){size=view.getUint32(pos+8)*4294967296+view.getUint32(pos+12);head=16;}else if(size===0)size=end-pos;if(!Number.isFinite(size)||size<head||pos+size>end)break;const type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);visit(type,pos,head,size);pos+=size;}}
 function cinemaMp4ResetBaseTime(buffer){const bytes=new Uint8Array(buffer.slice(0));cinemaMp4ForEachBox(bytes,0,bytes.length,(type,pos,head,size)=>{if(type!=='moof')return;cinemaMp4ForEachBox(bytes,pos+head,pos+size,(child,cpos,chead,csize)=>{if(child!=='traf')return;cinemaMp4ForEachBox(bytes,cpos+chead,cpos+csize,(leaf,lpos,lhead,lsize)=>{if(leaf!=='tfdt'||lsize<16)return;const data=lpos+lhead,version=bytes[data],count=version===1?8:4;for(let i=0;i<count&&data+4+i<lpos+lsize;i++)bytes[data+4+i]=0;});});});return bytes.buffer;}
 async function cinemaMp4Prepare(file,chunkSeconds,onProgress){const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'MP4 parse failed');};const probeSize=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<20000;){const end=Math.min(file.size,offset+probeSize),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(onProgress)onProgress(Math.min(100,Math.round(offset/Math.max(1,file.size)*100)));if(info)break;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)throw new Error(parseError||'没有读到 MP4 / MOV 音轨信息');const track=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);if(!track)throw new Error('影片没有可提取的音轨');if(!/^mp4a(?:\.|$)|^aac/i.test(String(track.codec||'')))throw new Error('这部影片的音轨不是常见 AAC 格式，请先转成 MP4（AAC）或导入 SRT / VTT');const duration=Number(track.duration)/Number(track.timescale),segmentSeconds=Math.max(60,Math.min(180,Number(chunkSeconds)||180));if(!Number.isFinite(duration)||duration<=0)throw new Error('没有读到有效的音轨时长');return{duration,segmentSeconds,totalSegments:Math.max(1,Math.ceil(duration/segmentSeconds))};}
@@ -8040,6 +8040,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   list.forEach(m=>{if(m._silent)return;body+=chatBoundaryHTML(prevVisible,m);body+=bubbleRow(c,m);prevVisible=m;});
   const mood=S.settings.showMoodTag!==false&&c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#9a9b9f')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
   const visionBusy=hasPendingVision(id);
+  const replyGenState=replyGenerationState(id);
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
@@ -8062,7 +8063,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="enterSelect('${id}')"><div class="b">${svgIc('forward',26,'#e6e6ee')}</div><span>多选转发</span></div>
     </div>`}
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(_replying===id||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':(_replying===id?'回复中…':'▶ 让ta回')}</button></div>`:'')+qbar+`<div class="inputbar">`+`
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(replyGenState||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':replyGenState==='active'?'回复中…':replyGenState==='queued'?'排队中…':'▶ 让ta回'}</button></div>`:'')+qbar+`<div class="inputbar">`+`
       <span class="plus" style="background:${_voiceMode?'linear-gradient(145deg,#5a5c61,#303236)':'transparent'};box-shadow:${_voiceMode?'0 3px 9px rgba(0,0,0,.32)':'none'};color:${_voiceMode?'#f3f3f4':'#9b9ca0'}" onclick="_voiceMode=!_voiceMode;render()">${svgIc('mic',19,_voiceMode?'#f3f3f4':'#9b9ca0')}</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入文字，发送为语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
@@ -9381,10 +9382,26 @@ async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
   }catch(e){}}
 let _replyTimers={};
 let _replyDone={};
-let _replying=null;
+const MANUAL_REPLY_LIMIT=2;
+let _replying={};
+let _replyQueue=[];
 let _replyEpoch={};
 let _replyDeferred={};
 function replyStateKey(id,aid){return accountMessageKey(id,aid||actId());}
+function replyGenerationStore(){if(!_replying||typeof _replying!=='object'||Array.isArray(_replying))_replying={};return _replying;}
+function replyGenerationKey(id,aid){return replyStateKey(id,aid||actId());}
+function replyGenerationState(id,aid){const k=replyGenerationKey(id,aid);if(replyGenerationStore()[k])return'active';return (_replyQueue||[]).some(x=>x&&x.key===k)?'queued':'';}
+function replyGenerationBusy(id,aid){return !!replyGenerationState(id,aid);}
+function replyGenerationCount(){return Object.keys(replyGenerationStore()).length;}
+function replyGenerationRefresh(id,aid){if((aid||actId())===actId()&&cur().p==='chat'&&cur().id===id)render();}
+function replyGenerationDrain(){
+  _replyQueue=Array.isArray(_replyQueue)?_replyQueue:[];
+  while(replyGenerationCount()<MANUAL_REPLY_LIMIT){
+    const i=_replyQueue.findIndex(x=>x&&x.aid===actId());if(i<0)break;
+    const job=_replyQueue.splice(i,1)[0],c=getC(job.id);if(!c||c.blocked||c.deleted)continue;
+    replyGenerationRun(job.id,job.aid);
+  }
+}
 function replyEpoch(id,aid){const k=replyStateKey(id,aid);return +(_replyEpoch&&_replyEpoch[k]||0);}
 function replyTouch(id,aid){const k=replyStateKey(id,aid);_replyEpoch[k]=replyEpoch(id,aid)+1;if(_replyTimers[k]){clearTimeout(_replyTimers[k]);delete _replyTimers[k];}delete _replyDeferred[k];try{if((aid||actId())===actId()&&cur().p==='chat'&&cur().id===id){const t=$('#typing');if(t)t.remove();}}catch(_){}}
 function replyStale(id,token,aid){return token!=null&&+token!==replyEpoch(id,aid);}
@@ -9392,7 +9409,7 @@ function replyPendingUserText(id,aid){const a=msgsForAccount(id,aid||actId()),ou
 function replyVisibleAssistantCount(id,aid){return msgsForAccount(id,aid||actId()).filter(m=>m&&m.role==='assistant'&&m.type!=='sys').length;}
 function deferAccountReply(id,note,token,aid){const k=replyStateKey(id,aid);if(replyStale(id,token,aid))return;_replyDeferred[k]={id,note,token,aid};}
 function replyAccountChanged(id,note,token,aid,typingEl){if(actId()===aid)return false;if(typingEl&&typingEl.isConnected)typingEl.remove();deferAccountReply(id,note,token,aid);return true;}
-function resumeAccountReplies(aid){Object.keys(_replyDeferred).forEach(k=>{const d=_replyDeferred[k];if(!d||d.aid!==aid||replyStale(d.id,d.token,d.aid))return;delete _replyDeferred[k];clearTimeout(_replyTimers[k]);_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];aiReply(d.id,d.note,d.token,d.aid);},120);});}
+function resumeAccountReplies(aid){Object.keys(_replyDeferred).forEach(k=>{const d=_replyDeferred[k];if(!d||d.aid!==aid||replyStale(d.id,d.token,d.aid))return;delete _replyDeferred[k];clearTimeout(_replyTimers[k]);_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];aiReply(d.id,d.note,d.token,d.aid);},120);});replyGenerationDrain();}
 function delayedAccountReply(id,note,delay,aid){aid=aid||actId();const token=replyEpoch(id,aid);setTimeout(()=>{if(replyStale(id,token,aid))return;if(actId()!==aid){deferAccountReply(id,note,token,aid);return;}aiReply(id,note,token,aid);},Math.max(0,+delay||0));}
 function scheduleReply(id,note,onDone){
   if(offlineFocusActive()){if(typeof onDone==='function')onDone(false);return false;}
@@ -9406,10 +9423,22 @@ function scheduleReply(id,note,onDone){
   if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();if(typeof onDone==='function')onDone(false);return false;}
   const aid=actId(),k=replyStateKey(id,aid),token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);if(_replyDone[k]){const prev=_replyDone[k];delete _replyDone[k];try{prev(false);}catch(_){}}delete _replyDeferred[k];if(typeof onDone==='function')_replyDone[k]=onDone;_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];const done=_replyDone[k];delete _replyDone[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);if(done)done(false);return;}Promise.resolve(aiReply(id,note,token,aid)).then(ok=>{if(done)done(ok===true);}).catch(()=>{if(done)done(false);});},(Number(S.settings.replyDelay)||0)*1000);return true;}
 function manualReplyRetryAllowed(id,aid,token){const c=getC(id);return !!(c&&!c.blocked&&!c.deleted&&actId()===aid&&!replyStale(id,token,aid)&&!offlineFocusActive()&&!cinemaRoleOccupied(id)&&!wxLoginBlockReply(id));}
-async function manualReply(id){if(offlineFocusActive()){toast('线下约会进行中，微信消息已暂停');return;}if(_replying)return;if(hasPendingVision(id)){toast('图片还在识别，看到“已看清”后再点');return;}const c=getC(id);if(!c||c.blocked)return;_replying=id;if(cur().p==='chat'&&cur().id===id)render();
+function manualReply(id){
+  if(offlineFocusActive()){toast('线下约会进行中，微信消息已暂停');return false;}
+  const aid=actId(),key=replyGenerationKey(id,aid);if(replyGenerationBusy(id,aid))return false;
+  if(hasPendingVision(id)){toast('图片还在识别，看到“已看清”后再点');return false;}
+  const c=getC(id);if(!c||c.blocked||c.deleted)return false;
+  if(replyGenerationCount()>=MANUAL_REPLY_LIMIT){_replyQueue.push({id,aid,key});replyGenerationRefresh(id,aid);toast('已排队，前面的回复完成后自动生成');return true;}
+  replyGenerationRun(id,aid);return true;
+}
+async function replyGenerationRun(id,aid){
+  aid=aid||actId();const key=replyGenerationKey(id,aid);if(replyGenerationStore()[key])return false;
+  if(actId()!==aid){if(!replyGenerationBusy(id,aid))_replyQueue.push({id,aid,key});return false;}
+  const c=getC(id);if(!c||c.blocked||c.deleted)return false;
+  replyGenerationStore()[key]={id,aid,startedAt:Date.now()};replyGenerationRefresh(id,aid);
   // 判断最后一条真实对话是谁发的：若是他自己发的，这次「让ta回复」=继续多说，要明确告诉他别把自己的话当成对方说的
   let _note;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){const mm=_ms[i];if(mm.type==='sys'||mm._call)continue;if(mm.role==='user')break;if(mm.role==='assistant'){_note='[系统：'+S.me.name+'这会儿还没开口、还没回你。请你接着自己刚才的话【再自然地多说几句】（补充、延续你上面说的，或换个角度再聊两句），不要重复已经说过的内容。注意：上面那几条都是【你自己】说的，不是'+S.me.name+'说的，千万别把自己说过的话当成ta说的去回应。]';break;}}}
-  const aid=actId(),token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token))toast('这次模型没有返回可见消息，请再点一下');}}finally{_replying=null;if(cur().p==='chat'&&cur().id===id)render();}}
+  const token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token))toast('这次模型没有返回可见消息，请再点一下');}return true;}finally{delete replyGenerationStore()[key];replyGenerationRefresh(id,aid);replyGenerationDrain();}}
 /* 提示音 + 通知 */
 let _audio;
 function ensureAudio(){try{
@@ -10061,7 +10090,7 @@ function initiativePlan(c,a,st){const mem=initiativeMemory(c,a,st),active=c.trai
 let _initiativeBusy={};
 function initiativeRunKey(c){return memoryScopeKey()+'|'+c.id;}
 function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.settings.initiative===false||!c||c.deleted||c.blocked||(typeof cinemaRoleOccupied==='function'&&cinemaRoleOccupied(c.id))||!c.proactive||!c.proactive.enabled||_call||_initiativeBusy[runKey])return false;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active)return false;const now=new Date();if(!initiativeWindow(c,now))return false;
-  const st=initiativeState(c),ts=Date.now(),lm=lastMsg(c.id),delay=initiativeDelayMs(c);if(typeof _replying!=='undefined'&&_replying===c.id)return false;if(_replyTimers&&_replyTimers[replyStateKey(c.id)])return false;
+  const st=initiativeState(c),ts=Date.now(),lm=lastMsg(c.id),delay=initiativeDelayMs(c);if(typeof replyGenerationBusy==='function'&&replyGenerationBusy(c.id))return false;if(_replyTimers&&_replyTimers[replyStateKey(c.id)])return false;
   if(lm&&lm.role==='user'){st.nextAt=ts+delay;return false;}/* 用户最后一句尚未得到回应时，主动消息不能抢在正常回复前另开话题 */
   if((c.followups||[]).some(x=>!x.asked&&x.due<=ts&&ts-x.due<48*3600000))return false;
   {const _lut=typeof lastUserTs==='function'?lastUserTs(c.id):0;if(_lut&&extremeLoveOn(c)&&typeof escContact==='function'&&escContact()===c&&ts-_lut>=_IGT[0]*60000)return false;}
