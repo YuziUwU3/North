@@ -33,6 +33,14 @@ test('Douyin redesign keeps feed actions and exposes a center publish control', 
   }
 });
 
+test('Douyin profile uses a real profile grid and vector heart icons', () => {
+  assert.match(ui, /window\.dyProfile=function/);
+  assert.match(ui, /dy-profile-grid/);
+  assert.match(ui, /svgIc\('heart',13,'#fff'/);
+  assert.doesNotMatch(ui, /❤️/);
+  assert.match(html, /\.dy-profile-card\{/);
+});
+
 test('new presentation layer loads after app.js and is available offline', () => {
   assert.match(html, /<script src="app\.js\?v=(\d+)"[^>]*><\/script>\s*<script src="commerce-ui\.js\?v=\1"/);
   assert.match(html, /\.shop-card\{/);

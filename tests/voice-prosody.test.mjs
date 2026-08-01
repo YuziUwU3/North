@@ -130,7 +130,7 @@ assert.equal(JSON.parse(JSON.stringify({ emotion: context.ttsVoiceProfile("Tell 
 const tunedProfile = context.ttsVoiceProfile("Slow down.", {}, minimax28, { rate: 0.6, pitch: 0.5 });
 assert.equal(tunedProfile.speed, 0.6);
 assert.equal(tunedProfile.pitch, -12);
-assert.match(context.ttsSentencePauseText("One. Two.", { pause: 1 }), /One\. …+ Two\./);
+assert.equal(context.ttsSentencePauseText("One. Two.", { pause: 1 }), "One. Two.");
 for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted", "whisper", "kiss"]) {
   const profile = context.ttsVoiceProfile("Keep my voice.", { cue }, minimax28);
   assert.equal(profile.pitch, 0, `${cue} changed pitch`);
@@ -210,6 +210,8 @@ assert.doesNotMatch(source, /u\.rate=\(\+v\.rate\|\|1\)\*vp\.speed\*callPaceRate
 assert.match(source, /u\.rate=\(\+v\.rate\|\|1\)\*vp\.speed/);
 assert.match(source, /hasNextSpoken&&voicePauseMs\(c\)>0/);
 assert.match(source, /await sleep\(voicePauseMs\(c\)\)/);
+assert.equal(context.ttsSentencePauseText("One. Two.", { pause: 1 }), "One. Two.");
+assert.doesNotMatch(context.ttsSentencePauseText("One. Two.", { pause: 2 }), /…/, "sentence pause must not be encoded as repeated ellipses");
 assert.match(source, /if\(video\)content=ensureVideoCallAction\(content,_callCueTag\)/);
 assert.match(source, /function phReleaseSimSub\(callId,line\)/);
 assert.doesNotMatch(source, /preT=setTimeout|off<0/, "call subtitles must never race ahead from request time");

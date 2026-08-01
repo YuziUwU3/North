@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='770'){
+if(window.__NORTH_SHELL_BUILD__!=='771'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v770 · 真人手绘画笔';
+const APP_VER='v771 · 语音防重复与应用焕新';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1171,7 +1171,7 @@ function requestedVoiceNeedsFix(content,userText,c){return !!(explicitVoiceReply
 function forceRequestedVoiceReply(content,userText,c){content=String(content||'');if(!explicitVoiceReplyRequest(userText)||(S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)return content;if(ttsContentLang(c)!=='zh')return content;const lines=content.split(/\n/);if(lines.some(x=>parseVoiceTagLine(x)))return content;const idx=[];for(let i=0;i<lines.length;i++){const t=String(lines[i]||'').trim();if(t&&!/^[\[【]/.test(t))idx.push(i);}if(!idx.length)return content;const joined=idx.map(i=>String(lines[i]||'').trim()).join(' ').replace(/[|｜]/g,'，').trim();if(!joined)return content;const chars=[...joined],voice=chars.slice(0,VOICE_MAX_CHARS).join('').trim(),rest=chars.slice(VOICE_MAX_CHARS).join('').trim(),cue=ttsRequestedCue(userText)||ttsAutoCue(voice,c)||'';if(!voice)return content;const first=idx[0],drop=new Set(idx);return lines.flatMap((line,i)=>i===first?['[语音|'+voice+(cue?'|语气:'+cue:'')+']',...(rest?[rest]:[])]:drop.has(i)?[]:[line]).join('\n');}
 function ttsSafeProsody(base,o){let s=String(base||'').trim();if(!s)return '';s=s.replace(/([。！？!?])(?=\S)/g,'$1 ').replace(/([，、；;：:])(?=\S)/g,'$1 ').replace(/\.{3,}|…{2,}/g,'……').replace(/([吧呢啊呀哦嘛])([。！？!?])(?=\S)/g,'$1$2 ');
   const emo=ttsEmotionHint(s,o),cn=hasCN(s);if(cn&&emo==='soft')s=s.replace(/别哭[，,]?/,'别哭，').replace(/我在[。!！]?$/,'我在。');if(cn&&emo==='sleepy')s=s.replace(/晚安[。!！]?$/,'晚安……');return s.replace(/\s+/g,' ').trim();}
-function ttsSentencePauseText(text,o){let s=String(text||'').trim(),pause=voicePauseSeconds(o);if(!s||pause<.15)return s;const marks=Math.max(1,Math.min(5,Math.round(pause/.4)));return s.replace(/([。！？!?\.])\s*(?=\S)/g,(m,p)=>p+' '+('…'.repeat(marks))+' ');}
+function ttsSentencePauseText(text,o){return String(text||'').trim();}/* API 只接收原标点；连续省略号会让部分音色误判成结巴或重复词。真实句间等待由播放队列的 voicePauseMs 完成。 */
 function tts2p8Interjection(s,rawCue){s=String(s||'').trim();const cue=String(rawCue||'').toLowerCase();if(!s||!cue)return s;let tag='',before=false;if(/亲亲|亲吻|kiss|mwah|啵|mua/.test(cue))tag='(lip-smacking)';else if(/轻笑|chuckle|giggle/.test(cue))tag='(chuckle)';else if(/大笑|laughs|laugh/.test(cue))tag='(laughs)';else if(/叹气|sigh/.test(cue)){tag='(sighs)';before=true;}else if(/吸气|inhale/.test(cue)){tag='(inhale)';before=true;}else if(/呼气|exhale/.test(cue)){tag='(exhale)';before=true;}else if(/喘息|pant/.test(cue))tag='(pant)';else if(/哭泣|crying/.test(cue)){tag='(crying)';before=true;}return tag?(before?(tag+' '+s):(s+' '+tag)):s;}
 function tts2p8IsInterjectionCue(cue){return /亲亲|亲吻|kiss|mwah|啵|mua|轻笑|chuckle|giggle|大笑|laughs|laugh|叹气|sigh|吸气|inhale|呼气|exhale|喘息|pant|哭泣|crying/i.test(String(cue||''));}
 function ttsRelayInterjection(s,rawCue){s=String(s||'').trim();const cue=String(rawCue||''),explicit=/亲亲|亲吻|mwah|啵|mua|轻笑|chuckle|giggle|大笑|laughs|叹气|sigh|吸气|inhale|呼气|exhale|喘息|pant|哭泣|crying/i.test(cue);if(!s||!explicit)return s;const cn=hasCN(s);let sound='';if(/亲亲|亲吻|mwah|啵|mua/i.test(cue))sound=cn?'啵。':'Mwah.';else if(/轻笑|chuckle|giggle/i.test(cue))sound=cn?'呵……':'Heh...';else if(/大笑|laughs/i.test(cue))sound=cn?'哈哈。':'Ha ha.';else if(/叹气|sigh/i.test(cue))sound=cn?'唉……':'Sigh...';else if(/吸气|inhale/i.test(cue))sound=cn?'嘶……':'Gasp...';else if(/呼气|exhale/i.test(cue))sound=cn?'呼……':'Phew...';else if(/喘息|pant/i.test(cue))sound=cn?'呼，呼……':'Huff, puff...';else if(/哭泣|crying/i.test(cue))sound=cn?'呜……':'Oh...';return sound?(sound+' '+s):s;}
@@ -1360,7 +1360,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=770';
+  const url='sw.js?v=771';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -4086,15 +4086,22 @@ function moodSection(){pruneDailyMood();const my=moodToday('me');const recent=(S
   return `<div style="margin:10px 12px;padding:13px 14px;border-radius:16px;background:linear-gradient(135deg,#ffe3ee,#ffd6e6 70%,#ffe0ef);box-shadow:0 6px 18px rgba(232,150,181,.22)"><div style="font-weight:700;color:#c2407a;margin-bottom:8px">每日心情表</div>
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:4px">${picker}<span onclick="myMoodNote()" style="margin-left:auto;font-size:13px;color:#c2407a;font-weight:600;cursor:pointer">写两句</span></div>
     ${rows}</div>`;}
-function renderCalendar(){pruneDailyMood();const evs=[...S.calendar].sort((a,b)=>a.date<b.date?-1:1);const today=todayStr();
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">日历</span><span class="r" onclick="addCalEvent()">＋</span></div>
-    <div class="scroll" style="background:#000">
-      <div class="hint" style="padding:12px">今天 ${today} ${holidayOf(today)?'· '+holidayOf(today)+'🎉':''}。你和ta都能加日程；到日子ta会提醒你；节假日ta会发红包祝福。</div>
-      ${moodSection()}
-      ${evs.length?evs.map(e=>{const c=getC(e.contactId);const past=e.date<today;return `<div class="section" style="margin:10px 12px"><div class="it"><div><div style="font-size:15px;color:${past?'#666':'#eee'}">${e.type==='period'?'🩸 ':'📌 '}${esc(e.title)}</div><div style="font-size:12px;color:#888;margin-top:3px">${e.date}${c?' · '+esc(c.remark||c.name)+'提醒':''}</div></div><span onclick="S.calendar=S.calendar.filter(x=>x.id!=='${e.id}');save();render()" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;}).join(''):'<div class="empty">还没有日程，点右上角 ＋ 添加</div>'}
-      <div style="height:20px"></div></div>`;}
-function addCalEvent(){openModal(`<h3>添加日程</h3>
-  <div class="field"><label>日期</label><input id="ce_d" type="date" value="${todayStr()}"></div>
+let _calMonth='',_calSelected='',_calClockDay='';
+function calDateParts(s){const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?{y:+m[1],m:+m[2],d:+m[3]}:null;}
+function calDateString(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function calEnsure(){const today=todayStr();if(!_calMonth||_calClockDay!==today){_calMonth=today.slice(0,7);_calSelected=today;_calClockDay=today;}if(!calDateParts(_calSelected))_calSelected=today;}
+function calSelect(date){if(!calDateParts(date))return;_calSelected=date;_calMonth=date.slice(0,7);render();}
+function calShift(step){calEnsure();const p=calDateParts(_calSelected),mp=calDateParts(_calMonth+'-01'),day=p?p.d:1,last=new Date(mp.y,mp.m+(+step||0),0),next=new Date(last.getFullYear(),last.getMonth(),Math.min(day,last.getDate()));_calSelected=calDateString(next);_calMonth=_calSelected.slice(0,7);render();}
+function calToday(){_calClockDay='';calEnsure();render();}
+function calLocate(){calEnsure();openModal(`<h3>定位日期</h3><div class="field"><label>选择日期</label><input id="cal_locate_date" type="date" value="${_calSelected}"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="calLocateGo()">定位</button></div>`);}
+function calLocateGo(){const el=$('#cal_locate_date'),v=el&&el.value;if(!calDateParts(v)){toast('请选择日期');return;}closeModal();calSelect(v);}
+function calWeekLabel(date){const p=calDateParts(date);return p?'星期'+'日一二三四五六'[new Date(p.y,p.m-1,p.d).getDay()]:'';}
+function calDelete(id){S.calendar=S.calendar.filter(x=>x.id!==id);save();render();}
+function calEventRow(e){const c=getC(e.contactId),period=e.type==='period';return `<div class="cal-event"><i style="background:${period?'#ff5b78':'#4b8cff'}"></i><div class="cal-event-main"><b>${esc(e.title)}</b><small>${period?'生理期':'日程'}${c?' · '+esc(c.remark||c.name)+'提醒':''}</small></div><button onclick="calDelete('${e.id}')" aria-label="删除日程">${svgIc('trash',17,'currentColor')}</button></div>`;}
+function renderCalendar(){pruneDailyMood();calEnsure();const today=todayStr(),mp=calDateParts(_calMonth+'-01'),first=new Date(mp.y,mp.m-1,1),start=new Date(mp.y,mp.m-1,1-first.getDay()),monthLabel=mp.y+'年'+mp.m+'月',week=['日','一','二','三','四','五','六'],byDate={};(S.calendar||[]).forEach(e=>{if(e&&e.date)(byDate[e.date]||(byDate[e.date]=[])).push(e);});const cells=[];for(let i=0;i<42;i++){const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i),ds=calDateString(d),outside=d.getMonth()!==mp.m-1,events=byDate[ds]||[],hol=holidayOf(ds);cells.push(`<button class="cal-day${outside?' outside':''}${ds===today?' today':''}${ds===_calSelected?' selected':''}" onclick="calSelect('${ds}')"><span>${d.getDate()}</span>${hol?'<small>'+esc(hol.slice(0,4))+'</small>':''}${events.length?'<i class="cal-dot'+(events.some(x=>x.type==='period')?' period':'')+'"></i>':''}</button>`);}const selectedEvents=(byDate[_calSelected]||[]).slice().sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''))),sp=calDateParts(_calSelected),selectedLabel=sp?(sp.m+'月'+sp.d+'日 · '+calWeekLabel(_calSelected)):'';
+  return `<div class="nav cal-nav"><span class="l" onclick="back()">‹</span><span class="t">日历</span><span class="r" onclick="addCalEvent('${_calSelected}')">＋</span></div><div class="scroll cal-scroll"><section class="cal-card"><div class="cal-toolbar"><div><strong>${monthLabel}</strong><small>${selectedLabel}</small></div><div class="cal-tools"><button onclick="calLocate()">${svgIc('search',16,'currentColor')}<em>定位</em></button><button onclick="calToday()">今天</button></div></div><div class="cal-month-nav"><button onclick="calShift(-1)" aria-label="上个月">‹</button><div></div><button onclick="calShift(1)" aria-label="下个月">›</button></div><div class="cal-week">${week.map(x=>'<span>'+x+'</span>').join('')}</div><div class="cal-grid">${cells.join('')}</div></section><section class="cal-agenda"><div class="cal-agenda-title"><div><strong>${selectedLabel}</strong>${holidayOf(_calSelected)?'<span>'+esc(holidayOf(_calSelected))+'</span>':''}</div><button onclick="addCalEvent('${_calSelected}')">添加日程</button></div>${selectedEvents.length?selectedEvents.map(calEventRow).join(''):'<div class="cal-empty">这一天没有安排</div>'}</section>${moodSection()}<div style="height:20px"></div></div>`;}
+function addCalEvent(date){openModal(`<h3>添加日程</h3>
+  <div class="field"><label>日期</label><input id="ce_d" type="date" value="${calDateParts(date)?date:todayStr()}"></div>
   <div class="field"><label>事项</label><input id="ce_t" placeholder="去看医生 / 发工资…"></div>
   <div class="field"><label>类型</label><select id="ce_type"><option value="event">普通日程</option><option value="period">姨妈期</option></select></div>
   <div class="field"><label>谁提醒我</label><select id="ce_c"><option value="">不提醒</option>${S.contacts.filter(c=>!c.deleted).map(c=>`<option value="${c.id}">${esc(c.remark||c.name)}</option>`).join('')}</select></div>
@@ -5217,14 +5224,14 @@ function setLockBg(){pickFile('image/*',async f=>{S.me.lockBg=await compressBack
 function setCallBg(){pickFile('image/*',async f=>{S.me.callBg=await compressBackground(f);save();if(cur().p==='settings')render();if(_call)renderCall();toast('通话背景已换');});}
 const GAMES=[
   {k:'drawguess',e:'',n:'你画我猜',tag:'逐笔画布'},
-  {k:'soup',e:'🐢',n:'海龟汤'},
-  {k:'escape',e:'🚪',n:'小黑屋(自定义密室)'},
-  {k:'wordguess',e:'🤐',n:'你说我猜'},
-  {k:'undercover',e:'🕵️',n:'谁是卧底'},
-  {k:'tod',e:'🎲',n:'真心话大冒险',kick:'我们玩真心话大冒险：用骰子比大小，ta会点下面的🎲掷骰子，你也掷一个（直接在话里说你掷出几点1-6），点数小的人要选「真心话」或「大冒险」并完成。先让ta掷，或你先掷都行～'},
-  {k:'quiz',e:'💑',n:'默契考验',kick:'我们玩默契大考验：轮流出一道关于彼此的问题考对方，看谁更懂谁。你先出第一题～'},
-  {k:'drama',e:'🎭',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境/开场白，然后我们一起把剧情演下去。开场吧～'},
-  {k:'quick',e:'⚡',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始！'}
+  {k:'soup',e:'',n:'海龟汤'},
+  {k:'escape',e:'',n:'小黑屋(自定义密室)'},
+  {k:'wordguess',e:'',n:'你说我猜'},
+  {k:'undercover',e:'',n:'谁是卧底'},
+  {k:'tod',e:'',n:'真心话大冒险',kick:'我们玩真心话大冒险：用骰子比大小，你也掷一个（直接在话里说你掷出几点1-6），点数小的人要选「真心话」或「大冒险」并完成。先让ta掷，或你先掷都行。'},
+  {k:'quiz',e:'',n:'默契考验',kick:'我们玩默契大考验：轮流出一道关于彼此的问题考对方，看谁更懂谁。你先出第一题。'},
+  {k:'drama',e:'',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境或开场白，然后一起把剧情演下去。开场吧。'},
+  {k:'quick',e:'',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始。'}
 ];
 function gameContextRounds(){S.settings=S.settings||{};const n=Math.floor(Number(S.settings.gameHistRounds));return Number.isFinite(n)&&n>=2?Math.min(100,n):24;}
 function gameContextRows(rows){rows=Array.isArray(rows)?rows:[];const starts=[],human=m=>m&&(m.who==='me'||m.kind==='me'||m.kind==='pf'||m.kind==='host');for(let i=0;i<rows.length;i++){if(human(rows[i])&&(i===0||!human(rows[i-1])))starts.push(i);}const rounds=gameContextRounds(),start=starts.length>rounds?starts[starts.length-rounds]:0;return rows.slice(start);}
@@ -5263,12 +5270,12 @@ function startGame(k,cid){const g=GAMES.find(x=>x.k===k);if(!g)return;closeModal
   if(k==='drawguess')return dgOpenSetup(cid);
   if(k==='soup')return soupCfg(cid);
   if(k==='escape')return escapeCfg(cid);
-  if(k==='wordguess')return openGameSpace('wordguess',cid,'我们玩「你说我猜」：轮流出题——一个人描述一个词（不能说出这个词里的任何一个字），另一个人来猜，猜中或想换就继续，自由发挥别老用重复的词。你先出一个词、描述给我猜～','🤐 你说我猜');
+  if(k==='wordguess')return openGameSpace('wordguess',cid,'我们玩「你说我猜」：轮流出题——一个人描述一个词（不能说出这个词里的任何一个字），另一个人来猜，猜中或想换就继续，自由发挥别老用重复的词。你先出一个词、描述给我猜。','你说我猜');
   if(k==='undercover')return ucConfig(cid);
-  openGameSpace(k,cid,g.kick,g.e+' '+g.n);}
+  openGameSpace(k,cid,g.kick,g.n);}
 const MIX_GAME_KEYS=['soup','wordguess','undercover','drama'];
 function mgrRooms(){S.me=S.me||{};if(!Array.isArray(S.me.gameRooms))S.me.gameRooms=[];return S.me.gameRooms;}
-function mgrGame(k){return GAMES.find(x=>x.k===k)||{k:k,e:'🎮',n:'游戏',kick:'一起玩吧。'};}
+function mgrGame(k){return GAMES.find(x=>x.k===k)||{k:k,e:'',n:'游戏',kick:'一起玩吧。'};}
 function mgrRoom(id){return mgrRooms().find(r=>r.id===id)||null;}
 function mgrPlayerKey(kind,id){return kind+':'+id;}
 function mgrPfName(id){const f=phoneFriendById(id);return f?pfFriendDisplayName(f):id;}
@@ -5286,12 +5293,12 @@ function mgrSystem(r,text,id){return mgrAddRoomMsg(r,{id:id||uid(),kind:'sys',na
 function mgrSeenEvent(r,id){if(!r||!id)return false;r._seenEvents=r._seenEvents||{};if(r._seenEvents[id])return true;r._seenEvents[id]=Date.now();const ks=Object.keys(r._seenEvents);if(ks.length>500)ks.sort((a,b)=>r._seenEvents[a]-r._seenEvents[b]).slice(0,ks.length-500).forEach(k=>delete r._seenEvents[k]);return false;}
 function mgrRoomCue(kind){return;}
 function openMixedGamePicker(k){const g=mgrGame(k),roles=S.contacts.filter(c=>!c.deleted&&!c.blocked),p=phoneFriendState(),pfs=p.friends||[];
-  openModal(`<h3>${g.e} ${esc(g.n)} · 多人房</h3><div class="hint">先做稳定版：可多选角色和小手机真人好友。真人会收到房间邀请卡，全部点准备后房主才能开始。第一版完整支持「即兴小剧场」，其他游戏先接入等待室。</div>
+  openModal(`<h3>${esc(g.n)} · 多人房</h3><div class="hint">先做稳定版：可多选角色和小手机真人好友。真人会收到房间邀请卡，全部点准备后房主才能开始。第一版完整支持「即兴小剧场」，其他游戏先接入等待室。</div>
     <div class="field"><label>虚拟角色</label><div class="section">${roles.length?roles.map(c=>`<label class="avline" style="font-weight:400">${av(c.avatar,'sm')}<span style="flex:1">${esc(c.remark||c.name)}</span><span class="sw" data-mgr-role="${c.id}" onclick="this.classList.toggle('on')"></span></label>`).join(''):'<div class="hint" style="padding:8px">暂无可邀请角色</div>'}</div></div>
     <div class="field"><label>小手机真人好友</label><div class="section">${pfs.length?pfs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase();return `<label class="avline" style="font-weight:400">${pfAvatarHTML(f,'sm')}<span style="flex:1">${esc(pfFriendDisplayName(f))}</span><span class="sw" data-mgr-pf="${id}" onclick="this.classList.toggle('on')"></span></label>`;}).join(''):'<div class="hint" style="padding:8px">暂无小手机好友</div>'}</div></div>
     <div class="btns"><button class="btn g" onclick="openGames()">返回</button><button class="btn p" onclick="mgrCreateRoom('${k}')">创建房间</button></div>`);}
 function mgrCreateRoom(k){const roles=[...document.querySelectorAll('[data-mgr-role].on')].map(e=>e.getAttribute('data-mgr-role')).filter(Boolean),pfs=[...document.querySelectorAll('[data-mgr-pf].on')].map(e=>e.getAttribute('data-mgr-pf')).filter(Boolean);if(!roles.length&&!pfs.length){toast('至少选一个玩家');return;}
-  const g=mgrGame(k),id='mgr_'+uid(),r={id,game:k,title:g.e+' '+g.n,hostId:phoneFriendId(),hostName:S.me.name,host:true,status:'lobby',readyMe:false,created:Date.now(),roleIds:roles,pfIds:pfs,roleNames:roles.map(x=>{const c=getC(x);return c&&(c.remark||c.name)||x;}),pfNames:pfs.map(mgrPfName),members:{},msgs:[],busy:false};
+  const g=mgrGame(k),id='mgr_'+uid(),r={id,game:k,title:g.n,hostId:phoneFriendId(),hostName:S.me.name,host:true,status:'lobby',readyMe:false,created:Date.now(),roleIds:roles,pfIds:pfs,roleNames:roles.map(x=>{const c=getC(x);return c&&(c.remark||c.name)||x;}),pfNames:pfs.map(mgrPfName),members:{},msgs:[],busy:false};
   r.members.me={name:S.me.name,kind:'me',ready:false};roles.forEach(cid=>{const c=getC(cid);r.members[mgrPlayerKey('role',cid)]={name:(c&&(c.remark||c.name))||cid,kind:'role',ready:true};});pfs.forEach(pid=>{r.members[mgrPlayerKey('pf',pid)]={name:mgrPfName(pid),kind:'pf',ready:false};});
   mgrRooms().unshift(r);save();closeModal();pfs.forEach(pid=>mgrSendPf(pid,r,{type:'game_room_invite',hostId:r.hostId,hostName:r.hostName,roleNames:r.roleNames,pfNames:r.pfNames,created:r.created}));go('mgroom',{id});}
 function mgrSendPf(pid,r,pl){const body=pfPack(Object.assign({roomId:r.id,game:r.game,title:r.title},pl||{}));if(body)sendPhoneFriendBody(pid,body,{silent:true,transport:true});}
@@ -5485,7 +5492,7 @@ async function gsReply(){if(!_gs)return;const g=_gs;g.busy=true;gsRender();
   if(_gs===g){g.busy=false;gsSaveDraft(g);}gsRender();}
 function gsSend(){if(!_gs||_gs.busy)return;const ta=$('#gs_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
   _gs.msgs.push({id:uid(),who:'me',text:v});gsSaveDraft(_gs);if(manualReplySceneOn('games'))gsRender();else gsReply();}
-function gsDice(){if(!_gs||_gs.busy)return;const v=1+Math.floor(Math.random()*6);_gs.msgs.push({id:uid(),who:'me',text:'🎲 我掷出了 '+v+' 点'});gsSaveDraft(_gs);if(manualReplySceneOn('games'))gsRender();else gsReply();}
+function gsDice(){if(!_gs||_gs.busy)return;const v=1+Math.floor(Math.random()*6);_gs.msgs.push({id:uid(),who:'me',text:'我掷出了 '+v+' 点'});gsSaveDraft(_gs);if(manualReplySceneOn('games'))gsRender();else gsReply();}
 function gsManualReply(){if(!_gs||_gs.busy)return;gsReply();}
 function gsMsgMenu(mid){if(!_gs)return;const m=(_gs.msgs||[]).find(x=>x.id===mid);if(!m)return;openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="gs_e" rows="3">${esc(m.text)}</textarea></div><div class="btns"><button class="btn d" onclick="gsDelMsg('${mid}')">删除</button><button class="btn p" onclick="gsEditMsg('${mid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function gsEditMsg(mid){if(!_gs)return;const m=(_gs.msgs||[]).find(x=>x.id===mid),v=(($('#gs_e')||{}).value||'').trim();if(!m||!v)return;m.text=v;gsSaveDraft(_gs);closeModal();gsRender();}
@@ -5493,16 +5500,17 @@ function gsDelMsg(mid){if(!_gs)return;_gs.msgs=(_gs.msgs||[]).filter(x=>x.id!==m
 function gsFmt(){const t=Math.max(0,_gs?_gs.t:0);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
 function gsTimer(){if(!_gs)return;clearInterval(_gs._tm);const tm=setInterval(()=>{if(!_gs||cur().p!=='gs'){clearInterval(tm);return;}_gs.t--;const e=document.getElementById('gstime');if(e)e.textContent=gsFmt();if(_gs.t<=0){clearInterval(tm);toast('时间到啦～想继续玩也行，不玩就点结束');}},1000);_gs._tm=tm;}
 function gsRender(){if(cur().p==='gs')render();}
-function renderGS(){if(!_gs)return '';const c=getC(_gs.cid);(_gs.msgs||[]).forEach(m=>{if(!m.id)m.id=uid();});
+function gameRoomMeta(kind){return {soup:['推理解谜','每次提问都在靠近真相','输入你的推理或问题'],escape:['密室逃脱','观察线索，做出下一步行动','描述你要调查或执行的动作'],wordguess:['词语竞猜','不能直接说出答案中的字','输入猜测或新的描述'],tod:['真心挑战','掷骰子决定这一轮的挑战','输入回答、真心话或大冒险'],quiz:['默契考验','轮流提出关于彼此的问题','输入你的答案或下一道题'],drama:['即兴剧场','接住对方的台词继续演下去','输入角色台词或动作'],quick:['快速回合','凭第一反应回答，不要犹豫','输入你的第一反应']}[kind]||['游戏进行中','和TA一起完成这一局','输入消息'];}
+function renderGS(){if(!_gs)return '';const c=getC(_gs.cid),meta=gameRoomMeta(_gs.kind),turns=(_gs.msgs||[]).filter(m=>m.who==='me').length;(_gs.msgs||[]).forEach(m=>{if(!m.id)m.id=uid();});
   const body=_gs.msgs.map(m=>m.who==='me'
-    ?`<div class="msg me" onclick="gsMsgMenu('${m.id}')"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`
-    :`<div class="msg them" onclick="gsMsgMenu('${m.id}')">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`).join('')
-    +(_gs.busy?`<div class="msg them">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
-  return `<div class="nav"><span class="l" onclick="gsExit()">‹ 退出</span><span class="t">${esc(_gs.title)} <span id="gstime" style="color:#fa5151;font-size:13px">${gsFmt()}</span></span><span class="r" onclick="gsEnd()" style="color:#fa5151">结束</span></div>
-    <div class="scroll" id="gsbg" style="background:#000">${body||'<div class="empty" style="padding:30px">开场中…</div>'}</div>
-    ${manualReplySceneOn('games')?`<div class="manual-reply-row" style="background:#111"><button class="manual-reply-chip" ${_gs.busy?'disabled':''} onclick="gsManualReply()">${_gs.busy?'回应中…':'▶ 让TA回应'}</button></div>`:''}
-    <div style="padding:6px 12px 0;background:#111;text-align:right"><button class="minibtn" onclick="gsClear()" style="color:#d58b9e;border-color:#563744">清空记录</button></div>
-    <div class="inputbar"><button class="send" style="background:#3a3a3c;margin-right:6px" onclick="gsDice()" title="掷骰子"></button><textarea id="gs_in" rows="1" placeholder='说点什么…（🎲掷骰子；说"游戏结束"或点右上「结束」随时退出）' onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gsSend();}"></textarea><button class="send" onclick="gsSend()">发</button></div>`;}
+    ?`<div class="msg me gs-message" onclick="gsMsgMenu('${m.id}')"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`
+    :`<div class="msg them gs-message" onclick="gsMsgMenu('${m.id}')">${av(c?c.avatar:'')}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`).join('')
+    +(_gs.busy?`<div class="msg them gs-message">${av(c?c.avatar:'')}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
+  return `<div class="gs-room gs-theme-${esc(_gs.kind)}"><div class="nav gs-nav"><span class="l" onclick="gsExit()">‹ 退出</span><span class="t"><i>${gameLineIcon(_gs.kind)}</i><b>${esc(_gs.title)}</b><small>${esc(meta[0])}</small></span><span class="r" onclick="gsEnd()">结束</span></div><div class="gs-score"><span>回合 <b>${turns}</b></span><span>${esc(meta[1])}</span><time id="gstime">${gsFmt()}</time></div>
+    <div class="scroll gs-playfield" id="gsbg"><div class="gs-intro"><i>${gameLineIcon(_gs.kind)}</i><div><b>${esc(meta[0])}</b><small>${esc(meta[1])}</small></div></div>${body||'<div class="gs-opening"><i></i><span>正在准备开场</span></div>'}</div>
+    ${manualReplySceneOn('games')?`<div class="manual-reply-row gs-manual"><button class="manual-reply-chip" ${_gs.busy?'disabled':''} onclick="gsManualReply()">${_gs.busy?'回应中…':'让TA回应'}</button></div>`:''}
+    <div class="gs-tools"><button onclick="gsClear()">${svgIc('trash',14,'currentColor')}<span>清空本局</span></button><small>点按气泡可编辑记录</small></div>
+    <div class="gs-compose">${_gs.kind==='tod'?`<button class="gs-dice" onclick="gsDice()" title="掷骰子">${gameLineIcon('tod')}<span>掷骰</span></button>`:''}<textarea id="gs_in" rows="1" placeholder="${esc(meta[2])}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gsSend();}"></textarea><button class="gs-send" onclick="gsSend()" aria-label="发送">${svgIc('forward',19,'#fff')}</button></div></div>`;}
 function gsExit(){const g=_gs;if(g){clearInterval(g._tm);g.busy=false;gsSaveDraft(g);}_gs=null;home();}
 function gsEnd(){const g=_gs;if(g){clearInterval(g._tm);gameSetHandoff(g.cid,g.title,g.msgs);gsDropDraft(g);}_gs=null;home();}
 async function gsClear(){if(!_gs)return;if(_gs.busy){toast('等这条回复完成后再清空');return;}if(!(_gs.msgs||[]).length){toast('没有游戏记录');return;}if(!await uiConfirm('清空这局游戏的全部聊天记录？\n游戏不会结束，可以继续玩。'))return;_gs.msgs=[];gsSaveDraft(_gs);gsRender();toast('游戏记录已清空');}
@@ -5524,7 +5532,7 @@ function ucConfig(cid){closeModal();const cs=S.contacts.filter(c=>!c.deleted);
    <div class="hint">勾选要拉进来一起玩的角色（可多选），人数不够用匿名AI玩家补。每人拿到一个词，卧底的词不一样。</div>
    <div class="field"><label>拉谁进来玩（可多选）</label><div class="section">${cs.length?cs.map(c=>`<label class="avline" style="font-weight:400">${esc(c.remark||c.name)}<span class="sw ${c.id===cid?'on':''}" data-uc="${c.id}" onclick="this.classList.toggle('on')"></span></label>`).join(''):'<div style="font-size:12px;color:#999;padding:8px">还没有角色，会全用匿名AI玩家</div>'}</div></div>
    <div class="field"><label>再加几个匿名AI玩家</label><select id="uc_bots"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
-   <div class="field"><label>词库类别</label><select id="uc_cat"><option value="ai">🎲 AI随机出题（无限不重复）</option><option value="美食">🍔 美食</option><option value="日常">🧴 日常用品</option><option value="动物">🐾 动物</option><option value="地点">📍 地点</option><option value="职业">👮 人物职业</option><option value="抽象">💭 抽象脑洞</option></select></div>
+   <div class="field"><label>词库类别</label><select id="uc_cat"><option value="ai">AI随机出题（无限不重复）</option><option value="美食">美食</option><option value="日常">日常用品</option><option value="动物">动物</option><option value="地点">地点</option><option value="职业">人物职业</option><option value="抽象">抽象脑洞</option></select></div>
    <div class="field"><label>卧底人数</label><select id="uc_u"><option selected>1</option><option>2</option></select></div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="ucStart()">开始</button></div>`);}
 async function ucStart(){const sel=[...document.querySelectorAll('[data-uc].on')].map(e=>e.getAttribute('data-uc'));
@@ -5536,7 +5544,7 @@ async function ucStart(){const sel=[...document.querySelectorAll('[data-uc].on')
   const traits=[...UC_TRAITS].sort(()=>Math.random()-.5);
   const players=[{id:'me',name:S.me.name,isMe:true,avatar:S.me.avatar,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}];
   chars.forEach(c=>players.push({id:'p_'+c.id,name:c.remark||c.name,avatar:c.avatar,isMe:false,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}));
-  let bi=0;for(let i=0;i<nbots;i++)players.push({id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,bot:true,trait:traits[i%traits.length],alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});
+  let bi=0;for(let i=0;i<nbots;i++)players.push({id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'',isMe:false,bot:true,trait:traits[i%traits.length],alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});
   const N=players.length;
   const ridx=[...Array(N).keys()].sort(()=>Math.random()-.5).slice(0,U);ridx.forEach(i=>players[i].role='undercover');
   _uc={cid,players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null,_botDescDone:false};
@@ -5618,43 +5626,25 @@ function ucMsgMenu(pid){if(!_uc)return;const p=(_uc.players||[]).find(x=>x.id===
 function ucEditMsg(pid){if(!_uc)return;const p=(_uc.players||[]).find(x=>x.id===pid),v=(($('#uc_e')||{}).value||'').trim();if(!p||!v)return;p.desc=v.slice(0,80);closeModal();render();}
 function ucDelMsg(pid){if(!_uc)return;const p=(_uc.players||[]).find(x=>x.id===pid);if(!p)return;p.desc='';closeModal();render();}
 function ucPill(p){const me=_uc.players.find(x=>x.isMe);const dead=!p.alive;
-  return `<div ${p.desc?`onclick="ucMsgMenu('${p.id}')"`:''} style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:${dead?'#1a1a1c':'#202022'};opacity:${dead?'.55':'1'};${p.desc?'cursor:pointer':''}">
-    ${av(p.avatar,'sm')}<div style="flex:1;min-width:0"><div style="font-weight:600;${dead?'text-decoration:line-through':''}">${esc(p.name)}${p.isMe?'（你）':''} ${dead?'<span style="color:#fa5151">'+(p.role==='undercover'?'🕵️卧底':'🙂平民')+' 出局</span>':''}</div>
-    ${p.desc?`<div style="font-size:13px;color:#bbb;margin-top:2px">「${esc(p.desc)}」</div>`:'<div style="font-size:12px;color:#666;margin-top:2px">…</div>'}</div></div>`;}
+  return `<div class="uc-player${dead?' dead':''}" ${p.desc?`onclick="ucMsgMenu('${p.id}')"`:''}>${av(p.avatar,'sm')}<div><b>${esc(p.name)}${p.isMe?' <small>你</small>':''}</b>${p.desc?`<span>${esc(p.desc)}</span>`:'<span class="waiting">等待描述</span>'}</div>${dead?`<em>${p.role==='undercover'?'卧底':'平民'} · 已出局</em>`:'<i></i>'}</div>`;}
 function renderUC(){if(!_uc)return '';const me=_uc.players.find(p=>p.isMe);
   let panel='';
-  if(_uc.phase==='loading')panel='<div class="empty" style="padding:30px">发牌中…🎴</div>';
+  if(_uc.phase==='loading')panel='<div class="uc-status"><i></i><span>正在分配词卡</span></div>';
   else if(_uc.phase==='desc'){const cur_=_uc.players[_uc.order[_uc.turn]];
-    if(cur_&&cur_.isMe&&cur_.alive&&!cur_._said&&!_uc.busy)panel=`<div style="padding:10px"><div style="text-align:center;color:#ffd6e8;margin-bottom:8px">轮到你描述了（别说出你的词）</div><div class="inputbar" style="position:static"><textarea id="uc_in" rows="1" placeholder="用一句话描述你的词…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ucDesc();}"></textarea><button class="send" onclick="ucDesc()">说</button></div></div>`;
-    else panel=`<div class="empty" style="padding:18px">${esc((cur_&&cur_.name)||'')} 描述中…💭</div>`;}
+    if(cur_&&cur_.isMe&&cur_.alive&&!cur_._said&&!_uc.busy)panel=`<div class="uc-action"><b>轮到你描述</b><small>用一句话描述，但不要直接说出词卡</small><div><textarea id="uc_in" rows="1" placeholder="输入一句描述" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ucDesc();}"></textarea><button onclick="ucDesc()">发送</button></div></div>`;
+    else panel=`<div class="uc-status"><i></i><span>${esc((cur_&&cur_.name)||'玩家')}正在描述</span></div>`;}
   else if(_uc.phase==='vote'){
-    if(_uc.busy)panel='<div class="empty" style="padding:18px">大家投票中…🗳️</div>';
-    else if(me.alive)panel=`<div style="padding:10px"><div style="text-align:center;color:#ffd6e8;margin-bottom:8px">投票！你觉得谁是卧底？</div>${ucAlive().filter(p=>!p.isMe).map(p=>`<button class="btn g" style="margin-bottom:6px" onclick="ucVote('${p.id}')">投 ${esc(p.name)}</button>`).join('')}</div>`;
-    else panel=`<div style="padding:10px;text-align:center"><div style="color:#888;margin-bottom:8px">你已出局，旁观中👀</div><button class="btn p" onclick="ucVote('')">看投票结果</button></div>`;}
+    if(_uc.busy)panel='<div class="uc-status"><i></i><span>其他玩家正在投票</span></div>';
+    else if(me.alive)panel=`<div class="uc-vote"><b>选出你认为的卧底</b><div>${ucAlive().filter(p=>!p.isMe).map(p=>`<button onclick="ucVote('${p.id}')">${esc(p.name)}</button>`).join('')}</div></div>`;
+    else panel=`<div class="uc-vote"><b>你已出局 · 旁观模式</b><div><button onclick="ucVote('')">查看投票结果</button></div></div>`;}
   else if(_uc.phase==='result'){const o=_uc.lastOut;
-    panel=`<div style="padding:14px;text-align:center;line-height:1.9">
-      ${o.tie?'<div style="color:#f7a23b">出现平票，抽签决定～</div>':''}
-      <div style="font-size:16px">🗳️ <b>${esc(o.name)}</b> 被票出局</div>
-      <div style="font-size:20px;margin:6px 0">ta是 ${o.role==='undercover'?'🕵️ <b style="color:#fa5151">卧底</b>':'🙂 <b>平民</b>'}！</div>
-      <div style="font-size:12px;color:#777">${esc(o.votes||'')}</div>
-      <button class="btn p" style="margin-top:12px" onclick="ucNextRound()">下一轮 ›</button></div>`;}
+    panel=`<div class="uc-result">${o.tie?'<small>本轮平票 · 随机裁定</small>':''}<b>${esc(o.name)} 被票出局</b><strong>${o.role==='undercover'?'身份：卧底':'身份：平民'}</strong><p>${esc(o.votes||'')}</p><button onclick="ucNextRound()">进入下一轮</button></div>`;}
   else if(_uc.phase==='over'){const o=_uc.lastOut;const meUnder=me.role==='undercover';const win=_uc.win;
     const iWon=(win==='under')===meUnder;
-    panel=`<div style="padding:16px;text-align:center;line-height:1.9">
-      ${o?`<div>🗳️ <b>${esc(o.name)}</b> 出局，ta是 ${o.role==='undercover'?'🕵️卧底':'🙂平民'}</div>`:''}
-      <div style="font-size:22px;margin:10px 0">${win==='under'?'🕵️ 卧底获胜！':'🎉 平民获胜！'}</div>
-      <div style="font-size:15px;color:${iWon?'#2bd66a':'#fa5151'}">你是 ${meUnder?'🕵️卧底':'🙂平民'}，${iWon?'你赢啦！🏆':'这局输了～'}</div>
-      <div style="font-size:13px;color:#888;margin-top:10px">平民词：${esc(_uc.civWord)} ｜ 卧底词：${esc(_uc.ucWord)}</div>
-      <div style="margin-top:8px;font-size:12px;color:#888">${_uc.players.map(p=>esc(p.name)+'('+(p.role==='undercover'?'卧底':'平民')+')').join('、')}</div>
-      <div style="display:flex;gap:10px;justify-content:center;margin-top:14px"><button class="btn p" style="max-width:120px" onclick="ucReplay()">再来一局</button><button class="btn g" style="max-width:120px" onclick="ucQuit()">退出</button></div></div>`;}
+    panel=`<div class="uc-result final"><small>GAME OVER</small><b>${win==='under'?'卧底阵营获胜':'平民阵营获胜'}</b><strong class="${iWon?'win':'lose'}">你是${meUnder?'卧底':'平民'} · ${iWon?'本局获胜':'本局落败'}</strong><p>平民词：${esc(_uc.civWord)}<br>卧底词：${esc(_uc.ucWord)}</p><div>${_uc.players.map(p=>esc(p.name)+' · '+(p.role==='undercover'?'卧底':'平民')).join('　')}</div><footer><button onclick="ucReplay()">再来一局</button><button onclick="ucQuit()">退出游戏</button></footer></div>`;}
   const show=!!_uc.showWord;
-  const wordBox=`<div onclick="ucToggleWord()" style="margin:10px;padding:12px;border-radius:14px;background:linear-gradient(135deg,#2d3344,#596273);color:#fff;text-align:center;cursor:pointer">
-    <div style="font-size:12px;opacity:.9">你的词卡（点一下${show?'隐藏':'查看'}）</div><div style="font-size:${show?'26':'18'}px;font-weight:800;margin-top:2px;letter-spacing:${show?'0':'4px'}">${show?esc(me.word||'…'):'••••'}</div>
-    <div style="font-size:11px;opacity:.85;margin-top:3px">第 ${_uc.round} 轮 · 你不知道自己是不是卧底，自己判断哦</div></div>`;
-  return `<div class="nav"><span class="l" onclick="ucQuit()">‹ 退出</span><span class="t">谁是卧底</span><span class="r" onclick="ucQuit()" style="color:#fa5151">结束</span></div>
-    <div class="scroll" style="background:#000">${wordBox}
-      <div style="display:flex;flex-direction:column;gap:6px;padding:0 10px">${_uc.players.map(ucPill).join('')}</div>
-      <div style="margin-top:6px">${panel}</div><div style="height:20px"></div></div>`;}
+  const wordBox=`<button class="uc-word" onclick="ucToggleWord()"><small>你的词卡 · 点按${show?'隐藏':'查看'}</small><b class="${show?'show':''}">${show?esc(me.word||'…'):'••••'}</b><span>第 ${_uc.round} 轮 · 根据描述判断自己的阵营</span></button>`;
+  return `<div class="uc-room"><div class="nav uc-nav"><span class="l" onclick="ucQuit()">‹ 退出</span><span class="t"><i>${gameLineIcon('undercover')}</i><b>谁是卧底</b><small>DEDUCTION ROOM</small></span><span class="r" onclick="ucQuit()">结束</span></div><div class="scroll uc-scroll">${wordBox}<div class="uc-list">${_uc.players.map(ucPill).join('')}</div><div class="uc-panel">${panel}</div><div style="height:20px"></div></div></div>`;}
 function ucSetHandoff(){if(!_uc)return;const rows=(_uc.players||[]).filter(p=>p.desc).map(p=>({who:p.isMe?'me':'ta',name:p.name,text:p.desc}));if(_uc.lastOut)rows.push({who:'sys',text:_uc.lastOut.name+'被票出局'});gameSetHandoff(_uc.cid,'谁是卧底',rows);}
 function ucReplay(){const lead=_uc.players.find(p=>!p.isMe&&p.id.indexOf('p_')===0);const cid=_uc.cid||(lead?lead.id.slice(2):(S.contacts.filter(c=>!c.deleted)[0]||{}).id);ucSetHandoff();_uc=null;if(cid)ucConfig(cid);else home();}
 function ucToggleWord(){if(!_uc)return;_uc.showWord=!_uc.showWord;render();}
@@ -9772,7 +9762,7 @@ function editVoice(id){const c=getC(id);const v=getVoice(c);openModal(`<h3>${esc
   <div class="field"><label>系统音色</label><select id="v_uri">${voiceOptions(v.voiceURI)}</select></div>
   <div class="field"><label>语速 <b id="v_rate_n">${(+v.rate||1).toFixed(1)}</b></label><input id="v_rate" type="range" min="0.5" max="1.8" step="0.1" value="${v.rate||1}" oninput="$('#v_rate_n').textContent=(+this.value).toFixed(1)" style="width:100%"></div>
   <div class="field"><label>音调 <b id="v_pitch_n">${(+v.pitch||1).toFixed(1)}</b></label><input id="v_pitch" type="range" min="0.5" max="1.6" step="0.1" value="${v.pitch||1}" oninput="$('#v_pitch_n').textContent=(+this.value).toFixed(1)" style="width:100%"></div>
-  <div class="field"><label>每句之间停顿 <b id="v_pause_n">${voicePauseSeconds(v).toFixed(1)}</b> 秒<small style="display:block;color:#888">用于连续语音、语音通话和视频通话；英文建议 0.6–1.0 秒</small></label><input id="v_pause" type="range" min="0" max="3" step="0.1" value="${voicePauseSeconds(v)}" oninput="$('#v_pause_n').textContent=(+this.value).toFixed(1)" style="width:100%"></div>
+  <div class="field"><label>每句之间停顿 <b id="v_pause_n">${voicePauseSeconds(v).toFixed(1)}</b> 秒<small style="display:block;color:#888">连续通话会在两句之间真实等待；单条语音保留自然标点，不再插入省略号，避免结巴和重复词</small></label><input id="v_pause" type="range" min="0" max="3" step="0.1" value="${voicePauseSeconds(v)}" oninput="$('#v_pause_n').textContent=(+this.value).toFixed(1)" style="width:100%"></div>
   <div class="field"><label>语言（外语会带中文翻译）</label><select id="v_lang"><option value="zh" ${v.lang==='zh'?'selected':''}>中文</option><option value="英" ${v.lang==='英'?'selected':''}>英语</option><option value="日" ${v.lang==='日'?'selected':''}>日语</option><option value="韩" ${v.lang==='韩'?'selected':''}>韩语</option></select></div>
   <div class="field"><label>英语口音（仅英语有效）<small style="display:block;color:#888">API克隆音色仍以原始录音口音为主</small></label><select id="v_accent"><option value="auto" ${normVoiceAccent(v)==='auto'?'selected':''}>自动 · 跟随音色</option><option value="en-GB" ${normVoiceAccent(v)==='en-GB'?'selected':''}>英式英语 · British</option><option value="en-US" ${normVoiceAccent(v)==='en-US'?'selected':''}>美式英语 · American</option></select></div>
   <div class="field"><label>外置API音色ID<small style="display:block;color:#888">仅关闭内置语音、使用外置接口时生效</small></label><input id="v_tv" value="${esc(v.ttsVoice||'')}" placeholder="外置接口需要时填写，如克隆ID/alloy"></div>
@@ -10175,14 +10165,12 @@ async function webSearch(q){const ws=S.settings.search||{};
 /* =================== 浏览器 =================== */
 let _brBusy=false,_brBusyMode='';
 function renderBrowser(){const b=S.browser||{};
-  const webOn=!!(S.settings.web&&S.settings.web.enabled),src=b.lastSearchMode==='web'?'🌐 本次使用 Jina 真实联网':b.lastSearchMode==='webmodel'?'🌐 本次已请求联网模型（是否实时取决于模型能力）':b.lastSearchMode==='fallback'?'⚠️ 联网失败，本次已改用普通模型':b.lastSearchMode==='model'?'🤖 本次未联网，使用普通模型回答':'';
-  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">浏览器</span><span class="r" onclick="brHistory()">${svgIc('clock',19,'#ccc')}</span></div>
-   <div style="padding:10px 12px;background:#1c1c1e;display:flex;gap:8px;border-bottom:.5px solid #2a2a2c">
-     <input id="br_q" value="${esc(b.q||'')}" placeholder="联网搜索…" style="flex:1;border:1px solid #38383a;border-radius:18px;padding:8px 14px;background:#2c2c2e;color:#eee;outline:none" onkeydown="if(event.key==='Enter')browserSearch()">
-     <button class="send" onclick="browserSearch()" ${_brBusy?'disabled':''}>${_brBusy?'…':'搜'}</button></div>
-   <div class="scroll" style="background:#000">
-   ${_brBusy?`<div class="empty">${_brBusyMode==='web'?'🌐 正在联网搜索…':_brBusyMode==='webmodel'?'🌐 正在请求联网模型…':'🤖 当前未联网，正在用模型回答…'}</div>`:((b.items&&b.items.length)?(src?`<div class="hint" style="margin:10px 12px;color:${b.lastSearchMode==='web'?'#65c88a':'#d7a85b'}">${src}</div>`:'')+b.items.map((it,i)=>`<div class="section"><div style="padding:12px 14px" onclick="brView(${i})"><div style="color:#7db3ff;font-size:15px;font-weight:600">${esc(it.title)}</div><div style="color:#bbb;font-size:13px;margin-top:4px;line-height:1.6">${esc((it.snippet||'').slice(0,160))}${(it.snippet||'').length>160?'…':''}</div><div style="margin-top:8px;display:flex;gap:8px"><button class="minibtn" onclick="event.stopPropagation();brView(${i})">查看</button><button class="minibtn" onclick="event.stopPropagation();brFwd(${i})">转发给角色</button></div></div></div>`).join(''):`<div class="empty" style="padding:50px;line-height:1.8">搜点你想查的吧～<br>${webOn?'已开启联网搜索':'联网未开启，将使用普通模型回答'}</div>`)}
-   <div style="height:20px"></div></div>`;}
+  const webOn=!!(S.settings.web&&S.settings.web.enabled),items=b.items||[],history=(b.history||[]).slice(0,6),src=b.lastSearchMode==='web'?'已连接实时网络':b.lastSearchMode==='webmodel'?'联网模型结果':b.lastSearchMode==='fallback'?'网络不可用，已切换智能回答':b.lastSearchMode==='model'?'智能回答 · 内容可能不是最新':'';
+  const search=`<div class="br-search"><span>${svgIc('search',19,'#8a8d94')}</span><input id="br_q" value="${esc(b.q||'')}" placeholder="搜索你感兴趣的内容" onkeydown="if(event.key==='Enter')browserSearch()"><button onclick="browserSearch()" ${_brBusy?'disabled':''}>${_brBusy?'搜索中':'百度一下'}</button></div>`;
+  const homeView=`<div class="br-home"><div class="br-logo">百<span>度</span></div>${search}<div class="br-shortcuts"><button onclick="browserSearch('今日热点')">${svgIc('star',21,'#ff5a54')}<span>热榜</span></button><button onclick="browserSearch('今日新闻')">${svgIc('notebook',21,'#3478f6')}<span>资讯</span></button><button onclick="browserSearch('热门图片')">${svgIc('image',21,'#8f63e9')}<span>图片</span></button><button onclick="browserSearch('生活实用技巧')">${svgIc('book',21,'#f4a51c')}<span>知道</span></button></div><section class="br-hot"><div class="br-section-title"><b>百度热搜</b><small>实时热点</small></div>${['今日有哪些值得关注的消息','近期热门影视作品','本地周末好去处','夏日生活实用指南','大家都在听的新歌'].map((x,i)=>`<button onclick="browserSearch('${x}')"><i>${i+1}</i><span>${x}</span><em>${i<2?'热':''}</em></button>`).join('')}</section>${history.length?`<section class="br-recent"><div class="br-section-title"><b>最近搜索</b><button onclick="brHistory()">全部记录</button></div><div>${history.map((x,i)=>`<button onclick="brRe(${i})">${svgIc('clock',13,'#9699a0')} ${esc(x.q)}</button>`).join('')}</div></section>`:''}<div class="br-network">${webOn?'联网搜索已开启':'当前使用智能回答，可在设置中开启联网搜索'}</div></div>`;
+  const busyView=`<div class="br-results"><div class="br-result-search">${search}</div><div class="br-loading"><i></i><i></i><i></i><span>${_brBusyMode==='model'?'正在整理答案':'正在检索相关内容'}</span></div></div>`;
+  const resultView=`<div class="br-results"><div class="br-result-search">${search}</div><div class="br-result-meta"><span>搜索结果 · ${items.length}</span><small>${src}</small></div>${items.map((it,i)=>`<article class="br-result" onclick="brView(${i})"><div class="br-site"><span>B</span><div>百度智能搜索<small>baidu.com</small></div></div><h3>${esc(it.title)}</h3><p>${esc((it.snippet||'').slice(0,220))}${(it.snippet||'').length>220?'…':''}</p><div class="br-actions"><button onclick="event.stopPropagation();brView(${i})">查看详情</button><button onclick="event.stopPropagation();brFwd(${i})">转发给角色</button></div></article>`).join('')}<div class="br-end">没有更多结果了</div></div>`;
+  return `<div class="nav br-nav"><span class="l" onclick="home()">‹</span><span class="t">百度</span><span class="r" onclick="brHistory()">${svgIc('clock',19,'currentColor')}</span></div><div class="scroll br-page">${_brBusy?busyView:(items.length?resultView:homeView)}</div>`;}
 async function browserModelSearch(q){return await chatAPI([{role:'system',content:'你是浏览器里的普通回答模型。当前没有可用的真实联网结果，只能依据已有知识回答，可能不是最新信息。整理成3到5条简短结果，每行一条，严格格式：标题:::一两句话摘要。不要声称刚刚搜索、查到实时网页或看到最新资料。'},{role:'user',content:q}],{max:700,aux:true});}
 async function browserSearch(qArg){if(_brBusy)return;const q=(qArg||($('#br_q')?$('#br_q').value:'')||'').trim();if(!q){toast('搜点啥呢');return;}
   S.browser=S.browser||{};S.browser.q=q;S.browser.history=S.browser.history||[];S.browser.history.unshift({q,time:Date.now()});S.browser.history=S.browser.history.slice(0,40);
