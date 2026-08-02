@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='781';</script>
+<script>window.__NORTH_SHELL_BUILD__='782';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-781';
+  var key='north-sw-reloaded-782';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=781';
+  var url='sw.js?v=782';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -913,7 +913,6 @@ body{min-height:0}
 /* 一起听：保留新版播放器，只恢复旧版相依头像、耳机线与距离信息。 */
 .music-classic-together{position:relative;z-index:3;flex:none}.music-headphone-pair{position:relative;width:230px;height:94px;margin:0 auto}.music-headphone-pair>svg{position:absolute;left:0;top:0;width:230px;height:98px;overflow:visible;pointer-events:none}.music-headphone-pair>svg path{fill:none;stroke:rgba(238,241,247,.58);stroke-width:1.15;stroke-linecap:round}.music-headphone-avatars{position:absolute;left:50%;top:9px;display:flex;align-items:center;transform:translateX(-50%)}.music-headphone-avatars>div{position:relative;z-index:1}.music-headphone-avatars>div+div{z-index:2;margin-left:-12px}.music-headphone-invite{width:66px;height:66px;display:flex;align-items:center;justify-content:center;border:2px dashed rgba(255,255,255,.48);border-radius:50%;color:#d5d5da;font-size:10px;line-height:1.25;text-align:center;cursor:pointer}.music-headphone-action{position:absolute;left:50%;bottom:0;z-index:4;width:25px;height:25px;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:50%;background:linear-gradient(135deg,#ff9ec4,#ff6fa5);box-shadow:0 2px 7px rgba(0,0,0,.45);color:#fff;transform:translateX(-50%);cursor:pointer}.music-classic-together .music-bubbles{min-height:37px;margin-top:4px;padding:0 22px}.music-classic-distance{width:100%;display:block;margin:1px 0 3px;padding:2px 14px;border:0;background:transparent;color:#d2d2da;font-size:10px;text-align:center;cursor:pointer}.music-classic-distance i{font-style:normal}.music-chat-dock{position:relative}.music-chat-toggle{height:24px;display:flex;align-items:center;justify-content:center;gap:4px;margin:0 auto 3px;padding:0 9px;border:0;border-radius:12px;background:transparent;color:rgba(255,255,255,.48);font-size:8px;cursor:pointer}.music-chat-toggle svg{transition:transform .2s}.music-chat-dock.collapsed .music-chatbar{display:none}.music-chat-dock.collapsed .music-chat-toggle{margin-bottom:0}.music-app-hero-record{right:10px!important}.music-vinyl-wrap{overflow:visible}
 @media(max-width:390px){.music-app-hero-record{right:7px!important}}@media(max-height:720px){.music-headphone-pair{height:80px;transform:scale(.88);transform-origin:top center;margin-bottom:-10px}.music-classic-together .music-bubbles{min-height:29px;margin-top:0}.music-classic-distance{margin-bottom:0}.music-chat-toggle{height:20px}}
-.music-lyrics .mlrc{color:#7d7d88!important;font-weight:400;transform:scale(1)}.music-lyrics .mlrc.on{color:#ffd6e8!important;font-weight:700;transform:scale(1.08)}
 </style>
 <style>
 .lmview{background-color:#06101a;background-image:radial-gradient(circle at 53% 43%,rgba(35,76,108,.2),transparent 29%),linear-gradient(rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(rgba(116,158,194,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.02) 1px,transparent 1px)!important;background-size:auto,40px 40px,40px 40px,160px 160px,160px 160px!important}.lmview:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 0 42%,rgba(126,185,236,.05) 50%,transparent 58%);mix-blend-mode:screen}.lmzones path{fill:rgba(72,107,137,.055);stroke:rgba(154,190,222,.18);stroke-width:1.1;vector-effect:non-scaling-stroke}.lmroutes path{fill:none;stroke:url(#lmRoute);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:9 15;vector-effect:non-scaling-stroke}.lmregionnames text{fill:rgba(191,216,235,.28);font:700 10px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:1.7px;text-anchor:middle}.lmmeridians path{stroke:rgba(150,188,222,.065)!important}.lmlands path{fill:rgba(72,107,137,.035)!important;stroke:rgba(154,190,222,.08)!important;filter:none!important}.lmcity i{background:#a6c0d7;box-shadow:0 0 0 3px rgba(166,192,215,.1),0 0 12px rgba(116,178,232,.2)}.lmtrail{border-color:rgba(148,197,239,.38);background:linear-gradient(145deg,rgba(9,21,34,.93),rgba(14,24,36,.84));box-shadow:0 12px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05)}.lmtrail i{background:linear-gradient(145deg,#f2f6fb,#a8c7e7);color:#0b1722}.lmfootrow>i{background:linear-gradient(145deg,rgba(112,163,209,.24),rgba(63,99,132,.12));color:#c8e1f5}
@@ -976,9 +975,9 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=781" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=781" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=781" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=781"></script>
+<script src="license-gate.js?v=782" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=782" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=782" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=782"></script>
 </body>
 </html>

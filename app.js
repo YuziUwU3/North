@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='781'){
+if(window.__NORTH_SHELL_BUILD__!=='782'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v781 · 歌词与逐句语音';
+const APP_VER='v782 · 歌词同步恢复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1364,7 +1364,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=781';
+  const url='sw.js?v=782';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2347,7 +2347,7 @@ function cinemaFallbackMemory(s,c){const call=summaryUserLabel(c),act=s.kind==='
 async function cinemaEnd(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c)return;if(!await uiConfirm('结束这次'+(s.kind==='book'?'共读':'放映')+'？\n结束后会整理成角色长期记忆，视频盒或书架里的内容仍可重播。'))return;const v=$('#cinVideo');cinemaStopTranscribe();if(v){v.pause();s.progress=v.currentTime||s.progress;s.duration=Number.isFinite(v.duration)?v.duration:s.duration;}s.status='finished';s.updatedAt=Date.now();_cin.token++;_cin.busy=false;cinemaSaveProgress(true);toast('正在把这次内容收进记忆…');let memory=cinemaFallbackMemory(s,c),high=cinemaWatchedHighlights(s),len=cinemaSummaryLength(s);const configured=!!(S.settings&&S.settings.chat&&S.settings.chat.base&&S.settings.chat.key);if(configured&&((s.items||[]).length||high)){try{const raw=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。把下面这次放映室经历写成一段第一人称长期记忆：只概括已提供的字幕、转写、画面内容和双方真正聊过的事情；用“我”指自己，用“'+summaryUserLabel(c)+'”称呼一起观看的人。不补完没看到的剧情，不编造事件。根据实际内容量写约'+len.min+'到'+len.max+'个中文字，内容少就短、内容多才写长，最多300字；保持简洁连贯。禁止写影片全长、观看时长、分钟数、时间点或播放进度。一整段，不要标题、列表、括号动作或重要度标记。'+perspRule(c)},{role:'user',content:cinemaTranscript(s,c)}],{max:650,temp:.28});const t=cinemaSummaryClean(raw,len.max);if(t.length>=35)memory=t;}catch(_){}}s.summary=memory;addSummary(c,memory,4,'【放映室】');const full=summaryCleanText(c,'【放映室】'+memory),mem=(c.summaries||[]).slice().reverse().find(x=>x&&x.text&&summarySimilarity(summaryCleanText(c,x.text),full)>=.58);if(mem)mem.cinemaSessionId=s.id;cinemaMirrorLifecycle(s,'end',memory);save();cinemaLeaveImmersive();cinemaReleaseMedia();back();toast('已结束，'+(c.remark||c.name)+'会记得这一次');if(!c.blocked)scheduleReply(c.id,'[系统：你和'+S.me.name+'刚刚结束在放映室'+(s.kind==='book'?'共读':'一起看')+'《'+s.title+'》。本场实际发生的聊天和内容总结已经写入你的上下文。自然说一句有头有尾的收尾话，不要汇报时长或进度，也不要重新回答本场已经回答过的问题。]');}
 
 /* ---------- 🎵 一起听音乐 ---------- */
-let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=false,_mView='home',_mChatOpen=true,_mLyricIndex=-2;
+let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=false,_mView='home',_mChatOpen=true,_mLyricIndex=-2,_mLyricRaf=0,_mLyricPaintAt=0;
 let _mBub={l:null,r:null};// 一起听字幕气泡：l=我(白色) r=角色(灰色)，说完一句自动消失
 let _mReplyBusy=false,_mSendT=0;// 防止一起听聊天回复重复触发（发两遍）
 function _mBubHTML(o){if(!o||!o.text)return '';const mine=o.side==='l',bgc=mine?'rgba(255,255,255,.98)':'rgba(72,73,78,.98)';
@@ -2443,7 +2443,7 @@ function syncMark(){if(!_sync||!_ma)return;_sync.stamps[_sync.idx]=_ma.currentTi
 function syncBack(){if(!_sync)return;if(_sync.idx>0){_sync.idx--;_sync.stamps[_sync.idx]=null;}syncRender();}
 function syncSave(){if(!_sync)return;const s=S.music.songs.find(x=>x.id===_sync.id);if(s){s.lyrics=_sync.lines.map((t,i)=>(_sync.stamps[i]!=null?'['+fmtLrc(_sync.stamps[i])+']':'')+t).join('\n');save();}_sync=null;closeModal();render();toast('时间轴已保存🎯');}
 async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;_mWantPlay=true;
-  if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();};_ma.onpause=()=>{_mPlaying=false;mBtns();};}
+  if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();mLyricLoopStart();};_ma.onpause=()=>{_mPlaying=false;mBtns();mLyricLoopStop();mTick();};}
   _mCur=id;S.music.lastSongId=id;let url;
   if(s.src&&s.src.t==='url')url=s.src.url;
   else{const b=await mGet(id);if(!b){toast('音频文件丢了，删掉重新加一下');return;}if(_mUrl){try{URL.revokeObjectURL(_mUrl);}catch(e){}}url=URL.createObjectURL(b);_mUrl=url;}
@@ -2460,10 +2460,12 @@ function musicSeek(ev){if(!_ma||!_ma.duration)return;const r=ev.currentTarget.ge
 function parseLyrics(l){if(!l)return[];const out=[];const re=/\[(\d{1,3}):(\d{1,2})(?:[.:,](\d{1,3}))?\]/g;
   l.split('\n').forEach(ln=>{let m;const times=[];re.lastIndex=0;while((m=re.exec(ln))){times.push(+m[1]*60+(+m[2])+(m[3]?+('0.'+m[3]):0));}const txt=ln.replace(/\[[^\]]*\]/g,'').trim();if(times.length)times.forEach(t=>out.push({t,txt}));else if(txt)out.push({t:null,txt});});
   if(out.some(x=>x.t!=null))out.sort((a,b)=>((a.t==null?-1:a.t)-(b.t==null?-1:b.t)));return out;}
-function musicLyricIndex(lines,time){let idx=-1;for(let i=0;i<(lines||[]).length;i++){if(lines[i].t!=null&&lines[i].t<=time+.035)idx=i;}return idx;}
+function musicLyricIndex(lines,time){let idx=-1,first=-1;for(let i=0;i<(lines||[]).length;i++){if(lines[i].t==null)continue;if(first<0)first=i;if(lines[i].t<=time+.06)idx=i;}return idx<0?first:idx;}
+function mLyricLoopStart(){if(_mLyricRaf||!_ma||_ma.paused)return;const step=now=>{if(!_ma||_ma.paused){_mLyricRaf=0;return;}if(!now||now-_mLyricPaintAt>=80){_mLyricPaintAt=now||Date.now();mTick();}_mLyricRaf=requestAnimationFrame(step);};_mLyricRaf=requestAnimationFrame(step);}
+function mLyricLoopStop(){if(_mLyricRaf)cancelAnimationFrame(_mLyricRaf);_mLyricRaf=0;}
 function mLyricTick(force){const box=document.getElementById('m_lyrics');if(!box||!_ma||!_mCur)return;const s=S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);if(!lines.length)return;
   if(lines.some(x=>x.t!=null)){// 带时间轴：高亮当前句并居中
-    const idx=musicLyricIndex(lines,_ma.currentTime),els=box.querySelectorAll('.mlrc');if(!force&&idx===_mLyricIndex&&els[idx]&&els[idx].classList.contains('on'))return;_mLyricIndex=idx;els.forEach((el,i)=>{el.classList.toggle('on',i===idx);if(i===idx)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current');});
+    const idx=musicLyricIndex(lines,_ma.currentTime),els=box.querySelectorAll('.mlrc');_mLyricIndex=idx;els.forEach((el,i)=>{const on=i===idx;el.classList.toggle('on',on);el.style.color=on?'#ffd6e8':'#7d7d88';el.style.fontWeight=on?'700':'400';el.style.transform=on?'scale(1.08)':'scale(1)';if(on)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current');});
     if(idx>=0&&els[idx])box.scrollTop=Math.max(0,els[idx].offsetTop-box.clientHeight/2+els[idx].clientHeight/2);}
   else if(_ma.duration){// 纯文本歌词：跟着进度匀速滚动
     const max=box.scrollHeight-box.clientHeight;if(max>0)box.scrollTop=(_ma.currentTime/_ma.duration)*max;}}
