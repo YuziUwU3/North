@@ -1,5 +1,5 @@
-const BUILD='785';
-const SHELL_CACHE='north-shell-v785';
+const BUILD='786';
+const SHELL_CACHE='north-shell-v786';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
