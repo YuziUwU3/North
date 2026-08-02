@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='786'){
+if(window.__NORTH_SHELL_BUILD__!=='787'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v786 · 触屏声音与聊天保护';
+const APP_VER='v787 · 提示音通道与自然标点';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=786';
+  const url='sw.js?v=787';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1733,7 +1733,6 @@ function buildSystem(c,opt){
   {const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
    if(_lu&&_gap>=25*60000){const _dg=dayGap(_lu.time,Date.now());
      s+='\n\n# 距离上次聊已经隔了很久（务必分清"刚刚"和"很久以前"）\n'+S.me.name+'上一次跟你说话是在 '+fmtDT(_lu.time)+'，距现在已经过去了【'+fmtDur(_gap)+'】'+(_dg?('，而且已经跨过【'+_dg+'个自然日】'):'')+'。这中间ta一直没理你、你俩没在聊。所以：\n· 之前发生的事（打过的电话、聊过的话、你做的事）都是【'+fmtDur(_gap)+'以前】的了，【绝对不能】说成"刚刚/刚才/方才"。要照实说"你都'+fmtDur(_gap)+'没理我了""几个小时前那通电话"。\n· 如果已经跨天，就把昨天/前几天的事当成过去式回忆或旧账，不要接着上一天的约会、通话、争吵继续演，好像时间没变过。';}}
-  s+='\n\n# 标点和口吻（必须遵守）\n像真人微信聊天，不要使用省略号（……或…），不要使用中文引号（“”），不要使用破折号（——或—）。可以用逗号、句号、问号？、感叹号！。';
   if(c.job)s+='\n\n# 你的职业\n你是「'+c.job+'」。说话、作息、收入水平、花钱方式都要符合这个职业，别脱节。';
   if(c.wallet!=null)s+='\n\n# 你的经济状况（你清楚自己有多少钱）\n你银行卡/钱包里现在大约有 ¥'+(+c.wallet).toFixed(0)+'。你心里有数、知道自己的余额，被问到就照实说个大概；花钱、转账、请客、送礼都要量力而行、符合你的职业和这个余额，别装穷也别乱挥霍超出能力。';
   {const _sp2=getSpy(c);if(_sp2&&_sp2.phone)s+='\n\n# 你的手机号\n你的手机号是 '+_sp2.phone+'，你记得自己的号码。';}
@@ -6714,7 +6713,7 @@ function phDefaultAvatar(cls){return `<div class="avatar ${cls||'sm'} phdefav">$
 function phAvatar(n,cls){const x=phFind(n),v=x&&x.avatar;if(v)return av(v,cls||'sm');return phDefaultAvatar(cls);}
 function phWhen(t){const d=new Date(t||Date.now()),now=new Date();if(d.toDateString()===now.toDateString())return hm(t);const y=new Date(now);y.setDate(now.getDate()-1);if(d.toDateString()===y.toDateString())return '昨天';return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function phRegion(n){const p=phState(),key=phNorm(n),x=phFind(n);if(p.regions[key])return p.regions[key];if(x&&x.region)return x.region;const d=(''+phDigits(n)).replace(/^\+?86/,'');if(d==='110')return '报警服务';if(d==='119')return '消防救援';if(d==='120')return '急救中心';if(d==='122')return '交通报警';if(d==='10086')return '中国移动';if(/^025/.test(d))return '江苏 南京';if(/^0512/.test(d))return '江苏 苏州';if(/^1\d{10}$/.test(d)){const a=['江苏 苏州','上海','广东 深圳','浙江 杭州','北京','四川 成都','湖北 武汉'];return a[Math.abs(phHash(d))%a.length];}return '未知地区';}
-function phSound(type,key){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const map={sms:[[1046,.07],[1396,.08]],call:[[440,.12],[523,.12],[659,.18]],connect:[[740,.06],[988,.08]],key:[[697,.055],[852,.06]],end:[[330,.08],[247,.1]]};const seq=(map[type]||map.call).map(x=>x.slice());if(type==='key'&&key){const d=String(key).charCodeAt(0)%7;seq[0][0]=620+d*38;seq[1][0]=760+d*42;}let at=_audio.currentTime;seq.forEach(x=>{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=x[0];o.type=type==='key'?'sine':'triangle';g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(Math.min(1,(type==='key'?.11:.16)*volMul()),at+.01);g.gain.exponentialRampToValueAtTime(.001,at+x[1]);o.start(at);o.stop(at+x[1]+.02);at+=x[1]+.035;});}catch(_){}}
+function phSound(type,key){if(!S.settings.sound)return;const map={sms:[[1046,.07],[1396,.08]],call:[[440,.12],[523,.12],[659,.18]],connect:[[740,.06],[988,.08]],key:[[697,.055],[852,.06]],end:[[330,.08],[247,.1]]},seq=(map[type]||map.call).map(x=>x.slice());if(type==='key'&&key){const d=String(key).charCodeAt(0)%7;seq[0][0]=620+d*38;seq[1][0]=760+d*42;}playMediaTone(seq,{key:'phone-'+type+'-'+(key||''),level:type==='key'?.11:.16,gap:.035});}
 function phMyAliasNumber(){const p=phState();if(!p.aliasNum){p.aliasNum=phRandomNumber();save(300);}return p.aliasNum;}
 function phLineLabel(line){return line==='alias'?'匿名号':'主号';}
 function phSetLine(line){const p=phState();p.line=line==='alias'?'alias':'main';if(p.line==='alias')phMyAliasNumber();save();const page=cur();if(page&&page.p==='phonesms'){const n=phDigits(page.num),x=phFind(n);if(x&&x.kind==='role'){openPhoneSMS(n,p.line==='alias'?phSmsKey(n,'alias',phMyAliasNumber()):n);return;}}render();}
@@ -9627,6 +9626,11 @@ async function replyGenerationRun(id,aid){
   const token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token))toast('这次模型没有返回可见消息，请再点一下');}return true;}finally{if(replyGenerationStore()[key]===running)delete replyGenerationStore()[key];replyGenerationRefresh(id,aid);replyGenerationDrain();}}
 /* 提示音 + 通知 */
 let _audio,_audioBornAt=0,_audioPulseAt=0,_audioWakeRequired=true,_audioWakeAt=0,_audioPrimeUrl='',_audioMediaPrimer=null,_audioMicGranted=false,_audioMicCycling=null,_audioMicPermissionStatus=null;
+const _uiToneUrls=new Map();
+function uiToneElement(){if(_audioMediaPrimer)return _audioMediaPrimer;try{const a=new Audio();a.preload='auto';a.setAttribute('playsinline','');a.setAttribute('webkit-playsinline','');_audioMediaPrimer=a;return a;}catch(_){return null;}}
+function uiToneUrl(seq,opt){opt=opt||{};seq=(seq||[]).filter(x=>x&&+x[0]>0&&+x[1]>0);if(!seq.length)return'';const gap=Math.max(0,+opt.gap||0),key=opt.key||JSON.stringify([seq,gap]);if(_uiToneUrls.has(key))return _uiToneUrls.get(key);try{const rate=16000,parts=seq.map(x=>({freq:+x[0],count:Math.max(1,Math.round(+x[1]*rate)),gap:Math.max(0,Math.round(gap*rate))})),samples=parts.reduce((n,x)=>n+x.count+x.gap,0),b=new Uint8Array(44+samples*2),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i);};w(0,'RIFF');v.setUint32(4,36+samples*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,samples*2,true);let at=0;for(const p of parts){for(let i=0;i<p.count;i++){const edge=Math.min(1,i/(rate*.008),(p.count-i-1)/(rate*.025)),sample=Math.sin(2*Math.PI*p.freq*i/rate)*Math.max(0,edge)*.72;v.setInt16(44+(at+i)*2,Math.max(-32767,Math.min(32767,Math.round(sample*32767))),true);}at+=p.count+p.gap;}const url=URL.createObjectURL(new Blob([b],{type:'audio/wav'}));_uiToneUrls.set(key,url);return url;}catch(_){return'';}}
+function webToneSequence(seq,opt){opt=opt||{};ensureAudio();if(!_audio)return false;try{let at=_audio.currentTime,gap=Math.max(0,+opt.gap||0),level=Math.max(.01,Math.min(1,(+opt.level||.2)*volMul()));(seq||[]).forEach(x=>{const o=_audio.createOscillator(),g=_audio.createGain(),dur=Math.max(.03,+x[1]||.1);o.connect(g);g.connect(_audio.destination);o.frequency.value=+x[0]||660;o.type='sine';g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(level,at+.01);g.gain.exponentialRampToValueAtTime(.0001,at+dur);o.start(at);o.stop(at+dur+.02);at+=dur+gap;});return true;}catch(_){return false;}}
+function playMediaTone(seq,opt){opt=opt||{};if(!S.settings.sound)return null;const a=uiToneElement(),url=uiToneUrl(seq,opt);if(!a||!url){webToneSequence(seq,opt);return null;}try{a.pause();a.loop=!!opt.loop;a.volume=Math.max(0,Math.min(1,(+opt.level||.45)*volMul()));if(a.src!==url)a.src=url;a.currentTime=0;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>{if(typeof opt.onFail==='function')opt.onFail();else webToneSequence(seq,opt);});return a;}catch(_){webToneSequence(seq,opt);return null;}}
 function ensureAudio(rebuildSuspended){try{
   const staleSuspended=rebuildSuspended&&_audio&&_audio.state==='suspended'&&Date.now()-_audioBornAt>700;
   if(_audio&&(_audio.state==='interrupted'||staleSuspended)){try{_audio.close();}catch(e){}_audio=null;_curSrc=null;}/* iOS 被打断或长期挂起后 resume 常常无效，用户再次点击时直接重建 */
@@ -9640,7 +9644,7 @@ function audioUnlock(){try{const ac=ensureAudio(true);if(!ac)return null;try{if(
 function audioRouteReset(unlockNow){stopBufSource('audio-route-reset');try{if(_audio&&_audio.state!=='closed')_audio.close();}catch(_){}_audio=null;_audioBornAt=0;_audioPulseAt=0;_audioWakeRequired=!unlockNow;try{if('speechSynthesis'in window)speechSynthesis.cancel();}catch(_){}return unlockNow?audioUnlock():null;}
 function audioMarkWakeRequired(){_audioWakeRequired=true;}
 function audioPrimeMediaUrl(){if(_audioPrimeUrl)return _audioPrimeUrl;try{const rate=8000,samples=800,b=new Uint8Array(44+samples*2),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i);};w(0,'RIFF');v.setUint32(4,36+samples*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,samples*2,true);v.setInt16(44,1,true);_audioPrimeUrl=URL.createObjectURL(new Blob([b],{type:'audio/wav'}));}catch(_){}return _audioPrimeUrl;}
-function audioMediaWake(){try{const url=audioPrimeMediaUrl();if(!url)return false;const a=new Audio(url);a.preload='auto';a.volume=.001;a.setAttribute('playsinline','');a.setAttribute('webkit-playsinline','');_audioMediaPrimer=a;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>{});setTimeout(()=>{try{a.pause();a.removeAttribute('src');}catch(_){}if(_audioMediaPrimer===a)_audioMediaPrimer=null;},180);return true;}catch(_){return false;}}
+function audioMediaWake(){try{const url=audioPrimeMediaUrl(),a=uiToneElement();if(!url||!a)return false;a.loop=false;a.volume=.001;if(a.src!==url)a.src=url;a.currentTime=0;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>{});setTimeout(()=>{try{if(a.src===url)a.pause();}catch(_){}},180);return true;}catch(_){return false;}}
 function audioProbeMicPermission(){const devices=()=>{try{if(!navigator.mediaDevices||!navigator.mediaDevices.enumerateDevices)return Promise.resolve(false);return navigator.mediaDevices.enumerateDevices().then(ds=>{if((ds||[]).some(d=>d&&d.kind==='audioinput'&&d.label))_audioMicGranted=true;return _audioMicGranted;}).catch(()=>false);}catch(_){return Promise.resolve(false);}};try{if(_audioMicPermissionStatus){_audioMicGranted=_audioMicPermissionStatus.state==='granted'||_audioMicGranted;return _audioMicGranted?Promise.resolve(true):devices();}if(!navigator.permissions||!navigator.permissions.query)return devices();return navigator.permissions.query({name:'microphone'}).then(p=>{_audioMicPermissionStatus=p;const sync=()=>{_audioMicGranted=p.state==='granted';};sync();try{p.addEventListener('change',sync,{once:false});}catch(_){p.onchange=sync;}return _audioMicGranted||devices();}).catch(devices);}catch(_){return devices();}}
 function audioMicRouteCycle(){if(!_audioMicGranted||_audioMicCycling||_rec||_callHF||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return Promise.resolve(false);const done=v=>{_audioMicCycling=null;return v;};_audioMicCycling=navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>new Promise(res=>setTimeout(()=>{try{stream.getTracks().forEach(t=>t.stop());}catch(_){}res(true);},90))).then(done,()=>done(false));return _audioMicCycling;}
 function audioHardWake(){const now=Date.now();if(now-_audioWakeAt<450)return audioUnlock();_audioWakeAt=now;const ac=audioRouteReset(true);audioMediaWake();audioMicRouteCycle().then(ok=>{if(!ok)return;try{if(ac&&ac.state!=='running')ac.resume().catch(()=>{});}catch(_){}audioMediaWake();try{if(_ma&&_mWantPlay&&_ma.paused)_ma.play().catch(()=>{});}catch(_){}});return ac;}
@@ -9651,9 +9655,7 @@ function audioKick(){if(_audioWakeRequired)audioHardWake();else audioUnlock();tr
 document.addEventListener('visibilitychange',()=>{if(document.hidden)audioMarkWakeRequired();else{audioProbeMicPermission();audioKick();}});
 window.addEventListener('pageshow',()=>{audioMarkWakeRequired();audioProbeMicPermission();audioKick();},{passive:true});
 document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some(c=>!c.deleted&&getSpy(c).loc);if(!S.weather||Date.now()-S.weather.time>(liveLoc?600000:72000000))fetchWeather();},{once:true});
-function playDing(){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
-  o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(Math.min(1,.25*volMul()),_audio.currentTime+.02);
-  g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
+function playDing(){playMediaTone([[880,.34]],{key:'message-ding',level:.42});}
 function notifyIncoming(c,msg){
   // 语音消息：不再自动播放，改成点一下语音条才播（点开能重复听）
   if(c.muted)return;
@@ -9835,14 +9837,9 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 他刚说完那一下，麦克风可能还收着他的尾音，继续忽略一小段再听你 */
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
 function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}callHFStop();}
-function ringStart(){ringStop();ensureAudio();if(!_audio)return;let on=false;
-  _ring=setInterval(()=>{try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
-    o.frequency.value=on?660:520;o.type='sine';g.gain.setValueAtTime(.0001,_audio.currentTime);
-    g.gain.exponentialRampToValueAtTime(Math.min(1,.2*volMul()),_audio.currentTime+.05);g.gain.exponentialRampToValueAtTime(.0001,_audio.currentTime+.5);
-    o.start();o.stop(_audio.currentTime+.55);on=!on;}catch(e){}},650);
-  if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
-function ringStop(){if(_ring){clearInterval(_ring);_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
-function blip(freq,dur){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(Math.min(1,.2*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
+function ringStart(){ringStop();const fallback=()=>{if(!_ring||typeof _ring==='number')return;try{_ring.pause();_ring.loop=false;}catch(_){}let on=false;webToneSequence([[520,.5]],{level:.2});_ring=setInterval(()=>{webToneSequence([[on?660:520,.5]],{level:.2});on=!on;},650);};_ring=playMediaTone([[520,.5],[660,.5]],{key:'incoming-ring',level:.5,gap:.14,loop:true,onFail:fallback});if(!_ring){let on=false;_ring=setInterval(()=>{webToneSequence([[on?660:520,.5]],{level:.2});on=!on;},650);}if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
+function ringStop(){if(_ring){if(typeof _ring==='number')clearInterval(_ring);else try{_ring.pause();_ring.loop=false;_ring.currentTime=0;}catch(_){}_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
+function blip(freq,dur){playMediaTone([[freq,dur]],{key:'blip-'+freq+'-'+dur,level:.35});}
 function incomingCall(id,kind,opt){if(offlineFocusActive())return false;if(cinemaRoleOccupied(id))return false;const c=getC(id);if(!c||c.blocked||_call)return false;opt=opt&&typeof opt==='object'?opt:{};
   _call={id,kind,state:'incoming',dir:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null,_suspicionEvent:opt.suspicionEvent||''};initAudio();ringStart();showCallBanner(c);
   appNotify(c.remark||c.name,(kind==='video'?'视频':'语音')+'通话邀请',{tag:'call-'+id,renotify:true,requireInteraction:true,vibrate:[400,200,400,200,400],data:{type:'open',target:'call',id:id}});
@@ -10445,7 +10442,7 @@ function doPostMoment(){const t=$('#mm_t').value.trim();if(!t&&!(window._mmImgs|
   const visible=[...document.querySelectorAll('[data-mv].on')].map(e=>e.getAttribute('data-mv'));
   const p={id:uid(),authorId:'me',text:cleanMomentText(t)||t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[],acct:actId(),visible};
   S.moments.unshift(p);save();closeModal();render();reactToMyMoment(p);}
-function cleanRolePunct(t){return (t||'').replace(/……|…/g,'。').replace(/[“”「」『』]/g,'').replace(/——|—/g,'，');}
+function cleanRolePunct(t){return String(t||'');}
 function cleanReply(t){return cleanRolePunct((t||'').replace(/\[(心情|记住|闹钟|来电|联网|骰子|送礼|代付成功|日程|转账|红包|位置|图片|文件|角色扮演|你画我猜)[^\]]*\]/g,'').replace(/^["「]+|["」]+$/g,'').trim()).trim();}
 function recordVisit(cid,where){const c=getC(cid);if(!c)return;if(!S.visitors)S.visitors=[];S.visitors.unshift({cid,name:c.remark||c.name,avatar:c.avatar,where:where||'朋友圈',time:Date.now()});if(S.visitors.length>40)S.visitors.length=40;save();}
 function momentVisibleTo(p,cid){if(!p||p.authorId!=='me')return true;if(!p.visible||!p.visible.length)return true;return p.visible.indexOf(cid)>=0;}
