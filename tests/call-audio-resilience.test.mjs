@@ -81,6 +81,27 @@ assert.equal(notRetried,null);
 assert.equal(generateCalls,1,'relay synthesis must not retry when refund was not confirmed');
 assert.equal(refundCalls,1);
 
+let now=5000,created=0,closed=0,resumed=0;
+class FakeAudioContext{
+  constructor(){created++;this.state='suspended';}
+  close(){closed++;this.state='closed';}
+  resume(){resumed++;return Promise.resolve();}
+}
+const staleAudio={state:'suspended',close(){closed++;this.state='closed';},resume(){resumed++;return Promise.resolve();}};
+const recoveryContext=vm.createContext({
+  _audio:staleAudio,_audioBornAt:0,_curSrc:{},window:{AudioContext:FakeAudioContext},Date:{now:()=>now},Promise,
+});
+vm.runInContext(functionSource('ensureAudio'),recoveryContext);
+const recovered=recoveryContext.ensureAudio(true);
+assert.notEqual(recovered,staleAudio,'a stale suspended context should be replaced on the next user gesture');
+assert.equal(closed,1);
+assert.equal(created,1);
+assert.equal(recoveryContext._curSrc,null);
+now+=200;
+assert.equal(recoveryContext.ensureAudio(true),recovered,'the pointerdown and click from one gesture must reuse the fresh context');
+assert.equal(created,1,'one gesture must not repeatedly rebuild the audio context');
+assert.ok(resumed>=2,'audio recovery should request resume on both the stale replacement and the follow-up gesture');
+
 assert.match(source,/visibilitychange/);
 assert.match(source,/window\.addEventListener\('pageshow',audioKick/);
 console.log('call audio resilience tests passed');
