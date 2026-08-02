@@ -228,6 +228,10 @@ assert.doesNotMatch(functionSource("testTTS"), /Promise\.race/, "voice testing m
 assert.match(functionSource("testTTS"), /audioUnlock\(\);const played=await playBuf\(buf\)/, "voice testing should wake the shared audio path again before playback");
 assert.match(functionSource("ensureAudio"), /staleSuspended=rebuildSuspended&&_audio&&_audio\.state==='suspended'/, "a stale suspended mobile audio context must be rebuilt on the next gesture");
 assert.match(functionSource("audioUnlock"), /ensureAudio\(true\)/, "all user gestures must use the recovery path for app-wide audio");
+assert.match(functionSource("audioUnlock"), /createBuffer\(1,32,22050\)/, "running-but-silent Android audio routes must receive an output pulse");
+assert.match(functionSource("audioUnlock"), /navigator[\s\S]*userActivation[\s\S]*ua\.isActive/, "background pageshow must not consume the next real user-gesture unlock");
+assert.doesNotMatch(functionSource("audioUnlock"), /ac&&ac\.state!==['"]running['"]\)\{[^}]*createBuffer/, "a context that claims to be running must not skip the unlock pulse");
+assert.match(functionSource("playUrl"), /audioDataToBuf\(url\)[\s\S]*decodeBuf\(ab\)[\s\S]*playBuf\(buf\)/, "cached voice playback must fall back to WebAudio when HTML audio is blocked");
 assert.match(functionSource("phSimRoleSay"), /!voiceProgressiveOn\(\)/);
 assert.match(functionSource("callAI"), /ttsApiOn\(\)&&!voiceProgressiveOn\(\)/);
 assert.match(source, /hasNextSpoken&&voicePauseMs\(c\)>0/);

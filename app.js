@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='784'){
+if(window.__NORTH_SHELL_BUILD__!=='785'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v784 · 声音与回复恢复';
+const APP_VER='v785 · 全局声音唤醒';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1268,9 +1268,9 @@ if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=load
 let _curAudio=null,_curSrc=null;
 function stopBufSource(reason){const s=_curSrc;if(!s)return;try{s.__northStopped=reason||'replaced';s.stop();}catch(e){}if(_curSrc===s)_curSrc=null;}
 function volMul(){const v=(S.settings&&S.settings.volume!=null)?S.settings.volume:1;return Math.max(0,Math.min(3,v));}
-function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const vol=volMul();
+function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const active=_curAudio,vol=volMul();
   try{ensureAudio();if(_audio&&vol>1){const src=_audio.createMediaElementSource(_curAudio);const g=_audio.createGain();g.gain.value=vol;src.connect(g);g.connect(_audio.destination);}else{_curAudio.volume=Math.max(0,Math.min(1,vol));}}catch(e){try{_curAudio.volume=Math.max(0,Math.min(1,vol));}catch(_){}}
-  _curAudio.play().catch(()=>{});}
+  try{const p=_curAudio.play();if(p&&typeof p.catch==='function')p.catch(async()=>{if(_curAudio!==active)return;try{const ab=await audioDataToBuf(url),buf=await decodeBuf(ab);if(buf)await playBuf(buf);}catch(_){}});}catch(_){} }
 async function playBuf(buf){ensureAudio();if(!_audio||!buf)return false;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_audio.state!=='running')return false;stopBufSource('replaced-by-buffer');const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;return true;}catch(e){return false;}}
 function voiceAudioKey(m){const x=m&&String(m.audio||'').match(/^idb-audio:(.+)$/i);return x?x[1]:'';}
 function voiceAudioExpired(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&m.audio&&Date.now()-Number(m.audioTs||m.time||0)>VOICE_AUDIO_TTL_MS);}
@@ -1372,7 +1372,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=784';
+  const url='sw.js?v=785';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -9621,7 +9621,7 @@ async function replyGenerationRun(id,aid){
   let _note;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){const mm=_ms[i];if(mm.type==='sys'||mm._call)continue;if(mm.role==='user')break;if(mm.role==='assistant'){_note='[系统：'+S.me.name+'这会儿还没开口、还没回你。请你接着自己刚才的话【再自然地多说几句】（补充、延续你上面说的，或换个角度再聊两句），不要重复已经说过的内容。注意：上面那几条都是【你自己】说的，不是'+S.me.name+'说的，千万别把自己说过的话当成ta说的去回应。]';break;}}}
   const token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token))toast('这次模型没有返回可见消息，请再点一下');}return true;}finally{if(replyGenerationStore()[key]===running)delete replyGenerationStore()[key];replyGenerationRefresh(id,aid);replyGenerationDrain();}}
 /* 提示音 + 通知 */
-let _audio,_audioBornAt=0;
+let _audio,_audioBornAt=0,_audioPulseAt=0;
 function ensureAudio(rebuildSuspended){try{
   const staleSuspended=rebuildSuspended&&_audio&&_audio.state==='suspended'&&Date.now()-_audioBornAt>700;
   if(_audio&&(_audio.state==='interrupted'||staleSuspended)){try{_audio.close();}catch(e){}_audio=null;_curSrc=null;}/* iOS 被打断或长期挂起后 resume 常常无效，用户再次点击时直接重建 */
@@ -9629,8 +9629,10 @@ function ensureAudio(rebuildSuspended){try{
   if(_audio&&_audio.state!=='running')_audio.resume().catch(()=>{});
 }catch(e){}return _audio;}
 function initAudio(){ensureAudio();}
-// iOS 解锁：必须在用户手势里同步 resume + 播一个静音 buffer，否则之后再放声音会没声
-function audioUnlock(){try{const ac=ensureAudio(true);if(ac&&ac.state!=='running'){try{ac.resume().catch(()=>{});}catch(_){}const bf=ac.createBuffer(1,1,22050),s=ac.createBufferSource();s.buffer=bf;s.connect(ac.destination);s.start(0);}return ac;}catch(e){return null;}}
+// iOS/安卓 WebView 解锁：即使状态已经显示 running，也必须在用户手势里真正送出一次极低音量脉冲。
+// 部分浏览器会出现“running 但输出通道仍静音”，之前的条件判断会误跳过解锁，直到开关一次听筒识别才恢复。
+function audioUnlock(){try{const ac=ensureAudio(true);if(!ac)return null;try{if(ac.state!=='running')ac.resume().catch(()=>{});}catch(_){}const now=Date.now(),ua=typeof navigator!=='undefined'&&navigator.userActivation,gesture=!ua||ua.isActive;if(gesture&&now-_audioPulseAt>180){const bf=ac.createBuffer(1,32,22050),ch=bf.getChannelData?bf.getChannelData(0):null,s=ac.createBufferSource();if(ch&&ch.length)ch[0]=.00001;s.buffer=bf;s.connect(ac.destination);s.start(0);_audioPulseAt=now;}return ac;}catch(e){return null;}}
+function audioRouteReset(unlockNow){stopBufSource('audio-route-reset');try{if(_audio&&_audio.state!=='closed')_audio.close();}catch(_){}_audio=null;_audioBornAt=0;_audioPulseAt=0;try{if('speechSynthesis'in window)speechSynthesis.cancel();}catch(_){}return unlockNow?audioUnlock():null;}
 // iOS：用了系统键盘的语音转文字/被其它声音打断后，AudioContext 会被挂起、在放的音乐(_ma)也会被暂停，提示音/铃声/音乐就没了。
 // 这里在每次点击/触摸/切回页面时既唤醒 AudioContext，又把"本该在放的音乐"接着放，免得要退出后台才恢复。
 function audioKick(){audioUnlock();try{if(_ma&&_mWantPlay&&_ma.paused&&(!_ma.duration||_ma.currentTime<_ma.duration-0.3))_ma.play().catch(()=>{});}catch(e){}}
@@ -9803,7 +9805,7 @@ function callResumeHold(){if(_call&&_call.state==='active'){if(_call._bgHold){_c
 let _callBusy=false,_callPend=null;/* 通话回复串行锁：同一时间只跑一轮callAI，防止"边聊边查手机"两轮叠在一起、说得飞快 */
 /* ===== 免提模式：对着屏幕说话→自动识别→他语音回你→接着听，全程不用动手 ===== */
 let _callHF=false,_callSR=null,_callHFBusy=false,_hfIgnoreUntil=0;
-function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();toast('已关闭免提');}else{callHFStart();}render();}
+function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();audioRouteReset(true);toast('已关闭免提');}else{audioUnlock();callHFStart();}render();}
 function callHFStart(){const sr=makeSR();if(!sr){toast('这台设备/浏览器不支持语音识别，先用打字或按住说话吧（安卓Chrome支持最好）');_callHF=false;return;}
   _callHF=true;_callSR=sr;
   /* 全程保持一次聆听，不每轮停/开——避免麦克风开关的"嘀"提示音。他说话时只是【忽略】识别结果而不停止 */
@@ -9839,7 +9841,7 @@ function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const l
   b.className='msgbanner show';}
 function hideCallBanner(){const b=$('#callBanner');if(b)b.className='msgbanner';}
 function openIncoming(){if(!_call)return;audioUnlock();_call.opened=true;hideCallBanner();renderCall();}
-function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话',susEvent=_call._suspicionEvent||'';_call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();
+function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();audioRouteReset(false);hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话',susEvent=_call._suspicionEvent||'';_call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();
   const cc0=getC(id);if(cc0){phAddRecent(phRoleNumber(cc0),'in','missed',kindTxt.indexOf('视频')>=0?'video':'voice',0);phAddRoleVoicemail(cc0.id,phRoleNumber(cc0),{why:'missed',scene:'角色打来的'+kindTxt+'未接',context:''});}
   msgs(id).push({role:'user',type:'sys',content:'未接来电 · '+kindTxt,time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
   const c=getC(id);if(susEvent)suspicionCallFailed(id,susEvent,kindTxt);else if(c&&!c.blocked)delayedAccountReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，响了好一会儿ta都没接（未接来电）。你有点担心又有点不爽，主动发条消息问ta去哪了/在干嘛/怎么不接电话（符合你心情值和人设，别凶过头）。]',1500);}
@@ -9859,7 +9861,7 @@ function answerCall(autoByThem){if(!_call)return;audioUnlock();ringStop();clearT
     ? '这通电话是你主动打给'+S.me.name+'的，'+S.me.name+'刚接通。之后提起时绝对不要说成ta打给你。'
     : '这通电话是'+S.me.name+'主动打给你的，你刚接通。之后提起时绝对不要说成你打给ta。';
   callAI('[系统：'+dirText+(_call.kind==='video'?' 这是视频电话。':' 这是语音电话。')+(proR?' 这通是你自己主动打给ta的，因为你'+proR+'。开口先自然把你主动找ta的心情说出来，口语化短句。':' 自然开口，口语化短句。')+']');}
-function declineCall(){if(!_call)return;ringStop();endCallTimers();hideCallBanner();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming',wasCb=!!_call._cb,_kind=_call.kind,susEvent=_call._suspicionEvent||'';const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
+function declineCall(){if(!_call)return;ringStop();endCallTimers();audioRouteReset(true);hideCallBanner();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming',wasCb=!!_call._cb,_kind=_call.kind,susEvent=_call._suspicionEvent||'';const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
   const c0=getC(id);if(c0){phAddRecent(phRoleNumber(c0),wasIn?'in':'out',wasIn?'missed':'canceled',_kind,0);if(wasIn)phAddRoleVoicemail(c0.id,phRoleNumber(c0),{why:'decline',scene:'你明确拒接了角色的'+kindTxt,context:''});}
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
   _call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();if(cur().p==='chat')render();
@@ -9868,7 +9870,7 @@ function declineCall(){if(!_call)return;ringStop();endCallTimers();hideCallBanne
     else if(wasCb)maybeCallBack(id,_kind,false,true);// 连回拨也拒接：后续无论再拨或改文字，都能承接当天拒接次数
     else if(suspicionHandleUserHangup(c,{kind:_kind,dir:'incoming',dur:0,rejected:true})){}
     else {delayedAccountReply(id,rejectedCallPrompt(id,kindTxt,'initial'),2500);scheduleRejectedCallFollowup(id,Date.now(),kindTxt);}}}
-function hangupCall(byAI,reason){if(!_call)return;blip(300,.3);endCallTimers();hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');const _susEvent=_call._suspicionEvent||'';
+function hangupCall(byAI,reason){if(!_call)return;endCallTimers();audioRouteReset(!byAI);blip(300,.3);hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');const _susEvent=_call._suspicionEvent||'';
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
   const endText=byAI?(reason==='wxlogin'?'角色为了登录你的微信主动挂断':reason==='remotecontrol'?'角色为了申请远程操控主动挂断':'角色主动挂断'):'你主动挂断';
   msgs(id).push({role:'user',type:'sys',content:'通话结束 · '+endText+' · '+kindTxt+'时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
@@ -9914,7 +9916,7 @@ function checkCallSilence(){if(!_call||_call.state!=='active')return;
     summarizeCall(id,kind==='video'?'视频通话':'语音通话',sess);
     msgs(id).push({role:'user',type:'sys',content:'对方因你长时间没回应挂断了',time:Date.now(),id:uid()});
     const c0=getC(id);if(c0){c0._lastCallEnded={ts:Date.now(),kind,dir,byAI:true,dur,reason:'silent-redial'};}
-    endCallTimers();ringStop();_call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();if(cur().p==='chat'&&cur().id===id)render();
+    endCallTimers();ringStop();audioRouteReset(false);_call=null;_callBusy=false;_callPend=null;callClearPersist();renderCall();if(cur().p==='chat'&&cur().id===id)render();
     setTimeout(()=>{const cc=getC(id);if(_call||!cc||cc.blocked)return;
       if(effCallProb(cc)<=0||Math.random()*100>=effCallProb(cc)){aiReply(id,'[系统：刚才通话你因'+S.me.name+'长时间没出声而挂断了，这次没再回拨，改发条文字消息关心一下ta（问怎么突然不说话了/是不是走开了/有点担心，符合你人设）。]');return;}
       incomingCall(id,kind);if(_call)_call._silentRedial=true;},3000);return;}
@@ -10662,10 +10664,10 @@ function hydrateStoredImageNodes(){document.querySelectorAll('[data-idb-avatar]'
 function refreshHydratedUI(){hydrateStoredImageNodes();const a=document.activeElement,editing=a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable);if(!editing)render();if(_call&&_call.state==='incoming'&&!_call.opened){const c=getC(_call.id);if(c)showCallBanner(c);}}
 let _androidResumeRepairAt=0;
 function androidResumeRepair(force){if(!_appBootFinished)return;const host=document.getElementById('app');if(!force&&host&&host.firstElementChild){window.__northBootReady=true;return;}const now=Date.now();if(now-_androidResumeRepairAt<800)return;_androidResumeRepairAt=now;try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
-window.addEventListener('pagehide',()=>{sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
+window.addEventListener('pagehide',()=>{if(_callHF){callHFStop();audioRouteReset(false);}sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
 window.addEventListener('beforeunload',()=>{sleepMarkAway();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();});
 window.addEventListener('pageshow',e=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(_callHF){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending)saveNow();}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});document.addEventListener('fullscreenchange',cinemaFullscreenChanged);document.addEventListener('webkitfullscreenchange',cinemaFullscreenChanged);
 function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();initBattery();requestPersistentStorage();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}

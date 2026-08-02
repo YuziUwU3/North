@@ -102,6 +102,41 @@ assert.equal(recoveryContext.ensureAudio(true),recovered,'the pointerdown and cl
 assert.equal(created,1,'one gesture must not repeatedly rebuild the audio context');
 assert.ok(resumed>=2,'audio recovery should request resume on both the stale replacement and the follow-up gesture');
 
+let pulseNow=9000,pulseStarts=0,pulseCloses=0,pulseCancels=0;
+const pulseSamples=new Float32Array(32);
+const runningAudio={
+  state:'running',destination:{},
+  resume(){return Promise.resolve();},
+  close(){pulseCloses++;this.state='closed';return Promise.resolve();},
+  createBuffer(){return{getChannelData(){return pulseSamples;}};},
+  createBufferSource(){return{connect(){},start(){pulseStarts++;}};},
+};
+const pulseContext=vm.createContext({
+  _audio:runningAudio,_audioBornAt:pulseNow,_audioPulseAt:0,_curSrc:null,
+  window:{AudioContext:FakeAudioContext,speechSynthesis:{cancel(){pulseCancels++;}}},
+  speechSynthesis:{cancel(){pulseCancels++;}},Date:{now:()=>pulseNow},Promise,
+});
+vm.runInContext(functionSource('stopBufSource'),pulseContext);
+vm.runInContext(functionSource('ensureAudio'),pulseContext);
+vm.runInContext(functionSource('audioUnlock'),pulseContext);
+vm.runInContext(functionSource('audioRouteReset'),pulseContext);
+pulseContext.audioUnlock();
+assert.equal(pulseStarts,1,'a context reporting running must still receive a real unlock pulse');
+assert.ok(pulseSamples[0]>0&&pulseSamples[0]<.00002,'the unlock pulse must not be optimized away as an empty buffer');
+pulseContext.audioUnlock();
+assert.equal(pulseStarts,1,'one tap must not create duplicate unlock sources');
+pulseNow+=181;
+pulseContext.audioUnlock();
+assert.equal(pulseStarts,2,'a later user gesture may repair a silent output route again');
+pulseContext.audioRouteReset(false);
+assert.equal(pulseCloses,1,'ending a call must release the communication AudioContext');
+assert.equal(pulseContext._audio,null);
+assert.ok(pulseCancels>=1,'ending a call must also stop device speech output');
+
 assert.match(source,/visibilitychange/);
 assert.match(source,/window\.addEventListener\('pageshow',audioKick/);
+assert.match(functionSource('callHFToggle'),/callHFStop\(\);audioRouteReset\(true\)/);
+assert.match(functionSource('declineCall'),/audioRouteReset\(true\)/);
+assert.match(functionSource('hangupCall'),/audioRouteReset\(!byAI\)/);
+assert.match(source,/pagehide',\(\)=>\{if\(_callHF\)\{callHFStop\(\);audioRouteReset\(false\);\}/);
 console.log('call audio resilience tests passed');
