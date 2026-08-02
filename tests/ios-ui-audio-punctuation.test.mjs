@@ -22,6 +22,7 @@ function functionSource(name){
 }
 
 const mediaElement=functionSource('uiToneElement');
+const toneUrl=functionSource('uiToneUrl');
 const mediaWake=functionSource('audioMediaWake');
 const mediaTone=functionSource('playMediaTone');
 
@@ -33,6 +34,10 @@ assert.match(mediaWake,/uiToneElement\(\)/,'touch wake must prime the same eleme
 assert.doesNotMatch(mediaWake,/new Audio\(/,'touch wake must not unlock a disposable element on iOS');
 assert.doesNotMatch(mediaWake,/removeAttribute\(['"]src/,'the primed iOS element must remain reusable');
 assert.match(functionSource('playDing'),/playMediaTone/);
+assert.match(functionSource('playDing'),/decay:true/,'message sound must use the original soft decaying envelope');
+assert.match(toneUrl,/rate=44100/,'media tone should not use a harsh low sample rate');
+assert.match(toneUrl,/Math\.exp/,'soft message tone must decay instead of sustaining at full amplitude');
+assert.match(mediaWake,/callMediaElement\(\)/,'the same user touch must prime the dedicated iOS call media channel');
 assert.match(functionSource('phSound'),/playMediaTone/);
 assert.match(functionSource('ringStart'),/playMediaTone/);
 assert.match(functionSource('ringStart'),/loop:true/);

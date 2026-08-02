@@ -9,8 +9,9 @@ assert.ok(start>=0&&end>start,'wechat fallback helpers must exist');
 
 assert.match(source,/具体约会只能使用本轮已选中的一条相关记忆/);
 assert.doesNotMatch(source,/_off\.memory\.map\(offMemText\)/);
-assert.match(source,/let content=await wechatPrimaryReply\(\[\{role:'system',content:_sys\},\.\.\.hist,_pin\],_md,_routeState\)/);
-assert.match(source,/wechatRoleDrift\(content\)&&!_routeState\.fallback/);
+assert.match(source,/let content;try\{content=await wechatPrimaryReply\(\[\{role:'system',content:_sys\},\.\.\.hist,_pin\],_md,_routeState\)/);
+assert.match(source,/wechatRoleDrift\(content\)&&\(!_routeState\.fallback\|\|_naturalOn\)/);
+assert.match(source,/content:_stableSys/,'natural mode failures must use the complete stable prompt');
 assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|\|wechatAuxConfigured\(\)\}\)/);
 
 const calls=[];

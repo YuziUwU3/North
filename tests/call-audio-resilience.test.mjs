@@ -144,5 +144,11 @@ assert.match(functionSource('callHFToggle'),/callHFStop\(\);audioRouteReset\(fal
 assert.match(functionSource('callHFStop'),/typeof _callSR\.abort==='function'/,'ending recognition should release the Android communication route immediately');
 assert.match(functionSource('declineCall'),/audioRouteReset\(false\)/);
 assert.match(functionSource('hangupCall'),/audioRouteReset\(false\)/);
+assert.match(functionSource('speakWait'),/playCallMediaWait\(ready\.ab,ready\.buf,start\)/,'API call speech must use the iOS-safe media channel');
+assert.match(functionSource('playCallMediaWait'),/a\.play\(\)/);
+assert.match(functionSource('playCallMediaWait'),/playCallFallbackWait\(buf,onStart\)/,'WebAudio remains a bounded fallback');
+assert.match(functionSource('playCallFallbackWait'),/stopBufSource\('call-fallback-timeout'\)/,'a suspended fallback cannot hold the call reply queue indefinitely');
+assert.match(functionSource('playCallMediaWait'),/2500/,'a blocked iOS media start must fall back quickly instead of freezing the reply queue');
+assert.match(functionSource('endCallTimers'),/stopCallMediaAudio/,'hanging up must stop any prepared call media');
 assert.match(source,/pagehide',\(\)=>\{audioMarkWakeRequired\(\);if\(_callHF\)\{callHFStop\(\);audioRouteReset\(false\);\}/);
 console.log('call audio resilience tests passed');
