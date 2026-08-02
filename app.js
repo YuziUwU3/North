@@ -5069,7 +5069,7 @@ function gParseReply(content,cap,recent,g){const out=[];let txt=0;let pq=null;
     splitActions(l).forEach(p=>{if(txt>=cap)return;p=(p||'').replace(/^(@[^\s@]+\s*)+/,'').trim();if(!p||/^@\S+$/.test(p))return;/* 丢掉纯@xxx气泡 */const it={type:'text',content:p};if(pq){it.q=pq;pq=null;}out.push(it);txt++;});
   });
   return out;}
-async function aiGroupReply(id,fromText){if(offlineFocusActive())return;const g=S.groups.find(x=>x.id===id);if(!g)return;
+async function aiGroupReply(id,fromText){const g=S.groups.find(x=>x.id===id);if(!g)return;
   const allowed=(g.responders&&g.responders.length)?g.responders:g.members;
   const members=allowed.map(x=>getC(x)).filter(c=>c&&!c.deleted&&!c.blocked);if(!members.length)return;
   // 被@到的先回；选中的(没选=全部)每个人都至少回一条，其余顺序打乱
@@ -5081,7 +5081,6 @@ async function aiGroupReply(id,fromText){if(offlineFocusActive())return;const g=
     try{const recent=g.msgs.slice(-14);const sys=buildSystem(c)+gContext(g,c,recent);
       const pcap=Math.max(1,Math.min(cap,lo+Math.floor(Math.random()*(cap-lo+1))));// 每人这轮回几条随机，更自然
       let content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[轮到你在群里说话了。看看上面大家（包括其他群友互相）说了啥，自然接话——回'+S.me.name+'、或接群友的话拌嘴起哄都行。要专门回应某条就用 [引用|序号]，别@人、别跟别人说一样的话。只回 1 到 2 条短消息。]'}],{max:380});
-      if(offlineFocusActive())return;
       // 他改自己的群昵称
       content=content.replace(/[\[【]\s*群昵称\s*[\|｜:：]\s*([^\]】]{1,16})[\]】]/g,(mm,nn)=>{const nv=(nn||'').trim();if(nv){g.nicks=g.nicks||{};g.nicks[c.id]=nv;save();}return '';});
       let items=gParseReply(content,pcap,recent,g);
@@ -5089,7 +5088,6 @@ async function aiGroupReply(id,fromText){if(offlineFocusActive())return;const g=
       let first=true;
       for(const it of items){
         if(!first)await sleep(420+Math.random()*560);first=false;
-        if(offlineFocusActive())return;
         it.senderId=c.id;it.role='assistant';it.time=Date.now();it.id=uid();g.msgs.push(it);save();
         if(S.settings.sound&&!c.muted)playDing();// 每条群消息都有提示音
         if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',gbubble(g,it));if(stick)cb.scrollTop=cb.scrollHeight;}}
@@ -9323,7 +9321,7 @@ function lineToMsg(line,cch){
 function wechatAuxConfigured(){const a=S.settings&&S.settings.aux;return !!(a&&a.model);}
 async function wechatPrimaryReply(messages,md,state){try{const r=await chatAPI(messages,md);if(String(r||'').trim()||md.aux||!wechatAuxConfigured())return r;}catch(e){if(md.aux||!wechatAuxConfigured())throw e;}if(state)state.fallback=true;return chatAPI(messages,Object.assign({},md,{aux:true}));}
 function wechatRoleDrift(t){t=String(t||'').trim();return !t||isRefusal(t)||splitBubbles(t).some(isOOCLine);}
-async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccount||actId();if(offlineFocusActive())return;if(replyToken==null&&!note)replyToken=replyEpoch(id,replyAccount);if(replyStale(id,replyToken,replyAccount))return;if(actId()!==replyAccount){deferAccountReply(id,note,replyToken,replyAccount);return;}const c=getC(id);if(!c||c.blocked||c.deleted)return;/* 已删除的角色(找回箱里)绝不后台发消息 */
+async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount=replyAccount||actId();replyIntent=offlineReplyIntent(id,note,replyIntent);if(offlineReplyBlocked(replyIntent))return;if(replyToken==null&&!note)replyToken=replyEpoch(id,replyAccount);if(replyStale(id,replyToken,replyAccount))return;if(actId()!==replyAccount){deferAccountReply(id,note,replyToken,replyAccount);return;}const c=getC(id);if(!c||c.blocked||c.deleted)return;/* 已删除的角色(找回箱里)绝不后台发消息 */
   if(cinemaRoleOccupied(id))return;/* 正在一起看剧或看书时，角色只在放映室回应 */
   if(wxLoginBlockReply(id,note))return;/* 角色登录用户微信期间不能同时给用户发消息；退出后合并承接 */
   if(initiativeNoteActive(note)&&!initiativeReplyFresh(c,note))return false;/* 主动任务排队后若用户又说话或争吵状态改变，旧任务立即作废 */
@@ -9352,7 +9350,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     const _pin={role:'system',content:personaPin(c)};
     const _md={aux:c.model==='aux',complete:true},_repairMd=Object.assign({},_md,{aux:c.model==='aux'||wechatAuxConfigured()}),_routeState={fallback:false};// 正常回复走角色选定模型；主模型失败/跳出角色时才用副模型重试一次
     let content=await wechatPrimaryReply([{role:'system',content:_sys},...hist,_pin],_md,_routeState);
-    if(offlineFocusActive()){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
+    if(offlineReplyBlocked(replyIntent)){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
     if(replyStale(id,replyToken,replyAccount)){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     if(initiativeNoteActive(note)&&!initiativeReplyFresh(c,note)){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
@@ -9379,7 +9377,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
     if(_hlPlan){const _hv=hlValidate(content,_hlPlan,c,_userText);let _rewritten=false,_candidate=content,_check=_hv,_best=content,_bestN=(_hv.fails||[]).length;const _pl=_hlPlan.powerPlan,_kp=_hlPlan.knowledgePlan,_strong=(_pl&&Math.max(...Object.values(_pl.levels||{}).map(Number))>=81)||(_kp&&(_kp.level==='advanced'||_kp.level==='expert')),_tries=_strong?2:1;for(let _rw=0;_rw<_tries&&!_check.ok;_rw++){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:_candidate},{role:'user',content:hlRewriteNote(_check,_hlPlan)},_pin],_md);if(!fix||isRefusal(fix))break;const cleaned=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n')),next=hlValidate(cleaned,_hlPlan,c,_userText);if((next.fails||[]).length<_bestN){_best=cleaned;_bestN=next.fails.length;}_candidate=cleaned;_check=next;if(next.ok){content=cleaned;_rewritten=true;break;}}if(!_rewritten&&_best!==content)content=_best;hlMetricRecord(c,_hv,_rewritten);}
     if(_relIntent&&_relIntent.kind!=='baseline'){let _rc=relationshipCheck(c,_relIntent,content);if(!_rc.ok){let fix='';try{fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content},{role:'user',content:relationshipRewriteNote(_relIntent,_rc)},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix){const cleaned=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n')),next=relationshipCheck(c,_relIntent,cleaned);if(next.ok)content=cleaned;else content=relationshipFallback(c,_relIntent);}else content=relationshipFallback(c,_relIntent);}}
     if(_voiceRequired&&requestedVoiceNeedsFix(content,_userText,c)){const _vl=ttsContentLang(c),_vn=voiceLangName(_vl)||'中文',_voiceFixNote=_vl&&_vl!=='zh'?'[系统最终纠正：对方这一轮明确要求你发语音，但你刚才没有给出可播放的语音。请只重写成一条 [语音|'+_vn+'原文|准确的中文翻译|语气:最符合当下情绪的语气]，原文最多'+VOICE_MAX_CHARS+'字。可以保留一行 [心情|...]，除此之外不许再发普通文字，不许解释格式。]':'[系统最终纠正：对方这一轮明确要求你发语音，但你刚才发成了普通文字或内容过长。请把真正要说的重点合并成一条 [语音|要说的话|语气:最符合当下情绪的语气]，最多'+VOICE_MAX_CHARS+'字。可以保留一行 [心情|...]，除此之外不许再发普通文字，不许解释格式。]';try{const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content},{role:'user',content:_voiceFixNote},_pin],_repairMd);if(fix&&voiceReplyTagValid(fix,c))content=fix;}catch(_){}}
-    if(offlineFocusActive()){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
+    if(offlineReplyBlocked(replyIntent)){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     if(initiativeNoteActive(note)&&!initiativeReplyFresh(c,note)){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
     if(_hlPlan)dialogueEmotionOnReply(c,content,_userText);
@@ -9436,7 +9434,7 @@ async function aiReply(id,note,replyToken,replyAccount){replyAccount=replyAccoun
       if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
       await sleep(got?roleMessageGap(line):0);
       if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
-      if(offlineFocusActive())break;
+      if(offlineReplyBlocked(replyIntent))break;
       if(wxLoginBlockReply(id,note))break;/* 回复生成到一半时若角色开始登录，也立刻停止继续发 */
       got=true;
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -9576,13 +9574,15 @@ function replyEpoch(id,aid){const k=replyStateKey(id,aid);return +(_replyEpoch&&
 function replyTouch(id,aid){const k=replyStateKey(id,aid);_replyEpoch[k]=replyEpoch(id,aid)+1;if(_replyTimers[k]){clearTimeout(_replyTimers[k]);delete _replyTimers[k];}delete _replyDeferred[k];try{if((aid||actId())===actId()&&cur().p==='chat'&&cur().id===id){const t=$('#typing');if(t)t.remove();}}catch(_){}}
 function replyStale(id,token,aid){return token!=null&&+token!==replyEpoch(id,aid);}
 function replyPendingUserText(id,aid){const a=msgsForAccount(id,aid||actId()),out=[];for(let i=a.length-1;i>=0;i--){const m=a[i];if(!m||m._call)continue;if(m.role==='assistant'&&m.type!=='sys')break;if(m.role==='user'&&m.type!=='sys'){const t=msgToText(m);if(t)out.unshift('· '+t.replace(/\n/g,' ').slice(0,220));}}return out.slice(-6).join('\n');}
+function offlineReplyIntent(id,note,explicit){if(explicit==='user'||explicit==='proactive')return explicit;return !note||!!replyPendingUserText(id)?'user':'proactive';}
+function offlineReplyBlocked(intent){return offlineFocusActive()&&intent!=='user';}
 function replyVisibleAssistantCount(id,aid){return msgsForAccount(id,aid||actId()).filter(m=>m&&m.role==='assistant'&&m.type!=='sys').length;}
 function deferAccountReply(id,note,token,aid){const k=replyStateKey(id,aid);if(replyStale(id,token,aid))return;_replyDeferred[k]={id,note,token,aid};}
 function replyAccountChanged(id,note,token,aid,typingEl){if(actId()===aid)return false;if(typingEl&&typingEl.isConnected)typingEl.remove();deferAccountReply(id,note,token,aid);return true;}
 function resumeAccountReplies(aid){Object.keys(_replyDeferred).forEach(k=>{const d=_replyDeferred[k];if(!d||d.aid!==aid||replyStale(d.id,d.token,d.aid))return;delete _replyDeferred[k];clearTimeout(_replyTimers[k]);_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];aiReply(d.id,d.note,d.token,d.aid);},120);});replyGenerationDrain();}
 function delayedAccountReply(id,note,delay,aid){aid=aid||actId();const token=replyEpoch(id,aid);setTimeout(()=>{if(replyStale(id,token,aid))return;if(actId()!==aid){deferAccountReply(id,note,token,aid);return;}aiReply(id,note,token,aid);},Math.max(0,+delay||0));}
 function scheduleReply(id,note,onDone){
-  if(offlineFocusActive()){if(typeof onDone==='function')onDone(false);return false;}
+  const replyIntent=offlineReplyIntent(id,note);if(offlineReplyBlocked(replyIntent)){if(typeof onDone==='function')onDone(false);return false;}
   if(typeof cinemaRoleOccupied==='function'&&cinemaRoleOccupied(id)){if(typeof onDone==='function')onDone(false);return false;}
   if(wxLoginBlockReply(id,note)){if(typeof onDone==='function')onDone(false);return false;}
   if(note&&_call&&_call.state==='active'&&_call.id===id&&/任务|便签|没完成|未完成|完成|验收|奖励|惩罚|罚/.test(note)){
@@ -9591,10 +9591,9 @@ function scheduleReply(id,note,onDone){
   }
   // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
   if(!note&&manualReplySceneOn('wechat')){if(cur().p==='chat'&&cur().id===id)render();if(typeof onDone==='function')onDone(false);return false;}
-  const aid=actId(),k=replyStateKey(id,aid),token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);if(_replyDone[k]){const prev=_replyDone[k];delete _replyDone[k];try{prev(false);}catch(_){}}delete _replyDeferred[k];if(typeof onDone==='function')_replyDone[k]=onDone;_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];const done=_replyDone[k];delete _replyDone[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);if(done)done(false);return;}Promise.resolve(aiReply(id,note,token,aid)).then(ok=>{if(done)done(ok===true);}).catch(()=>{if(done)done(false);});},(Number(S.settings.replyDelay)||0)*1000);return true;}
-function manualReplyRetryAllowed(id,aid,token){const c=getC(id);return !!(c&&!c.blocked&&!c.deleted&&actId()===aid&&!replyStale(id,token,aid)&&!offlineFocusActive()&&!cinemaRoleOccupied(id)&&!wxLoginBlockReply(id));}
+  const aid=actId(),k=replyStateKey(id,aid),token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);if(_replyDone[k]){const prev=_replyDone[k];delete _replyDone[k];try{prev(false);}catch(_){}}delete _replyDeferred[k];if(typeof onDone==='function')_replyDone[k]=onDone;_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];const done=_replyDone[k];delete _replyDone[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);if(done)done(false);return;}Promise.resolve(aiReply(id,note,token,aid,replyIntent)).then(ok=>{if(done)done(ok===true);}).catch(()=>{if(done)done(false);});},(Number(S.settings.replyDelay)||0)*1000);return true;}
+function manualReplyRetryAllowed(id,aid,token){const c=getC(id);return !!(c&&!c.blocked&&!c.deleted&&actId()===aid&&!replyStale(id,token,aid)&&!cinemaRoleOccupied(id)&&!wxLoginBlockReply(id));}
 function manualReply(id){
-  if(offlineFocusActive()){toast('线下约会进行中，微信消息已暂停');return false;}
   const aid=actId(),key=replyGenerationKey(id,aid);if(replyGenerationBusy(id,aid))return false;
   if(hasPendingVision(id)){toast('图片还在识别，等识别结束后再点');return false;}
   const c=getC(id);if(!c||c.blocked||c.deleted)return false;
@@ -9608,7 +9607,7 @@ async function replyGenerationRun(id,aid){
   replyGenerationStore()[key]={id,aid,startedAt:Date.now()};replyGenerationRefresh(id,aid);
   // 判断最后一条真实对话是谁发的：若是他自己发的，这次「让ta回复」=继续多说，要明确告诉他别把自己的话当成对方说的
   let _note;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){const mm=_ms[i];if(mm.type==='sys'||mm._call)continue;if(mm.role==='user')break;if(mm.role==='assistant'){_note='[系统：'+S.me.name+'这会儿还没开口、还没回你。请你接着自己刚才的话【再自然地多说几句】（补充、延续你上面说的，或换个角度再聊两句），不要重复已经说过的内容。注意：上面那几条都是【你自己】说的，不是'+S.me.name+'说的，千万别把自己说过的话当成ta说的去回应。]';break;}}}
-  const token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid);if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token))toast('这次模型没有返回可见消息，请再点一下');}return true;}finally{delete replyGenerationStore()[key];replyGenerationRefresh(id,aid);replyGenerationDrain();}}
+  const token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token))toast('这次模型没有返回可见消息，请再点一下');}return true;}finally{delete replyGenerationStore()[key];replyGenerationRefresh(id,aid);replyGenerationDrain();}}
 /* 提示音 + 通知 */
 let _audio;
 function ensureAudio(){try{
@@ -9630,7 +9629,6 @@ function playDing(){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;
   o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(Math.min(1,.25*volMul()),_audio.currentTime+.02);
   g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
 function notifyIncoming(c,msg){
-  if(offlineFocusActive())return;
   // 语音消息：不再自动播放，改成点一下语音条才播（点开能重复听）
   if(c.muted)return;
   const viewing=cur().p==='chat'&&cur().id===c.id;

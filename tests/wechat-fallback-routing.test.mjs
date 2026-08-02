@@ -4,7 +4,7 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const start=source.indexOf('function wechatAuxConfigured()');
-const end=source.indexOf('async function aiReply(id,note,replyToken,replyAccount)',start);
+const end=source.indexOf('async function aiReply(id,note,replyToken,replyAccount,replyIntent)',start);
 assert.ok(start>=0&&end>start,'wechat fallback helpers must exist');
 
 assert.match(source,/具体约会只能使用本轮已选中的一条相关记忆/);

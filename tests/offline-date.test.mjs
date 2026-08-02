@@ -252,10 +252,51 @@ assert.match(source, /ontouchend="offlinePickTap\(event,'\$\{c\.id\}'\)"/);
 assert.doesNotMatch(source, /Object\.values\(S\.offline\|\|\{\}\)\.some\(o=>o&&o\.started\)/);
 assert.match(source, /function enterJail\(cid,reason,test\)[\s\S]*?offlineFocusStop\(\)/);
 assert.match(source, /function releaseJail\(backdoor\)[\s\S]*?offlineFocusStop\(\);save\(\)/);
-assert.match(source, /async function aiReply\(id,note,replyToken,replyAccount\)\{replyAccount=replyAccount\|\|actId\(\);if\(offlineFocusActive\(\)\)return/);
-assert.match(source, /function scheduleReply\(id,note,onDone\)\{\s*if\(offlineFocusActive\(\)\)/);
+assert.match(source, /function offlineReplyIntent\(id,note,explicit\)/);
+assert.match(source, /function offlineReplyBlocked\(intent\)\{return offlineFocusActive\(\)&&intent!==\x27user\x27;\}/);
+assert.match(source, /async function aiReply\(id,note,replyToken,replyAccount,replyIntent\)\{replyAccount=replyAccount\|\|actId\(\);replyIntent=offlineReplyIntent\(id,note,replyIntent\);if\(offlineReplyBlocked\(replyIntent\)\)return/);
+assert.match(source, /function scheduleReply\(id,note,onDone\)\{\s*const replyIntent=offlineReplyIntent\(id,note\);if\(offlineReplyBlocked\(replyIntent\)\)/);
 assert.match(source, /function incomingCall\(id,kind,opt\)\{if\(offlineFocusActive\(\)\)return/);
-assert.match(source, /async function aiGroupReply\(id,fromText\)\{if\(offlineFocusActive\(\)\)return/);
+assert.doesNotMatch(source, /async function aiGroupReply\(id,fromText\)\{if\(offlineFocusActive\(\)\)return/);
+assert.doesNotMatch(source, /function manualReply\(id\)\{\s*if\(offlineFocusActive\(\)\)/);
+assert.doesNotMatch(source, /function notifyIncoming\(c,msg\)\{\s*if\(offlineFocusActive\(\)\)return/);
+const placeCallStart = source.indexOf("function placeCall(id,kind)");
+const placeCallEnd = source.indexOf("function answerCall", placeCallStart);
+assert.ok(placeCallStart >= 0 && placeCallEnd > placeCallStart);
+const placeCallSource = source.slice(placeCallStart, placeCallEnd);
+assert.doesNotMatch(placeCallSource, /offlineFocus(?:Active|Stop)\(\)/);
+
+const replyIntentStart = source.indexOf("function offlineReplyIntent(id,note,explicit)");
+const replyIntentEnd = source.indexOf("function replyVisibleAssistantCount", replyIntentStart);
+assert.ok(replyIntentStart >= 0 && replyIntentEnd > replyIntentStart);
+const replyIntentSandbox = {
+  active: true,
+  pending: "",
+  offlineFocusActive() {
+    return replyIntentSandbox.active;
+  },
+  replyPendingUserText() {
+    return replyIntentSandbox.pending;
+  },
+};
+vm.runInNewContext(
+  source.slice(replyIntentStart, replyIntentEnd) +
+    ";globalThis.userMessage=offlineReplyIntent('c1','');" +
+    "pending='\u00b7 \u7528\u6237\u521a\u53d1\u7684\u8bdd';globalThis.userCard=offlineReplyIntent('c1','[\u5361\u7247\u56de\u590d]');" +
+    "pending='';globalThis.proactive=offlineReplyIntent('c1','[\u5b9a\u65f6\u4e3b\u52a8\u95ee\u5019]');" +
+    "globalThis.manual=offlineReplyIntent('c1','[\u7ee7\u7eed\u56de\u590d]','user');" +
+    "globalThis.blockUser=offlineReplyBlocked(userMessage);globalThis.blockCard=offlineReplyBlocked(userCard);" +
+    "globalThis.blockProactive=offlineReplyBlocked(proactive);globalThis.blockManual=offlineReplyBlocked(manual);",
+  replyIntentSandbox,
+);
+assert.equal(replyIntentSandbox.userMessage, "user");
+assert.equal(replyIntentSandbox.userCard, "user");
+assert.equal(replyIntentSandbox.proactive, "proactive");
+assert.equal(replyIntentSandbox.manual, "user");
+assert.equal(replyIntentSandbox.blockUser, false);
+assert.equal(replyIntentSandbox.blockCard, false);
+assert.equal(replyIntentSandbox.blockProactive, true);
+assert.equal(replyIntentSandbox.blockManual, false);
 
 const focusStart = source.indexOf("function offlineFocusStart(id,o)");
 const focusEnd = source.indexOf("const DAYPARTS", focusStart);
