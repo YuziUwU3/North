@@ -1271,7 +1271,7 @@ function volMul(){const v=(S.settings&&S.settings.volume!=null)?S.settings.volum
 function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const vol=volMul();
   try{ensureAudio();if(_audio&&vol>1){const src=_audio.createMediaElementSource(_curAudio);const g=_audio.createGain();g.gain.value=vol;src.connect(g);g.connect(_audio.destination);}else{_curAudio.volume=Math.max(0,Math.min(1,vol));}}catch(e){try{_curAudio.volume=Math.max(0,Math.min(1,vol));}catch(_){}}
   _curAudio.play().catch(()=>{});}
-async function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}stopBufSource('replaced-by-buffer');const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;}catch(e){}}
+async function playBuf(buf){ensureAudio();if(!_audio||!buf)return false;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_audio.state!=='running')return false;stopBufSource('replaced-by-buffer');const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;return true;}catch(e){return false;}}
 function voiceAudioKey(m){const x=m&&String(m.audio||'').match(/^idb-audio:(.+)$/i);return x?x[1]:'';}
 function voiceAudioExpired(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&m.audio&&Date.now()-Number(m.audioTs||m.time||0)>VOICE_AUDIO_TTL_MS);}
 function clearVoiceAudio(m){try{const k=voiceAudioKey(m);if(k)imgDel('__audio_'+k);}catch(_){}if(m){try{if(/^blob:/i.test(String(m._aurl||'')))URL.revokeObjectURL(m._aurl);}catch(_){}delete m.audio;delete m.audioTs;delete m._aurl;delete m._ttsFailAt;}}
@@ -1333,9 +1333,9 @@ async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});if(!opt.language
   if(!opt.quiet)toast('语音API错误 '+lastErr+(tries>1?'（已自动重试）':''));return null;}
 async function decodeBuf(ab){if(!ab)return null;try{initAudio();if(!_audio)return null;return await _audio.decodeAudioData(ab.slice(0));}catch(e){return null;}}
 async function speak(text,o){const v=o?getVoice(o):null;
-  if(ttsApiOn()){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);}else if(ab){await ttsRefundAudio(ab,'tts-decode-failed');}return;}
-  const t=ttsSentencePauseText(ttsSafeProsody(ttsCleanBase(text),o),o);if(!t||!('speechSynthesis'in window))return;
-  try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;applySystemVoice(u,v);}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+  if(ttsApiOn()){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf)return await playBuf(buf);if(ab)await ttsRefundAudio(ab,'tts-decode-failed');return false;}
+  const t=ttsSentencePauseText(ttsSafeProsody(ttsCleanBase(text),o),o);if(!t||!('speechSynthesis'in window))return false;
+  try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;applySystemVoice(u,v);}speechSynthesis.cancel();speechSynthesis.speak(u);return true;}catch(e){return false;}}
 async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(voiceAudioExpired(m))clearVoiceAudio(m);
@@ -3331,7 +3331,7 @@ async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(i
   S.settings.tts={provider,base,key,model,voice,group,enabled:true,relay:!!(saved&&saved.relay&&!base&&!key),relayLang:(saved&&saved.relayLang)||''};
   try{initAudio();const ab=await Promise.race([ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(ab==='__T_O__'){o.style.color='#e85';o.textContent='❌ 超时（25秒没响应，检查地址/Key/音色）';}
-    else if(ab){const buf=await decodeBuf(ab);if(buf){playBuf(buf);o.style.color='#19a463';o.textContent='✅ 语音生成成功（已播放）';}else{o.style.color='#19a463';o.textContent='✅ 接口通了（拿到语音数据）';}}
+    else if(ab){const buf=await decodeBuf(ab);if(buf){const played=await playBuf(buf);o.style.color=played?'#19a463':'#d99b38';o.textContent=played?'✅ 语音生成成功（已播放）':'⚠️ 接口已生成语音，但本次播放被手机系统拦住了，请再点一次测试';}else{o.style.color='#d99b38';o.textContent='⚠️ 接口通了并拿到数据，但音频格式暂时无法播放';}}
     else{o.style.color='#e85';o.textContent='❌ 没拿到语音，检查地址/Key/音色（海螺还要GroupId）';}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}
   S.settings.tts=saved;}
@@ -9717,8 +9717,9 @@ function editVoice(id){const c=getC(id);const v=getVoice(c);openModal(`<h3>${esc
   <div class="btns" style="margin-bottom:8px"><button class="btn g" onclick="previewVoice('${id}')">试听</button><button class="btn g" onclick="cloneVoiceModal('${id}')">克隆声音(国内·硅基流动)</button></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveVoice('${id}')">保存</button></div>`);}
 function readVoiceForm(){return {engine:$('#v_eng').value,voiceURI:$('#v_uri').value,rate:+$('#v_rate').value||1,pitch:+$('#v_pitch').value||1,apiTuning:!!($('#v_api_tuning')&&$('#v_api_tuning').checked),pause:Math.max(0,Math.min(3,+$('#v_pause').value||0)),lang:$('#v_lang').value,accent:$('#v_accent').value,ttsVoice:$('#v_tv').value.trim()};}
-function previewVoice(id){const c=getC(id);const nv=readVoiceForm();const samp={zh:'你好呀，我是'+(c.remark||c.name)+'，这是我的声音。','英':'Hi, this is my voice. Nice to talk with you.','日':'こんにちは、これが私の声です。よろしくね。','韩':'안녕하세요, 제 목소리예요. 잘 부탁해요.'}[nv.lang||'zh'];
-  const tmp=c.voice;c.voice=nv;speak(samp,c);c.voice=tmp;}
+async function previewVoice(id){audioUnlock();const c=getC(id);if(!c)return false;const nv=readVoiceForm(),samp={zh:'你好呀，我是'+(c.remark||c.name)+'，这是我的声音。','英':'Hi, this is my voice. Nice to talk with you.','日':'こんにちは、これが私の声です。よろしくね。','韩':'안녕하세요, 제 목소리예요. 잘 부탁해요.'}[nv.lang||'zh'];
+  if(nv.engine==='api'&&!ttsApiOn()){toast('请先在设置里启用并保存外置语音API');return false;}
+  const tmp=c.voice;c.voice=nv;try{const ok=await speak(samp,c);if(ok)toast('试听已播放');else toast('试听没有播放出来，请查看刚才的语音接口提示');return ok;}finally{c.voice=tmp;}}
 function saveVoice(id){const c=getC(id);c.voice=readVoiceForm();phState().stranger.lang=c.voice.lang||'zh';save();closeModal();render();toast('音色已保存');}
 /* 在 App 内直接克隆声音（硅基流动 CosyVoice，国内不用梯子） */
 function cloneVoiceModal(id){const tts=S.settings.tts||{};
