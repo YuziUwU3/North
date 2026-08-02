@@ -1037,6 +1037,7 @@ async function minimaxTTS(text: string, voiceId: string, model: string, setting?
       voice_setting: { voice_id: voiceId, ...safeTTSVoiceSetting(setting) },
       audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
     }),
+    signal: AbortSignal.timeout(25000),
   });
   const data = await r.json().catch(() => null);
   if (!r.ok || (data?.base_resp && data.base_resp.status_code !== 0)) {
@@ -1140,6 +1141,7 @@ async function externalFishTTS(body: Record<string, unknown>) {
     method: "POST",
     headers,
     body: JSON.stringify({ text, reference_id: voiceId, format: "mp3", normalize: true }),
+    signal: AbortSignal.timeout(25000),
   });
   if (!r.ok) {
     const detail = await r.text().catch(() => "");
@@ -1211,6 +1213,7 @@ async function externalMosslandTTS(body: Record<string, unknown>) {
       response_format: "mp3",
       delivery_method: "audio",
     }),
+    signal: AbortSignal.timeout(25000),
   });
   if (!r.ok) {
     const detail = await r.text().catch(() => "");

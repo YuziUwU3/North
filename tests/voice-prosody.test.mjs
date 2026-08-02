@@ -205,6 +205,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(context.fishVoiceItems({ items: [{ _i
 assert.match(backend, /if \(action === "external_tts"\)/);
 assert.match(backend, /async function externalFishTTS/);
 assert.match(backend, /headers\.model = model/);
+assert.match(backend, /signal: AbortSignal\.timeout\(25000\)/, "the relay must stop a stalled TTS upstream before it can hold a reply for a minute");
 assert.match(source, /通话字幕延后/);
 assert.match(source, /通话句间衔接/);
 assert.match(source, /function callPaceRate\(\)/);
@@ -219,7 +220,17 @@ assert.match(functionSource("testTTS"), /const played=await playBuf\(buf\)/, "ex
 assert.match(source, /API音色使用上面的语速和音调/);
 assert.match(source, /voiceProgressive:false/);
 assert.match(source, /语音逐句生成/);
-assert.match(source, /if\(voiceProgressiveOn\(\)\)await warmVoiceMsg\(vm,c\)/);
+assert.match(source, /const TTS_REQUEST_TIMEOUT_MS=28000/);
+assert.match(functionSource("aiRelayTimeout"), /action==='tts'\|\|action==='external_tts'\?35000/);
+assert.match(functionSource("ttsArr"), /Math\.min\(2,opt\.tries==null\?2:/, "external TTS retry count must stay bounded");
+assert.match(functionSource("ttsArr"), /ttsTimeoutError\(lastErr\)/, "a timeout must not be retried into another long wait");
+assert.doesNotMatch(functionSource("aiReply"), /await warmVoiceMsg\(vm,c\)/, "voice generation must not hide the role reply until audio is ready");
+const voiceReplySource=functionSource("aiReply"),voiceBubbleAt=voiceReplySource.indexOf("appendChatMessageHTML(id,c,vm"),voiceWarmAt=voiceReplySource.indexOf("scheduleVoiceWarm(vm,c");
+assert.ok(voiceBubbleAt>=0&&voiceWarmAt>voiceBubbleAt, "the reply bubble must render before background voice generation starts");
+assert.match(functionSource("scheduleVoiceWarm"), /_voiceWarmQueues/, "progressive chat voice generation should remain sequential in the background");
+assert.match(functionSource("speakMsg"), /return speakSystem\(m\.content,o\)/, "a failed API voice should fall back to device speech without making the same API request twice");
+assert.match(functionSource("prepareCallSpeech"), /\{tries:1\}/, "call preparation must not multiply nested TTS retries");
+assert.match(functionSource("speakWait"), /if\(await playBufWait\(ready\.buf,start\)\)return/, "calls should fall through to device speech when API audio cannot play");
 assert.match(functionSource("phSimRoleSay"), /!voiceProgressiveOn\(\)/);
 assert.match(functionSource("callAI"), /ttsApiOn\(\)&&!voiceProgressiveOn\(\)/);
 assert.match(source, /hasNextSpoken&&voicePauseMs\(c\)>0/);
