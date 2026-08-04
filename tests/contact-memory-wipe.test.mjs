@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v792 · 电话声音、首句与歌词修复'/);
+assert.match(source, /APP_VER='v793 · 线下入口与歌词绑定修复'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 

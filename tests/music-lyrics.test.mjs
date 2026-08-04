@@ -98,4 +98,24 @@ assert.match(functionSource('musicPlay'),/token!==_mPlayToken/,'rapid song chang
 assert.match(functionSource('mLyricTick'),/_mAudioSongId!==_mCur/,'lyric timing must only read audio for the displayed song');
 assert.match(source,/if\(c\.p==='music'\)[\s\S]*?requestAnimationFrame\(\(\)=>\{mTick\(\);if\(_ma&&!_ma\.paused\)mLyricLoopStart\(\);\}\)/,'rebuilding the player DOM must restore progress and lyric state');
 
+const entryCalls=[],entrySong={id:'song'};
+const entryContext=vm.createContext({
+  S:{music:{songs:[entrySong]}},
+  musicInit(){},musicAdd(){},musicEnsureCurrent(){return entrySong;},
+  musicPlay(id){entryCalls.push(id);return Promise.resolve(true);},
+  render(){entryCalls.push('render');},mLyricTick(){},setTimeout(fn){fn();},
+});
+vm.runInContext("var _ma={src:'blob:old',paused:false,play(){entryCalls.push('resume');return Promise.resolve();}},_mCur='song',_mAudioSongId='old-song',_mView='home';",entryContext);
+vm.runInContext(functionSource('musicOpenPlayer'),entryContext);
+vm.runInContext(functionSource('musicExpandPlayer'),entryContext);
+entryContext.musicOpenPlayer('song',true);
+assert.deepEqual(entryCalls,['song'],'opening a song must reload it when the displayed song and audio instance are mismatched');
+entryCalls.length=0;
+entryContext.musicExpandPlayer();
+assert.deepEqual(entryCalls,['song'],'expanding the player must repair a stale audio/song binding');
+entryCalls.length=0;
+vm.runInContext("_mAudioSongId='song';_ma.src='blob:song';",entryContext);
+entryContext.musicOpenPlayer('song',true);
+assert.deepEqual(entryCalls,['render'],'an already bound playing song must not restart');
+
 console.log('music lyrics tests passed');

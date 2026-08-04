@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
-assert.match(source, /const APP_VER='v792 · 电话声音、首句与歌词修复'/);
+assert.match(source, /const APP_VER='v793 · 线下入口与歌词绑定修复'/);
 assert.match(source, /const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620/);
 assert.match(source, /onclick="appTap\(event,\\''\+k\+'\\'\)"/);
 assert.match(source, /onpointerdown="appDown\(event,\\''\+k\+'\\'\)"/);
@@ -20,5 +20,6 @@ assert.match(source, /tale:\(\)=>openApp\('tale'\)/);
 assert.match(source, /dread:\(\)=>openApp\('dread'\)/);
 assert.match(source, /tale:taleStart/);
 assert.match(source, /dread:dreadStart/);
+assert.match(source, /offline:\(\)=>setTimeout\(openOfflineMenu,0\)/,'modal apps opened from pointerup must wait until the trailing compatibility click has finished');
 
 console.log("android app launch tests passed");

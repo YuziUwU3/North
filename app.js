@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='792'){
+if(window.__NORTH_SHELL_BUILD__!=='793'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v792 · 电话声音、首句与歌词修复';
+const APP_VER='v793 · 线下入口与歌词绑定修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=792';
+  const url='sw.js?v=793';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2411,8 +2411,8 @@ function mBlobDataURL(b){return new Promise(res=>{const r=new FileReader();r.onl
 function mDataURLBlob(s){try{const a=String(s||'').split(','),m=(a[0]||'').match(/data:([^;]+)/),bin=atob(a[1]||''),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:(m&&m[1])||'application/octet-stream'});}catch(e){return null;}}
 function openMusic(){musicEnsureCurrent();_mView='home';go('music');}
 function musicOpenHome(){_mView='home';render();}
-function musicOpenPlayer(id,autoplay){musicInit();const s=id?(S.music.songs||[]).find(x=>x.id===id):musicEnsureCurrent();if(!s){musicAdd();return;}_mView='player';if(autoplay&&(!_ma||_mCur!==s.id))musicPlay(s.id);else{_mCur=s.id;if(autoplay&&_ma&&_ma.paused){_mWantPlay=true;_ma.play().catch(()=>{});}render();setTimeout(()=>mLyricTick(true),0);}}
-function musicExpandPlayer(){const s=musicEnsureCurrent();if(!s){musicAdd();return;}_mView='player';render();setTimeout(()=>mLyricTick(true),0);}
+function musicOpenPlayer(id,autoplay){musicInit();const s=id?(S.music.songs||[]).find(x=>x.id===id):musicEnsureCurrent();if(!s){musicAdd();return;}_mView='player';const needsLoad=!_ma||!_ma.src||_mAudioSongId!==s.id;if(autoplay&&needsLoad)musicPlay(s.id);else{_mCur=s.id;if(autoplay&&_ma&&_ma.paused){_mWantPlay=true;_ma.play().catch(()=>{});}render();setTimeout(()=>mLyricTick(true),0);}}
+function musicExpandPlayer(){const s=musicEnsureCurrent();if(!s){musicAdd();return;}_mView='player';if(!_ma||!_ma.src||_mAudioSongId!==s.id){musicPlay(s.id);return;}render();setTimeout(()=>mLyricTick(true),0);}
 function musicToggleChat(){_mChatOpen=!_mChatOpen;const dock=document.getElementById('musicChatDock'),btn=document.getElementById('musicChatToggle');if(dock)dock.classList.toggle('collapsed',!_mChatOpen);if(btn){btn.setAttribute('aria-expanded',String(_mChatOpen));btn.innerHTML=`<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="m7 ${_mChatOpen?'15':'9'} 5 ${_mChatOpen?'-5':'5'} 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${_mChatOpen?'收起聊天':'展开聊天'}</span>`;}}
 function musicAdd(){musicInit();window._muBlob=null;openModal(`<h3>添加歌曲</h3>
   <div class="field"><label>歌名</label><input id="mu_t" placeholder="歌名"></div>
@@ -2965,7 +2965,7 @@ function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcon
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',cinema:'放映室',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
-  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:openMusic,cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
+  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:()=>setTimeout(openOfflineMenu,0),roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:openMusic,cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
