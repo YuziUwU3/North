@@ -56,9 +56,12 @@ assert.match(html, /\.music-lyrics\{overflow-x:hidden!important;overflow-y:auto!
 assert.match(html, /\.music-lyrics\{[^}]*touch-action:pan-y/);
 assert.match(html, /\.music-lyrics::-webkit-scrollbar\{display:none\}/);
 assert.match(html, /\.music-stage\{min-height:0;flex:0 0 clamp\(190px,28vh,240px\)\}/);
+assert.match(html, /\.music-meta\{margin-top:clamp\(18px,2\.4vh,24px\);padding:0 26px 3px\}/);
 assert.match(html, /\.music-lyrics\{height:clamp\(92px,14vh,120px\);padding:0 22px\}/);
 assert.match(html, /\.music-lyrics \.mlrc\{font-size:13px;line-height:1\.8\}/);
-assert.match(html, /@media\(max-height:720px\)\{\.music-meta b\{font-size:16px\}[\s\S]*?\.music-lyrics \.mlrc\{font-size:12px;line-height:1\.75\}\}/);
+assert.match(html, /\.music-controls\{margin-top:auto;padding:1px 22px 16px\}/);
+assert.match(html, /\.music-chat-toggle\{font-size:13px\}/);
+assert.match(html, /@media\(max-height:720px\)\{\.music-meta\{margin-top:14px\}[\s\S]*?\.music-lyrics \.mlrc\{font-size:12px;line-height:1\.75\}[\s\S]*?\.music-controls\{padding-bottom:12px\}\.music-chat-toggle\{font-size:12px\}\}/);
 assert.doesNotMatch(html, /\.music-lyrics \.mlrc\.on\{color:#ffd6e8!important/);
 assert.match(html, /\.music-settings\{/);
 assert.match(html, /\.music-library-modal\{/);
