@@ -21,6 +21,9 @@ function functionSource(name){
 const context=vm.createContext({});
 vm.runInContext(functionSource('parseLyrics'),context);
 vm.runInContext(functionSource('musicLyricIndex'),context);
+vm.runInContext(functionSource('mLyricBrowse'),context);
+vm.runInContext(functionSource('mLyricBind'),context);
+vm.runInContext(functionSource('mLyricScroll'),context);
 vm.runInContext(functionSource('mLyricTick'),context);
 
 const lines=context.parseLyrics('[00:01.250]第一句\n[00:02.75]第二句\n[00:03,005]第三句');
@@ -43,26 +46,44 @@ const rows=lines.map(()=>({
   setAttribute(name,value){this.attrs[name]=value;},
   removeAttribute(name){delete this.attrs[name];}
 }));
-const lyricBox={clientHeight:64,scrollTop:0,querySelectorAll(){return rows;}};
+let scrollCalls=0;
+const lyricListeners={};
+const lyricBox={clientHeight:64,scrollHeight:180,scrollTop:0,querySelectorAll(){return rows;},addEventListener(type,fn){lyricListeners[type]=fn;},scrollTo(options){scrollCalls++;this.scrollTop=options.top;this.lastBehavior=options.behavior;}};
 context.document={getElementById(id){return id==='m_lyrics'?lyricBox:null;}};
 context.S={music:{songs:[{id:'song',lyrics:'[00:01.250]第一句\n[00:02.750]第二句\n[00:03.005]第三句'}]}};
 context._mCur='song';
 context._mAudioSongId='song';
 context._mLyricIndex=-2;
+context._mLyricManualUntil=0;
+context._mLyricFollowPending=false;
 context._ma={currentTime:0,duration:4};
 context.mLyricTick(true);
 assert.equal(rows[0].style.color,'#7d7d88','first keyed line must remain dim before its cue');
 assert.equal(rows[1].style.color,'#7d7d88');
 context._ma.currentTime=2.8;
-context.mLyricTick(true);
+context.mLyricTick();
 assert.equal(rows[0].style.color,'#7d7d88');
 assert.equal(rows[1].style.color,'#ffd6e8','current keyed line must be repainted on every tick');
 assert.equal(rows[1].attrs['aria-current'],'true');
+assert.equal(scrollCalls,1,'a cue change must move the lyric viewport once');
+assert.equal(lyricBox.lastBehavior,'smooth');
+context.mLyricTick();
+assert.equal(scrollCalls,1,'the 80ms paint loop must not restart the same smooth scroll');
 
+lyricListeners.pointerdown();
+context._ma.currentTime=3.1;
+context.mLyricTick();
+assert.equal(rows[2].style.color,'#ffd6e8','manual browsing must not stop current-line highlighting');
+assert.equal(scrollCalls,1,'manual browsing must not be pulled back by automatic centering');
+context._mLyricManualUntil=0;
+context.mLyricTick();
+assert.equal(scrollCalls,2,'automatic following must resume after manual browsing ends');
+
+const colorsBeforeMismatch=rows.map(row=>row.style.color);
 context._mAudioSongId='another-song';
 context._ma.currentTime=3.1;
 context.mLyricTick(true);
-assert.equal(rows[2].style.color,'#7d7d88','lyrics must ignore audio that belongs to another song');
+assert.deepEqual(rows.map(row=>row.style.color),colorsBeforeMismatch,'lyrics must ignore audio that belongs to another song');
 
 const pending=new Map(),revoked=[];
 class FakeAudio{
@@ -96,6 +117,8 @@ assert.match(functionSource('musicPlay'),/onseeked=\(\)=>mLyricTick\(true\)/,'se
 assert.match(functionSource('musicPlay'),/onplaying=\(\)=>\{mLyricTick\(true\);mLyricLoopStart\(\);\}/,'actual playback must restart the lyric clock');
 assert.match(functionSource('musicPlay'),/token!==_mPlayToken/,'rapid song changes must discard stale asynchronous loads');
 assert.match(functionSource('mLyricTick'),/_mAudioSongId!==_mCur/,'lyric timing must only read audio for the displayed song');
+assert.match(functionSource('mLyricTick'),/changed\|\|_mLyricFollowPending/,'timed lyrics must scroll only when the active cue changes');
+assert.match(functionSource('mLyricTick'),/Date\.now\(\)<_mLyricManualUntil/,'manual lyric browsing must temporarily suspend auto-centering');
 assert.match(source,/if\(c\.p==='music'\)[\s\S]*?requestAnimationFrame\(\(\)=>\{mTick\(\);if\(_ma&&!_ma\.paused\)mLyricLoopStart\(\);\}\)/,'rebuilding the player DOM must restore progress and lyric state');
 
 const entryCalls=[],entrySong={id:'song'};

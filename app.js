@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='793'){
+if(window.__NORTH_SHELL_BUILD__!=='794'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v793 · 线下入口与歌词绑定修复';
+const APP_VER='v794 · 歌词手动浏览与跟唱修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=793';
+  const url='sw.js?v=794';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2367,7 +2367,7 @@ function cinemaFallbackMemory(s,c){const call=summaryUserLabel(c),act=s.kind==='
 async function cinemaEnd(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c)return;if(!await uiConfirm('结束这次'+(s.kind==='book'?'共读':'放映')+'？\n结束后会整理成角色长期记忆，视频盒或书架里的内容仍可重播。'))return;const v=$('#cinVideo');cinemaStopTranscribe();if(v){v.pause();s.progress=v.currentTime||s.progress;s.duration=Number.isFinite(v.duration)?v.duration:s.duration;}s.status='finished';s.updatedAt=Date.now();_cin.token++;_cin.busy=false;cinemaSaveProgress(true);toast('正在把这次内容收进记忆…');let memory=cinemaFallbackMemory(s,c),high=cinemaWatchedHighlights(s),len=cinemaSummaryLength(s);const configured=!!(S.settings&&S.settings.chat&&S.settings.chat.base&&S.settings.chat.key);if(configured&&((s.items||[]).length||high)){try{const raw=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。把下面这次放映室经历写成一段第一人称长期记忆：只概括已提供的字幕、转写、画面内容和双方真正聊过的事情；用“我”指自己，用“'+summaryUserLabel(c)+'”称呼一起观看的人。不补完没看到的剧情，不编造事件。根据实际内容量写约'+len.min+'到'+len.max+'个中文字，内容少就短、内容多才写长，最多300字；保持简洁连贯。禁止写影片全长、观看时长、分钟数、时间点或播放进度。一整段，不要标题、列表、括号动作或重要度标记。'+perspRule(c)},{role:'user',content:cinemaTranscript(s,c)}],{max:650,temp:.28});const t=cinemaSummaryClean(raw,len.max);if(t.length>=35)memory=t;}catch(_){}}s.summary=memory;addSummary(c,memory,4,'【放映室】');const full=summaryCleanText(c,'【放映室】'+memory),mem=(c.summaries||[]).slice().reverse().find(x=>x&&x.text&&summarySimilarity(summaryCleanText(c,x.text),full)>=.58);if(mem)mem.cinemaSessionId=s.id;cinemaMirrorLifecycle(s,'end',memory);save();cinemaLeaveImmersive();cinemaReleaseMedia();back();toast('已结束，'+(c.remark||c.name)+'会记得这一次');if(!c.blocked)scheduleReply(c.id,'[系统：你和'+S.me.name+'刚刚结束在放映室'+(s.kind==='book'?'共读':'一起看')+'《'+s.title+'》。本场实际发生的聊天和内容总结已经写入你的上下文。自然说一句有头有尾的收尾话，不要汇报时长或进度，也不要重新回答本场已经回答过的问题。]');}
 
 /* ---------- 🎵 一起听音乐 ---------- */
-let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=false,_mView='home',_mChatOpen=true,_mLyricIndex=-2,_mLyricRaf=0,_mLyricPaintAt=0,_mPlayToken=0,_mAudioSongId=null;
+let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=false,_mView='home',_mChatOpen=true,_mLyricIndex=-2,_mLyricManualUntil=0,_mLyricFollowPending=false,_mLyricRaf=0,_mLyricPaintAt=0,_mPlayToken=0,_mAudioSongId=null;
 let _mBub={l:null,r:null};// 一起听字幕气泡：l=我(白色) r=角色(灰色)，说完一句自动消失
 let _mReplyBusy=false,_mSendT=0;// 防止一起听聊天回复重复触发（发两遍）
 function _mBubHTML(o){if(!o||!o.text)return '';const mine=o.side==='l',bgc=mine?'rgba(255,255,255,.98)':'rgba(72,73,78,.98)';
@@ -2468,7 +2468,7 @@ async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id
   let url,ownedUrl=null;
   if(s.src&&s.src.t==='url')url=s.src.url;
   else{const b=await mGet(id);if(token!==_mPlayToken)return false;if(!b){toast('音频文件没有完整导入，请删掉后重新添加');return false;}ownedUrl=URL.createObjectURL(b);url=ownedUrl;}
-  if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}const oldUrl=_mUrl;_mUrl=ownedUrl;_mCur=id;_mAudioSongId=id;S.music.lastSongId=id;_mLyricIndex=-2;_mLyricPaintAt=0;_ma.src=url;_ma.loop=!!S.music.loop;if(oldUrl&&oldUrl!==ownedUrl)try{URL.revokeObjectURL(oldUrl);}catch(_){}try{await _ma.play();}catch(e){if(token===_mPlayToken)toast('点一下▶播放');}
+  if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}const oldUrl=_mUrl;_mUrl=ownedUrl;_mCur=id;_mAudioSongId=id;S.music.lastSongId=id;_mLyricIndex=-2;_mLyricManualUntil=0;_mLyricFollowPending=true;_mLyricPaintAt=0;_ma.src=url;_ma.loop=!!S.music.loop;if(oldUrl&&oldUrl!==ownedUrl)try{URL.revokeObjectURL(oldUrl);}catch(_){}try{await _ma.play();}catch(e){if(token===_mPlayToken)toast('点一下▶播放');}
   if(token!==_mPlayToken)return false;save(300);render();setTimeout(()=>{if(token===_mPlayToken){mTick();mLyricTick(true);}},0);return true;}
 function musicToggle(){if(!_ma||!_mCur||_mAudioSongId!==_mCur){const songs=S.music&&S.music.songs||[],s=songs.find(x=>x.id===_mCur)||songs[0];if(s)musicPlay(s.id);return;}if(_ma.paused){_mWantPlay=true;_ma.play().catch(()=>{});}else{_mWantPlay=false;_ma.pause();}}
 function musicNext(){const songs=S.music.songs;if(!songs.length)return;let i=songs.findIndex(s=>s.id===_mCur);i=(i+1)%songs.length;musicPlay(songs[i].id);}
@@ -2484,12 +2484,15 @@ function parseLyrics(l){if(!l)return[];const out=[];const re=/\[(\d{1,3}):(\d{1,
 function musicLyricIndex(lines,time){let idx=-1;for(let i=0;i<(lines||[]).length;i++){if(lines[i].t!=null&&lines[i].t<=time)idx=i;}return idx;}
 function mLyricLoopStart(){if(_mLyricRaf||!_ma||_ma.paused)return;const step=now=>{if(!_ma||_ma.paused){_mLyricRaf=0;return;}if(!now||now-_mLyricPaintAt>=80){_mLyricPaintAt=now||Date.now();mTick();}_mLyricRaf=requestAnimationFrame(step);};_mLyricRaf=requestAnimationFrame(step);}
 function mLyricLoopStop(){if(_mLyricRaf)cancelAnimationFrame(_mLyricRaf);_mLyricRaf=0;}
-function mLyricTick(force){const box=document.getElementById('m_lyrics');if(!box||!_ma||!_mCur||_mAudioSongId!==_mCur)return;const s=S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);if(!lines.length)return;
+function mLyricBrowse(){_mLyricManualUntil=Date.now()+4000;_mLyricFollowPending=true;}
+function mLyricBind(box){if(!box||box._northLyricBound)return;box._northLyricBound=true;['pointerdown','touchstart','wheel'].forEach(type=>box.addEventListener(type,mLyricBrowse,{passive:true}));}
+function mLyricScroll(box,top,smooth){top=Math.max(0,top||0);if(box.scrollTo)box.scrollTo({top,behavior:smooth?'smooth':'auto'});else box.scrollTop=top;}
+function mLyricTick(force){const box=document.getElementById('m_lyrics');if(!box||!_ma||!_mCur||_mAudioSongId!==_mCur)return;mLyricBind(box);const s=S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);if(!lines.length)return;const manual=!force&&Date.now()<_mLyricManualUntil;
   if(lines.some(x=>x.t!=null)){// 带时间轴：高亮当前句并居中
-    const idx=musicLyricIndex(lines,_ma.currentTime),els=box.querySelectorAll('.mlrc');_mLyricIndex=idx;els.forEach((el,i)=>{const on=i===idx;el.classList.toggle('on',on);el.style.color=on?'#ffd6e8':'#7d7d88';el.style.fontWeight=on?'700':'400';el.style.transform=on?'scale(1.08)':'scale(1)';if(on)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current');});
-    if(idx>=0&&els[idx])box.scrollTop=Math.max(0,els[idx].offsetTop-box.clientHeight/2+els[idx].clientHeight/2);}
+    const idx=musicLyricIndex(lines,_ma.currentTime),els=box.querySelectorAll('.mlrc'),changed=idx!==_mLyricIndex;_mLyricIndex=idx;els.forEach((el,i)=>{const on=i===idx;el.classList.toggle('on',on);el.style.color=on?'#ffd6e8':'#7d7d88';el.style.fontWeight=on?'700':'400';el.style.transform=on?'scale(1.08)':'scale(1)';if(on)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current');});
+    if(!manual&&(force||changed||_mLyricFollowPending)&&idx>=0&&els[idx]){mLyricScroll(box,els[idx].offsetTop-box.clientHeight/2+els[idx].clientHeight/2,true);_mLyricFollowPending=false;}}
   else if(_ma.duration){// 纯文本歌词：跟着进度匀速滚动
-    const max=box.scrollHeight-box.clientHeight;if(max>0)box.scrollTop=(_ma.currentTime/_ma.duration)*max;}}
+    const max=box.scrollHeight-box.clientHeight;if(!manual&&max>0){mLyricScroll(box,(_ma.currentTime/_ma.duration)*max,false);_mLyricFollowPending=false;}}}
 const SVG_PLAY='<svg viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
 const SVG_PAUSE='<svg viewBox="0 0 24 24" width="24" height="24"><rect x="6" y="4" width="4" height="16" rx="1.5" fill="#fff"/><rect x="14" y="4" width="4" height="16" rx="1.5" fill="#fff"/></svg>';
 const SVG_NEXT='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 5l10 7-10 7zM16 5h3v14h-3z" fill="#fff"/></svg>';
@@ -2584,7 +2587,7 @@ function musicChatSend(){const sess=S.music.session;if(!sess)return;if(_mReplyBu
   save();aiMusicReply(sess.cid);}
 async function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);const ln=lines[i];if(!ln)return;
   if(ln.t!=null){if(!_ma||_mAudioSongId!==_mCur){if(!await musicPlay(_mCur))return;}if(_ma&&_mAudioSongId===_mCur){_ma.currentTime=ln.t;if(_ma.paused)_ma.play().catch(()=>{});}}
-  _mLyricIndex=-2;mLyricTick(true);}
+  _mLyricManualUntil=0;_mLyricFollowPending=true;_mLyricIndex=-2;mLyricTick(true);}
 let _homePage=0,_homeSnapTimer=null;
 function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
