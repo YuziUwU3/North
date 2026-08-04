@@ -14,7 +14,47 @@ const manualSummary=source.slice(source.indexOf('async function offManualSummary
 assert.doesNotMatch(manualSummary,/offlineDeactivate/);
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v790 · 屏保铃声与音乐同步修复/);
+assert.match(source, /offlineWechatLive:true/);
+assert.match(source, /约会中同步到线上/);
+assert.match(source, /关闭：线上与线下按平行独立世界处理/);
+assert.match(source, /const _offlineLive=offlineWechatLiveState\(c\)/);
+assert.match(source, /if\(!_offlineLive\)\{const _gn=conversationGapNote\(c\)/);
+assert.match(source, /if\(!_offlineLive&&lu\)/);
+const liveStart = source.indexOf("function offlineWechatLiveOn()");
+const liveEnd = source.indexOf("function conversationGapNote", liveStart);
+assert.ok(liveStart >= 0 && liveEnd > liveStart);
+const liveSandbox = {
+  S: {
+    settings: {},
+    me: { name: "North" },
+    offline: {
+      same: { started: true, loc: "江边", when: "2026-08-05 19:00", daypart: "晚上" },
+      ended: { started: false },
+    },
+  },
+};
+vm.runInNewContext(
+  source.slice(liveStart, liveEnd) +
+    ";globalThis.defaultOn=offlineWechatLiveOn();" +
+    "globalThis.same=offlineWechatLiveState({id:'same'});" +
+    "globalThis.other=offlineWechatLiveState({id:'other'});" +
+    "globalThis.ended=offlineWechatLiveState({id:'ended'});" +
+    "globalThis.prompt=offlineWechatLivePrompt({id:'same'});" +
+    "S.settings.offlineWechatLive=false;" +
+    "globalThis.disabled=offlineWechatLiveState({id:'same'});",
+  liveSandbox,
+);
+assert.equal(liveSandbox.defaultOn, true);
+assert.equal(liveSandbox.same.loc, "江边");
+assert.equal(liveSandbox.other, null);
+assert.equal(liveSandbox.ended, null);
+assert.equal(liveSandbox.disabled, null);
+assert.match(liveSandbox.prompt, /线下约会尚未结束/);
+assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
+assert.match(liveSandbox.prompt, /手动分段总结/);
+assert.match(liveSandbox.prompt, /地点：江边/);
+
+assert.match(source, /v791 · 约会实时状态同步/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -598,6 +638,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=790/);
+assert.match(html, /app\.js\?v=791/);
 
 console.log("offline date tests passed");

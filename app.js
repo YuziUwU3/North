@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='790'){
+if(window.__NORTH_SHELL_BUILD__!=='791'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v790 · 屏保铃声与音乐同步修复';
+const APP_VER='v791 · 约会实时状态同步';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -366,7 +366,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', proactiveIdleMin:20, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
+    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:20, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, aiImage:{enabled:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=790';
+  const url='sw.js?v=791';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1666,6 +1666,9 @@ function traitDesc(c){if(!c)return '';let out='';
     ].filter(x=>x[1]!=null);
     if(TR.length)out+='\n\n# 你的性格强度（硬设定·必须严格贴合，绝不许串成别的人设、绝不许表现得跟数值相反）\n'+TR.map(x=>{const v=x[1];const b=v<=35?x[3]:(v>=55?x[2]:('中等、有分寸：'+x[2]+'，但不极端、看情况'));return '· '+x[0]+' '+v+'/100（'+lv(v)+'）→ '+b;}).join('\n')+'\n【铁律】把每一项的强度真正【做出来】、融进你的语气和行动里，不是嘴上说说。尤其：黏人度低就【从头到尾都不黏人】、高就【一直黏着ta】；主动度低就【别老主动找ta】、高就【常主动找】。务必和数值一致、前后别矛盾，别一会儿黏一会儿冷。';}
   return out;}
+function offlineWechatLiveOn(){return !(S.settings&&S.settings.offlineWechatLive===false);}
+function offlineWechatLiveState(c){if(!c||!offlineWechatLiveOn())return null;const o=S.offline&&S.offline[c.id];return o&&o.started===true?o:null;}
+function offlineWechatLivePrompt(c,o){o=o||offlineWechatLiveState(c);if(!o)return'';const detail=[o.loc?('地点：'+o.loc):'',o.when?('约会时间：'+o.when):'',o.daypart?('当前时段：'+o.daypart):''].filter(Boolean).join('；');return '\n\n# 当前剧情状态：线下约会仍在进行（实时状态，优先级最高）\n你和'+S.me.name+'的线下约会尚未结束，'+S.me.name+'人就在约会现场，此刻只是约会间隙拿出手机向你发送消息，并非你们已经分开。'+(detail?'\n'+detail+'。':'')+'\n即使刚刚做过手动分段总结，那也只是归档本场已发生的进度，不代表约会结束。回复必须承认你们仍在同一个约会现场，不能把约会说成已经结束的过往，也不能因为微信消息间隔而质问'+S.me.name+'为何许久没回。';}
 function conversationGapNote(c){try{const arr=msgs(c.id)||[];let ui=-1;
   for(let i=arr.length-1;i>=0;i--){const m=arr[i];if(m&&m.role==='user'&&m.time&&!m._silent){ui=i;break;}}
   if(ui<=0)return '';const curm=arr[ui];let start=ui;
@@ -1742,8 +1745,9 @@ function buildSystem(c,opt){
   s+=memoryResetPrompt(c);
   s+=friendOriginPrompt(c);
   s+='\n\n# 现在的日期和时间（最高优先级）\n'+timeAwarenessPrompt(S.me.name,'wechat');
-  {const _gn=conversationGapNote(c);if(_gn)s+='\n\n# 当前这条消息和上一轮聊天之间的时间差（重要）\n'+_gn;}
-  {const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
+  const _offlineLive=offlineWechatLiveState(c);if(_offlineLive)s+=offlineWechatLivePrompt(c,_offlineLive);
+  if(!_offlineLive){const _gn=conversationGapNote(c);if(_gn)s+='\n\n# 当前这条消息和上一轮聊天之间的时间差（重要）\n'+_gn;}
+  if(!_offlineLive){const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
    if(_lu&&_gap>=25*60000){const _dg=dayGap(_lu.time,Date.now());
      s+='\n\n# 距离上次聊已经隔了很久（务必分清"刚刚"和"很久以前"）\n'+S.me.name+'上一次跟你说话是在 '+fmtDT(_lu.time)+'，距现在已经过去了【'+fmtDur(_gap)+'】'+(_dg?('，而且已经跨过【'+_dg+'个自然日】'):'')+'。这中间ta一直没理你、你俩没在聊。所以：\n· 之前发生的事（打过的电话、聊过的话、你做的事）都是【'+fmtDur(_gap)+'以前】的了，【绝对不能】说成"刚刚/刚才/方才"。要照实说"你都'+fmtDur(_gap)+'没理我了""几个小时前那通电话"。\n· 如果已经跨天，就把昨天/前几天的事当成过去式回忆或旧账，不要接着上一天的约会、通话、争吵继续演，好像时间没变过。';}}
   if(c.job)s+='\n\n# 你的职业\n你是「'+c.job+'」。说话、作息、收入水平、花钱方式都要符合这个职业，别脱节。';
@@ -1871,7 +1875,7 @@ function buildSystem(c,opt){
   if(isLover(c)){const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';}
   // 久未回复感知
   const lu=[...msgs(c.id)].reverse().find(m=>m.role==='user');
-  if(lu){const gap=Date.now()-lu.time;if(gap>3600000)s+='\n\n# 注意\n'+S.me.name+'已经 '+Math.floor(gap/3600000)+' 小时没回你消息了，你可以表达在意/想念或追问。';}
+  if(!_offlineLive&&lu){const gap=Date.now()-lu.time;if(gap>3600000)s+='\n\n# 注意\n'+S.me.name+'已经 '+Math.floor(gap/3600000)+' 小时没回你消息了，你可以表达在意/想念或追问。';}
   // 他自己的手机内容（保持一致，被问到能答上来）
   if(_main&&typeof phSyncRolePhoneRecords==='function')phSyncRolePhoneRecords(c.id);
   const sp=S.spy[c.id];
@@ -5926,9 +5930,11 @@ function offSetting(id){const o=offData(id);
    <div class="field"><label>时间</label><input id="os_when" value="${esc(o.when||'')}"></div>
    <div class="field"><label>时段（ta会按这个时段表现）</label><select id="os_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(d=>`<option ${d===(o.daypart||'晚上')?'selected':''}>${d}</option>`).join('')}</select></div>
    <div class="field"><label>线下模型分工</label><div class="hint" style="padding:8px 0 0">正常回复固定使用主模型；检测到跳出角色或复读后，重写固定使用副模型。未配置副模型时才回退主模型。</div></div>
+   <div class="field"><label class="avline">约会中同步到线上<span class="sw ${offlineWechatLiveOn()?'on':''}" onclick="offlineWechatLiveToggle(this)"></span></label><div class="hint" style="padding:8px 0 0">开启：同一角色的线上聊天会知道线下约会仍在进行；关闭：线上与线下按平行独立世界处理。</div></div>
    <div class="field"><label class="avline">角色扮演软件使用副模型（不影响线下约会）<span class="sw ${S.settings.offAux?'on':''}" onclick="S.settings.offAux=!S.settings.offAux;save();this.classList.toggle('on');toast(S.settings.offAux?'角色扮演改用副模型':'角色扮演改用主模型')"></span></label></div>
    <div class="field"><label>上下文条数（双方消息合计）<small style="color:#888;display:block">线下本场按双方消息合计；进入约会前的微信/电话也按这个数量带入。越大越记得住、也越费API。默认30，范围10-80</small></label><input type="number" min="10" max="80" value="${S.settings.offHist||30}" onchange="S.settings.offHist=Math.max(10,Math.min(80,+this.value||30));save();toast('线下上下文：'+S.settings.offHist+'条')" style="width:90px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"></div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();o.daypart=$('#os_part').value;save();closeModal();render();})()">保存</button></div>`);}
+function offlineWechatLiveToggle(el){S.settings=S.settings||{};S.settings.offlineWechatLive=!offlineWechatLiveOn();save();if(el&&el.classList)el.classList.toggle('on',S.settings.offlineWechatLive);toast(S.settings.offlineWechatLive?'约会状态已同步到线上':'线上与线下已独立');}
 function offQuit(){_off=null;_offSel=null;home();}
 
 /* ===== 角色扮演 ===== */
