@@ -251,7 +251,8 @@ assert.match(source, /if\(video\)content=ensureVideoCallAction\(content,_callCue
 assert.match(source, /function phReleaseSimSub\(callId,line\)/);
 assert.doesNotMatch(source, /preT=setTimeout|off<0/, "call subtitles must never race ahead from request time");
 assert.match(functionSource("phPhoneVoiceOffset"), /Math\.max\(0,Math\.min\(1200/, "saved negative offsets must be clamped to zero");
-assert.match(functionSource("callPrefetchSpeech"), /Math\.min\(2,rows\.length\)/, "call TTS prefetch must stay bounded to two workers");
+assert.doesNotMatch(functionSource("callPrefetchSpeech"), /Math\.min\(2,rows\.length\)/, "the first call sentence must not compete with a second TTS request");
+assert.match(functionSource("callPrefetchSpeech"), /if\(rows\.length\)worker\(\)/, "call TTS must use one ordered prefetch worker");
 assert.match(functionSource("speakWait"), /prepared:?\s*opt\.prepared|opt\.prepared\?await opt\.prepared/, "call playback must accept prefetched audio");
 
 const playbackEvents = [];
@@ -316,6 +317,6 @@ const prefetched = await Promise.all(prefetchContext.callPrefetchSpeech(
   () => true,
 ));
 assert.equal(prefetched.length, 4);
-assert.equal(maxPrefetch, 2, "prefetch must prepare ahead without unbounded parallel MiniMax requests");
+assert.equal(maxPrefetch, 1, "the first call sentence must be prepared before later sentences start");
 
 console.log("voice prosody tests passed");

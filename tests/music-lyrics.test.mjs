@@ -47,6 +47,7 @@ const lyricBox={clientHeight:64,scrollTop:0,querySelectorAll(){return rows;}};
 context.document={getElementById(id){return id==='m_lyrics'?lyricBox:null;}};
 context.S={music:{songs:[{id:'song',lyrics:'[00:01.250]第一句\n[00:02.750]第二句\n[00:03.005]第三句'}]}};
 context._mCur='song';
+context._mAudioSongId='song';
 context._mLyricIndex=-2;
 context._ma={currentTime:0,duration:4};
 context.mLyricTick(true);
@@ -58,12 +59,43 @@ assert.equal(rows[0].style.color,'#7d7d88');
 assert.equal(rows[1].style.color,'#ffd6e8','current keyed line must be repainted on every tick');
 assert.equal(rows[1].attrs['aria-current'],'true');
 
-assert.match(source,/if\(_mCur!==id\|\|!_ma\|\|!_ma\.src\)await musicPlay\(id\)/);
+context._mAudioSongId='another-song';
+context._ma.currentTime=3.1;
+context.mLyricTick(true);
+assert.equal(rows[2].style.color,'#7d7d88','lyrics must ignore audio that belongs to another song');
+
+const pending=new Map(),revoked=[];
+class FakeAudio{
+  constructor(){this.paused=true;this.src='';this.loop=false;}
+  pause(){this.paused=true;if(this.onpause)this.onpause();}
+  play(){this.paused=false;if(this.onplay)this.onplay();return Promise.resolve();}
+}
+const raceContext=vm.createContext({
+  S:{music:{songs:[{id:'first',src:{t:'idb'}},{id:'second',src:{t:'idb'}}]}},
+  musicInit(){},mLyricLoopStop(){},mLyricTick(){},mLyricLoopStart(){},mTick(){},mEnded(){},mBtns(){},
+  Audio:FakeAudio,toast(){},save(){},render(){},setTimeout,
+  mGet(id){return new Promise(resolve=>pending.set(id,resolve));},
+  URL:{createObjectURL(blob){return 'blob:'+blob.id;},revokeObjectURL(url){revoked.push(url);}},
+});
+vm.runInContext('let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mWantPlay=false,_mLyricIndex=-2,_mLyricPaintAt=0,_mPlayToken=0,_mAudioSongId=null;',raceContext);
+vm.runInContext('async '+functionSource('musicPlay'),raceContext);
+const firstPlay=raceContext.musicPlay('first');
+const secondPlay=raceContext.musicPlay('second');
+pending.get('second')({id:'second'});await Promise.resolve();await Promise.resolve();
+pending.get('first')({id:'first'});await Promise.all([firstPlay,secondPlay]);
+assert.equal(vm.runInContext('_mCur',raceContext),'second','a stale IndexedDB read must not replace the latest selected song');
+assert.equal(vm.runInContext('_mAudioSongId',raceContext),'second','the audio/song identity must stay aligned after rapid switching');
+assert.equal(vm.runInContext('_ma.src',raceContext),'blob:second');
+assert.deepEqual(revoked,[],'the stale request must not revoke the latest song URL');
+
+assert.match(source,/if\(_mAudioSongId!==id\|\|!_ma\|\|!_ma\.src\)await musicPlay\(id\)/);
 assert.match(source,/if\(!await mGet\(s\.id\)\)/,'music packs must verify each IndexedDB write');
 assert.match(source,/跳过 '\+skipped\+' 首不完整歌曲/);
 assert.match(functionSource('musicPlay'),/onloadedmetadata=\(\)=>mLyricTick\(true\)/,'metadata readiness must repaint keyed lyrics');
 assert.match(functionSource('musicPlay'),/onseeked=\(\)=>mLyricTick\(true\)/,'seeking to an authored cue must repaint immediately');
 assert.match(functionSource('musicPlay'),/onplaying=\(\)=>\{mLyricTick\(true\);mLyricLoopStart\(\);\}/,'actual playback must restart the lyric clock');
+assert.match(functionSource('musicPlay'),/token!==_mPlayToken/,'rapid song changes must discard stale asynchronous loads');
+assert.match(functionSource('mLyricTick'),/_mAudioSongId!==_mCur/,'lyric timing must only read audio for the displayed song');
 assert.match(source,/if\(c\.p==='music'\)[\s\S]*?requestAnimationFrame\(\(\)=>\{mTick\(\);if\(_ma&&!_ma\.paused\)mLyricLoopStart\(\);\}\)/,'rebuilding the player DOM must restore progress and lyric state');
 
 console.log('music lyrics tests passed');
