@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='794'){
+if(window.__NORTH_SHELL_BUILD__!=='795'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v794 · 歌词手动浏览与跟唱修复';
+const APP_VER='v795 · 歌词居中坐标修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=794';
+  const url='sw.js?v=795';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2487,10 +2487,11 @@ function mLyricLoopStop(){if(_mLyricRaf)cancelAnimationFrame(_mLyricRaf);_mLyric
 function mLyricBrowse(){_mLyricManualUntil=Date.now()+4000;_mLyricFollowPending=true;}
 function mLyricBind(box){if(!box||box._northLyricBound)return;box._northLyricBound=true;['pointerdown','touchstart','wheel'].forEach(type=>box.addEventListener(type,mLyricBrowse,{passive:true}));}
 function mLyricScroll(box,top,smooth){top=Math.max(0,top||0);if(box.scrollTo)box.scrollTo({top,behavior:smooth?'smooth':'auto'});else box.scrollTop=top;}
+function mLyricTarget(box,line){const br=box.getBoundingClientRect(),lr=line.getBoundingClientRect();return box.scrollTop+lr.top-br.top-box.clientHeight/2+line.clientHeight/2;}
 function mLyricTick(force){const box=document.getElementById('m_lyrics');if(!box||!_ma||!_mCur||_mAudioSongId!==_mCur)return;mLyricBind(box);const s=S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);if(!lines.length)return;const manual=!force&&Date.now()<_mLyricManualUntil;
   if(lines.some(x=>x.t!=null)){// 带时间轴：高亮当前句并居中
     const idx=musicLyricIndex(lines,_ma.currentTime),els=box.querySelectorAll('.mlrc'),changed=idx!==_mLyricIndex;_mLyricIndex=idx;els.forEach((el,i)=>{const on=i===idx;el.classList.toggle('on',on);el.style.color=on?'#ffd6e8':'#7d7d88';el.style.fontWeight=on?'700':'400';el.style.transform=on?'scale(1.08)':'scale(1)';if(on)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current');});
-    if(!manual&&(force||changed||_mLyricFollowPending)&&idx>=0&&els[idx]){mLyricScroll(box,els[idx].offsetTop-box.clientHeight/2+els[idx].clientHeight/2,true);_mLyricFollowPending=false;}}
+    if(!manual&&(force||changed||_mLyricFollowPending)&&idx>=0&&els[idx]){mLyricScroll(box,mLyricTarget(box,els[idx]),true);_mLyricFollowPending=false;}}
   else if(_ma.duration){// 纯文本歌词：跟着进度匀速滚动
     const max=box.scrollHeight-box.clientHeight;if(!manual&&max>0){mLyricScroll(box,(_ma.currentTime/_ma.duration)*max,false);_mLyricFollowPending=false;}}}
 const SVG_PLAY='<svg viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
