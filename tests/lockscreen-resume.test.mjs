@@ -28,11 +28,14 @@ function normalize(me) {
   return context.S.me;
 }
 
-assert.equal(normalize({ locked: false }).locked, false, 'reopening must preserve an unlocked phone');
+assert.equal(normalize({ locked: false }).locked, false, 'normalization must preserve an explicit unlocked value until boot');
 assert.equal(normalize({ locked: true }).locked, true, 'an explicitly locked phone must stay locked');
-assert.equal(normalize({}).locked, false, 'legacy saved data without a lock flag should not open the screensaver');
+assert.equal(normalize({}).locked, true, 'legacy saved data without a lock flag must open on the screensaver');
 
 assert.match(source, /function lockOpen\(\)\{S\.me\.locked=false;save\(\)/);
 assert.match(source, /function lockShow\(drop\)[\s\S]*?S\.me\.locked=true;save\(\)/);
+assert.match(source, /function lockPrepareAway\(\)\{try\{S\.me=S\.me\|\|\{\};S\.me\.locked=true;saveNow\(\)/);
+assert.match(source, /function finishAppBoot\(\)[\s\S]*?S\.me\.locked=true;[\s\S]*?render\(\)/);
+assert.doesNotMatch(source, /正在读取大容量存档/);
 
 console.log('lockscreen resume tests passed');

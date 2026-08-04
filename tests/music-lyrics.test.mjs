@@ -28,8 +28,9 @@ assert.equal(lines.length,3);
 assert.equal(lines[0].t,1.25,'three digit milliseconds must stay readable');
 assert.equal(lines[1].t,2.75);
 assert.equal(lines[2].t,3.005);
-assert.equal(context.musicLyricIndex(lines,0),0,'the first keyed lyric stays highlighted before its exact cue');
-assert.equal(context.musicLyricIndex(lines,1.24),0,'small media event jitter must not leave the next lyric dark');
+assert.equal(context.musicLyricIndex(lines,0),-1,'no keyed lyric should highlight before its exact cue');
+assert.equal(context.musicLyricIndex(lines,1.24),-1,'a lyric must not highlight early');
+assert.equal(context.musicLyricIndex(lines,1.25),0,'a lyric highlights at its exact keyed time');
 assert.equal(context.musicLyricIndex(lines,2.75),1);
 assert.equal(context.musicLyricIndex(lines,3.1),2);
 
@@ -49,12 +50,16 @@ context._mCur='song';
 context._mLyricIndex=-2;
 context._ma={currentTime:0,duration:4};
 context.mLyricTick(true);
-assert.equal(rows[0].style.color,'#ffd6e8','first keyed line must be painted pink immediately');
+assert.equal(rows[0].style.color,'#7d7d88','first keyed line must remain dim before its cue');
 assert.equal(rows[1].style.color,'#7d7d88');
 context._ma.currentTime=2.8;
 context.mLyricTick(true);
 assert.equal(rows[0].style.color,'#7d7d88');
 assert.equal(rows[1].style.color,'#ffd6e8','current keyed line must be repainted on every tick');
 assert.equal(rows[1].attrs['aria-current'],'true');
+
+assert.match(source,/if\(_mCur!==id\|\|!_ma\|\|!_ma\.src\)await musicPlay\(id\)/);
+assert.match(source,/if\(!await mGet\(s\.id\)\)/,'music packs must verify each IndexedDB write');
+assert.match(source,/跳过 '\+skipped\+' 首不完整歌曲/);
 
 console.log('music lyrics tests passed');

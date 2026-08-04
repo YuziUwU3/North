@@ -40,6 +40,10 @@ assert.match(account,/function aiShowPurchaseNotice\(\)/);
 assert.match(account,/成功只扣一次6点/);
 assert.match(account,/两条路线都失败则6点全额退回/);
 assert.match(account,/更换浏览器或手机前请先备份并确认用户ID/);
+assert.match(account,/accept="image\/\*,\.jpg,\.jpeg,\.png,\.webp,\.heic,\.heif"/);
+assert.match(account,/function aiClaimCanvasData\(source,width,height\)/);
+assert.match(account,/typeof createImageBitmap==='function'/);
+assert.match(account,/当前浏览器不能读取 HEIC\/HEIF/);
 
 assert.match(backend,/image: 6/);
 assert.match(backend,/Deno\.env\.get\("IMAGE_MODEL"\) \|\| "gpt-image-2"/);

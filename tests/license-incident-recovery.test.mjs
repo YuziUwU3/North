@@ -28,7 +28,8 @@ assert.match(gate, /restoreLocalIdentity,/);
 
 assert.match(app, /e&&e\.server&&e\.permanent===true/);
 assert.doesNotMatch(app, /e&&e\.server&&e\.status===400/);
-assert.match(app, /授权服务暂时拥堵，已保留当前登录/);
+assert.match(app, /_licenseTransientNoticeAt>10\*60000/);
+assert.match(app, /授权检查暂时未连通，当前登录不受影响，稍后会自动重试/);
 assert.match(app, /licenseTryIncidentRecovery/);
 assert.match(app, /aiReady=aiId\.length>=8&&aiSecret\.length>=16/);
 assert.doesNotMatch(app, /synced\.includes\(id\)/);

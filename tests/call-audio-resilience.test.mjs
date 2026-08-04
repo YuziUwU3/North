@@ -135,13 +135,17 @@ assert.ok(pulseCancels>=1,'ending a call must also stop device speech output');
 
 assert.match(source,/visibilitychange/);
 assert.match(source,/window\.addEventListener\('pageshow',\(\)=>\{audioMarkWakeRequired\(\);audioProbeMicPermission\(\);audioKick\(\);\}/);
-assert.match(functionSource('audioKick'),/_audioWakeRequired\)audioHardWake\(\)/,'the first touch after returning must perform a hard wake');
-assert.match(functionSource('audioHardWake'),/audioRouteReset\(true\)[\s\S]*audioMediaWake\(\)[\s\S]*audioMicRouteCycle\(\)/,'hard wake must rebuild WebAudio, prime media audio and cycle an already-authorized microphone route');
+assert.match(functionSource('audioKick'),/_audioWakeRequired\)audioHardWake\(mic\)/,'the first touch after returning must perform a hard wake');
+assert.match(functionSource('audioHardWake'),/audioRouteReset\(true\)[\s\S]*audioMediaWake\(\)[\s\S]*if\(!skipMic\)audioMicRouteCycle\(\)/,'hard wake must rebuild WebAudio and only cycle the microphone for non-mic gestures');
 assert.match(functionSource('audioMicRouteCycle'),/!_audioMicGranted/,'touch recovery must never request a new microphone permission');
+assert.match(functionSource('audioKick'),/closest\('\[data-call-mic\]'\)/,'the call microphone gesture must not be pre-empted by route cycling');
+assert.match(functionSource('audioMicRouteCancel'),/getTracks\(\)\.forEach\(t=>t\.stop\(\)\)/,'temporary microphone streams must be releasable');
+assert.match(functionSource('callHFStart'),/^function callHFStart\(\)\{audioMicRouteCancel\(\)/);
 assert.match(functionSource('audioProbeMicPermission'),/query\(\{name:'microphone'\}\)/);
 assert.match(functionSource('audioProbeMicPermission'),/enumerateDevices\(\)/,'Android browsers without Permissions API should still detect an already-authorized microphone');
 assert.match(functionSource('callHFToggle'),/callHFStop\(\);audioRouteReset\(false\)/);
 assert.match(functionSource('callHFStop'),/typeof _callSR\.abort==='function'/,'ending recognition should release the Android communication route immediately');
+assert.match(functionSource('callHFStop'),/audioMicRouteCancel\(\)/,'hanging up must also release a pending route-cycle microphone stream');
 assert.match(functionSource('declineCall'),/audioRouteReset\(false\)/);
 assert.match(functionSource('hangupCall'),/audioRouteReset\(false\)/);
 assert.match(functionSource('speakWait'),/playCallMediaWait\(ready\.ab,ready\.buf,start\)/,'API call speech must use the iOS-safe media channel');
@@ -151,4 +155,11 @@ assert.match(functionSource('playCallFallbackWait'),/stopBufSource\('call-fallba
 assert.match(functionSource('playCallMediaWait'),/2500/,'a blocked iOS media start must fall back quickly instead of freezing the reply queue');
 assert.match(functionSource('endCallTimers'),/stopCallMediaAudio/,'hanging up must stop any prepared call media');
 assert.match(source,/pagehide',\(\)=>\{audioMarkWakeRequired\(\);if\(_callHF\)\{callHFStop\(\);audioRouteReset\(false\);\}/);
+
+const failureContext=vm.createContext({String,Number});
+vm.runInContext(functionSource('callFailureText'),failureContext);
+assert.equal(failureContext.callFailureText({status:401,message:'unauthorized'}),'(通话服务授权失败，请检查 AI 账户)');
+assert.equal(failureContext.callFailureText({network:true,message:'fetch failed'}),'(网络连接中断，请再说一次)');
+assert.equal(failureContext.callFailureText(new Error('request timeout')),'(连接超时，请再说一次)');
+assert.doesNotMatch(source,/\(信号不好…\)/,'call failures must not hide every root cause behind a generic signal message');
 console.log('call audio resilience tests passed');

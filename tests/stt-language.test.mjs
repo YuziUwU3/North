@@ -16,13 +16,18 @@ function functionSource(name) {
 const context = vm.createContext({});
 vm.runInContext(functionSource("sttLangCode"), context);
 vm.runInContext(functionSource("sttApiLang"), context);
+vm.runInContext(functionSource("sttRelayLang"), context);
 
 assert.equal(context.sttLangCode("zh-CN"), "zh-CN");
+assert.equal(context.sttLangCode("粤语"), "yue-HK");
+assert.equal(context.sttLangCode("yue-HK"), "yue-HK");
 assert.equal(context.sttLangCode("英"), "en-US");
 assert.equal(context.sttLangCode("en-US"), "en-US");
 assert.equal(context.sttLangCode("日"), "ja-JP");
 assert.equal(context.sttLangCode("韩"), "ko-KR");
 assert.equal(context.sttApiLang("zh-CN"), "zh");
+assert.equal(context.sttApiLang("yue-HK"), "zh");
+assert.equal(context.sttRelayLang("yue-HK"), "yue");
 assert.equal(context.sttApiLang("en-US"), "en");
 assert.equal(context.sttApiLang("ja-JP"), "ja");
 assert.equal(context.sttApiLang("ko-KR"), "ko");
@@ -36,14 +41,15 @@ assert.match(source, /await sttRequest\(blob,\{timestamps:true,lang\}\)/);
 assert.match(source, /影片“一键提取字幕”不可用/);
 assert.match(source, /识别语言（只转写，不翻译）/);
 assert.match(source, /英文 → 英文文字/);
-assert.match(source, /language=sttApiLang\(opt\.lang\|\|a\.lang\)/);
+assert.match(source, /rawLang=opt\.lang\|\|a\.lang,language=sttApiLang\(rawLang\)/);
+assert.match(source, /language:sttRelayLang\(rawLang\)/);
 assert.match(source, /fd\.append\('language',language\)/);
 assert.match(source, /fd\.append\('response_format','verbose_json'\)/);
 assert.match(source, /fd\.append\('timestamp_granularities\[\]','segment'\)/);
 assert.match(source, /async function sttTranscribeTimed/);
 assert.match(source, /r\.lang=sttLangCode\(lang\|\|\(\(S\.settings\.stt\|\|\{\}\)\.lang\)\)/);
-assert.match(source, /function callHFStart\(\)\{const sr=makeSR\(\)/);
-assert.doesNotMatch(source, /function callHFStart\(\)\{const sr=makeSR\('zh-CN'\)/);
+assert.match(source, /function callHFStart\(\)\{audioMicRouteCancel\(\);const sr=makeSR\(\)/);
+assert.doesNotMatch(source, /function callHFStart\(\)[^}]*makeSR\('zh-CN'\)/);
 
 const timed = vm.createContext({
   sttRequest: async () => ({

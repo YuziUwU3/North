@@ -45,7 +45,7 @@ assert.match(backend, /requireAdmin\(req, body\)/);
 assert.match(backend, /admin-unauthorized"\) \? 401/);
 
 assert.match(account, /function aiOpenPurchaseClaim\(purchaseId\)/);
-assert.match(account, /accept="image\/jpeg,image\/png,image\/webp"/);
+assert.match(account, /accept="image\/\*,\.jpg,\.jpeg,\.png,\.webp,\.heic,\.heif"/);
 assert.match(account, /function aiClaimImageData\(file\)/);
 assert.match(account, /purchase_submit/);
 assert.match(account, /付款账号昵称或尾号（必填）/);

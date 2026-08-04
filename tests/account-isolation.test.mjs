@@ -12,6 +12,9 @@ assert.doesNotMatch(source, /# 当前聊天身份（小号与大号严格分开�
 assert.doesNotMatch(source, /现在跟你聊天的是小号身份/);
 assert.match(source, /if\(_main\)\{const av=affNow\(c\)/);
 assert.match(source, /if\(_main&&!opt\.selectiveMemory\)\{const _pd=powerDynamicPrompt/);
+assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
+assert.doesNotMatch(source, /if\(aid==='main'\)setTimeout\(triggerAltReports/);
+assert.match(source, /# 姓名边界（重要）[\s\S]*?忆北的小手机[\s\S]*?应用\/设备名称/);
 
 assert.match(source, /function accountDeleteTap\(ev,id\)/);
 assert.match(source, /aria-label="删除小号"/);

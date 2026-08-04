@@ -79,6 +79,9 @@ assert.equal(context.ttsLanguageBoost({ voice: { lang: "zh" } }), "English", "bu
 context.ttsUseRelay = () => false;
 assert.equal(context.ttsContentLang({ voice: { lang: "英" } }), "英", "external voice must keep the role language");
 assert.equal(context.ttsLanguageBoost({ voice: { lang: "日" } }), "Japanese");
+assert.equal(context.ttsLanguageBoost({ voice: { lang: "粤" } }), "Chinese,Yue");
+assert.equal(context.normVoiceLang("yue-HK"), "粤");
+assert.equal(context.voiceLangName("粤"), "粤语");
 assert.equal(context.voiceTagNeedsLangFix("[语音|Tell me why.|为什么这样？|语气:质问]", { voice: { lang: "英" } }), false);
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "british" }), "en-GB");
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "en-US" }), "en-US");
@@ -90,6 +93,11 @@ const utterance = {};
 context.applySystemVoice(utterance, { lang: "\u82f1", accent: "en-GB", voiceURI: "" });
 assert.equal(utterance.lang, "en-GB");
 assert.equal(utterance.voice.voiceURI, "gb-voice");
+context._voices = [{ voiceURI: "hk-voice", lang: "zh-HK" }];
+const cantoneseUtterance = {};
+context.applySystemVoice(cantoneseUtterance, { lang: "粤", accent: "auto", voiceURI: "" });
+assert.equal(cantoneseUtterance.lang, "yue-HK");
+assert.equal(cantoneseUtterance.voice.voiceURI, "hk-voice");
 
 const minimax02 = { base: "https://api.minimax.io", model: "speech-02-turbo" };
 const eleven3 = { base: "https://api.elevenlabs.io", model: "eleven_v3" };
@@ -154,6 +162,7 @@ assert.match(source, /function ttsUseRelay\(\)\{const t=ttsCfg\(\);return !!\(tt
 assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
 assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /language_boost: safeTTSLanguageBoost\(languageBoost\)/);
+assert.match(backend, /"Chinese,Yue"/);
 assert.match(backend, /body\.voice_setting \|\| null, body\.language_boost/);
 assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSetting\(setting\) \}/);
 assert.match(backend, /if \(allowed\.has\(emotion\)\) out\.emotion = emotion/);

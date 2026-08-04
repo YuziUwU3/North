@@ -38,7 +38,9 @@ test('large core state migrates to IndexedDB before localStorage reaches its bro
   assert.match(app, /writeCoreBootShell\(savedAt\)/);
   assert.match(app, /__coreIdb:\{ver:1,savedAt:/);
   assert.match(app, /async function bootOverflowCore\(\)/);
-  assert.match(app, /const rec=await imgGet\(CORE_IDB_KEY\)/);
+  assert.match(app, /primary=await imgGet\(CORE_IDB_KEY\)/);
+  assert.match(app, /backup=await imgGet\(RECOVERY_IDB_KEY\)/);
+  assert.match(app, /recoveryStateMeaningful\(stats\)/);
   assert.match(app, /S=mergeStateData\(restored\)/);
   assert.match(functionSource('bootImages'), /^async function bootImages\(\)\{await bootOverflowCore\(\);try\{/);
   assert.match(app, /if\(_coreBootRef&&!_appBootFinished\)return true/);
@@ -124,6 +126,8 @@ test('real save flow keeps only the newest queued large snapshot and restores it
     function _imgReplacer(key,value){return value}
     function isQuotaError(){return false}
     function mergeStateData(data){return Object.assign(defState(),data||{})}
+    function recoveryStateStats(data){return {contacts:(data.contacts||[]).length,accounts:1,messages:0,memories:0,moments:0,groups:0}}
+    function recoveryStateMeaningful(stats){return !!stats.contacts}
     function normalizeLoadedState(){}
   `, context);
   for (const name of ['storedTextBytes', 'coreBootShell', 'writeCoreBootShell', 'queueCoreMirror', 'saveNow', 'bootOverflowCore']) {
@@ -139,4 +143,32 @@ test('real save flow keeps only the newest queued large snapshot and restores it
   vm.runInContext(`S=coreBootShell(Date.now());_appBootFinished=false`, context);
   assert.equal(await vm.runInContext('bootOverflowCore()', context), true);
   assert.equal(vm.runInContext('S.marker', context), 'newest');
+});
+
+test('a missing large primary snapshot falls back to the protected recovery snapshot', async () => {
+  const db = new Map();
+  const local = new Map();
+  const recovered = {settings:{},me:{accounts:[]},contacts:[{id:'kept'}],marker:'recovered'};
+  db.set('__recovery_state',{ver:1,savedAt:1234,json:JSON.stringify(recovered),stats:{contacts:1,accounts:1,messages:0,memories:0,moments:0,groups:0}});
+  const context = vm.createContext({
+    Blob, Date, Promise, setTimeout, clearTimeout,
+    localStorage:{setItem:(key,value)=>local.set(key,String(value))},
+    imgGet:async key=>db.get(key)??null,
+    imgPut:async(key,value)=>db.set(key,value),
+    toast:()=>{},
+  });
+  vm.runInContext(`
+    const KEY='north-test',CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state';
+    let _coreBootRef={ver:1,savedAt:2000},_coreOverflowMode=true,_coreLogicalBytes=0,S={};
+    function defState(){return {settings:{},me:{accounts:[]},contacts:[]}}
+    function mergeStateData(data){return Object.assign(defState(),data||{})}
+    function normalizeLoadedState(){}
+    function recoveryStateStats(data){return {contacts:(data&&data.contacts||[]).length}}
+    function recoveryStateMeaningful(stats){return !!(stats&&stats.contacts)}
+  `,context);
+  for(const name of ['storedTextBytes','coreBootShell','writeCoreBootShell','bootOverflowCore'])vm.runInContext(functionSource(name),context);
+  assert.equal(await vm.runInContext('bootOverflowCore()',context),true);
+  assert.equal(vm.runInContext('S.marker',context),'recovered');
+  assert.equal(JSON.parse(db.get('__core_state').json).marker,'recovered');
+  assert.equal(JSON.parse(local.get('north-test')).__coreIdb.savedAt,1234);
 });

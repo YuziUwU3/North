@@ -718,6 +718,7 @@ function tencentVoiceFormat(format: string) {
 
 function tencentEngine(lang: unknown) {
   const value = String(lang || "zh").toLowerCase();
+  if (value.startsWith("yue") || value.includes("cantonese")) return "16k_yue";
   if (value.startsWith("en")) return "16k_en";
   if (value.startsWith("ja") || value.startsWith("jp")) return "16k_ja";
   if (value.startsWith("ko") || value.startsWith("kr")) return "16k_ko";
@@ -1017,7 +1018,7 @@ function safeTTSVoiceSetting(input: TTSVoiceSetting | null | undefined) {
 
 function safeTTSLanguageBoost(input: unknown) {
   const value = String(input || "auto");
-  return new Set(["auto", "Chinese", "English", "Japanese", "Korean"]).has(value) ? value : "auto";
+  return new Set(["auto", "Chinese", "Chinese,Yue", "English", "Japanese", "Korean"]).has(value) ? value : "auto";
 }
 
 async function minimaxTTS(text: string, voiceId: string, model: string, setting?: TTSVoiceSetting, languageBoost?: unknown) {
