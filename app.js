@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='789'){
+if(window.__NORTH_SHELL_BUILD__!=='790'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v789 · 存档通话与社交稳定性修复';
+const APP_VER='v790 · 屏保铃声与音乐同步修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=789';
+  const url='sw.js?v=790';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1517,7 +1517,9 @@ function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)ret
 function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return;let on=false;try{on=S.me.locked===false&&cur().p==='home'&&!_call;}catch(_){}e.classList.toggle('show',!!on);}
 function lockOpen(){S.me.locked=false;save();renderLockScreen();renderLockPull();}
 function lockShow(drop){if(_call)return;const el=$('#lockScreen');if(el)el.style.transform='';const b=$('#msgBanner');if(b)b.className='msgbanner';S.me.locked=true;save();renderLockScreen(true);renderLockPull();}
-function lockPrepareAway(){try{S.me=S.me||{};S.me.locked=true;saveNow();}catch(_){}}
+let _lockAwayAt=0;
+function lockPrepareAway(force){try{S.me=S.me||{};if(force){_lockAwayAt=0;S.me.locked=true;saveNow();return true;}if(!_lockAwayAt)_lockAwayAt=Date.now();if(_savePending)saveNow();return false;}catch(_){return false;}}
+function lockResumeFromAway(){try{const awayAt=_lockAwayAt;_lockAwayAt=0;if(!awayAt||Date.now()-awayAt<2500)return false;S.me=S.me||{};if(S.me.locked!==true){S.me.locked=true;save(0);}renderLockScreen(true);renderLockPull();return true;}catch(_){return false;}}
 function lockQuickTorch(e){try{e.stopPropagation();}catch(_){}toast('手电筒已点亮');}
 function lockQuickCamera(e){try{e.stopPropagation();}catch(_){}lockOpen();setTimeout(()=>openApp('moments'),80);}
 let _lockTouch=null;
@@ -1994,7 +1996,7 @@ function render(){
   restoreRenderScroll(c,_scrollState);
   if((c.p==='tale'&&S.tale&&S.tale.active)||(c.p==='dread'&&S.dread&&S.dread.active)){setTimeout(jailAmbientStart,40);}
   else if(c.p!=='jail'){jailAmbientStop();}
-  if(c.p==='music'){if(S.music&&S.music.session&&S.music.session.startTs){if(!_mSessTimer)_mSessTimer=setInterval(mSessTick,1000);mSessTick();}else if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}}
+  if(c.p==='music'){if(S.music&&S.music.session&&S.music.session.startTs){if(!_mSessTimer)_mSessTimer=setInterval(mSessTick,1000);mSessTick();}else if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}requestAnimationFrame(()=>{mTick();if(_ma&&!_ma.paused)mLyricLoopStart();});}
   if(c.p==='wechat'&&wxTab==='moments'){}
   if(c.p==='home')homeRestorePage();
 }
@@ -2458,7 +2460,7 @@ function syncMark(){if(!_sync||!_ma)return;_sync.stamps[_sync.idx]=_ma.currentTi
 function syncBack(){if(!_sync)return;if(_sync.idx>0){_sync.idx--;_sync.stamps[_sync.idx]=null;}syncRender();}
 function syncSave(){if(!_sync)return;const s=S.music.songs.find(x=>x.id===_sync.id);if(s){s.lyrics=_sync.lines.map((t,i)=>(_sync.stamps[i]!=null?'['+fmtLrc(_sync.stamps[i])+']':'')+t).join('\n');save();}_sync=null;closeModal();render();toast('时间轴已保存🎯');}
 async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;_mWantPlay=true;
-  if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();mLyricLoopStart();};_ma.onpause=()=>{_mPlaying=false;mBtns();mLyricLoopStop();mTick();};_ma.onerror=()=>toast('这首音乐的格式或文件已损坏，当前浏览器无法播放');}
+  if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onloadedmetadata=()=>mLyricTick(true);_ma.ondurationchange=()=>mLyricTick(true);_ma.onseeking=()=>mLyricTick(true);_ma.onseeked=()=>mLyricTick(true);_ma.onplaying=()=>{mLyricTick(true);mLyricLoopStart();};_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();mLyricTick(true);mLyricLoopStart();};_ma.onpause=()=>{_mPlaying=false;mBtns();mLyricLoopStop();mTick();};_ma.onerror=()=>toast('这首音乐的格式或文件已损坏，当前浏览器无法播放');}
   _mCur=id;S.music.lastSongId=id;let url;
   if(s.src&&s.src.t==='url')url=s.src.url;
   else{const b=await mGet(id);if(!b){toast('音频文件没有完整导入，请删掉后重新添加');return false;}if(_mUrl){try{URL.revokeObjectURL(_mUrl);}catch(e){}}url=URL.createObjectURL(b);_mUrl=url;}
@@ -6719,7 +6721,7 @@ function phDefaultAvatar(cls){return `<div class="avatar ${cls||'sm'} phdefav">$
 function phAvatar(n,cls){const x=phFind(n),v=x&&x.avatar;if(v)return av(v,cls||'sm');return phDefaultAvatar(cls);}
 function phWhen(t){const d=new Date(t||Date.now()),now=new Date();if(d.toDateString()===now.toDateString())return hm(t);const y=new Date(now);y.setDate(now.getDate()-1);if(d.toDateString()===y.toDateString())return '昨天';return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function phRegion(n){const p=phState(),key=phNorm(n),x=phFind(n);if(p.regions[key])return p.regions[key];if(x&&x.region)return x.region;const d=(''+phDigits(n)).replace(/^\+?86/,'');if(d==='110')return '报警服务';if(d==='119')return '消防救援';if(d==='120')return '急救中心';if(d==='122')return '交通报警';if(d==='10086')return '中国移动';if(/^025/.test(d))return '江苏 南京';if(/^0512/.test(d))return '江苏 苏州';if(/^1\d{10}$/.test(d)){const a=['江苏 苏州','上海','广东 深圳','浙江 杭州','北京','四川 成都','湖北 武汉'];return a[Math.abs(phHash(d))%a.length];}return '未知地区';}
-function phSound(type,key){if(!S.settings.sound)return;const map={sms:[[1046,.07],[1396,.08]],call:[[440,.12],[523,.12],[659,.18]],connect:[[740,.06],[988,.08]],key:[[697,.055],[852,.06]],end:[[330,.08],[247,.1]]},seq=(map[type]||map.call).map(x=>x.slice());if(type==='key'&&key){const d=String(key).charCodeAt(0)%7;seq[0][0]=620+d*38;seq[1][0]=760+d*42;}playMediaTone(seq,{key:'phone-soft-'+type+'-'+(key||''),level:type==='key'?.09:.11,gap:.035,wave:type==='key'?'sine':'triangle'});}
+function phSound(type,key){if(!S.settings.sound)return;const map={sms:[[1046,.07],[1396,.08]],call:[[880,.16],[1174,.11]],connect:[[740,.06],[988,.08]],key:[[697,.055],[852,.06]],end:[[330,.08],[247,.1]]},seq=(map[type]||map.call).map(x=>x.slice());if(type==='key'&&key){const d=String(key).charCodeAt(0)%7;seq[0][0]=620+d*38;seq[1][0]=760+d*42;}playMediaTone(seq,{key:'phone-soft-v2-'+type+'-'+(key||''),level:type==='key'?.09:(type==='call'?.1:.11),gap:type==='call'?.16:.035,wave:'sine',decay:type==='call'});}
 function phMyAliasNumber(){const p=phState();if(!p.aliasNum){p.aliasNum=phRandomNumber();save(300);}return p.aliasNum;}
 function phLineLabel(line){return line==='alias'?'匿名号':'主号';}
 function phSetLine(line){const p=phState();p.line=line==='alias'?'alias':'main';if(p.line==='alias')phMyAliasNumber();save();const page=cur();if(page&&page.p==='phonesms'){const n=phDigits(page.num),x=phFind(n);if(x&&x.kind==='role'){openPhoneSMS(n,p.line==='alias'?phSmsKey(n,'alias',phMyAliasNumber()):n);return;}}render();}
@@ -9655,12 +9657,11 @@ function audioProbeMicPermission(){const devices=()=>{try{if(!navigator.mediaDev
 function audioMicRouteCancel(){_audioMicCycleToken++;const stream=_audioMicCycleStream;_audioMicCycleStream=null;_audioMicCycling=null;if(stream)try{stream.getTracks().forEach(t=>t.stop());}catch(_){}return !!stream;}
 function audioMicRouteCycle(){if(!_audioMicGranted||_audioMicCycling||_rec||_callHF||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return Promise.resolve(false);const token=++_audioMicCycleToken,stop=stream=>{try{stream&&stream.getTracks().forEach(t=>t.stop());}catch(_){}};_audioMicCycling=navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>new Promise(res=>{if(token!==_audioMicCycleToken){stop(stream);res(false);return;}_audioMicCycleStream=stream;setTimeout(()=>{stop(stream);const ok=token===_audioMicCycleToken;if(ok){_audioMicCycleStream=null;_audioMicCycling=null;}res(ok);},90);})).catch(()=>{if(token===_audioMicCycleToken)_audioMicCycling=null;return false;});return _audioMicCycling;}
 function audioHardWake(skipMic){const now=Date.now();if(now-_audioWakeAt<450)return audioUnlock();_audioWakeAt=now;const ac=audioRouteReset(true);audioMediaWake();if(!skipMic)audioMicRouteCycle().then(ok=>{if(!ok)return;try{if(ac&&ac.state!=='running')ac.resume().catch(()=>{});}catch(_){}audioMediaWake();try{if(_ma&&_mWantPlay&&_ma.paused)_ma.play().catch(()=>{});}catch(_){}});return ac;}
-// iOS：用了系统键盘的语音转文字/被其它声音打断后，AudioContext 会被挂起、在放的音乐(_ma)也会被暂停，提示音/铃声/音乐就没了。
-// 这里在每次点击/触摸/切回页面时既唤醒 AudioContext，又把"本该在放的音乐"接着放，免得要退出后台才恢复。
-function audioKick(e){const mic=!!(e&&e.target&&e.target.closest&&e.target.closest('[data-call-mic]'));if(_audioWakeRequired)audioHardWake(mic);else audioUnlock();try{if(_ma&&_mWantPlay&&_ma.paused&&(!_ma.duration||_ma.currentTime<_ma.duration-0.3))_ma.play().catch(()=>{});}catch(e){}}
+// iOS：切回页面只恢复 WebAudio 和本机播放器；只有明确点通话麦克风时才唤醒媒体通道，避免抢占正在播放的后台音乐。
+function audioKick(e){const mic=!!(e&&e.target&&e.target.closest&&e.target.closest('[data-call-mic]'));if(_audioWakeRequired&&mic)audioHardWake(true);else audioUnlock();try{if(_ma&&_mWantPlay&&_ma.paused&&(!_ma.duration||_ma.currentTime<_ma.duration-0.3))_ma.play().catch(()=>{});}catch(e){}}
 ['touchend','pointerdown','click'].forEach(ev=>document.addEventListener(ev,audioKick,{passive:true}));
-document.addEventListener('visibilitychange',()=>{if(document.hidden)audioMarkWakeRequired();else{audioProbeMicPermission();audioKick();}});
-window.addEventListener('pageshow',()=>{audioMarkWakeRequired();audioProbeMicPermission();audioKick();},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)audioMarkWakeRequired();else audioProbeMicPermission();});
+window.addEventListener('pageshow',()=>{audioMarkWakeRequired();audioProbeMicPermission();},{passive:true});
 document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some(c=>!c.deleted&&getSpy(c).loc);if(!S.weather||Date.now()-S.weather.time>(liveLoc?600000:72000000))fetchWeather();},{once:true});
 function playDing(){if(_ma&&_mWantPlay&&!_ma.paused){webToneSequence([[880,.22]],{level:.12,decay:true});setTimeout(()=>{try{if(_ma&&_mWantPlay&&_ma.paused)_ma.play().catch(()=>{});}catch(_){}},180);return;}playMediaTone([[880,.28]],{key:'message-ding-soft-v3',level:.16,decay:true});}
 function notifyIncoming(c,msg){
@@ -9844,7 +9845,7 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 他刚说完那一下，麦克风可能还收着他的尾音，继续忽略一小段再听你 */
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
 function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');callHFStop();}
-function ringStart(){ringStop();const fallback=()=>{if(!_ring||typeof _ring==='number')return;try{_ring.pause();_ring.loop=false;}catch(_){}let on=false;webToneSequence([[520,.5]],{level:.16});_ring=setInterval(()=>{webToneSequence([[on?660:520,.5]],{level:.16});on=!on;},650);};_ring=playMediaTone([[520,.5],[660,.5]],{key:'incoming-ring-soft',level:.2,gap:.14,loop:true,wave:'triangle',onFail:fallback});if(!_ring){let on=false;_ring=setInterval(()=>{webToneSequence([[on?660:520,.5]],{level:.16});on=!on;},650);}if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
+function ringStart(){ringStop();const seq=[[880,.16],[1174,.11]],fallback=()=>{if(!_ring||typeof _ring==='number')return;try{_ring.pause();_ring.loop=false;}catch(_){}webToneSequence(seq,{level:.09,gap:.16});_ring=setInterval(()=>webToneSequence(seq,{level:.09,gap:.16}),1200);};_ring=playMediaTone(seq,{key:'incoming-ring-chime-v2',level:.11,gap:.32,loop:true,wave:'sine',decay:true,onFail:fallback});if(!_ring)_ring=setInterval(()=>webToneSequence(seq,{level:.09,gap:.16}),1200);if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
 function ringStop(){if(_ring){if(typeof _ring==='number')clearInterval(_ring);else try{_ring.pause();_ring.loop=false;_ring.currentTime=0;}catch(_){}_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
 function blip(freq,dur){playMediaTone([[freq,dur]],{key:'blip-'+freq+'-'+dur,level:.35});}
 function incomingCall(id,kind,opt){if(offlineFocusActive())return false;if(cinemaRoleOccupied(id))return false;const c=getC(id);if(!c||c.blocked||_call)return false;opt=opt&&typeof opt==='object'?opt:{};
@@ -9867,7 +9868,7 @@ function scheduleRejectedCallFollowup(id,since,kindTxt){const aid=actId(),meName
   delayedAccountReply(id,rejectedCallPrompt(id,kindTxt,'followup',aid,meName),0,aid);
 },65000);}
 function placeCall(id,kind){const c=getC(id);if(!c)return;audioUnlock();_call={id,kind,state:'outgoing',dir:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
-  blip(600,.15);setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
+  playMediaTone([[880,.16],[1174,.11]],{key:'outgoing-call-chime-v2',level:.1,gap:.16,wave:'sine',decay:true});setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
 function answerCall(autoByThem){if(!_call)return;audioUnlock();ringStop();clearTimeout(_callMissT);hideCallBanner();blip(880,.12);
   const dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');
   _call.state='active';_call.dir=dir;_call.opened=true;_call.start=Date.now();_call.lastUserTs=Date.now();_call.silentStage=0;const proR=_call._proReason;
@@ -10686,9 +10687,9 @@ function refreshHydratedUI(){hydrateStoredImageNodes();const a=document.activeEl
 let _androidResumeRepairAt=0;
 function androidResumeRepair(force){if(!_appBootFinished)return;const host=document.getElementById('app');if(!force&&host&&host.firstElementChild){window.__northBootReady=true;return;}const now=Date.now();if(now-_androidResumeRepairAt<800)return;_androidResumeRepairAt=now;try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
 window.addEventListener('pagehide',()=>{audioMarkWakeRequired();if(_callHF){callHFStop();audioRouteReset(false);}sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}});
-window.addEventListener('beforeunload',()=>{audioMarkWakeRequired();sleepMarkAway();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}});
-window.addEventListener('pageshow',e=>{setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){audioMarkWakeRequired();if(_callHF){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}}else{sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioProbeMicPermission();audioKick();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('beforeunload',()=>{audioMarkWakeRequired();sleepMarkAway();callBackgroundHold();lockPrepareAway(true);if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}});
+window.addEventListener('pageshow',e=>{lockResumeFromAway();setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(idleOpenHeartbeatStart,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){audioMarkWakeRequired();if(_callHF){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}}else{lockResumeFromAway();sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioProbeMicPermission();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(idleOpenHeartbeatStart,1800);});document.addEventListener('fullscreenchange',cinemaFullscreenChanged);document.addEventListener('webkitfullscreenchange',cinemaFullscreenChanged);
 function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{S.me=S.me||{};S.me.locked=true;sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();initBattery();audioProbeMicPermission();requestPersistentStorage();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}

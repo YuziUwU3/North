@@ -12,6 +12,18 @@ const end = source.indexOf('\nnormalizeLoadedState();', start);
 assert.ok(start >= 0 && end > start, 'normalizeLoadedState should exist');
 const functionSource = source.slice(start, end);
 
+function namedFunction(name){
+  const at=source.indexOf(`function ${name}`);
+  assert.ok(at>=0,`missing ${name}`);
+  const brace=source.indexOf('{',at);
+  let depth=0;
+  for(let i=brace;i<source.length;i++){
+    if(source[i]==='{')depth++;
+    else if(source[i]==='}'&&--depth===0)return source.slice(at,i+1);
+  }
+  throw new Error(`unterminated ${name}`);
+}
+
 function normalize(me) {
   const context = vm.createContext({
     S: {
@@ -34,7 +46,21 @@ assert.equal(normalize({}).locked, true, 'legacy saved data without a lock flag 
 
 assert.match(source, /function lockOpen\(\)\{S\.me\.locked=false;save\(\)/);
 assert.match(source, /function lockShow\(drop\)[\s\S]*?S\.me\.locked=true;save\(\)/);
-assert.match(source, /function lockPrepareAway\(\)\{try\{S\.me=S\.me\|\|\{\};S\.me\.locked=true;saveNow\(\)/);
+const lockContext=vm.createContext({S:{me:{locked:false}},_savePending:false,_lockAwayAt:0,now:1000,saved:0,painted:0,Date:{now(){return lockContext.now;}},save(){lockContext.saved++;},saveNow(){lockContext.saved++;},renderLockScreen(){lockContext.painted++;},renderLockPull(){}});
+vm.runInContext(`${namedFunction('lockPrepareAway')};${namedFunction('lockResumeFromAway')}`,lockContext);
+lockContext.lockPrepareAway();
+assert.equal(lockContext.S.me.locked,false,'a transient hidden event must not immediately relock the phone');
+lockContext.now=3200;
+assert.equal(lockContext.lockResumeFromAway(),false,'a short interruption must stay unlocked');
+lockContext.lockPrepareAway();
+lockContext.now=6000;
+assert.equal(lockContext.lockResumeFromAway(),true,'returning after a real background stay must relock');
+assert.equal(lockContext.S.me.locked,true);
+lockContext.S.me.locked=false;
+lockContext.lockPrepareAway(true);
+assert.equal(lockContext.S.me.locked,true,'beforeunload must persist the lock immediately');
+assert.match(source, /beforeunload[\s\S]*?lockPrepareAway\(true\)/);
+assert.match(source, /visibilitychange[\s\S]*?if\(document\.hidden\)[\s\S]*?lockPrepareAway\(\)/);
 assert.match(source, /function finishAppBoot\(\)[\s\S]*?S\.me\.locked=true;[\s\S]*?render\(\)/);
 assert.doesNotMatch(source, /正在读取大容量存档/);
 

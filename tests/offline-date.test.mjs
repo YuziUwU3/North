@@ -14,7 +14,7 @@ const manualSummary=source.slice(source.indexOf('async function offManualSummary
 assert.doesNotMatch(manualSummary,/offlineDeactivate/);
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
-assert.match(source, /v789 · 存档通话与社交稳定性修复/);
+assert.match(source, /v790 · 屏保铃声与音乐同步修复/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -598,6 +598,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=789/);
+assert.match(html, /app\.js\?v=790/);
 
 console.log("offline date tests passed");

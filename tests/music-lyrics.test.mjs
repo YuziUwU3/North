@@ -61,5 +61,9 @@ assert.equal(rows[1].attrs['aria-current'],'true');
 assert.match(source,/if\(_mCur!==id\|\|!_ma\|\|!_ma\.src\)await musicPlay\(id\)/);
 assert.match(source,/if\(!await mGet\(s\.id\)\)/,'music packs must verify each IndexedDB write');
 assert.match(source,/跳过 '\+skipped\+' 首不完整歌曲/);
+assert.match(functionSource('musicPlay'),/onloadedmetadata=\(\)=>mLyricTick\(true\)/,'metadata readiness must repaint keyed lyrics');
+assert.match(functionSource('musicPlay'),/onseeked=\(\)=>mLyricTick\(true\)/,'seeking to an authored cue must repaint immediately');
+assert.match(functionSource('musicPlay'),/onplaying=\(\)=>\{mLyricTick\(true\);mLyricLoopStart\(\);\}/,'actual playback must restart the lyric clock');
+assert.match(source,/if\(c\.p==='music'\)[\s\S]*?requestAnimationFrame\(\(\)=>\{mTick\(\);if\(_ma&&!_ma\.paused\)mLyricLoopStart\(\);\}\)/,'rebuilding the player DOM must restore progress and lyric state');
 
 console.log('music lyrics tests passed');

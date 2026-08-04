@@ -39,8 +39,17 @@ assert.match(toneUrl,/rate=44100/,'media tone should not use a harsh low sample 
 assert.match(toneUrl,/Math\.exp/,'soft message tone must decay instead of sustaining at full amplitude');
 assert.match(mediaWake,/callMediaElement\(\)/,'the same user touch must prime the dedicated iOS call media channel');
 assert.match(functionSource('phSound'),/playMediaTone/);
-assert.match(functionSource('ringStart'),/playMediaTone/);
-assert.match(functionSource('ringStart'),/loop:true/);
+const phoneSound=functionSource('phSound');
+const incomingRing=functionSource('ringStart');
+const outgoingCall=functionSource('placeCall');
+assert.match(phoneSound,/call:\[\[880,\.16\],\[1174,\.11\]\]/,'dialing must use a short message-like chime');
+assert.match(phoneSound,/decay:type==='call'/);
+assert.doesNotMatch(phoneSound,/call:\[\[440/,'the old rising alarm sequence must not return');
+assert.match(incomingRing,/playMediaTone/);
+assert.match(incomingRing,/loop:true/);
+assert.match(incomingRing,/decay:true/);
+assert.doesNotMatch(incomingRing,/520|660/,'incoming calls must not alternate the old siren frequencies');
+assert.match(outgoingCall,/outgoing-call-chime-v2[\s\S]*decay:true/,'role calls must use the same soft dialing family');
 
 assert.doesNotMatch(source,/# 标点和口吻（必须遵守）/);
 assert.equal(functionSource('cleanRolePunct'),"function cleanRolePunct(t){return String(t||'');}");
