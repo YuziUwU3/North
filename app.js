@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='798'){
+if(window.__NORTH_SHELL_BUILD__!=='799'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v798 · 伴生设备控制页原型';
+const APP_VER='v799 · 音乐导出防退出修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=798';
+  const url='sw.js?v=799';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2520,19 +2520,28 @@ function musicChatHistoryModal(cid){musicInit();const roles=musicChatContacts(),
     return `<div style="padding:7px 2px;border-bottom:.5px solid #2a2a2c;font-size:13px;line-height:1.45"><div style="display:flex;gap:8px;align-items:center"><b style="color:${col};flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(who)}</b><span style="color:#777;font-size:11px">${hm(m.time)}</span></div><div style="color:#ddd;white-space:pre-wrap;margin-top:2px">${esc(m.content||'')}</div></div>`;}).join(''):'<div class="empty" style="padding:28px;color:#888">还没有一起听聊天记录</div>';
   const picker=roles.length?`<div class="field" style="margin-bottom:10px"><label>查看哪个角色</label><select onchange="musicChatHistoryModal(this.value)">${roles.map(c=>`<option value="${esc(c.id)}" ${c.id===cid?'selected':''}>${esc(c.remark||c.name)}</option>`).join('')}</select></div>`:'<div class="hint">当前没有可查看的角色；已删除角色的记录不会在这里显示。</div>',chatBtn=selected?`<button class="btn p" style="margin-top:8px" onclick="closeModal();openChat('${selected.id}')">打开和 ${esc(selected.remark||selected.name)} 的微信聊天</button>`:'';
   openModal(`<h3>一起听聊天记录</h3>${picker}<div class="section" style="max-height:50vh;overflow:auto">${body}</div>${selected&&rows.length?`<button class="btn d" style="margin-top:8px" onclick="musicClearChat('${selected.id}')">清空这个角色的记录</button>`:''}${chatBtn}<button class="btn g" style="margin-top:8px" onclick="musicMenu()">返回设置</button>`);}
-async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!songs.length){toast('还没有歌单');return;}toast('正在打包歌单…');
-  try{const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[],loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''}};
-    for(const s of songs){const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}pack.music.songs.push(x);}
-    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'}),mode=await beautySaveFile(blob,'小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json');toast(mode==='cancelled'?'已取消导出':mode==='shared'?'歌单已生成，请存储到文件':'歌单已导出');
-  }catch(e){toast('导出失败，文件太大；请用“分首导出”');}}
+const MUSIC_EXPORT_PACK_SAFE_BYTES=20*1024*1024,MUSIC_EXPORT_ONE_SAFE_BYTES=32*1024*1024;
+let _musicExportBusy=false,_musicReadyExport=null,_musicReadyExportTimer=0;
+function musicPackSettings(single){return single?{loop:false,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:''}:{loop:!!S.music.loop,totalSec:S.music.totalSec||0,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:S.music.bg||''};}
+async function musicExportMeasure(songs,single){const blobs=new Map();let bytes=JSON.stringify(musicPackSettings(single)).length*2;for(const s of songs||[]){bytes+=JSON.stringify(s||{}).length*2;if(s&&s.src&&s.src.t==='idb'){const b=await mGet(s.id);if(b){blobs.set(s.id,b);bytes+=Number(b.size)||0;}}}return{bytes,blobs};}
+function musicExportDataURLSafe(file){return /^data:[^,"\r\n]+;base64,[A-Za-z0-9+/=]*$/.test(file||'');}
+async function musicPackBlob(songs,single,blobs){const shell=JSON.stringify({type:'yibei-music-pack',ver:1,at:Date.now(),music:Object.assign({songs:[]},musicPackSettings(single))}),marker='"songs":[]',at=shell.indexOf(marker);if(at<0)throw new Error('歌单结构生成失败');const parts=[shell.slice(0,at)+'"songs":['];
+  for(let i=0;i<songs.length;i++){const x=Object.assign({},songs[i]);delete x.file;const prefix=i?',':'';if(x.src&&x.src.t==='idb'){const b=blobs&&blobs.get(x.id)||await mGet(x.id),file=b?await mBlobDataURL(b):'';if(file){if(!musicExportDataURLSafe(file))throw new Error('音频编码失败');const meta=JSON.stringify(x);parts.push(prefix+meta.slice(0,-1)+',"file":"',file,'"}');continue;}}parts.push(prefix+JSON.stringify(x));}
+  parts.push(']'+shell.slice(at+marker.length));return new Blob(parts,{type:'application/json'});}
+function musicClearReadyExport(){if(_musicReadyExportTimer)clearTimeout(_musicReadyExportTimer);_musicReadyExportTimer=0;_musicReadyExport=null;}
+function musicPrepareReadyExport(blob,name,label){musicClearReadyExport();_musicReadyExport={blob,name,label};_musicReadyExportTimer=setTimeout(musicClearReadyExport,120000);openModal(`<h3>${esc(label)}已准备好</h3><div class="hint">文件大小 ${cacheSizeText(blob.size)}。为避免手机浏览器把异步下载当成页面跳转，请在这里亲自点一次保存。</div><div class="btns"><button class="btn g" onclick="musicDiscardReadyExport()">取消</button><button class="btn p" onclick="musicSaveReadyExport()">保存文件</button></div>`);}
+function musicDiscardReadyExport(){musicClearReadyExport();closeModal();}
+async function musicSaveReadyExport(){const ready=_musicReadyExport;if(!ready){toast('文件已过期，请重新导出');closeModal();return;}const mode=await beautySaveFile(ready.blob,ready.name);if(_musicReadyExport===ready)musicClearReadyExport();closeModal();toast(mode==='cancelled'?'已取消导出':mode==='shared'?'文件已生成，请存储到文件':ready.label+'已导出');}
+async function musicExportPack(){musicInit();const songs=S.music.songs||[];if(!songs.length){toast('还没有歌单');return;}if(_musicExportBusy){toast('歌单正在打包，请稍候');return;}_musicExportBusy=true;toast('正在检查歌单大小…');
+  try{const measured=await musicExportMeasure(songs,false);if(measured.bytes>MUSIC_EXPORT_PACK_SAFE_BYTES){musicExportOneModal('整包约 '+cacheSizeText(measured.bytes)+'，继续合成一个 JSON 容易让手机浏览器退出，已改为安全的分首导出。');return;}toast('正在打包歌单…');const blob=await musicPackBlob(songs,false,measured.blobs);musicPrepareReadyExport(blob,'小手机音乐歌单_'+new Date().toISOString().slice(0,10)+'.json','歌单文件');
+  }catch(e){toast('导出失败；请用“分首导出”');}finally{_musicExportBusy=false;}}
 function musicSafeName(s){return String(s||'未命名').replace(/[\\/:*?"<>|]/g,'_').slice(0,40)||'未命名';}
 async function musicExportOne(id){musicInit();const s=(S.music.songs||[]).find(x=>x.id===id);if(!s){toast('没找到这首');return;}toast('正在导出…');
-  try{const x=Object.assign({},s);if(x.src&&x.src.t==='idb'){const b=await mGet(x.id);if(b)x.file=await mBlobDataURL(b);}
-    const pack={type:'yibei-music-pack',ver:1,at:Date.now(),music:{songs:[x],loop:false,distance:S.music.distance==null?1400:S.music.distance,meAvatar:S.music.meAvatar||'',taAvatar:S.music.taAvatar||'',bg:''}};
-    const blob=new Blob([JSON.stringify(pack)],{type:'application/json'}),mode=await beautySaveFile(blob,'小手机单曲_'+musicSafeName(s.title)+'.json');toast(mode==='cancelled'?'已取消导出':mode==='shared'?'单曲文件已生成，请存储到文件':'已导出 '+(s.title||'这首歌'));
-  }catch(e){toast('这首也太大了，建议重新上传音频版');}}
-function musicExportOneModal(){musicInit();const songs=S.music.songs||[];const list=songs.length?songs.map(s=>`<div class="it"><span style="flex:1;color:#eee">${esc(s.title||'未命名')}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><button class="minibtn" onclick="musicExportOne('${s.id}')">导出</button></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌</div>';
-  openModal(`<h3>分首导出</h3><div class="hint">录屏/大文件不要一次性导出全部，点每首右边的“导出”，到主屏幕版再逐个导入。</div><div class="section" style="max-height:54vh;overflow:auto">${list}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+  if(_musicExportBusy){toast('另一个音乐文件正在打包，请稍候');return;}_musicExportBusy=true;
+  try{const measured=await musicExportMeasure([s],true);if(measured.bytes>MUSIC_EXPORT_ONE_SAFE_BYTES){toast('这首歌文件过大，为防止小手机退出，已停止导出；请保留原音频文件');return;}const blob=await musicPackBlob([s],true,measured.blobs);musicPrepareReadyExport(blob,'小手机单曲_'+musicSafeName(s.title)+'.json','单曲文件');
+  }catch(e){toast('单曲导出失败，请检查音乐文件');}finally{_musicExportBusy=false;}}
+function musicExportOneModal(reason){musicInit();const songs=S.music.songs||[];const list=songs.length?songs.map(s=>`<div class="it"><span style="flex:1;color:#eee">${esc(s.title||'未命名')}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><button class="minibtn" onclick="musicExportOne('${s.id}')">导出</button></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌</div>';
+  openModal(`<h3>分首导出</h3><div class="hint">${esc(reason||'大文件不要一次性导出全部，点每首右边的“导出”，之后可逐个导入。')}</div><div class="section" style="max-height:54vh;overflow:auto">${list}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function musicImportPack(){pickFile('.json',f=>{const r=new FileReader();r.onload=async()=>{try{const p=JSON.parse(r.result);if(!p||p.type!=='yibei-music-pack'||!p.music)throw 0;musicInit();const incoming=Array.isArray(p.music.songs)?p.music.songs:[];let n=0,skipped=0;
       for(const raw of incoming){try{if(!raw||typeof raw!=='object'){skipped++;continue;}const s=Object.assign({},raw);if(!s.id||S.music.songs.some(x=>x.id===s.id))s.id='m'+uid();if(s.file){const b=mDataURLBlob(s.file);delete s.file;if(!b){skipped++;continue;}s.src={t:'idb'};await mPut(s.id,b);if(!await mGet(s.id)){await mDelIDB(s.id);skipped++;continue;}}else if(s.src&&s.src.t==='idb'){skipped++;continue;}else if(!(s.src&&s.src.t==='url'&&s.src.url)){skipped++;continue;}S.music.songs.unshift(s);n++;}catch(_){skipped++;}}
       S.music.loop=!!p.music.loop;if(p.music.distance!=null)S.music.distance=p.music.distance;if(p.music.meAvatar)S.music.meAvatar=p.music.meAvatar;if(p.music.taAvatar)S.music.taAvatar=p.music.taAvatar;if(p.music.bg)S.music.bg=p.music.bg;save();closeModal();render();toast('已导入 '+n+' 首'+(skipped?'，跳过 '+skipped+' 首不完整歌曲':''));
