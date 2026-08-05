@@ -83,11 +83,12 @@ test('internal and external apps bind through distinct stable ids', () => {
   assert.match(functionSource('companionDispatchBound'), /外置 App 尚未通过稳定 ID 完成绑定/);
 });
 
-test('a both-scope instruction creates separate internal and external rules', () => {
+test('a unified limit creates separate internal and external execution rules', () => {
   const dispatch = functionSource('companionDispatchBound');
   const tags = functionSource('applyControlTags');
   assert.match(dispatch, /needsExternal=scope!==\x27internal\x27/);
   assert.match(dispatch, /needsInternal=scope!==\x27external\x27/);
+  assert.match(dispatch, /scope=action===\x27limit\x27\?\x27both\x27:requestedScope/);
   assert.match(dispatch, /companionApplyInternalAction/);
   assert.match(dispatch, /companionApplyAction/);
   assert.match(dispatch, /外置 DeviceActivity 规则已提交/);
@@ -113,8 +114,7 @@ test('internal and external usage stay independent and per-app external time is 
   assert.match(ui, /companionDuration\(app\.usedSec\)/);
   assert.match(ui, /screenTimeAvailable/);
   assert.match(payload, /reportAvailable/);
-  assert.match(ui, /两边各自计时/);
-  assert.match(ui, /绝不合并时长/);
+  assert.match(ui, /两边仍各自计时/);
   assert.match(ui, /待 iPhone 端接入/);
   assert.match(functionSource('companionRolePrompt'), /当前只有总时长/);
   assert.match(functionSource('companionRolePrompt'), /不得自行拆分或猜测/);
@@ -123,7 +123,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v814 · 外置 App 稳定编号与可选绑定'/);
+  assert.match(app, /const APP_VER='v815 · 内外统一限额'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -134,17 +134,40 @@ test('manual sync sends a device request and schedules server refreshes', () => 
   assert.match(source, /最迟约 30 秒回传/);
 });
 
-test('unbound external apps remain controllable without guessing an internal id', () => {
+test('unbound external apps remain lockable but cannot receive an independent limit', () => {
   const owner = functionSource('companionOwnerAction');
   const batch = functionSource('companionBatchAction');
   assert.match(owner, /else if\(app\)r=companionApplyAction/);
   assert.match(owner, /scope:'external'/);
+  assert.match(owner, /action===\x27limit\x27&&!binding/);
+  assert.match(owner, /限额只保留一份并同步到内外两端/);
   assert.match(owner, /本次仅控制真实 iPhone/);
   assert.match(batch, /for\(const app of st\.apps\)/);
   assert.match(batch, /externalOnly\+\+/);
-  assert.match(functionSource('companionBindingOptions'), /不绑定（仅控制真实 iPhone）/);
+  assert.match(functionSource('companionBindingOptions'), /不绑定（仅外置锁定 \/ 解锁）/);
   assert.match(functionSource('renderCompanionPage'), /绑定小手机同名 App（可选）/);
-  assert.match(functionSource('renderCompanionPage'), /不绑定也能单独锁定、解锁和限额真实 iPhone/);
+  assert.match(functionSource('renderCompanionPage'), /未绑定 App 仍可单独锁定或解锁/);
+  assert.match(functionSource('renderCompanionPage'), /placeholder="不限额"/);
+});
+
+test('binding is saved immediately and refreshes only the companion panel', () => {
+  const bind = functionSource('companionBindExternal');
+  const refresh = functionSource('companionRefreshPanel');
+  assert.match(bind, /saveNow\(\)/);
+  assert.match(bind, /companionRefreshPanel\(\)/);
+  assert.doesNotMatch(bind, /save\(\);render\(\)/);
+  assert.match(refresh, /scrollTop/);
+  assert.match(refresh, /renderCompanionPage/);
+});
+
+test('role limits require a binding and are forced to both endpoints', () => {
+  const route = functionSource('companionDispatchRoleByText');
+  const external = functionSource('companionDispatchRoleExternal');
+  assert.match(route, /action===\x27limit\x27/);
+  assert.match(route, /scope:'both'/);
+  assert.match(route, /companionUnifiedLimitInternalIds/);
+  assert.match(external, /action===\x27limit\x27/);
+  assert.match(external, /只支持已绑定 App 的内外统一设置/);
 });
 
 test('anonymous external apps receive stable matching numbers instead of upload-order names', () => {
@@ -226,7 +249,7 @@ test('role parser routes explicit and natural external controls through the comp
   assert.match(natural, /externalNames=dual&&\(deviceState\.permissions\.appControl\|\|deviceState\.permissions\.limits\)/);
   assert.match(natural, /companionDispatchRoleByText\('limit'/);
   assert.match(natural, /companionRoleScopeForText\(deviceState/);
-  assert.match(bound, /needsInternal&&!?\(S\.couple\.grant\|\|\{\}\)\[internalId\]/);
+  assert.match(bound, /needsInternal&&!\(S\.couple\.grant\|\|\{\}\)\[internalId\]/);
 });
 
 test('companion operation history expires automatically after three days', () => {
@@ -252,7 +275,7 @@ test('companion device page has advanced locked-state cards without changing com
   assert.match(decorate, /companion-app-locked/);
   assert.match(decorate, /companion-usage-meter/);
   assert.match(decorate, /last\.actor/);
-  assert.match(phone, /v814 外置 App 稳定编号与可选绑定/);
+  assert.match(phone, /v815 内外统一限额/);
   assert.match(phone, /#coupage3/);
   assert.match(phone, /\.companion-app-locked/);
   assert.match(phone, /linear-gradient\(90deg,#ac2848,#ff6377\)/);
