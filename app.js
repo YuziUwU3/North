@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='805'){
+if(window.__NORTH_SHELL_BUILD__!=='806'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v805 · 主屏入口与外观修复';
+const APP_VER='v806 · 连续来电铃声修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=805';
+  const url='sw.js?v=806';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -9737,7 +9737,7 @@ const _uiToneUrls=new Map();
 function uiToneElement(){if(_audioMediaPrimer)return _audioMediaPrimer;try{const a=new Audio();a.preload='auto';a.setAttribute('playsinline','');a.setAttribute('webkit-playsinline','');_audioMediaPrimer=a;return a;}catch(_){return null;}}
 function callMediaElement(){if(_callMediaAudio)return _callMediaAudio;try{const a=new Audio();a.preload='auto';a.setAttribute('playsinline','');a.setAttribute('webkit-playsinline','');_callMediaAudio=a;return a;}catch(_){return null;}}
 function uiToneUrl(seq,opt){opt=opt||{};seq=(seq||[]).filter(x=>x&&+x[0]>0&&+x[1]>0);if(!seq.length)return'';const gap=Math.max(0,+opt.gap||0),wave=opt.wave==='triangle'?'triangle':'sine',key=opt.key||JSON.stringify([seq,gap,!!opt.decay,wave]);if(_uiToneUrls.has(key))return _uiToneUrls.get(key);try{const rate=44100,parts=seq.map(x=>({freq:+x[0],count:Math.max(1,Math.round(+x[1]*rate)),gap:Math.max(0,Math.round(gap*rate))})),samples=parts.reduce((n,x)=>n+x.count+x.gap,0),b=new Uint8Array(44+samples*2),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i);};w(0,'RIFF');v.setUint32(4,36+samples*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,samples*2,true);let at=0;for(const p of parts){for(let i=0;i<p.count;i++){const t=i/rate,dur=p.count/rate,edge=Math.min(1,i/(rate*.008),(p.count-i-1)/(rate*.025)),soft=opt.decay?Math.min(1,t/.018)*Math.exp(-5.2*Math.max(0,t-.018)/Math.max(.05,dur-.018)):Math.max(0,edge),sine=Math.sin(2*Math.PI*p.freq*i/rate),tone=wave==='triangle'?(2/Math.PI)*Math.asin(sine):sine,sample=tone*Math.max(0,soft)*.58;v.setInt16(44+(at+i)*2,Math.max(-32767,Math.min(32767,Math.round(sample*32767))),true);}at+=p.count+p.gap;}const url=URL.createObjectURL(new Blob([b],{type:'audio/wav'}));_uiToneUrls.set(key,url);return url;}catch(_){return'';}}
-function webToneSequence(seq,opt){opt=opt||{};ensureAudio();if(!_audio)return false;try{let at=_audio.currentTime,gap=Math.max(0,+opt.gap||0),level=Math.max(.01,Math.min(1,(+opt.level||.2)*volMul()));(seq||[]).forEach(x=>{const o=_audio.createOscillator(),g=_audio.createGain(),dur=Math.max(.03,+x[1]||.1);o.connect(g);g.connect(_audio.destination);o.frequency.value=+x[0]||660;o.type='sine';g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(level,at+.01);g.gain.exponentialRampToValueAtTime(.0001,at+dur);o.start(at);o.stop(at+dur+.02);at+=dur+gap;});return true;}catch(_){return false;}}
+function webToneSequence(seq,opt){opt=opt||{};ensureAudio();if(!_audio)return false;try{let at=_audio.currentTime,gap=Math.max(0,+opt.gap||0),level=Math.max(.01,Math.min(1,(+opt.level||.2)*volMul()));(seq||[]).forEach(x=>{const o=_audio.createOscillator(),g=_audio.createGain(),dur=Math.max(.03,+x[1]||.1);o.connect(g);g.connect(_audio.destination);o.frequency.value=+x[0]||660;o.type='sine';g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(level,at+.01);if(opt.sustain)g.gain.setValueAtTime(level,at+Math.max(.01,dur-.04));g.gain.exponentialRampToValueAtTime(.0001,at+dur);o.start(at);o.stop(at+dur+.02);at+=dur+gap;});return true;}catch(_){return false;}}
 function playMediaTone(seq,opt){opt=opt||{};if(!S.settings.sound)return null;const a=uiToneElement(),url=uiToneUrl(seq,opt);if(!a||!url){webToneSequence(seq,opt);return null;}try{a.pause();a.loop=!!opt.loop;a.volume=Math.max(0,Math.min(1,(+opt.level||.45)*volMul()));if(a.src!==url)a.src=url;a.currentTime=0;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>{if(typeof opt.onFail==='function')opt.onFail();else webToneSequence(seq,opt);});return a;}catch(_){webToneSequence(seq,opt);return null;}}
 function ensureAudio(rebuildSuspended){try{
   const staleSuspended=rebuildSuspended&&_audio&&_audio.state==='suspended'&&Date.now()-_audioBornAt>700;
@@ -9945,7 +9945,7 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 他刚说完那一下，麦克风可能还收着他的尾音，继续忽略一小段再听你 */
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
 function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');callHFStop();}
-function ringStart(){ringStop();const seq=[[880,.22]],repeat=1650,fallback=()=>{if(!_ring||typeof _ring==='number')return;try{_ring.pause();_ring.loop=false;}catch(_){}webToneSequence(seq,{level:.1,decay:true});_ring=setInterval(()=>webToneSequence(seq,{level:.1,decay:true}),repeat);};_ring=playMediaTone(seq,{key:'incoming-ring-message-soft-v3',level:.12,gap:1.43,loop:true,wave:'sine',decay:true,onFail:fallback});if(!_ring)_ring=setInterval(()=>webToneSequence(seq,{level:.1,decay:true}),repeat);if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
+function ringStart(){ringStop();const seq=[[880,1.2]],repeat=1160,webOpt={level:.055,sustain:true},fallback=()=>{if(!_ring||typeof _ring==='number')return;try{_ring.pause();_ring.loop=false;}catch(_){}webToneSequence(seq,webOpt);_ring=setInterval(()=>webToneSequence(seq,webOpt),repeat);};_ring=playMediaTone(seq,{key:'incoming-ring-continuous-soft-v4',level:.07,gap:0,loop:true,wave:'sine',decay:false,sustain:true,onFail:fallback});if(!_ring&&S.settings.sound)_ring=setInterval(()=>webToneSequence(seq,webOpt),repeat);if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
 function ringStop(){if(_ring){if(typeof _ring==='number')clearInterval(_ring);else try{_ring.pause();_ring.loop=false;_ring.currentTime=0;}catch(_){}_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
 function blip(freq,dur){playMediaTone([[freq,dur]],{key:'blip-'+freq+'-'+dur,level:.35});}
 function incomingCall(id,kind,opt){if(offlineFocusActive())return false;if(cinemaRoleOccupied(id))return false;const c=getC(id);if(!c||c.blocked||_call)return false;opt=opt&&typeof opt==='object'?opt:{};

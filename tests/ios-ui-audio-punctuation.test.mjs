@@ -23,6 +23,7 @@ function functionSource(name){
 
 const mediaElement=functionSource('uiToneElement');
 const toneUrl=functionSource('uiToneUrl');
+const webTone=functionSource('webToneSequence');
 const mediaWake=functionSource('audioMediaWake');
 const mediaTone=functionSource('playMediaTone');
 
@@ -37,6 +38,7 @@ assert.match(functionSource('playDing'),/playMediaTone/);
 assert.match(functionSource('playDing'),/decay:true/,'message sound must use the original soft decaying envelope');
 assert.match(toneUrl,/rate=44100/,'media tone should not use a harsh low sample rate');
 assert.match(toneUrl,/Math\.exp/,'soft message tone must decay instead of sustaining at full amplitude');
+assert.match(webTone,/if\(opt\.sustain\)g\.gain\.setValueAtTime\(level/,'continuous-ring fallback must hold its gain until the final fade');
 assert.match(mediaWake,/callMediaElement\(\)/,'the same user touch must prime the dedicated iOS call media channel');
 assert.match(functionSource('phSound'),/playMediaTone/);
 const phoneSound=functionSource('phSound');
@@ -47,9 +49,12 @@ assert.match(phoneSound,/decay:type==='call'/);
 assert.doesNotMatch(phoneSound,/call:\[\[[^\]]+\],\[/,'dialing must not return to any alternating two-tone alarm pattern');
 assert.match(incomingRing,/playMediaTone/);
 assert.match(incomingRing,/loop:true/);
-assert.match(incomingRing,/decay:true/);
-assert.match(incomingRing,/seq=\[\[880,\.22\]\]/,'incoming calls must use one soft message-like note');
-assert.match(incomingRing,/gap:1\.43/,'incoming repeats must leave a long quiet gap instead of sounding like an alarm');
+assert.match(incomingRing,/decay:false/);
+assert.match(incomingRing,/seq=\[\[880,1\.2\]\]/,'incoming calls must use one low-volume sustained note');
+assert.match(incomingRing,/gap:0/,'incoming calls must not insert the old long silence between rings');
+assert.match(incomingRing,/repeat=1160/,'WebAudio fallback tones must overlap slightly instead of beeping once per second');
+assert.match(incomingRing,/sustain:true/,'WebAudio fallback must preserve the continuous envelope');
+assert.doesNotMatch(incomingRing,/1\.43|1650/,'the old intermittent ring cadence must not return');
 assert.doesNotMatch(incomingRing,/1174|520|660/,'incoming calls must not alternate siren-like frequencies');
 assert.match(outgoingCall,/\[\[880,\.22\]\][\s\S]*outgoing-call-message-soft-v3[\s\S]*decay:true/,'role calls must use the same single-note soft family');
 
