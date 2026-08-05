@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='809';</script>
+<script>window.__NORTH_SHELL_BUILD__='814';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-809';
+  var key='north-sw-reloaded-814';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=809';
+  var url='sw.js?v=814';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -933,7 +933,7 @@ body{min-height:0}
 <style>
 .nf-hero{position:relative;display:flex;align-items:center;gap:12px;min-height:0;margin-bottom:18px;padding:11px 12px;overflow:visible;border:1px solid rgba(255,255,255,.075);border-radius:16px;background:linear-gradient(145deg,rgba(27,30,40,.9),rgba(15,17,23,.94));box-shadow:0 10px 28px rgba(0,0,0,.18)}
 .nf-hero:after{display:none}.nf-hero>div{position:relative;z-index:1;flex:1;min-width:0}.nf-hero span{display:block;color:#aeb5c6;font-size:10px;font-weight:620;letter-spacing:.08em}.nf-hero p{margin:4px 0 0;color:#707786;font-size:9px;line-height:1.35}.nf-hero button{position:relative;z-index:1;flex:none;padding:8px 11px;border:1px solid rgba(208,198,230,.18);border-radius:11px;background:rgba(255,255,255,.055);color:#d8d5df;font-size:10px}
-/* v809 伴生设备控制台：保持纵向固定，新增电量与 HealthKit/Apple Watch 健康摘要。 */
+/* v814 外置 App 稳定编号与可选绑定：保持纵向固定并明确外置独立控制。 */
 #couplescroll{overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y}
 #coupage3{box-sizing:border-box;width:100%;max-width:100%;min-width:0;margin:-10px 0 0;padding:14px 10px 34px;overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y;background:radial-gradient(circle at 82% 1%,rgba(185,55,92,.17),transparent 24%),radial-gradient(circle at 4% 18%,rgba(63,99,161,.16),transparent 29%),linear-gradient(180deg,#090a0e 0%,#0d0d12 48%,#08090c 100%)}
 #coupage3>.section{position:relative;box-sizing:border-box;width:100%;max-width:100%;min-width:0;margin:0 0 13px!important;overflow:hidden;border:1px solid rgba(255,255,255,.075)!important;border-radius:22px!important;background:linear-gradient(145deg,rgba(30,31,39,.96),rgba(15,16,21,.985))!important;box-shadow:0 14px 34px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.035)!important}
@@ -1019,9 +1019,9 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=809" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=809" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=809" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=809"></script>
+<script src="license-gate.js?v=814" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=814" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=814" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=814"></script>
 </body>
 </html>

@@ -25,10 +25,35 @@ function functionSource(name) {
 }
 
 test('couple space exposes a third companion-device page', () => {
-  assert.match(app, /id="coutab3"[^>]*onclick="couTab\(3\)"/);
+  assert.match(app, /id="coutab3"[^>]*onclick="companionEnter\(\)"/);
   assert.match(app, /id="coupage3"/);
   assert.match(app, /伴生设备/);
   assert.match(functionSource('couTab'), /\[1,2,3\]/);
+});
+
+test('companion device entry requires the fixed password only once per browser', () => {
+  const store = new Map();
+  const context = vm.createContext({
+    localStorage: {
+      getItem(key) { return store.has(key) ? store.get(key) : null; },
+      setItem(key, value) { store.set(key, value); },
+    },
+  });
+  vm.runInContext(`
+    const COMPANION_ENTRY_GATE_KEY='north-companion-entry-unlocked-v1';
+    ${functionSource('companionEntryUnlocked')}
+    ${functionSource('companionEntryPasswordOK')}
+    this.unlocked=companionEntryUnlocked;
+    this.passwordOK=companionEntryPasswordOK;
+  `, context);
+  assert.equal(context.unlocked(), false);
+  assert.equal(context.passwordOK('206414'), true);
+  assert.equal(context.passwordOK('206413'), false);
+  context.localStorage.setItem('north-companion-entry-unlocked-v1', '1');
+  assert.equal(context.unlocked(), true);
+  assert.match(functionSource('coupleJump'), /\+tab===3/);
+  assert.match(functionSource('coupleJump'), /companionEnter\(id\)/);
+  assert.match(functionSource('companionSubmitEntry'), /localStorage\.setItem\(COMPANION_ENTRY_GATE_KEY,'1'\)/);
 });
 
 test('control defaults to both while role reads default to external only', () => {
@@ -98,7 +123,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v809 · 电量与健康摘要'/);
+  assert.match(app, /const APP_VER='v814 · 外置 App 稳定编号与可选绑定'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -117,6 +142,23 @@ test('unbound external apps remain controllable without guessing an internal id'
   assert.match(owner, /本次仅控制真实 iPhone/);
   assert.match(batch, /for\(const app of st\.apps\)/);
   assert.match(batch, /externalOnly\+\+/);
+  assert.match(functionSource('companionBindingOptions'), /不绑定（仅控制真实 iPhone）/);
+  assert.match(functionSource('renderCompanionPage'), /绑定小手机同名 App（可选）/);
+  assert.match(functionSource('renderCompanionPage'), /不绑定也能单独锁定、解锁和限额真实 iPhone/);
+});
+
+test('anonymous external apps receive stable matching numbers instead of upload-order names', () => {
+  const context = vm.createContext({ LOCKABLE: {} });
+  vm.runInContext(`${functionSource('companionSnapshotApps')}\nthis.read=companionSnapshotApps;`, context);
+  const state = { apps: [], bindings: [] };
+  const value = context.read(state, { apps: [
+    { id: 'ios.z', usedSeconds: 7 },
+    { id: 'ios.a', usedSeconds: 3 },
+  ] });
+  assert.deepEqual(Array.from(value, x => x.id), ['ios.a', 'ios.z']);
+  assert.deepEqual(Array.from(value, x => x.bindingCode), ['01', '02']);
+  assert.deepEqual(Array.from(value, x => x.name), ['外置 01', '外置 02']);
+  assert.match(functionSource('companionSnapshotApps'), /row\.bindingCode/);
 });
 
 test('role external commands resolve a synced display name to its stable external id', () => {
@@ -210,7 +252,7 @@ test('companion device page has advanced locked-state cards without changing com
   assert.match(decorate, /companion-app-locked/);
   assert.match(decorate, /companion-usage-meter/);
   assert.match(decorate, /last\.actor/);
-  assert.match(phone, /v809 伴生设备控制台/);
+  assert.match(phone, /v814 外置 App 稳定编号与可选绑定/);
   assert.match(phone, /#coupage3/);
   assert.match(phone, /\.companion-app-locked/);
   assert.match(phone, /linear-gradient\(90deg,#ac2848,#ff6377\)/);

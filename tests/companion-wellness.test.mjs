@@ -28,11 +28,19 @@ function functionSource(name) {
 test('wellness permissions are privacy scoped and health is off by default', () => {
   const context = vm.createContext({});
   vm.runInContext(`${functionSource('companionDefaultState')}this.value=companionDefaultState();`, context);
-  assert.equal(context.value.schema, 4);
+  assert.equal(context.value.schema, 5);
   assert.equal(context.value.permissions.battery, true);
   assert.equal(context.value.permissions.health, false);
   assert.equal(context.value.battery, null);
   assert.equal(context.value.health, null);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.value.automations)), {
+    eveningScreen: false,
+    morningSleep: false,
+    absenceBattery: false,
+    criticalBattery: false,
+    emotionCare: false,
+    manualUnlockAlert: false,
+  });
 });
 
 test('battery payload accepts a real zero percent value and clamps invalid ranges', () => {

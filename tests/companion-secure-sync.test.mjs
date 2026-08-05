@@ -62,7 +62,8 @@ test('pairing and commands use dedicated companion RPCs', () => {
   assert.match(functionSource('companionPollSnapshot'), /phone_companion_pull_snapshot/);
   assert.match(functionSource('companionSendCommand'), /phone_companion_enqueue_command/);
   assert.match(functionSource('companionBindExternal'), /externalAppId/);
-  assert.match(functionSource('renderCompanionPage'), /稳定 ID 绑定/);
+  assert.match(functionSource('renderCompanionPage'), /绑定小手机同名 App（可选）/);
+  assert.match(functionSource('renderCompanionPage'), /不绑定也能单独锁定、解锁和限额真实 iPhone/);
   assert.doesNotMatch(functionSource('companionPollSnapshot'), /phone_external_events/);
 });
 
