@@ -81,5 +81,30 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v800 · 苹果伴生真实同步接入'/);
+  assert.match(app, /const APP_VER='v801 · 真实同步与足迹稳定修复'/);
+});
+
+test('manual sync sends a device request and schedules server refreshes', () => {
+  const source = functionSource('companionRequestSync');
+  assert.match(source, /companionApplyAction\(st,'view'/);
+  assert.match(source, /scope:'external'/);
+  assert.match(source, /setTimeout\(\(\)=>companionPollSnapshot\(true\),35000\)/);
+  assert.match(source, /最迟约 30 秒回传/);
+});
+
+test('unbound external apps remain controllable without guessing an internal id', () => {
+  const owner = functionSource('companionOwnerAction');
+  const batch = functionSource('companionBatchAction');
+  assert.match(owner, /else if\(app\)r=companionApplyAction/);
+  assert.match(owner, /scope:'external'/);
+  assert.match(owner, /本次仅控制真实 iPhone/);
+  assert.match(batch, /for\(const app of st\.apps\)/);
+  assert.match(batch, /externalOnly\+\+/);
+});
+
+test('external display aliases can be saved without changing stable ids', () => {
+  const rename = functionSource('companionRenameExternal');
+  assert.match(rename, /app\.name=name/);
+  assert.match(rename, /稳定 ID 没有改变/);
+  assert.match(functionSource('renderCompanionPage'), /companionRenameExternal/);
 });
