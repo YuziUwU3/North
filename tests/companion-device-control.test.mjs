@@ -81,5 +81,5 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v799 · 音乐导出防退出修复'/);
+  assert.match(app, /const APP_VER='v800 · 苹果伴生真实同步接入'/);
 });
