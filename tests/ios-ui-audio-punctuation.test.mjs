@@ -22,12 +22,15 @@ function functionSource(name){
 }
 
 const mediaElement=functionSource('uiToneElement');
+const ringElement=functionSource('ringToneElement');
 const toneUrl=functionSource('uiToneUrl');
 const webTone=functionSource('webToneSequence');
 const mediaWake=functionSource('audioMediaWake');
 const mediaTone=functionSource('playMediaTone');
 
 assert.match(mediaElement,/_audioMediaPrimer/,'iOS UI sounds must reuse one persistent media element');
+assert.match(ringElement,/_ringMediaAudio/,'incoming calls must own an independent persistent media element');
+assert.match(ringElement,/new Audio\(\)/);
 assert.match(mediaTone,/uiToneElement\(\)/);
 assert.match(mediaTone,/a\.play\(\)/);
 assert.match(mediaTone,/webToneSequence/,'Web Audio remains a fallback only');
@@ -47,15 +50,9 @@ const outgoingCall=functionSource('placeCall');
 assert.match(phoneSound,/call:\[\[880,\.22\]\]/,'dialing must use the same single-note family as a message chime');
 assert.match(phoneSound,/decay:type==='call'/);
 assert.doesNotMatch(phoneSound,/call:\[\[[^\]]+\],\[/,'dialing must not return to any alternating two-tone alarm pattern');
-assert.match(incomingRing,/playMediaTone/);
-assert.match(incomingRing,/loop:true/);
-assert.match(incomingRing,/decay:false/);
-assert.match(incomingRing,/seq=\[\[880,1\.2\]\]/,'incoming calls must use one low-volume sustained note');
-assert.match(incomingRing,/gap:0/,'incoming calls must not insert the old long silence between rings');
-assert.match(incomingRing,/repeat=1160/,'WebAudio fallback tones must overlap slightly instead of beeping once per second');
-assert.match(incomingRing,/sustain:true/,'WebAudio fallback must preserve the continuous envelope');
-assert.doesNotMatch(incomingRing,/1\.43|1650/,'the old intermittent ring cadence must not return');
-assert.doesNotMatch(incomingRing,/1174|520|660/,'incoming calls must not alternate siren-like frequencies');
+assert.match(functionSource('ringAssetStart'),/INCOMING_RING_URL/);
+assert.match(functionSource('ringAssetStart'),/a\.loop=true/);
+assert.doesNotMatch(incomingRing+functionSource('ringAssetStart'),/playMediaTone|webToneSequence|880|1174|520|660/,'incoming calls must use only the bundled soft ringtone asset');
 assert.match(outgoingCall,/\[\[880,\.22\]\][\s\S]*outgoing-call-message-soft-v3[\s\S]*decay:true/,'role calls must use the same single-note soft family');
 
 assert.doesNotMatch(source,/# 标点和口吻（必须遵守）/);

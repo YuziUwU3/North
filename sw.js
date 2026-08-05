@@ -1,5 +1,5 @@
 const BUILD='809';
-const SHELL_CACHE='north-shell-v809';
+const SHELL_CACHE='north-shell-v809-ring-v1';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -8,6 +8,7 @@ const CORE_FILES=[
 ];
 const OPTIONAL_FILES=[
   './icon.png',
+  './assets/incoming-soft-ring-v1.wav',
   './pay-assets/alipay-receive.jpg',
   './pay-assets/wechat-receive.jpg',
   './pay-assets/wechat-contact.jpg',

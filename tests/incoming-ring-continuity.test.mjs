@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const serviceWorker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+const ringtonePath = path.join(root, 'assets', 'incoming-soft-ring-v1.wav');
 
 function functionSource(name) {
   const start = source.indexOf(`function ${name}(`);
@@ -28,74 +30,111 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('incoming media ringtone loops one sustained soft tone without a long silent gap', () => {
-  const media = { loop: false, currentTime: 4, pauseCalls: 0, pause() { this.pauseCalls++; } };
-  const played = [], web = [], timers = [], vibrations = [];
+test('bundled ringtone is an eight-second quiet seamless WAV without silent holes', () => {
+  const wav = fs.readFileSync(ringtonePath);
+  assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(wav.toString('ascii', 8, 12), 'WAVE');
+  assert.equal(wav.readUInt16LE(22), 1, 'mono keeps mobile decoding simple');
+  assert.equal(wav.readUInt32LE(24), 44100);
+  assert.equal(wav.readUInt16LE(34), 16);
+  assert.equal(wav.toString('ascii', 36, 40), 'data');
+  const dataBytes = wav.readUInt32LE(40);
+  const frames = dataBytes / 2;
+  assert.ok(Math.abs(frames / 44100 - 8) < 0.001);
+
+  const samples = new Int16Array(frames);
+  let peak = 0, energy = 0;
+  for (let i = 0; i < frames; i++) {
+    const value = wav.readInt16LE(44 + i * 2);
+    samples[i] = value;
+    peak = Math.max(peak, Math.abs(value));
+    energy += value * value;
+  }
+  const peakRatio = peak / 32767;
+  const rmsRatio = Math.sqrt(energy / frames) / 32767;
+  assert.ok(peakRatio >= 0.20 && peakRatio <= 0.23, `comfortable peak expected, got ${peakRatio}`);
+  assert.ok(rmsRatio >= 0.06 && rmsRatio <= 0.09, `comfortable RMS expected, got ${rmsRatio}`);
+
+  const window = Math.round(44100 * 0.05);
+  let minWindowRms = 1;
+  for (let start = 0; start + window <= frames; start += window) {
+    let sum = 0;
+    for (let i = start; i < start + window; i++) sum += samples[i] * samples[i];
+    minWindowRms = Math.min(minWindowRms, Math.sqrt(sum / window) / 32767);
+  }
+  assert.ok(minWindowRms > 0.025, `ringtone must not fall into a silent pulse, got ${minWindowRms}`);
+  assert.ok(Math.abs(samples[0] - samples[frames - 1]) / 32767 < 0.012, 'loop seam must stay below an audible click');
+  assert.match(serviceWorker, /\.\/assets\/incoming-soft-ring-v1\.wav/,'the ringtone must be available offline');
+});
+
+test('incoming calls use an independent audio element and fall back to the same asset', () => {
+  const vibrations = [];
+  const created = [];
+  const shared = media('shared');
+  function media(name) {
+    return {
+      name, loop: false, currentTime: 5, volume: 0, src: '', pauseCalls: 0, playCalls: 0, reject: null,
+      pause() { this.pauseCalls++; },
+      play() { this.playCalls++; return { catch: fn => { this.reject = fn; } }; },
+      setAttribute() {},
+    };
+  }
+  class FakeAudio {
+    constructor() { const value = media(`independent-${created.length}`); created.push(value); return value; }
+  }
   const ctx = vm.createContext({
     S: { settings: { sound: true } },
     navigator: { vibrate: pattern => vibrations.push(pattern) },
-    playMediaTone(seq, opt) { played.push({ seq, opt }); media.loop = !!opt.loop; return media; },
-    webToneSequence(seq, opt) { web.push({ seq, opt }); return true; },
-    setInterval(fn, ms) { timers.push({ fn, ms }); return 41; },
+    volMul: () => 1,
+    Audio: FakeAudio,
+    uiToneElement: () => shared,
     clearInterval() {},
   });
-  vm.runInContext(`let _ring=null;function ringStop(){_ring=null;}${functionSource('ringStart')};globalThis.api={start:ringStart,ring:()=>_ring};`, ctx);
+  vm.runInContext(`let _ring=null,_ringMediaAudio=null;const INCOMING_RING_URL='assets/incoming-soft-ring-v1.wav';${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.api={start:ringStart,stop:ringStop,ring:()=>_ring};`, ctx);
 
   ctx.api.start();
-  assert.deepEqual(JSON.parse(JSON.stringify(played[0].seq)), [[880, 1.2]]);
-  assert.equal(played[0].opt.loop, true);
-  assert.equal(played[0].opt.gap, 0);
-  assert.equal(played[0].opt.decay, false);
-  assert.equal(played[0].opt.sustain, true);
-  assert.equal(played[0].opt.level, 0.07);
-  assert.match(played[0].opt.key, /continuous-soft-v4/);
-  assert.equal(timers.length, 0, 'the primary HTMLAudio loop must not also start a timer');
+  const primary = created[0];
+  assert.equal(ctx.api.ring(), primary);
+  assert.equal(primary.src, 'assets/incoming-soft-ring-v1.wav');
+  assert.equal(primary.loop, true);
+  assert.equal(primary.volume, 0.42);
+  assert.equal(primary.playCalls, 1);
+  assert.equal(shared.playCalls, 0);
 
-  played[0].opt.onFail();
-  assert.equal(media.pauseCalls, 1);
-  assert.equal(media.loop, false);
-  assert.equal(web.length, 1, 'fallback starts immediately instead of waiting one interval');
-  assert.equal(web[0].opt.sustain, true);
-  assert.equal(timers[0].ms, 1160, '1.2 second fallback tones overlap by 40 ms');
-  timers[0].fn();
-  assert.equal(web.length, 2);
-  assert.deepEqual(Array.from(vibrations[0]), [400, 200, 400, 200, 400]);
+  primary.reject();
+  assert.equal(primary.pauseCalls, 1);
+  assert.equal(ctx.api.ring(), shared);
+  assert.equal(shared.src, 'assets/incoming-soft-ring-v1.wav');
+  assert.equal(shared.loop, true);
+  assert.equal(shared.playCalls, 1);
+
+  ctx.api.stop();
+  assert.equal(shared.pauseCalls, 2);
+  assert.equal(shared.loop, false);
+  assert.equal(shared.currentTime, 0);
+  assert.deepEqual(Array.from(vibrations[1]), [400, 200, 400, 200, 400]);
+  assert.equal(vibrations.at(-1), 0);
 });
 
-test('incoming ringtone does not force the fallback when sound is disabled', () => {
-  let intervals = 0;
+test('sound-off calls vibrate without creating or playing a ringtone element', () => {
+  let audioCreated = 0, sharedRequested = 0;
   const ctx = vm.createContext({
     S: { settings: { sound: false } },
     navigator: { vibrate() {} },
-    playMediaTone() { return null; },
-    webToneSequence() { throw new Error('sound-off fallback must not start'); },
-    setInterval() { intervals++; return 1; },
+    volMul: () => 1,
+    Audio: class { constructor() { audioCreated++; } },
+    uiToneElement() { sharedRequested++; return null; },
+    clearInterval() {},
   });
-  vm.runInContext(`let _ring=null;function ringStop(){_ring=null;}${functionSource('ringStart')};globalThis.start=ringStart;`, ctx);
+  vm.runInContext(`let _ring=null,_ringMediaAudio=null;const INCOMING_RING_URL='assets/incoming-soft-ring-v1.wav';${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.start=ringStart;`, ctx);
   ctx.start();
-  assert.equal(intervals, 0);
+  assert.equal(audioCreated, 0);
+  assert.equal(sharedRequested, 0);
 });
 
-test('WebAudio continuity option holds the gain until the final fade', () => {
-  const gainCalls = [];
-  const audio = {
-    currentTime: 10,
-    destination: {},
-    createOscillator() { return { frequency: {}, connect() {}, start() {}, stop() {} }; },
-    createGain() {
-      return { connect() {}, gain: {
-        setValueAtTime(value, at) { gainCalls.push(['set', value, at]); },
-        exponentialRampToValueAtTime(value, at) { gainCalls.push(['ramp', value, at]); },
-      } };
-    },
-  };
-  const ctx = vm.createContext({ _audio: audio, ensureAudio() {}, volMul: () => 1 });
-  vm.runInContext(`${functionSource('webToneSequence')};globalThis.run=webToneSequence;`, ctx);
-  assert.equal(ctx.run([[880, 1.2]], { level: 0.055, sustain: true }), true);
-  assert.deepEqual(gainCalls, [
-    ['set', 0.0001, 10],
-    ['ramp', 0.055, 10.01],
-    ['set', 0.055, 11.16],
-    ['ramp', 0.0001, 11.2],
-  ]);
+test('the old sustained pure-tone ringtone cannot return through either route', () => {
+  const ring = functionSource('ringStart') + functionSource('ringAssetStart');
+  assert.doesNotMatch(ring, /playMediaTone|webToneSequence|createOscillator/);
+  assert.doesNotMatch(ring, /880|1174|520|660|repeat=|setInterval/);
+  assert.match(source, /const INCOMING_RING_URL='assets\/incoming-soft-ring-v1\.wav'/);
 });
