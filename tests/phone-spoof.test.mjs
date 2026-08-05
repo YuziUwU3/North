@@ -26,7 +26,8 @@ function functionSource(name) {
       continue;
     }
     if (ch === "'" || ch === '"' || ch === "`") { quote = ch; continue; }
-    if (ch === "/" && source[i + 1] !== "/" && source[i + 1] !== "*" && /[=(,:;!&|?\[{]/.test(prev)) { regex = true; continue; }
+    const before = source.slice(Math.max(brace, i - 16), i);
+    if (ch === "/" && source[i + 1] !== "/" && source[i + 1] !== "*" && (/[=(,:;!&|?\[{]/.test(prev) || /\breturn\s*$/.test(before))) { regex = true; continue; }
     if (ch === "{") depth++;
     else if (ch === "}" && --depth === 0) return source.slice(start, i + 1);
     if (!/\s/.test(ch)) prev = ch;
@@ -65,6 +66,8 @@ const aliasContext = vm.createContext({
 for (const name of [
   "phEscRe",
   "phCallAdmits",
+  "phAdmitFallback",
+  "phStripFalseAdmit",
   "phSmsAdmitLine",
   "phAliasNormText",
   "phAliasGenericTerm",
