@@ -98,7 +98,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v807 · 角色外置管控与伴生界面升级'/);
+  assert.match(app, /const APP_VER='v808 · 伴生页面横向固定'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -210,8 +210,17 @@ test('companion device page has advanced locked-state cards without changing com
   assert.match(decorate, /companion-app-locked/);
   assert.match(decorate, /companion-usage-meter/);
   assert.match(decorate, /last\.actor/);
-  assert.match(phone, /v807 伴生设备控制台/);
+  assert.match(phone, /v808 伴生设备控制台/);
   assert.match(phone, /#coupage3/);
   assert.match(phone, /\.companion-app-locked/);
   assert.match(phone, /linear-gradient\(90deg,#ac2848,#ff6377\)/);
+});
+
+test('companion device page is fixed to vertical scrolling without clipped controls', () => {
+  assert.match(phone, /#couplescroll\{overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y\}/);
+  assert.match(phone, /#coupage3\{box-sizing:border-box;width:100%;max-width:100%;min-width:0;margin:-10px 0 0;/);
+  assert.doesNotMatch(phone, /#coupage3\{[^}]*margin:-10px -10px 0/);
+  assert.match(phone, /#cou_companion_apps\{overflow:hidden!important/);
+  assert.match(phone, /\.companion-app-card\{[^}]*width:100%;max-width:100%;min-width:0/);
+  assert.match(phone, /\.companion-app-card>div:last-child\{margin-left:0!important\}/);
 });
