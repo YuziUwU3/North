@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
-assert.match(source, /const APP_VER='v804 · 音乐键盘布局恢复'/);
+assert.match(source, /const APP_VER='v805 · 主屏入口与外观修复'/);
 assert.match(source, /const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620/);
 assert.match(source, /onclick="appTap\(event,\\''\+k\+'\\'\)"/);
 assert.match(source, /onpointerdown="appDown\(event,\\''\+k\+'\\'\)"/);
@@ -20,6 +20,7 @@ assert.match(source, /tale:\(\)=>openApp\('tale'\)/);
 assert.match(source, /dread:\(\)=>openApp\('dread'\)/);
 assert.match(source, /tale:taleStart/);
 assert.match(source, /dread:dreadStart/);
-assert.match(source, /offline:\(\)=>setTimeout\(openOfflineMenu,0\)/,'modal apps opened from pointerup must wait until the trailing compatibility click has finished');
+assert.match(source, /function appLaunch\(k\)[\s\S]*?if\(f\)setTimeout\(f,0\)/,'every pointerup launch must wait until the trailing compatibility click has finished');
+assert.match(source, /offline:openOfflineMenu/,'offline opening inherits the shared deferred pointerup launch');
 
 console.log("android app launch tests passed");

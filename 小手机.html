@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='804';</script>
+<script>window.__NORTH_SHELL_BUILD__='805';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-804';
+  var key='north-sw-reloaded-805';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=804';
+  var url='sw.js?v=805';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -58,7 +58,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .nav .r{justify-content:flex-end;}
 .nav .l{font-size:25px;}
 /* 主屏幕 */
-.home{background:linear-gradient(160deg,#ffc8dd,#bde0fe 55%,#cdb4db);height:100%;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;}
+.home{background:linear-gradient(160deg,#ffc8dd,#bde0fe 55%,#cdb4db);height:100%;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;}
+.home-scroll{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;}
 .home .clockw{color:#fff;text-align:center;margin-top:34px;text-shadow:0 2px 8px rgba(0,0,0,.15);}
 .home .clockw .hh{font-size:62px;font-weight:300;letter-spacing:2px;}
 .home .clockw .dd{font-size:15px;margin-top:2px;}
@@ -66,7 +67,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .appswipe{width:100%;min-width:0;margin-top:auto;display:flex;flex-shrink:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x pan-y}
 .appswipe::-webkit-scrollbar{display:none}
 .apppage{width:100%;min-width:100%;flex:0 0 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;padding:22px;scroll-snap-align:start;scroll-snap-stop:always;align-content:start;box-sizing:border-box}
-.pgdots{display:flex;justify-content:center;gap:8px;padding:2px 0 6px}
+.pgdots{position:relative;z-index:8;flex:none;display:flex;justify-content:center;gap:8px;padding:2px 0 6px;pointer-events:none}
 .pgdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4)}
 .pgdot.on{background:#fff}
 .app{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
@@ -84,7 +85,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .appghost .ic{box-shadow:0 12px 24px rgba(0,0,0,.32);}
 .appswipe.aedit{touch-action:none;}
 .app span{font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.25);}
-.dock{margin:0 16px 18px;background:rgba(255,255,255,.35);border-radius:26px;padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;backdrop-filter:blur(8px);}
+.home .app .ic{filter:brightness(var(--home-app-icon-tone,100%));}
+.home .app>span{opacity:var(--home-app-text-opacity,1);}
+.dock{position:relative;z-index:8;flex:none;margin:0 16px max(18px,env(safe-area-inset-bottom));background:rgba(255,255,255,.35);border-radius:26px;padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;backdrop-filter:blur(8px);}
 /* 列表通用 */
 .list .row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border-bottom:.5px solid #f0f0f0;cursor:pointer;}
 .list .row:active{background:#f5f5f5;}
@@ -433,7 +436,7 @@ body{background:#000;padding:0;}
 .wrow .wnm{flex:1;}
 .wrow .wnm small{display:block;color:#888;font-size:11.5px;margin-top:2px;}
 .app .ic{background:rgba(255,255,255,.12);box-shadow:0 6px 16px rgba(0,0,0,.25);position:relative;z-index:1;}
-.apps,.dock{position:relative;z-index:1;}
+.apps{position:relative;z-index:1;}
 .dock{background:rgba(255,255,255,.12);backdrop-filter:blur(10px);}
 /* ===== 淡粉色主题 ===== */
 .home.tpink{background:linear-gradient(165deg,#ffe5ef,#ffd3e1 50%,#f9cfe0);}
@@ -980,9 +983,9 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=804" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=804" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=804" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=804"></script>
+<script src="license-gate.js?v=805" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=805" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=805" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=805"></script>
 </body>
 </html>

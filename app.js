@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='804'){
+if(window.__NORTH_SHELL_BUILD__!=='805'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v804 · 音乐键盘布局恢复';
+const APP_VER='v805 · 主屏入口与外观修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=804';
+  const url='sw.js?v=805';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2612,9 +2612,9 @@ function renderHome(){
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const hr=d.getHours();const greet=hr<6?'夜深了，早点睡':hr<11?'早安呀小猫':hr<14?'中午好，吃饭了吗':hr<18?'下午好～':hr<23?'晚上好呀':'还不睡吗';
-  return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
-    ${homeWidgets()}
-    <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)" onscrollend="homeSnapPage(this)">${homeAppsHtml()}</div>
+  return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}">
+    <div class="home-scroll">${homeWidgets()}
+    <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)" onscrollend="homeSnapPage(this)">${homeAppsHtml()}</div></div>
     <div class="pgdots">${(S.me.appLayout||APP_DEFLAYOUT).map((_,i)=>'<span class="pgdot'+(i===_homePage?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
     <div class="dock">
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}</div>
@@ -2628,6 +2628,11 @@ function homePageDots(p){p=homePageClamp(p);for(let i=0;i<APP_PAGES;i++){const d
 function homePgScroll(el){const w=el.clientWidth||1;_homePage=homePageClamp(Math.round((el.scrollLeft||0)/w));homePageDots(_homePage);if(_homeSnapTimer)clearTimeout(_homeSnapTimer);_homeSnapTimer=setTimeout(()=>homeSnapPage(el),110);}
 function homeSnapPage(el){if(!el||!el.isConnected)return;if(_homeSnapTimer){clearTimeout(_homeSnapTimer);_homeSnapTimer=null;}const w=el.clientWidth||1,p=homePageClamp(Math.round((el.scrollLeft||0)/w)),left=p*w;_homePage=p;homePageDots(p);if(Math.abs((el.scrollLeft||0)-left)<2)el.scrollLeft=left;else try{el.scrollTo({left,behavior:'smooth'});}catch(_){el.scrollLeft=left;}}
 function homeRestorePage(){requestAnimationFrame(()=>{const el=$('#appswipe');if(!el)return;_homePage=homePageClamp(_homePage);el.scrollLeft=_homePage*(el.clientWidth||1);homePageDots(_homePage);});}
+function homeAppIconTone(){const n=+S.me.appIconTone;return Number.isFinite(n)?Math.max(45,Math.min(135,Math.round(n))):100;}
+function homeAppTextTone(){const n=+S.me.appTextTone;return Number.isFinite(n)?Math.max(30,Math.min(100,Math.round(n))):100;}
+function homeAppAppearanceVars(){return '--home-app-icon-tone:'+homeAppIconTone()+'%;--home-app-text-opacity:'+(homeAppTextTone()/100).toFixed(2)+';';}
+function homeAppAppearanceSet(key,value){const n=Math.round(+value||0);if(key==='icon'){S.me.appIconTone=Math.max(45,Math.min(135,n));const el=$('#homeAppIconToneVal');if(el)el.textContent=S.me.appIconTone+'%';}else if(key==='text'){S.me.appTextTone=Math.max(30,Math.min(100,n));const el=$('#homeAppTextToneVal');if(el)el.textContent=S.me.appTextTone+'%';}save(350);}
+function homeAppAppearanceReset(){S.me.appIconTone=100;S.me.appTextTone=100;save();const a=$('#homeAppIconTone'),b=$('#homeAppTextTone'),av=$('#homeAppIconToneVal'),bv=$('#homeAppTextToneVal');if(a)a.value=100;if(b)b.value=100;if(av)av.textContent='100%';if(bv)bv.textContent='100%';toast('已恢复 App 图标和文字默认深浅');}
 // ===== 主屏 App（数据驱动 + 长按拖拽换位/换页）=====
 const APPDEFS={
   wechat:{e:'💬',c:'#07c160',t:'微信'},phoneapp:{e:'',c:'#0a84ff',t:'电话',icon:'phoneapp',lk:1},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
@@ -2661,7 +2666,7 @@ function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
   if(Date.now()<_aNoClick)return;
   if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}
   const f=APPRUN[k];if(f)f();}
-function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}const f=APPRUN[k];if(f)f();}
+function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}const f=APPRUN[k];if(f)setTimeout(f,0);}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
   _aPend={k,x:e.clientX,y:e.clientY,t:Date.now()};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
@@ -2686,7 +2691,7 @@ function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clien
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
   const p=_aPend;_aPend=null;if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE)appLaunch(p.k);}
-function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;_aNoClick=Date.now()+450;const d=_aDrag;_aDrag=null;const sw=$('#appswipe');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(sw){sw.classList.remove('aedit');sw.querySelectorAll('.app').forEach(el=>el.style.opacity='');}}
+function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(sw){sw.classList.remove('aedit');sw.querySelectorAll('.app').forEach(el=>el.style.opacity='');}}
 function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');const k=d.k;
   _aNoClick=Date.now()+900;
   if(d.ghost)d.ghost.style.display='none';
@@ -2986,7 +2991,7 @@ function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcon
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',cinema:'放映室',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
-  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:()=>setTimeout(openOfflineMenu,0),roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:openMusic,cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
+  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,music:openMusic,cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
@@ -3260,6 +3265,9 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>${svgIc('image',15,'#bbb')} 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it"><span>${svgIc('lock',15,'#bbb')} 锁屏壁纸</span><span class="v"><button class="minibtn" onclick="setLockBg()">${S.me.lockBg?'换':'上传'}</button>${S.me.lockBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.lockBg=\'\';save();renderLockScreen(true);render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="appIconEditor()"><span>${svgIc('image',15,'#bbb')} App 图标美化</span><span class="v">自定义主屏图标 ›</span></div>
+      <div class="it" style="flex-wrap:wrap"><span>App 图标颜色深浅 <b id="homeAppIconToneVal" style="color:#ff8fab">${homeAppIconTone()}%</b><small style="display:block;color:#888">一键调整主屏全部 App，包括底部四个固定图标；数值低更暗，数值高更亮</small></span><input id="homeAppIconTone" type="range" min="45" max="135" step="5" value="${homeAppIconTone()}" style="width:100%;margin-top:7px" oninput="homeAppAppearanceSet('icon',this.value)"></div>
+      <div class="it" style="flex-wrap:wrap"><span>App 名称文字深浅 <b id="homeAppTextToneVal" style="color:#ff8fab">${homeAppTextTone()}%</b><small style="display:block;color:#888">一键调整主屏所有软件名称；数值低更浅，100% 最清晰</small></span><input id="homeAppTextTone" type="range" min="30" max="100" step="5" value="${homeAppTextTone()}" style="width:100%;margin-top:7px" oninput="homeAppAppearanceSet('text',this.value)"></div>
+      <div class="it"><span>App 图标与文字深浅</span><button class="minibtn" onclick="homeAppAppearanceReset()">恢复默认</button></div>
       <div class="it" onclick="widgetManager()"><span>${svgIc('star',15,'#bbb')} 主屏组件</span><span class="v">${(()=>{widInit();return S.me.widgets.length;})()}个 · 排序/开关 ›</span></div>
       <div class="it"><span>${svgIc('heart',15,'#bbb')} 主屏主题</span><span class="v"><button class="minibtn" style="${(!S.me.theme)?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='';save();render()">暗黑</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='pink'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='pink';save();render();toast('换成淡粉色啦 🌸')">淡粉</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='white';save();render();toast('换成白色啦 🤍')">白色</button></span></div>
       <div class="it"><span>${svgIc('chat',15,'#bbb')} 微信主题</span><span class="v"><button class="minibtn" style="${S.me.wxTheme!=='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='';save();render();toast('微信换成黑色')">黑色</button><button class="minibtn" style="margin-left:6px;${S.me.wxTheme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='white';save();render();toast('微信换成白色 🤍')">白色</button></span></div>
@@ -3306,7 +3314,7 @@ async function clearAllData(){
   fresh.settings=old.settings;// 保留 API 设置
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
-  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','appIcons','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
+  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','appIcons','appIconTone','appTextTone','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
   const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
@@ -4159,8 +4167,7 @@ if(S.couple&&S.couple.gags)cleanStaleGags();// 启动时清掉已删联系人的
 if(!S.giftbox)S.giftbox=[];
 if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
 if(S.couple&&S.couple.grant&&S.couple.grant.douyin===undefined)S.couple.grant.douyin=true;
-if(!S.dy)S.dy={profile:{nick:'',avatar:null,bio:'记录美好生活✨'},feed:[],liked:[],following:[],dms:[],history:[],mine:[],users:{}};
-['feed','liked','following','dms','history','mine'].forEach(k=>{if(!Array.isArray(S.dy[k]))S.dy[k]=[];});S.dy.users=S.dy.users||{};S.dy.profile=Object.assign({nick:'',avatar:null,bio:'记录美好生活✨'},S.dy.profile||{});
+dyInit();
 // 上下文从「条」改为「回合」：老数据把条数÷2换算成回合，只迁移一次
 if(S.settings){if(S.settings.histUnit!=='rounds'){S.settings.hist=Math.max(4,Math.min(24,Math.round((+S.settings.hist||24)/2)));S.settings.histUnit='rounds';}if(!(+S.settings.hist))S.settings.hist=12;}
 function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
@@ -4377,12 +4384,13 @@ function changeXCover(){pickFile('image/*',async f=>{S.x.profile.cover=await com
 /* ---------- 抖音 ---------- */
 const DY_GRADS=['linear-gradient(135deg,#fe2c55,#7c1f3a)','linear-gradient(135deg,#25f4ee,#0b6b67)','linear-gradient(135deg,#845ef7,#2b1a5e)','linear-gradient(135deg,#ff922b,#7a3d05)','linear-gradient(135deg,#20c997,#0a4d3a)','linear-gradient(135deg,#f06595,#5e1a3a)','linear-gradient(135deg,#4dabf7,#103a5e)','linear-gradient(135deg,#ffd43b,#7a6308)'];
 let dyTab='feed';let _dyMode='rec';let _dyNarr={};let _dyPaused={};
-function dyNick(){return S.dy.profile.nick||S.me.name;}
-function dyAvatar(){return S.dy.profile.avatar||S.me.avatar;}
-function openDouyin(){dyTab='feed';go('dy');if(!S.dy.feed.length)dyGenFeed('',true);}
+function dyInit(){let changed=false;if(!S.dy||typeof S.dy!=='object'){S.dy={};changed=true;}const d=S.dy;['feed','liked','following','dms','history','mine'].forEach(k=>{if(!Array.isArray(d[k])){d[k]=[];changed=true;}});if(!d.users||typeof d.users!=='object'||Array.isArray(d.users)){d.users={};changed=true;}if(!d.profile||typeof d.profile!=='object'||Array.isArray(d.profile)){d.profile={};changed=true;}const defs={nick:'',avatar:null,bio:'记录美好生活✨'};Object.keys(defs).forEach(k=>{if(d.profile[k]===undefined){d.profile[k]=defs[k];changed=true;}});return changed;}
+function dyNick(){dyInit();return S.dy.profile.nick||S.me.name;}
+function dyAvatar(){dyInit();return S.dy.profile.avatar||S.me.avatar;}
+function openDouyin(){if(dyInit())save(0);dyTab='feed';go('dy');if(!S.dy.feed.length)dyGenFeed('',true);}
 function dyVid(id){return S.dy.feed.find(v=>v.id===id)||S.dy.liked.find(v=>v.id===id)||(S.dy.mine||[]).find(v=>v.id===id);}
 function dyModalOpen(){const m=$('#modal');return m&&m.classList.contains('show');}
-function renderDouyin(){let body;
+function renderDouyin(){dyInit();let body;
   if(dyTab==='feed')body=dyFeedView();else if(dyTab==='search')body=dySearchView();else if(dyTab==='dm')body=dyDMList();else body=dyProfile();
   const nav=dyTab==='feed'?'':`<div class="dynav"><span class="l" onclick="home()" style="cursor:pointer">‹</span><span style="font-weight:700">${dyTab==='search'?'搜索':dyTab==='dm'?'消息':'我'}</span><span class="r" style="width:14px"></span></div>`;
   return `${nav}<div style="flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative">${body}${dyTab==='feed'?'<div class="xfab" style="bottom:60px;background:#fe2c55" onclick="dyCompose()">＋</div>':''}</div>
@@ -10633,7 +10641,7 @@ async function emergencyRestoreConfirm(){const c=_recoveryCandidate;if(!c)return
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
-    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
+    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
     phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
     phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
     music:pickObj(music,['bg','cover','theme','layout','widgets']),
@@ -10649,7 +10657,7 @@ function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
-  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
+  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
   const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
   const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});
