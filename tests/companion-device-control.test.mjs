@@ -36,6 +36,7 @@ test('control defaults to both while role reads default to external only', () =>
   assert.equal(context.value.defaultScope, 'both');
   assert.equal(context.value.readScope, 'external');
   assert.equal(context.value.screenTimeMode, 'total_only');
+  assert.equal(context.value.screenTimeAvailable, false);
   assert.equal(context.value.roleAccess, false);
   assert.match(app, /内外同时/);
   assert.match(app, /读取来源铁律/);
@@ -58,6 +59,7 @@ test('internal and external apps bind through distinct stable ids', () => {
 
 test('a both-scope instruction creates separate internal and external rules', () => {
   const dispatch = functionSource('companionDispatchBound');
+  const tags = functionSource('applyControlTags');
   assert.match(dispatch, /needsExternal=scope!==\x27internal\x27/);
   assert.match(dispatch, /needsInternal=scope!==\x27external\x27/);
   assert.match(dispatch, /companionApplyInternalAction/);
@@ -65,12 +67,26 @@ test('a both-scope instruction creates separate internal and external rules', ()
   assert.match(dispatch, /外置 DeviceActivity 规则已提交/);
   assert.match(functionSource('applyControlTags'), /仅内置\|只内置\|仅外置\|只外置\|内外同时/);
   assert.match(functionSource('applyControlTags'), /companionDispatchBound\(\x27limit\x27/);
+  assert.match(tags, /dual=!!\(st&&st\.roleAccess\)/);
+  assert.doesNotMatch(tags, /roleAccess&&companionReady/);
+});
+
+test('role location and usage reads are pinned to the external iPhone source', () => {
+  assert.match(functionSource('companionRoleReadsExternal'), /st\.readScope===\x27external\x27/);
+  assert.match(functionSource('companionRoleLocationText'), /companionRoleReadsExternal/);
+  assert.match(functionSource('companionRoleScreenTimeText'), /companionDuration/);
+  assert.match(functionSource('spyFocusData'), /companionRoleLocationText/);
+  assert.match(functionSource('spyFocusData'), /companionRoleScreenTimeText/);
+  assert.match(functionSource('remoteControlViewableSnapshot'), /externalScreenTime:companionRoleScreenTimeText/);
 });
 
 test('internal and external usage stay independent and per-app external time is pending', () => {
   const ui = functionSource('renderCompanionPage');
+  const payload = functionSource('companionApplyServerPayload');
   assert.match(ui, /internalUsed=internalId\?usedSecOf\(internalId\):0/);
   assert.match(ui, /companionDuration\(app\.usedSec\)/);
+  assert.match(ui, /screenTimeAvailable/);
+  assert.match(payload, /reportAvailable/);
   assert.match(ui, /两边各自计时/);
   assert.match(ui, /绝不合并时长/);
   assert.match(ui, /待 iPhone 端接入/);
@@ -81,7 +97,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v801 · 真实同步与足迹稳定修复'/);
+  assert.match(app, /const APP_VER='v802 · 逐App时长与外置控制修复'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -100,6 +116,16 @@ test('unbound external apps remain controllable without guessing an internal id'
   assert.match(owner, /本次仅控制真实 iPhone/);
   assert.match(batch, /for\(const app of st\.apps\)/);
   assert.match(batch, /externalOnly\+\+/);
+});
+
+test('companion operation history expires automatically after three days', () => {
+  const context = vm.createContext({});
+  const now = 10 * 24 * 60 * 60 * 1000;
+  vm.runInContext(
+    `const COMPANION_AUDIT_RETENTION_MS=3*24*60*60*1000;${functionSource('companionPruneAudit')}this.st={commands:[{ts:${now}-1000},{ts:${now}-4*24*60*60*1000}]};companionPruneAudit(this.st,${now});`,
+    context,
+  );
+  assert.equal(context.st.commands.length, 1);
 });
 
 test('external display aliases can be saved without changing stable ids', () => {

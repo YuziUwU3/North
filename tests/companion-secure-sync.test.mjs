@@ -11,6 +11,10 @@ const sql = readFileSync(
   join(root, 'supabase', 'migrations', '202608050001_phone_companion_secure_sync.sql'),
   'utf8',
 );
+const retentionSql = readFileSync(
+  join(root, 'supabase', 'migrations', '202608050002_phone_companion_three_day_audit.sql'),
+  'utf8',
+);
 
 function functionSource(name) {
   const start = app.indexOf(`function ${name}(`);
@@ -67,4 +71,9 @@ test('a bound external action is enqueued only once', () => {
   const dispatch = functionSource('companionDispatchBound');
   assert.match(apply, /!st\.demo&&!opt\.skipLog\)companionSendCommand/);
   assert.equal((dispatch.match(/companionSendCommand\(/g) || []).length, 1);
+});
+
+test('server companion command history is reduced to three days', () => {
+  assert.match(retentionSql, /created_at < now\(\) - interval '3 days'/i);
+  assert.doesNotMatch(retentionSql, /30 days/i);
 });
