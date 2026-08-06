@@ -1,0 +1,218 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function reply(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
+function base64url(value: Uint8Array | string) {
+  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
+}
+
+function pemBytes(pem: string) {
+  const body = pem.replaceAll("\\n", "\n")
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s+/g, "");
+  return Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
+}
+
+function derToRaw(signature: Uint8Array) {
+  if (signature.length === 64) return signature;
+  let offset = signature[1] & 0x80 ? 2 + (signature[1] & 0x7f) : 2;
+  if (signature[0] !== 0x30 || signature[offset++] !== 0x02) throw new Error("invalid-es256-signature");
+  const rLength = signature[offset++];
+  const r = signature.slice(offset, offset + rLength);
+  offset += rLength;
+  if (signature[offset++] !== 0x02) throw new Error("invalid-es256-signature");
+  const sLength = signature[offset++];
+  const s = signature.slice(offset, offset + sLength);
+  const raw = new Uint8Array(64);
+  raw.set(r.slice(Math.max(0, r.length - 32)), 32 - Math.min(32, r.length));
+  raw.set(s.slice(Math.max(0, s.length - 32)), 64 - Math.min(32, s.length));
+  return raw;
+}
+
+async function apnsJWT(teamId: string, keyId: string, privateKey: string) {
+  const header = base64url(JSON.stringify({ alg: "ES256", kid: keyId }));
+  const claims = base64url(JSON.stringify({ iss: teamId, iat: Math.floor(Date.now() / 1000) }));
+  const input = `${header}.${claims}`;
+  const key = await crypto.subtle.importKey(
+    "pkcs8", pemBytes(privateKey), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"],
+  );
+  const signed = new Uint8Array(await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(input),
+  ));
+  return `${input}.${base64url(derToRaw(signed))}`;
+}
+
+function localClock(timezone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone || "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date());
+  const value = (kind: string) => parts.find((part) => part.type === kind)?.value || "00";
+  return { day: `${value("year")}-${value("month")}-${value("day")}`, hour: Number(value("hour")) || 0 };
+}
+
+function nextDue(profile: Record<string, unknown>, waitMinutes?: number) {
+  const minutes = Math.max(15, Number(waitMinutes || profile.idle_minutes || 120));
+  return new Date(Date.now() + minutes * 60_000).toISOString();
+}
+
+function fallbackMessage(profile: Record<string, unknown>) {
+  const name = String(profile.user_name || "你").trim() || "你";
+  const hour = localClock(String(profile.timezone || "Asia/Shanghai")).hour;
+  if (hour < 10) return `${name}，醒了没有？醒了就来跟我说一声。`;
+  if (hour >= 22) return `${name}，这么晚了还没睡？别又偷偷熬夜。`;
+  return `${name}，在忙什么？有空回我一下。`;
+}
+
+async function roleMessage(profile: Record<string, unknown>) {
+  const key = Deno.env.get("OPENAI_API_KEY") || "";
+  if (!key) return fallbackMessage(profile);
+  const base = (Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/$/, "");
+  const model = Deno.env.get("ROLE_PUSH_MODEL") || Deno.env.get("CHAT_MODEL") || "gpt-4o-mini";
+  const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+  const prompt = [
+    `角色名：${String(profile.role_name || "角色").slice(0, 40)}`,
+    `与用户关系：${String(profile.relation || "").slice(0, 80)}`,
+    `角色设定摘要：${String(profile.persona || "").slice(0, 1200)}`,
+    `用户称呼：${String(profile.user_name || "你").slice(0, 40)}`,
+    `当地时间：${clock.day} ${String(clock.hour).padStart(2, "0")}:00`,
+  ].join("\n");
+  try {
+    const response = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        temperature: 0.9,
+        max_tokens: 90,
+        messages: [
+          { role: "system", content: "你正在以角色本人身份主动发一条微信。只输出一句自然、简短、有生活感的中文消息；保持人设，不提AI、系统、定时、通知或后台，不加引号和括号，不虚构具体事件。" },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (!response.ok) return fallbackMessage(profile);
+    const data = await response.json();
+    const text = String(data?.choices?.[0]?.message?.content || "").trim().replace(/^[“\"']|[”\"']$/g, "");
+    return text.slice(0, 180) || fallbackMessage(profile);
+  } catch (_) {
+    return fallbackMessage(profile);
+  }
+}
+
+async function sendAPNs(deviceToken: string, environment: string, roleName: string, body: string, outboxId: string) {
+  const keyId = Deno.env.get("APNS_KEY_ID") || "";
+  const teamId = Deno.env.get("APNS_TEAM_ID") || "";
+  const privateKey = Deno.env.get("APNS_PRIVATE_KEY") || "";
+  const bundleId = Deno.env.get("APNS_BUNDLE_ID") || "";
+  if (!deviceToken) return { status: "no-token", error: "" };
+  if (!keyId || !teamId || !privateKey || !bundleId) return { status: "apns-not-configured", error: "" };
+  const jwt = await apnsJWT(teamId, keyId, privateKey);
+  const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
+  const response = await fetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${jwt}`,
+      "apns-topic": bundleId,
+      "apns-push-type": "alert",
+      "apns-priority": "10",
+      "apns-expiration": String(Math.floor(Date.now() / 1000) + 3600),
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      aps: { alert: { title: roleName || "小手机", body }, sound: "default", badge: 1, "content-available": 1 },
+      rolePush: { outboxId },
+    }),
+  });
+  if (response.ok) return { status: "sent", error: "" };
+  return { status: `failed-${response.status}`, error: (await response.text()).slice(0, 400) };
+}
+
+Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (request.method !== "POST") return reply({ error: "method-not-allowed" }, 405);
+  try {
+    const input = await request.json().catch(() => ({}));
+    if (input?.action !== "dispatch_due") return reply({ error: "invalid-action" }, 400);
+    const url = Deno.env.get("SUPABASE_URL") || Deno.env.get("PHONE_SUPABASE_URL") || "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("PHONE_SERVICE_ROLE_KEY") || "";
+    const client = createClient(url, serviceKey, { auth: { persistSession: false } });
+    const { data: due, error } = await client.rpc("phone_role_push_claim_due", { p_limit: 20 });
+    if (error) throw error;
+    const profiles = Array.isArray(due) ? due : [];
+    let sent = 0;
+    for (const profile of profiles) {
+      const clock = localClock(profile.timezone);
+      const count = profile.daily_day === clock.day ? Number(profile.daily_count || 0) : 0;
+      const start = Number(profile.start_hour ?? 9), end = Number(profile.end_hour ?? 23);
+      const inside = start <= end ? clock.hour >= start && clock.hour < end : clock.hour >= start || clock.hour < end;
+      if (!inside || count >= Number(profile.daily_limit || 2)) {
+        await client.from("phone_role_push_profiles").update({
+          claimed_until: null,
+          daily_day: clock.day,
+          daily_count: count,
+          next_due_at: nextDue(profile, inside ? 180 : 60),
+          updated_at: new Date().toISOString(),
+        }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+
+      const body = await roleMessage(profile);
+      const dedupe = `${profile.target}:${profile.role_id}:${clock.day}:${count + 1}`;
+      const { data: outbox, error: outboxError } = await client.from("phone_role_push_outbox").upsert({
+        target: profile.target,
+        role_id: profile.role_id,
+        role_name: profile.role_name || "角色",
+        body,
+        trigger_kind: "scheduled",
+        dedupe_key: dedupe,
+      }, { onConflict: "dedupe_key", ignoreDuplicates: true }).select("id,push_status").maybeSingle();
+      if (outboxError) throw outboxError;
+      let outboxRow = outbox;
+      if (!outboxRow?.id) {
+        const { data: existing, error: existingError } = await client.from("phone_role_push_outbox")
+          .select("id,push_status").eq("dedupe_key", dedupe).maybeSingle();
+        if (existingError) throw existingError;
+        outboxRow = existing;
+      }
+      const outboxId = String(outboxRow?.id || "");
+      let push = { status: String(outboxRow?.push_status || "duplicate"), error: "" };
+      if (outboxId && outboxRow?.push_status !== "sent") {
+        const { data: link } = await client.from("phone_companion_links")
+          .select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle();
+        push = await sendAPNs(
+          String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"),
+          String(profile.role_name || "小手机"), body, outboxId,
+        );
+        await client.from("phone_role_push_outbox").update({ push_status: push.status, push_error: push.error || null }).eq("id", outboxId);
+        sent += push.status === "sent" ? 1 : 0;
+      }
+      await client.from("phone_role_push_profiles").update({
+        claimed_until: null,
+        daily_day: clock.day,
+        daily_count: count + 1,
+        last_sent_at: new Date().toISOString(),
+        next_due_at: nextDue(profile),
+        updated_at: new Date().toISOString(),
+      }).eq("target", profile.target).eq("role_id", profile.role_id);
+    }
+    return reply({ ok: true, claimed: profiles.length, sent });
+  } catch (error) {
+    return reply({ error: String(error?.message || error) }, 500);
+  }
+});

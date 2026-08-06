@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='826'){
+if(window.__NORTH_SHELL_BUILD__!=='827'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v826 · 微信消息音来电铃';
+const APP_VER='v827 · 服务器主动消息推送';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -640,7 +640,7 @@ function aiDone(){_aiLoadN=Math.max(0,_aiLoadN-1);if(_aiLoadN<=0){_aiLoadN=0;con
 // 生成内容带自动重试：parseFn 解析失败/空就重试，最多 tries 次，全失败返回 null
 async function aiGen(messages,opt,parseFn,tries){tries=tries||3;for(let i=0;i<tries;i++){try{const r=await chatAPI(messages,opt);const out=parseFn(r);if(out!=null&&(out.length===undefined||out.length>0))return out;}catch(e){}}return null;}
 function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
-function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c.proactive)c.proactive={enabled:false,start:9,end:23,times:2};if(!c._blk)c._blk={main:!!c.blocked};if(!c.imgLock)c.imgLock=buildImgLock(c);if(c.affection==null)c.affection=affBase(c);if(c.affectionLocked==null)c.affectionLocked=false;if(c.taskOff==null)c.taskOff=false;}return c;}
+function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c.proactive)c.proactive={enabled:false,start:9,end:23,times:2,serverPush:false};if(c.proactive.serverPush==null)c.proactive.serverPush=false;if(!c._blk)c._blk={main:!!c.blocked};if(!c.imgLock)c.imgLock=buildImgLock(c);if(c.affection==null)c.affection=affBase(c);if(c.affectionLocked==null)c.affectionLocked=false;if(c.taskOff==null)c.taskOff=false;}return c;}
 function hashStr(s){s=''+(s||'');let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0);}
 function pickBySeed(arr,seed,shift){return arr[(Math.abs(seed+(shift||0))%arr.length)|0];}
 function buildImgLock(c){
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=826';
+  const url='sw.js?v=827';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8069,6 +8069,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
       <div class="it"><span>消息免打扰</span><span class="sw ${c.muted?'on':''}" onclick="c_mute('${id}')"></span></div>
       <div class="it"><span>主动消息</span><span class="sw ${c.proactive.enabled?'on':''}" onclick="togProactive('${id}')"></span></div>
+      <div class="it"><span>关闭小手机后仍可主动联系<br><small style="color:#888">由服务器按时段触发，并通过真实 iPhone 伴生 App 通知；只上传角色摘要和时段，不上传完整聊天或健康数据</small></span><span class="sw ${c.proactive.serverPush?'on':''}" onclick="roleServerPushToggle('${id}')"></span></div>
       <div class="it" style="flex-wrap:wrap"><span>时段/每天次数<br><small style="color:#888">设好点「存」；要真生效记得打开上面的主动消息开关<br>当前 ${hm()} · ${initiativeWindow(c,new Date())?'在主动时段内':'不在主动时段内，暂不发送'}</small></span><span class="v" style="max-width:100%"><input type="number" min="0" max="23" id="pa_s" value="${hourOf(c.proactive.start,9)}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">点-<input type="number" min="0" max="23" id="pa_e" value="${hourOf(c.proactive.end,23)}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">点 <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:38px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>
     </div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#5b6b9c">查岗（让ta看我的手机）</div>
@@ -8328,6 +8329,7 @@ async function c_delete(id){const c=getC(id);
      const wd=S.hisWx&&S.hisWx[o.id];if(wd&&wd.friends)wd.friends=wd.friends.filter(f=>!names.includes(f.name));
      const sp=S.spy&&S.spy[o.id];if(sp&&sp.wechat)sp.wechat=sp.wechat.filter(w=>!names.includes(w.who));
    });}
+  if(c.proactive&&c.proactive.serverPush)companionRpc('phone_role_push_disable_profile',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_role_id:id}).catch(()=>{});
   save();stack.pop();render();}
 function cleanStaleGags(){if(!S.couple||!S.couple.gags)return false;let ch=false,p=phoneFriendState();Object.keys(S.couple.gags).forEach(cid=>{if(cid.indexOf('pf:')===0){const id=cid.slice(3);if(!(p.friends||[]).some(f=>(''+(f.phone_id||f.id||'')).toUpperCase()===id)){delete S.couple.gags[cid];ch=true;}return;}if(cid.indexOf('pfg:')===0){const gid=cid.slice(4);if(!(p.groups||[]).some(g=>(g.group_id||g.id)===gid)){delete S.couple.gags[cid];ch=true;}return;}const c=getC(cid);if(!c||c.deleted){delete S.couple.gags[cid];ch=true;}});if(ch)save();return ch;}
 function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
@@ -8352,13 +8354,21 @@ async function doClear(id,mode){const list=msgs(id);let keep,tip='';
     const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>{const t=msgClearTime(m);return m._call||!t||t<t0||t>t1;});tip='删除 '+a+' 到 '+b+' 的文字聊天？没有日期的旧消息和通话记录会保留。';}
   const n=list.length-keep.length;if(n<=0){toast('没有可删除的文字聊天');return;}if(!await uiConfirm(tip+'\n\n预计删除 '+n+' 条。'))return;
   S.messages[mkey(id)]=keep;await persistWechatMessagesNow();closeModal();render();toast('已删除 '+n+' 条文字聊天（通话记录保留）');}
-function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;if(c.proactive.enabled)initiativeArm(c);save();render();}
+function roleServerPushProfile(c){let timezone='Asia/Shanghai';try{timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||timezone;}catch(_){}return {roleId:c.id,roleName:(c.remark||c.name||'角色').slice(0,40),relation:String(c.relation||'').slice(0,80),persona:String(c.persona||'').slice(0,1200),userName:String(S.me&&S.me.name||'你').slice(0,40),enabled:!!(c.proactive&&c.proactive.enabled&&c.proactive.serverPush),timezone,startHour:hourOf(c.proactive&&c.proactive.start,9),endHour:hourOf(c.proactive&&c.proactive.end,23),dailyLimit:Math.max(1,Math.min(24,+(c.proactive&&c.proactive.times)||2)),idleMinutes:Math.max(15,Math.min(1440,+S.settings.proactiveIdleMin||120))};}
+async function roleServerPushSync(c,silent){if(!c||!c.proactive||!gateOK())return false;try{const ok=await companionRpc('phone_role_push_upsert_profile',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_profile:roleServerPushProfile(c)});if(!ok)throw new Error('真实 iPhone 尚未完成连接');if(!silent)toast(c.proactive.serverPush&&c.proactive.enabled?'服务器主动联系已开启':'服务器主动联系已关闭');return true;}catch(e){if(!silent)toast('服务器主动联系保存失败：'+e.message);return false;}}
+async function roleServerPushToggle(id){const c=getC(id);if(!c)return;if(!c.proactive.serverPush){const st=companionState();if(!st||!st.linked){toast('先在情侣空间连接真实 iPhone 伴生 App');return;}}c.proactive.serverPush=!c.proactive.serverPush;save();render();const ok=await roleServerPushSync(c,false);if(!ok){c.proactive.serverPush=false;save();render();}}
+let _roleServerPushPullBusy=false,_roleServerPushPullAt=0;
+async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||!S.couple||!isMain()||!force&&document.hidden)return false;const now=Date.now();if(!force&&now-_roleServerPushPullAt<45000)return false;_roleServerPushPullAt=now;_roleServerPushPullBusy=true;try{const rows=await companionRpc('phone_role_push_pull',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_limit:20});if(!Array.isArray(rows)||!rows.length)return true;const ack=[];let changed=false;for(const row of rows){if(!row||!row.id)continue;ack.push(row.id);const c=getC(row.roleId);if(!c||c.deleted)continue;const list=msgs(c.id);if(list.some(m=>m&&m._rolePushId===row.id))continue;const msg={role:'assistant',type:'text',content:String(row.body||'').slice(0,240),time:companionTime(row.createdAt)||Date.now(),id:uid(),_rolePushId:row.id,_serverProactive:true};if(!msg.content)continue;list.push(msg);changed=true;if(row.pushStatus!=='sent')notifyIncoming(c,msg);else if(cur().p!=='chat'||cur().id!==c.id){if(!_call)showMsgBanner(c,msg);playDing();}}
+    if(changed){save();if(cur().p==='chat'||cur().p==='home')render();}
+    if(ack.length)await companionRpc('phone_role_push_ack',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_ids:ack});return true;
+  }catch(_){return false;}finally{_roleServerPushPullBusy=false;}}
+function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;if(c.proactive.enabled)initiativeArm(c);save();render();if(c.proactive.serverPush)roleServerPushSync(c,true);}
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}
 function hhmmOf(v,def){if(typeof v==='number')return String(v).padStart(2,'0')+':00';if(typeof v==='string'&&/^\d{1,2}:\d{2}/.test(v))return v;return def||'09:00';}
 function hourOf(v,def){if(typeof v==='number')return v;if(typeof v==='string'&&v.includes(':'))return parseInt(v.split(':')[0],10)||0;return def;}
 function toMin(v){if(typeof v==='number')return v*60;if(typeof v==='string'&&v.includes(':')){const[a,b]=v.split(':');return (+a)*60+(+b);}return 0;}
-function savePa(id){const c=getC(id);let s=parseInt(($('#pa_s')||{}).value,10),e=parseInt(($('#pa_e')||{}).value,10);if(isNaN(s))s=9;if(isNaN(e))e=23;c.proactive.start=Math.max(0,Math.min(23,s));c.proactive.end=Math.max(0,Math.min(23,e));c.proactive.times=Math.max(1,Math.min(99,+($('#pa_n')||{}).value||1));if(c.proactive.enabled)initiativeArm(c);save();render();toast('已保存 ✓ '+c.proactive.start+'点-'+c.proactive.end+'点');}
+function savePa(id){const c=getC(id);let s=parseInt(($('#pa_s')||{}).value,10),e=parseInt(($('#pa_e')||{}).value,10);if(isNaN(s))s=9;if(isNaN(e))e=23;c.proactive.start=Math.max(0,Math.min(23,s));c.proactive.end=Math.max(0,Math.min(23,e));c.proactive.times=Math.max(1,Math.min(99,+($('#pa_n')||{}).value||1));if(c.proactive.enabled)initiativeArm(c);save();render();if(c.proactive.serverPush)roleServerPushSync(c,true);toast('已保存 ✓ '+c.proactive.start+'点-'+c.proactive.end+'点');}
 
 /* ---------- 多选转发 ---------- */
 let _sel=null,_gmsel=null,_gfwd=null;
@@ -10909,18 +10919,20 @@ let _androidResumeRepairAt=0;
 function androidResumeRepair(force){if(!_appBootFinished)return;const host=document.getElementById('app');if(!force&&host&&host.firstElementChild){window.__northBootReady=true;return;}const now=Date.now();if(now-_androidResumeRepairAt<800)return;_androidResumeRepairAt=now;try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
 window.addEventListener('pagehide',()=>{audioMarkWakeRequired();if(_callHF){callHFStop();audioRouteReset(false);}sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}});
 window.addEventListener('beforeunload',()=>{audioMarkWakeRequired();sleepMarkAway();callBackgroundHold();lockPrepareAway(true);if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}});
-window.addEventListener('pageshow',e=>{lockResumeFromAway();setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(()=>companionPollSnapshot(true),760);setTimeout(idleOpenHeartbeatStart,1600);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){audioMarkWakeRequired();if(_callHF){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}}else{lockResumeFromAway();sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioProbeMicPermission();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+window.addEventListener('pageshow',e=>{lockResumeFromAway();setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(()=>companionPollSnapshot(true),760);setTimeout(()=>roleServerPushPull(true),820);setTimeout(idleOpenHeartbeatStart,1600);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){audioMarkWakeRequired();if(_callHF){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}}else{lockResumeFromAway();sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioProbeMicPermission();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(idleOpenHeartbeatStart,1800);});document.addEventListener('fullscreenchange',cinemaFullscreenChanged);document.addEventListener('webkitfullscreenchange',cinemaFullscreenChanged);
+registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);setTimeout(idleOpenHeartbeatStart,1800);});document.addEventListener('fullscreenchange',cinemaFullscreenChanged);document.addEventListener('webkitfullscreenchange',cinemaFullscreenChanged);
 function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{S.me=S.me||{};S.me.locked=true;sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();initBattery();audioProbeMicPermission();requestPersistentStorage();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}
 if(!_coreBootRef)finishAppBoot();else{try{S.me=S.me||{};S.me.locked=true;render();}catch(_){const host=document.getElementById('app');if(host)host.innerHTML='';}}
 _bootImagesPromise=bootImages().then(()=>{if(!_appBootFinished)finishAppBoot();else refreshHydratedUI();window.__northBootReady=true;try{const savedAt=Date.now(),json=JSON.stringify(S,_imgReplacer);queueRecoverySnapshot(json,savedAt);}catch(_){}}).catch(e=>{window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'存档数据载入失败');});/* 大容量核心、聊天和图片从 IndexedDB 回填好后再渲染 */
 setTimeout(()=>pollExternalEvents(true),2600);
 setTimeout(()=>companionPollSnapshot(true),3200);
+setTimeout(()=>roleServerPushPull(true),3600);
 setTimeout(idleOpenHeartbeatStart,3800);
 setInterval(()=>pollExternalEvents(false),30000);
 setInterval(()=>companionPollSnapshot(false),8000);
+setInterval(()=>roleServerPushPull(false),60000);
 setInterval(()=>phoneFriendMaybeSync(false),30000);
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);

@@ -1,0 +1,44 @@
+CompanionRolePush v827 · 服务器定时触发与角色消息推送
+更新时间：2026-08-06
+
+当前已确认
+1. 真实 iPhone 显示“后台通知已开启”。
+2. 真实 iPhone 显示“后台通知已登记”。
+3. 这证明 APNs 权限、签名 entitlement、device token 与注册 RPC 已打通。
+
+必须部署的服务器文件
+- supabase/migrations/202608060003_phone_role_scheduled_push.sql
+- supabase/functions/phone-role-push/index.ts
+
+操作 1：安装数据库计划与 outbox
+打开 Supabase 项目 → 左侧 SQL Editor → New query。
+复制 202608060003_phone_role_scheduled_push.sql 的全部内容，粘贴后点右下角 Run。
+看到 Success 后停止，不要重复运行其他旧迁移。
+
+操作 2：部署定时推送函数
+在已登录该 Supabase 项目的终端中运行：
+supabase functions deploy phone-role-push --no-verify-jwt
+
+函数继续使用现有 Secrets：
+- APNS_KEY_ID
+- APNS_TEAM_ID
+- APNS_PRIVATE_KEY
+- APNS_BUNDLE_ID
+
+可选 Secrets：
+- OPENAI_API_KEY：存在时生成更贴合角色的自然消息；不存在时使用自然中文备用消息。
+- ROLE_PUSH_MODEL：不设置时使用代码内默认模型。
+
+操作 3：开启指定角色的服务器主动联系
+打开小手机 → 进入目标角色聊天 → 点右上角“…” → 找到“主动联系”。
+打开“关闭小手机后仍可主动联系”，设置允许时段和每日次数，然后点保存。
+
+成功标准
+- 小手机关闭或进入后台后，到达计划时间可收到该角色的系统通知。
+- 若 iOS 延迟或抑制 APNs，消息仍会留在 outbox；重新打开小手机后进入正确角色聊天。
+- 同一 outbox ID 只出现一次，不会因重复拉取而重复插入。
+
+边界
+- iOS 不保证每次 APNs 都即时唤醒；用户从多任务界面强制划掉 App 后限制更明显。
+- 设备登记成功不等于服务器两项已部署；必须完成操作 1 和操作 2。
+- 不需要重新授权屏幕使用时间、重选 App、添加 App Groups 或重做健康授权。
