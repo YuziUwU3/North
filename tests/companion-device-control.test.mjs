@@ -80,7 +80,7 @@ test('internal and external apps bind through distinct stable ids', () => {
   assert.equal(context.companionBoundExternal(state, 'douyin').id, 'ios.token.douyin');
   assert.equal(context.companionBoundExternal(state, 'music'), null);
   assert.match(functionSource('companionDispatchBound'), /binding\.externalAppId/);
-  assert.match(functionSource('companionDispatchBound'), /外置 App 尚未通过稳定 ID 完成绑定/);
+  assert.match(functionSource('companionDispatchBound'), /外置 App 尚未通过稳定 ID 完成关联/);
 });
 
 test('a unified limit creates separate internal and external execution rules', () => {
@@ -123,7 +123,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v819 · 内外精准锁定修复'/);
+  assert.match(app, /const APP_VER='v820 · 锁定目标完整性修复'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -137,16 +137,16 @@ test('manual sync sends a device request and schedules server refreshes', () => 
 test('unbound external apps remain lockable but cannot receive an independent limit', () => {
   const owner = functionSource('companionOwnerAction');
   const batch = functionSource('companionBatchAction');
-  assert.match(owner, /else if\(app\)r=companionApplyAction/);
+  assert.match(owner, /else r=companionApplyAction/);
   assert.match(owner, /scope:'external'/);
   assert.match(owner, /action===\x27limit\x27&&!binding/);
   assert.match(owner, /限额只保留一份并同步到内外两端/);
-  assert.match(owner, /本次仅控制真实 iPhone/);
+  assert.match(owner, /本次只控制真实 iPhone/);
   assert.match(batch, /for\(const app of st\.apps\)/);
   assert.match(batch, /externalOnly\+\+/);
-  assert.match(functionSource('companionBindingOptions'), /不绑定（仅外置锁定 \/ 解锁）/);
-  assert.match(functionSource('renderCompanionPage'), /绑定小手机同名 App（可选）/);
-  assert.match(functionSource('renderCompanionPage'), /未绑定 App 仍可单独锁定或解锁/);
+  assert.match(functionSource('companionBindingOptions'), /不关联（外置仍可锁定 \/ 解锁）/);
+  assert.match(functionSource('renderCompanionPage'), /关联小手机 App（可选，仅同名时同步锁定）/);
+  assert.match(functionSource('renderCompanionPage'), /未关联（外置仍可单独锁定或解锁）/);
   assert.match(functionSource('renderCompanionPage'), /placeholder="不限额"/);
 });
 
@@ -175,7 +175,7 @@ test('role limits require a binding and are forced to both endpoints', () => {
   assert.match(route, /scope:'both'/);
   assert.match(route, /companionUnifiedLimitInternalIds/);
   assert.match(external, /action===\x27limit\x27/);
-  assert.match(external, /只支持已绑定 App 的内外统一设置/);
+  assert.match(external, /只支持已关联 App 的内外统一设置/);
 });
 
 test('anonymous external apps receive stable matching numbers instead of upload-order names', () => {
@@ -282,6 +282,8 @@ test('bound role targets lock both endpoints while unbound targets stay external
     function companionScope(value){return value==='external'||value==='internal'||value==='both'?value:'';}
     function companionUnifiedLimitInternalIds(){return [];}
     function companionBindingForInternal(st,id){return st.bindings.find(x=>x.internalAppId===id)||null;}
+    ${functionSource('companionComparableAppName')}
+    ${functionSource('companionBindingMirrorsLock')}
     function companionDispatchBound(action,id,opt){calls.push({kind:'bound',action,id,scope:opt.scope});return {ok:true};}
     function companionDispatchRoleExternal(action,app){calls.push({kind:'external',action,id:app.id,scope:'external'});return {ok:true};}
     function _appKeys(){return [];}
@@ -296,6 +298,50 @@ test('bound role targets lock both endpoints while unbound targets stay external
     'bound:qq:both',
     'external:ios.wechat:external',
   ]);
+});
+
+test('a mismatched limit association can never substitute a virtual internal app for a real lock target', () => {
+  const calls = [];
+  const context = vm.createContext({ calls });
+  vm.runInContext(`
+    const S={couple:{grant:{cinema:true}}};
+    const LOCKABLE={cinema:'放映室'};
+    const state={defaultScope:'both',apps:[{id:'ios.chatgpt',name:'ChatGPT'}],bindings:[{internalAppId:'cinema',externalAppId:'ios.chatgpt'}]};
+    function companionState(){return state;}
+    function companionScope(value){return value==='external'||value==='internal'||value==='both'?value:'';}
+    function companionUnifiedLimitInternalIds(){return [];}
+    function companionBindingForInternal(st,id){return st.bindings.find(x=>x.internalAppId===id)||null;}
+    function companionDispatchBound(action,id,opt){calls.push({kind:'bound',action,id,scope:opt.scope});return {ok:true};}
+    function companionDispatchRoleExternal(action,app){calls.push({kind:'external',action,id:app.id,scope:'external'});return {ok:true};}
+    function _appKeys(){return [];}
+    ${functionSource('companionComparableAppName')}
+    ${functionSource('companionBindingMirrorsLock')}
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionMentionedExternalTargets')}
+    ${functionSource('companionExternalTargetsByText')}
+    ${functionSource('companionDispatchRoleByText')}
+    this.run=companionDispatchRoleByText;
+  `, context);
+  assert.equal(context.run('lock', 'ChatGPT', { scope: 'both', actor: '先生' }), true);
+  assert.deepEqual(Array.from(context.calls, x => `${x.kind}:${x.id}:${x.scope}`), ['external:ios.chatgpt:external']);
+  assert.match(functionSource('companionOwnerAction'), /没有同名内置 App，不能拿其他虚拟 App 代替锁定/);
+});
+
+test('pending and conflicting device commands never masquerade as a confirmed red lock card', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`${functionSource('companionLastExternalCommand')}\n${functionSource('companionExternalCommandState')}\nthis.state=companionExternalCommandState;`, context);
+  const appRow = { id: 'ios.trip', name: '携程旅行', locked: true };
+  const pending = { commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'pending', ts: 2 }] };
+  assert.equal(context.state(pending, appRow).kind, 'pendingUnlock');
+  const awaitingSnapshot = { lastSync: 2, commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'completed', ts: 3 }] };
+  assert.equal(context.state(awaitingSnapshot, appRow).kind, 'awaitSnapshot');
+  const conflict = { lastSync: 4, commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'completed', ts: 3 }] };
+  assert.equal(context.state(conflict, appRow).kind, 'conflict');
+  const decorate = functionSource('companionDecoratePage');
+  assert.match(decorate, /confirmedLocked=!!app\.locked&&\(commandState\.kind==='snapshot'\|\|commandState\.kind==='confirmed'\)/);
+  assert.match(decorate, /companion-app-pending/);
+  assert.doesNotMatch(functionSource('companionApplyServerPayload'), /snapshot\.generatedAt\)\|\|Date\.now\(\)/);
+  assert.match(app, /网页接受命令不等于设备执行成功/);
 });
 
 test('external name matching prefers the longest overlapping app name', () => {
@@ -392,7 +438,7 @@ test('companion device page has advanced locked-state cards without changing com
   assert.match(decorate, /companion-app-locked/);
   assert.match(decorate, /companion-usage-meter/);
   assert.match(decorate, /last\.actor/);
-  assert.match(phone, /v819 内外精准锁定修复/);
+  assert.match(phone, /v820 锁定目标完整性修复/);
   assert.match(phone, /#coupage3/);
   assert.match(phone, /\.companion-app-locked/);
   assert.match(phone, /linear-gradient\(90deg,#ac2848,#ff6377\)/);
