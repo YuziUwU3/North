@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='828'){
+if(window.__NORTH_SHELL_BUILD__!=='829'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v828 · 微信高低音来电铃';
+const APP_VER='v829 · 月光礼盒与节日自主赠礼';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1033,7 +1033,7 @@ function msgToText(m){
     if(m.type==='food')return '[我给你点了外卖「'+(m.name||'')+'」'+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（点好了，约15分钟送到）')+'，别再重复点了]';
     if(m.type==='transfer')return '[我给你转了 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，备注「'+m.note+'」':'')+']';
     if(m.type==='redpacket')return '[我给你发了个红包 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，「'+m.note+'」':'')+']';
-    if(m.type==='gift')return '[我送了你礼物「'+(m.name||'')+'」]';
+    if(m.type==='gift'){return '[我送了你礼物「'+(m.name||'')+'」'+giftRecipeContext(m.giftRecipe)+']';}
     if(m.type==='location')return '[我给你发了个位置：'+(m.name||'')+']';
     if(m.type==='file')return '[我给你发了文件：'+(m.name||'')+']';
     if(m.type==='sticker')return '[我发了个表情'+(m.meaning?'：'+m.meaning:'')+']';
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=828';
+  const url='sw.js?v=829';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1917,6 +1917,7 @@ function buildSystem(c,opt){
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
   s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，开启图片功能才发 [图片]；没有开启就只说文字，绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。';
+  s+='\n- 礼物卡支持附言：送礼时可写 [送礼|礼物名|价格|你想对ta说的话]，最后一句会固定显示在玩偶或戒指特效下方；没有特别想说的话时仍可沿用三段格式。';
   s+='\n- 【当前语音语言最终规则】本轮真正使用的语音语言是'+(voiceLangName(_voiceLang)||'中文')+'，它覆盖上面可能出现的旧角色语音语言。'+(_voiceLang==='zh'?'语音内容直接写中文。':'所有语音必须用 [语音|'+voiceLangName(_voiceLang)+'原文|普通话中文翻译]。'+voiceOriginalRule(_voiceLang));
   s+='\n- 当'+S.me.name+'说想玩“你画我猜”、想一起画画或让你邀请ta玩画画游戏时，可以主动发一张邀请卡：单独一行 [你画我猜]。不要在微信里直接开始画，等ta接受卡片进入游戏大厅。';
   s+='\n- 【微信格式铁律】这里是手机微信，不是小说/旁白/角色扮演软件。可见消息只能是你本人会打出来的文字、语音标签或卡片标签；严禁第三人称视角，严禁旁白，严禁动作/表情/镜头/环境/心理描写。不要写“他低头/她皱眉/男人沉默/某某看着屏幕/顾安辰垂眸”这类叙述，也不要用【】、（）包动作。想表达动作或情绪，只能写成第一人称聊天文字，比如“我刚刚愣了一下”“我现在很想抱你”。';
@@ -4052,13 +4053,27 @@ function checkFoodDelivery(){if(!isMain())return;const now=Date.now();let ch=fal
 setInterval(checkFoodDelivery,60000);setTimeout(checkFoodDelivery,7000);
 // 统一"包裹配送"：进商城订单显示已发货 + 第二天到信箱签收（礼物 和 代付的商品都走这条）
 function parcelDeliver(cid,name,price,kind,opts){opts=opts||{};name=(''+(name||'商品')).slice(0,30);price=+price||0;kind=kind||'gift';const pid=uid();const arrive=Date.now()+86400000;
-  S.giftbox=S.giftbox||[];S.giftbox.push({id:pid,cid:cid||null,name,price,kind,buyTs:Date.now(),arriveTs:arrive,delivered:false,notified:kind==='food'?false:true});
+  S.giftbox=S.giftbox||[];S.giftbox.push({id:pid,cid:cid||null,name,price,kind,giftRecipe:opts.giftRecipe||null,buyTs:Date.now(),arriveTs:arrive,delivered:false,notified:kind==='food'?false:true});
   S.shop.orders=S.shop.orders||[];S.shop.orders.unshift({id:pid,name,price,shop:opts.shop||(kind==='pay'?'代付':kind==='self'?'自购':'礼物'),emoji:opts.emoji||(kind==='pay'?'🛍️':kind==='self'?'🛒':'🎁'),buyTs:Date.now(),arriveTs:arrive,refunded:false,parcel:true,kind});
   if(S.shop.orders.length>40)S.shop.orders=S.shop.orders.slice(0,40);}
-function giftSend(cid,name,price){if(!cid)return;const c=getC(cid);name=(''+(name||'礼物')).slice(0,30);price=+price||0;
+function giftNameIsFloral(name){return /(?:花束|鲜花|玫瑰|百合|郁金香|向日葵|满天星|雏菊|牡丹|芍药|铃兰|桔梗|康乃馨|蝴蝶兰|永生花|花礼|手捧花)/i.test(String(name||''));}
+function giftEffectKind(name){name=String(name||'');if(giftNameIsFloral(name))return'bouquet';if(/(?:玩偶|公仔|抱枕|小熊|熊熊|兔子|小兔|小狗|狗狗|小猫|猫猫)/i.test(name))return'teddy';if(/(?:订婚戒指|求婚戒指|钻戒|戒指|指环)/i.test(name))return'ring';return'';}
+const GIFT_BOX_COLORS={blue:'#8fbce8',pink:'#f2adc7',white:'#f2efe8',red:'#ef6b6f'};
+function giftBoxColor(seed){const s=String(seed||'gift');let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(h,31)+s.charCodeAt(i))|0;return Object.keys(GIFT_BOX_COLORS)[Math.abs(h)%4];}
+function giftBoxEnglish(kind){return kind==='bouquet'?'A BOUQUET OF FLOWERS':kind==='teddy'?'PLUSH COMPANION':kind==='ring'?'ENGAGEMENT RING':'PRIVATE GIFT';}
+function giftBoxCardArt(color){return `<svg class="giftbox-mini" viewBox="0 0 180 150" aria-hidden="true" style="color:${GIFT_BOX_COLORS[color]||GIFT_BOX_COLORS.blue}"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="42" y="55" width="96" height="72" rx="9"/><path d="M36 51h108v18H36zM82 51h16v76M42 94h96M87 47c-14-17-36-18-39-5-3 10 14 13 37 11M93 47c14-17 36-18 39-5 3 10-14 13-37 11"/><path d="M84 46q6-6 13 0l-2 11H86z" fill="#111116"/></g><g fill="none" stroke="currentColor" stroke-linecap="round" opacity=".75"><path d="M24 31v12M18 37h12M151 33v9M146.5 37.5h9M153 99v8M149 103h8M25 108v7M21.5 111.5h7"/></g></svg>`;}
+function giftEffectRecipe(name,recipe,seed,time,words){const kind=giftEffectKind(name);if(!kind)return null;if(recipe&&recipe.type===kind){if(!recipe.boxColor)recipe.boxColor=giftBoxColor(recipe.seed||seed);return recipe;}if(typeof NorthGiftEffects==='undefined')return null;const create=kind==='bouquet'?NorthGiftEffects.createBouquetRecipe:kind==='teddy'?NorthGiftEffects.createTeddyRecipe:NorthGiftEffects.createRingRecipe;if(typeof create!=='function')return null;const made=create({giftName:name,seed:seed,time:time,words:words});made.boxColor=giftBoxColor(made.seed||seed);return made;}
+function giftFlowerRecipe(name,recipe,seed,time){return giftNameIsFloral(name)?giftEffectRecipe(name,recipe,seed,time):null;}
+function giftRecipeContext(recipe){if(!recipe)return'';if(recipe.type==='bouquet')return'，具体是一束「'+recipe.flowerName+'」，花语是「'+(recipe.flowerMeaning||'')+'」，赠送日期 '+(recipe.date||'');if(recipe.type==='teddy')return'，具体是「'+recipe.name+'」玩偶，附言是「'+(recipe.words||'')+'」，赠送日期 '+(recipe.date||'');if(recipe.type==='ring')return'，具体是「'+recipe.name+'」，想说的话是「'+(recipe.words||'')+'」，赠送日期 '+(recipe.date||'');return'';}
+function playGiftRecipe(name,sender,recipe){const kind=giftEffectKind(name)||(recipe&&recipe.type)||'';if(kind==='bouquet'&&typeof playBouquetGiftEffect==='function')return playBouquetGiftEffect({giftName:name,sender,recipe});if(kind==='teddy'&&typeof playTeddyGiftEffect==='function')return playTeddyGiftEffect({giftName:name,sender,recipe});if(kind==='ring'&&typeof playRingGiftEffect==='function')return playRingGiftEffect({giftName:name,sender,recipe});return false;}
+function giftMessageBloom(mid){let found=null,key='';for(const k in S.messages){const row=(S.messages[k]||[]).find(x=>x&&x.id===mid);if(row){found=row;key=k;break;}}
+  if(!found||found.from!=='ta'||!giftEffectKind(found.name))return false;
+  const cid=key.split('#')[0],c=getC(cid),fresh=!found.giftRecipe;found.giftRecipe=giftEffectRecipe(found.name,found.giftRecipe,found.id,found.time);if(fresh&&found.giftRecipe)save();return!!playGiftRecipe(found.name,c?(c.remark||c.name):'TA',found.giftRecipe);}
+function giftMessageOpen(mid,card){if(!card||card.classList.contains('opening'))return false;card.classList.add('opening');setTimeout(()=>{if(card&&card.classList)card.classList.remove('opening');giftMessageBloom(mid);},880);return true;}
+function giftSend(cid,name,price,words){if(!cid)return;const c=getC(cid);name=(''+(name||'礼物')).slice(0,30);price=+price||0;words=(''+(words||'')).trim().slice(0,36);
   if(msgs(cid).some(x=>x.role==='assistant'&&x.type==='gift'&&x.name===name&&Date.now()-(x.time||0)<180000))return;/* 3分钟内同样礼物不重复送(防挂电话后再送一次) */
-  parcelDeliver(cid,name,price,'gift');
-  const gm=c?{role:'assistant',type:'gift',name,price,from:'ta',shipping:true,id:uid(),time:Date.now()}:null;if(gm)msgs(cid).push(gm);
+  const giftTime=Date.now(),giftId=uid(),giftRecipe=giftEffectRecipe(name,null,giftId,giftTime,words);parcelDeliver(cid,name,price,'gift',{giftRecipe});
+  const gm=c?{role:'assistant',type:'gift',name,price,from:'ta',shipping:true,giftRecipe,id:giftId,time:giftTime}:null;if(gm)msgs(cid).push(gm);
   save();const cu=cur();if(cu&&cu.p==='chat'&&cu.id===cid&&gm){appendChatMessageHTML(cid,c,gm,{replaceTyping:true});}else if(cu&&cu.p==='wechat')render();}
 let _giftNotifyBusy={};
 function checkGiftDelivery(){if(!isMain())return;const now=Date.now();let ch=false;const gb=S.giftbox||[];
@@ -4066,12 +4081,12 @@ function checkGiftDelivery(){if(!isMain())return;const now=Date.now();let ch=fal
     if(k==='food'){if(first){const sm={role:'user',type:'sys',content:'🛵 '+who+'帮你付的外卖「'+g.name+'」送到了，趁热吃~',time:Date.now(),id:uid()};if(g.cid)msgs(g.cid).push(sm);playDing();}if(g.notified===false&&!_giftNotifyBusy[g.id]&&g.cid&&c&&!c.blocked){_giftNotifyBusy[g.id]=1;const queued=scheduleReply(g.cid,'[系统：你帮'+S.me.name+'付钱点的外卖「'+g.name+'」刚送到ta那儿了。自然地宠ta、叮嘱ta趁热吃一句，一两句。]',ok=>{delete _giftNotifyBusy[g.id];if(ok){g.notified=true;save();}});if(!queued)delete _giftNotifyBusy[g.id];}return;}
     const subj=k==='self'?('你买的「'+g.name+'」到了'):k==='pay'?('代付的「'+g.name+'」到了'):('礼物到了：'+g.name);
     const bd=k==='self'?('你买的「'+g.name+'」到货了，签收一下吧。'):k==='pay'?('你让 '+who+' 帮你付的「'+g.name+'」到货了，签收一下吧。'):('快递到了，'+who+'给你寄的「'+g.name+'」到了，签收一下吧。');
-    S.mail=S.mail||[];S.mail.unshift({id:uid(),cid:g.cid,type:'gift',kind:k,giftName:g.name,giftPrice:g.price,subject:subj,body:bd,signed:false,read:false,time:Date.now()});if(S.mail.length>60)S.mail=S.mail.slice(0,60);
+    S.mail=S.mail||[];S.mail.unshift({id:uid(),cid:g.cid,type:'gift',kind:k,giftName:g.name,giftPrice:g.price,giftRecipe:g.giftRecipe||null,subject:subj,body:bd,signed:false,read:false,time:Date.now()});if(S.mail.length>60)S.mail=S.mail.slice(0,60);
     if(c)notifyMail(c,{subject:subj});else playDing();});
   S.giftbox=gb.filter(g=>!g.delivered||now-g.arriveTs<6048e5);
   if(ch){save();const cu=cur();if(cu&&cu.p==='mail')render();}}
 setInterval(checkGiftDelivery,60000);setTimeout(checkGiftDelivery,8000);
-function signGift(lid){const L=(S.mail||[]).find(x=>x.id===lid);if(!L||L.signed)return;L.signed=true;L.read=true;save();closeModal&&closeModal();render();toast('签收了 '+L.giftName);const c=getC(L.cid);if(c&&!c.blocked)scheduleReply(L.cid,L.kind==='pay'?('[系统：'+S.me.name+'在信箱签收了你帮ta付钱买的「'+L.giftName+'」。你确认ta收到了、自然地宠ta或打趣一句，一两句。]'):('[系统：'+S.me.name+'在信箱签收了你寄的礼物「'+L.giftName+'」，ta很开心。你跟ta确认收到、自然地宠ta/道一句，一两句。]'));}
+function signGift(lid){const L=(S.mail||[]).find(x=>x.id===lid);if(!L||L.signed)return;L.signed=true;L.read=true;const c=getC(L.cid),effect=L.kind==='gift'&&giftEffectKind(L.giftName);if(effect)L.giftRecipe=giftEffectRecipe(L.giftName,L.giftRecipe,L.id,L.time);save();closeModal&&closeModal();render();toast('签收了 '+L.giftName);if(effect)setTimeout(()=>playGiftRecipe(L.giftName,c?(c.remark||c.name):'TA',L.giftRecipe),180);const detail=L.giftRecipe?giftRecipeContext(L.giftRecipe)+'，以后提起必须和这次已经确定的礼物一致':'';if(c&&!c.blocked)scheduleReply(L.cid,L.kind==='pay'?('[系统：'+S.me.name+'在信箱签收了你帮ta付钱买的「'+L.giftName+'」。你确认ta收到了、自然地宠ta或打趣一句，一两句。]'):('[系统：'+S.me.name+'在信箱签收了你寄的礼物「'+L.giftName+'」'+detail+'。ta很开心，你跟ta确认收到、自然地宠ta/道一句，一两句。]'));}
 function foodPayFlow(i){const p=S.food.results[i];if(!p)return;window._pp={name:p.name,price:+p.price,shop:'外卖·'+(p.shop||''),kind:'food'};pickTarget(payTo);}
 function foodReceive(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
   if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你签收了外卖：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,6);save();render();toast('已签收 '+found.m.name);
@@ -4135,12 +4150,12 @@ function saveCalEvent(){const d=$('#ce_d').value,t=$('#ce_t').value.trim();if(!d
 let _calBusy={};
 function calendarDeliver(key,today,job){if((S._calFired&&S._calFired[key]===today)||_calBusy[key])return false;_calBusy[key]=1;Promise.resolve().then(job).then(ok=>{if(ok){S._calFired=S._calFired||{};S._calFired[key]=today;save();}}).catch(()=>{}).finally(()=>{delete _calBusy[key];});return true;}
 function checkCalendar(){if(offlineFocusActive())return;if(pruneDailyMood())save();if(!S._calFired)S._calFired={};const F=S._calFired;const today=todayStr();const h=new Date().getHours();if(h<9)return;
-  const hol=holidayOf(today);
+  const hol=holidayOf(today),coupleCid=S.couple&&S.couple.cid||'';
   S.contacts.forEach(c=>{if(c.deleted||c.blocked)return;
-    if(!wechatNaturalOn()&&hol&&F['hol_'+c.id]!==today)calendarDeliver('hol_'+c.id,today,()=>holidayGreet(c.id,hol));
+    if(!wechatNaturalOn()&&hol&&F['hol_'+c.id]!==today&&c.id!==coupleCid)calendarDeliver('hol_'+c.id,today,()=>holidayGreet(c.id,hol));
   });
   S.calendar.forEach(e=>{if(e.date===today&&e.contactId&&F[e.id]!==today){const c=getC(e.contactId);if(c&&!c.blocked)calendarDeliver(e.id,today,()=>remindEvent(e.contactId,e));}});
-  if(S.couple&&S.couple.cid){const c=getC(S.couple.cid);if(c&&!c.blocked){const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today)calendarDeliver('anniv_'+i,today,()=>remindEvent(S.couple.cid,{date:today,title:'你们的纪念日「'+a.title+'」',type:'event'}));});}}
+  if(coupleCid){const c=getC(coupleCid);if(c&&!c.blocked){if(hol&&F['gift_hol_'+coupleCid]!==today)calendarDeliver('gift_hol_'+coupleCid,today,()=>occasionGift(coupleCid,hol,today));const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today)calendarDeliver('anniv_'+i,today,()=>occasionGift(coupleCid,'你们的纪念日「'+a.title+'」',today));});}}
   // 恋人每天在心情表里主动记一条（下午后、且今天还没记）
   if(!wechatNaturalOn()&&S.couple&&S.couple.cid&&h>=14&&F['mood_'+S.couple.cid]!==today&&!(S.mood||[]).some(m=>m.date===today&&m.who===S.couple.cid))calendarDeliver('mood_'+S.couple.cid,today,()=>recordTaMood(S.couple.cid));}
 setInterval(checkCalendar,60000);setTimeout(checkCalendar,4000);
@@ -4149,6 +4164,7 @@ async function holidayGreet(id,hol){if(wechatNaturalOn()||offlineFocusActive())r
   if(offlineFocusActive())return false;
   applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=moodInnerMonologue(c,honestMoodText(c,_mo[1]));return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;lineToMsgs(l,c).forEach(mm=>{if(!mm)return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);sent++;});});if(!sent)return false;save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();return true;
 }catch(e){return false;}}
+function occasionGift(id,occasion,date){if(offlineFocusActive())return Promise.resolve(false);const c=getC(id);if(!c||c.blocked)return Promise.resolve(false);return new Promise(resolve=>{let settled=false;const done=ok=>{if(settled)return;settled=true;resolve(!!ok);};const note='[系统：今天是'+date+'，也是'+occasion+'。这是已经登记的重要日期，不能忘记。请结合你的人设、你们的关系阶段、最近聊天和对方喜好，自己决定这次送花、玩偶还是订婚戒指；三类中必须且只能选一类，不能同时送多件。戒指只在关系和承诺程度合适时选择，不合适就选花或玩偶。自然说一两句话，并单独输出一行：[送礼|一束鲜花|0|你此刻最想对ta说的话]、[送礼|玩偶礼物|0|你此刻最想对ta说的话] 或 [送礼|订婚戒指|0|你此刻最想对ta说的话]。礼物的具体花材、玩偶品种或戒指款式由礼物系统受控随机确定；不要自己编造另一个具体款式，也不要提系统或规则。]';const queued=scheduleReply(id,note,done);if(!queued)done(false);});}
 async function remindEvent(id,e){if(offlineFocusActive())return false;const c=getC(id);try{let sent=0;
   const content=await chatAPI([{role:'system',content:buildSystem(c,{natural:wechatNaturalOn(),query:e.title||''})},{role:'user',content:'[系统：今天是'+e.date+'，'+S.me.name+'的日程「'+e.title+'」'+(e.type==='period'?'（姨妈期）':'')+'。这是'+S.me.name+'明确设置由你提醒的日程；请按你本人的方式提醒ta，不规定你的情绪或固定措辞。]'}]);
   if(offlineFocusActive())return false;
@@ -8480,8 +8496,9 @@ function buildPart(c,m,me){
   if(m.type==='spycard')return `<div class="card"><div class="cpay" style="background:#5b6b9c"><div class="big">📱</div><div><div class="t1">小手机查看权限</div><div class="t2">已授权随时查看我的手机</div></div></div><div class="cfoot">权限卡片</div></div>`;
   if(m.type==='ticket'&&m.trip)return tvTicketCardHTML(m.trip,getC(m.trip.cid));
   if(m.type==='dice')return `<div style="font-size:46px;line-height:1">${['','⚀','⚁','⚂','⚃','⚄','⚅'][m.value]||'🎲'}<span style="font-size:15px;color:#999;margin-left:6px">${m.value}点</span></div>`;
-  if(m.type==='gift'){const pend=(m.from==='ta'&&!m.received&&!m.declined&&!m.shipping);
+  if(m.type==='gift'){const effect=m.from==='ta'&&giftEffectKind(m.name),pend=(m.from==='ta'&&!m.received&&!m.declined&&!m.shipping&&!effect);
     const status=m.shipping?'已寄出 · 明日送达信箱':m.declined?(m.from==='ta'?'已拒收':'对方拒收 · 已退回'):m.received?(m.from==='ta'?'已领取':'对方已收下'):(m.from==='ta'?'等待领取':'待对方收下'),price=(+m.price||0)>0?'¥'+(+m.price).toFixed(2):'专属赠礼';
+    if(effect){const color=m.giftRecipe&&m.giftRecipe.boxColor||giftBoxColor(m.id);return `<div class="giftcard giftcard-effect giftcard-simple" role="button" tabindex="0" aria-label="打开${esc(m.name)}礼物特效" onclick="event.stopPropagation();giftMessageOpen('${m.id}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();giftMessageOpen('${m.id}',this)}">${giftBoxCardArt(color)}<div class="gift-simple-copy"><strong>${esc(m.name)}</strong><small>${giftBoxEnglish(effect)}</small></div></div>`;}
     return `<div class="giftcard"><div class="giftmain"><div class="giftline">${svgIc('gift',30,'#d7d7dc',1.35)}</div><div class="giftcopy"><div class="gifteyebrow">PRIVATE GIFT</div><div class="giftname">${esc(m.name)}</div><div class="giftmeta">${price}　·　${status}</div></div></div><div class="giftfoot"><span>${m.shop?esc(m.shop):'私人赠礼'}</span><span>GIFT DELIVERY</span></div></div>${pend?`<div style="display:flex;gap:7px;margin-top:6px"><button class="minibtn" style="background:#e7e7ea;color:#1c1c1f;border:0" onclick="event.stopPropagation();receiveGift('${m.id}')">领取</button><button class="minibtn" style="background:#25262a;color:#aaa;border:1px solid #3b3c41" onclick="event.stopPropagation();rejectGift('${m.id}')">拒收</button></div>`:''}`;}
   if(m.type==='food'){const pend=(m.from==='ta'&&!m.received&&!m.declined&&(m.arrived||!m.deliverAt));const delivering=(m.from==='me'&&m.received&&m.deliverAt&&!m.delivered)||(m.from==='ta'&&m.deliverAt&&!m.arrived&&!m.received&&!m.declined);
     const t2=m.declined?'已拒收·已退款':delivering?'配送中…约15分钟':m.received?(m.from==='me'?'已送达·ta吃上了':'已签收'):(m.from==='ta'?'已送达·点击签收':'¥'+(+m.price).toFixed(2)+'·等ta收');
@@ -9523,8 +9540,8 @@ function lineToMsg(line,cch){
   const vr=line.match(/^[\[【]\s*要求(报备|定位|照片)\s*(?:[|｜]\s*([^\]】]*))?[\]】]$/);if(vr)return suspicionRequestMessage(cch,{报备:'report',定位:'location',照片:'photo'}[vr[1]],vr[2]||'');
   const dm=line.match(/^\[骰子(?:\|([1-6]))?\]$/);
   if(dm)return {role:'assistant',type:'dice',value:dm[1]?+dm[1]:1+Math.floor(Math.random()*6),id:uid()};
-  const gm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);
-  if(gm)return {role:'assistant',type:'gift',name:gm[1]||'礼物',price:+gm[2]||0,shop:'',from:'ta',received:false,id:uid()};
+  const gm=line.match(/^\[送礼\|([^|\]]*)(?:\|([^|\]]*))?(?:\|([^\]]*))?\]$/);
+  if(gm){const id=uid(),name=gm[1]||'礼物',time=Date.now();return {role:'assistant',type:'gift',name,price:+gm[2]||0,shop:'',from:'ta',received:false,giftRecipe:giftEffectRecipe(name,null,id,time,gm[3]||''),id,time};}
   const pay=parsePayCardLine(line);if(pay)return {role:'assistant',type:pay.type,amount:pay.amount,note:pay.note,received:false,id:uid()};
   const m=line.match(CARD_RE);if(!m)return {role:'assistant',type:'text',content:line};
   const f=m[2].split('|');
@@ -9663,7 +9680,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(wxLoginBlockReply(id,note))break;/* 回复生成到一半时若角色开始登录，也立刻停止继续发 */
       got=true;
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
-      mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
+      mm=line.match(/^\[送礼\|([^|\]]*)(?:\|([^|\]]*))?(?:\|([^\]]*))?\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0,mm[3]||'');continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[放映邀请\|([^\]]*)\]$/);if(mm){if(!cinemaRoleInvite(id,(mm[1]||'').trim()))toast('角色想邀请的作品不在视频盒或书架里');continue;}
       if(/^\[同意放映\]$/.test(line)){cinemaRoleAnswerInvite(id,true);continue;}
