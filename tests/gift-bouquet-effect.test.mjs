@@ -21,7 +21,15 @@ test('supported particle gifts open from received role gift cards',()=>{
   assert.match(app,/function giftBoxCardArt/,'formal role cards should render only the chosen minimal Moonlight box and text');
   assert.match(app,/pend=\(m\.from==='ta'.+&&!effect\)/,'particle gift cards must not show receive or reject preview controls');
   assert.match(app,/function giftMessageOpen/);
-  assert.match(app,/giftMessageBloom\(mid\);\},880\)/,'role gift cards must shake before opening');
+  assert.match(app,/playGiftBoxReveal\(\{giftName:found\.name/,'chat cards must open the dedicated full-screen gift-box stage');
+  assert.match(app,/onOpen:\(\)=>giftMessageBloom\(mid\)/,'the particle gift opens only after the box stage completes');
+  assert.match(effect,/function playGiftBoxReveal/);
+  assert.match(effect,/if\(step===0\)/,'the full-screen box must require a wake-up tap before the open tap');
+  assert.match(effect,/cue\.textContent='再次轻触，打开礼物'/);
+  assert.match(effect,/\.giftcard-simple\{width:210px;min-height:138px/,'the formal chat card should stay close to the compact original template');
+  assert.match(effect,/\.giftcard-effect\{[^}]*border:0!important/,'the chat gift card must not regain a pale outline');
+  assert.match(effect,/\.gift-box-stage\{[^}]*position:fixed;inset:0/,'opening the chat card must occupy the full screen');
+  assert.match(effect,/width:min\(92vw,360px\)/,'the full-screen stage should present a visibly large gift box');
   assert.match(effect,/@keyframes giftCardShake/);
   assert.doesNotMatch(effect,/content:'点击开启'/,'the formal role card should not add a pseudo-button');
 });
@@ -39,6 +47,18 @@ test('bouquet composition is constrained-random rather than one fixed drawing',(
   assert.match(effect,/anchors=\[/,'flowers should keep a bouquet silhouette while positions vary');
   assert.match(effect,/seededRandom\(seed\)/);
   assert.match(effect,/palette:palette\.name/);
+  assert.match(effect,/baseY=h\*\.59/,'the full bouquet and wrapping must sit above the bottom copy');
+  assert.match(effect,/alpha\*\.58/,'the wrapping should remain visibly distinct from the dark background');
+});
+
+test('natural short gift requests are recognized without the exact phrase one bouquet',()=>{
+  assert.match(app,/function giftRequestIntent/);
+  assert.match(app,/花花\|鲜花\|花束/);
+  assert.match(app,/想要\|想收\|我也要\|送我\|给我/);
+  assert.match(app,/function giftRequestPrompt/);
+  assert.match(app,/不需要说出完整的“一束鲜花”/);
+  assert.match(app,/if\(_giftIntent&&!\/\\\[送礼\\\|\/\.test\(content\)\)/,'a missed gift action must receive a final correction pass');
+  assert.match(app,/giftRequestFallback\(_giftIntent\)/,'a failed correction must still create the requested gift card');
 });
 
 test('the chosen flower, meaning and date persist as role-readable gift facts',()=>{
@@ -91,19 +111,18 @@ test('full-screen particle animation is mobile-bounded and cleans itself up',()=
 });
 
 test('the app, offline cache and gate-free preview all load the effect',()=>{
-  assert.match(html,/gift-effects\.js\?v=829/);
+  assert.match(html,/gift-effects\.js\?v=830/);
   assert.match(sw,/gift-effects\.js\?v='\+BUILD/);
-  assert.match(preview,/gift-effects\.js\?v=preview-1/);
+  assert.match(preview,/gift-effects\.js\?v=preview-2/);
   assert.match(preview,/class="gift-cover"/);
   assert.match(preview,/id="giftNameCn">一束鲜花</);
   assert.match(preview,/id="giftNameEn">A BOUQUET OF FLOWERS</);
   assert.match(preview,/class="box-variant variant-b"/,'the chosen Moonlight structure should be the only box geometry');
   assert.doesNotMatch(preview,/variant-[acd]/);
   for(const color of ['blue','pink','white','red'])assert.match(preview,new RegExp('data-box-choice="'+color+'"'));
-  assert.match(preview,/background:color-mix\(in srgb,var\(--line\) 84%,white\)/,'surrounding stars must follow the selected box color');
+  assert.match(effect,/GIFT_STAGE_COLORS=\{blue:'#8fbce8',pink:'#f2adc7',white:'#f2efe8',red:'#ef6b6f'\}/,'the full-screen gift box and stars must follow the saved color');
   assert.doesNotMatch(preview,/M142 113l-25 47/,'the lower bow tails must be removed to prevent clipping');
-  assert.match(preview,/@keyframes giftShake/);
-  assert.match(preview,/classList\.add\('opening'\)/);
+  assert.match(preview,/playGiftBoxReveal\(\{giftName:giftLabels\[currentGiftKind\]/,'the preview should demonstrate compact card, box wake-up, and final reveal');
   assert.match(effect,/english\.textContent=recipe\.enName/);
   assert.doesNotMatch(preview,/花材、配色|连续查看|看看蓝色花束|本地预览分支/);
 });

@@ -1,7 +1,7 @@
 (function(global){
 'use strict';
 
-const EFFECT_VERSION='gift-bouquet-preview-1';
+const EFFECT_VERSION='gift-bouquet-preview-2';
 const FLORAL_GIFT_RE=/(?:花束|鲜花|玫瑰|百合|郁金香|向日葵|满天星|雏菊|牡丹|芍药|铃兰|桔梗|康乃馨|蝴蝶兰|永生花|花礼|手捧花)/i;
 const PALETTES=[
   {name:'暮光玫瑰',petals:['#ff6f91','#ff9eb5','#ffd0d9','#fff1f3'],core:'#ffe7a7',leaf:['#275d4d','#43816c'],glow:'#ff6d9f',wrap:'#4a273d'},
@@ -30,7 +30,7 @@ const RING_RECIPES=[
   {id:'dewdrop-ring',style:'pear',name:'晨露梨形钻戒',enName:'DEWDROP PEAR RING',metal:'#eee2d5',gem:'#c8f0eb',words:'想把每一个普通日子，都和你过成值得纪念的以后'}
 ];
 const FLOWER_TYPES=['rose','daisy','peony'];
-let activeEffect=null;
+let activeEffect=null,activeBoxStage=null;
 const lastCollectibleId={teddy:'',ring:''};
 
 function giftEffectIsFloral(name){return FLORAL_GIFT_RE.test(String(name||''));}
@@ -75,9 +75,11 @@ function ensureStyles(){
   const style=document.createElement('style');
   style.id='northGiftEffectStyle';
   style.textContent=`
-.giftcard-effect{position:relative;cursor:pointer;border-color:rgba(230,206,185,.22);box-shadow:0 12px 30px rgba(20,14,22,.24),inset 0 0 28px rgba(255,220,194,.025);-webkit-tap-highlight-color:transparent}
-.giftcard-simple{width:236px;min-height:190px;padding:12px 16px 17px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:linear-gradient(180deg,rgba(22,22,27,.97),rgba(13,13,17,.98));border-radius:18px}.giftbox-mini{width:154px;height:128px;overflow:visible;filter:drop-shadow(0 0 9px currentColor)}.giftbox-mini path,.giftbox-mini rect{vector-effect:non-scaling-stroke}.gift-simple-copy{display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:-2px}.gift-simple-copy strong{font-family:"Songti SC","STSong","Times New Roman",serif;font-size:17px;font-weight:400;letter-spacing:4px;text-indent:4px;color:#f3ece7}.gift-simple-copy small{margin-top:5px;font-family:"Bodoni 72 Smallcaps","Didot","Times New Roman",serif;font-size:7px;font-weight:500;letter-spacing:2.4px;color:rgba(238,222,212,.52)}
-.giftcard-effect.opening{pointer-events:none;animation:giftCardGlow .88s ease both}.giftcard-effect.opening .giftbox-mini{animation:giftCardShake .88s cubic-bezier(.36,.07,.19,.97) both}
+.giftcard-effect{position:relative;cursor:pointer;border:0!important;box-shadow:0 12px 30px rgba(20,14,22,.24),inset 0 0 28px rgba(255,220,194,.025);-webkit-tap-highlight-color:transparent}
+.giftcard-simple{width:210px;min-height:138px;padding:8px 13px 11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;background:linear-gradient(180deg,rgba(22,22,27,.97),rgba(13,13,17,.98));border-radius:15px}.giftbox-mini{width:106px;height:84px;overflow:visible;filter:drop-shadow(0 0 7px currentColor)}.giftbox-mini path,.giftbox-mini rect{vector-effect:non-scaling-stroke}.gift-simple-copy{display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:-1px}.gift-simple-copy strong{font-family:"Songti SC","STSong","Times New Roman",serif;font-size:14px;font-weight:400;letter-spacing:3.4px;text-indent:3.4px;color:#f3ece7}.gift-simple-copy small{margin-top:4px;font-family:"Bodoni 72 Smallcaps","Didot","Times New Roman",serif;font-size:6px;font-weight:500;letter-spacing:2px;color:rgba(238,222,212,.52)}
+.giftcard-effect.pressed{animation:giftCardPress .2s ease both}
+.gift-box-stage{--gift-line:#8fbce8;position:fixed;inset:0;z-index:2147482990;overflow:hidden;display:grid;place-items:center;background:radial-gradient(circle at 50% 48%,color-mix(in srgb,var(--gift-line) 11%,transparent),transparent 34%),linear-gradient(180deg,#090a10,#07070c 72%);isolation:isolate;opacity:0;transition:opacity .28s ease;touch-action:manipulation}
+.gift-box-stage.show{opacity:1}.gift-box-stage.closing{opacity:0}.gift-box-stage-box{appearance:none;position:relative;width:min(92vw,360px);height:390px;border:0;padding:0;background:transparent;color:var(--gift-line);cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 0 22px color-mix(in srgb,var(--gift-line) 18%,transparent))}.gift-box-stage-box:focus-visible{outline:0;filter:drop-shadow(0 0 32px color-mix(in srgb,var(--gift-line) 34%,transparent))}.gift-box-stage-box:before{content:"";position:absolute;left:50%;top:43%;width:300px;height:300px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--gift-line) 13%,transparent),color-mix(in srgb,var(--gift-line) 3%,transparent) 45%,transparent 72%);animation:giftStageBreathe 3.2s ease-in-out infinite}.gift-box-stage-art{position:absolute;left:50%;top:43%;width:min(92vw,360px);height:min(92vw,360px);transform:translate(-50%,-50%);overflow:visible}.gift-box-stage-art .gift-stage-shape{fill:color-mix(in srgb,var(--gift-line) 2.5%,transparent);stroke:var(--gift-line);stroke-width:1.28;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px color-mix(in srgb,var(--gift-line) 42%,transparent))}.gift-box-stage-art .gift-stage-soft{fill:color-mix(in srgb,var(--gift-line) 4%,transparent);stroke:color-mix(in srgb,var(--gift-line) 78%,transparent);stroke-width:1.08;stroke-linecap:round;stroke-linejoin:round}.gift-box-stage-art .gift-stage-knot{fill:#111116;stroke:var(--gift-line);stroke-width:1.28;stroke-linecap:round;stroke-linejoin:round}.gift-box-stage-name{position:absolute;left:0;right:0;bottom:22px;display:flex;flex-direction:column;align-items:center;text-align:center;text-shadow:0 0 18px color-mix(in srgb,var(--gift-line) 28%,transparent)}.gift-box-stage-name strong{font-family:"Songti SC","STSong","Times New Roman",serif;font-size:24px;font-weight:400;letter-spacing:7px;text-indent:7px;color:color-mix(in srgb,var(--gift-line) 78%,white)}.gift-box-stage-name small{margin-top:7px;font-family:"Bodoni 72 Smallcaps","Didot","Times New Roman",serif;font-size:8px;font-weight:500;letter-spacing:3px;color:color-mix(in srgb,var(--gift-line) 66%,transparent)}.gift-box-stage-cue{position:absolute;left:0;right:0;bottom:max(28px,calc(env(safe-area-inset-bottom) + 18px));text-align:center;font-size:10px;letter-spacing:2.2px;color:rgba(255,255,255,.36);transition:color .25s ease}.gift-box-stage.ready .gift-box-stage-cue{color:color-mix(in srgb,var(--gift-line) 68%,white)}.gift-box-stage-box.shaking{pointer-events:none;animation:giftCardShake .88s cubic-bezier(.36,.07,.19,.97) both;filter:drop-shadow(0 0 34px color-mix(in srgb,var(--gift-line) 42%,transparent))}.gift-box-stage.opening .gift-box-stage-box{pointer-events:none;animation:giftStageOpen .7s cubic-bezier(.2,.82,.2,1) both}.gift-box-stage-close{position:absolute;right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));width:38px;height:38px;border:0;border-radius:50%;background:rgba(12,12,18,.46);color:rgba(255,255,255,.82);font:300 25px/34px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .gift-bouquet-overlay{position:fixed;inset:0;z-index:2147483000;overflow:hidden;background:radial-gradient(circle at 50% 52%,rgba(66,24,53,.42),transparent 38%),linear-gradient(180deg,#07080f,#0c0912);isolation:isolate;touch-action:manipulation;opacity:0;transition:opacity .28s ease}
 .gift-bouquet-overlay.show{opacity:1}
 .gift-bouquet-overlay.closing{opacity:0}
@@ -96,9 +98,24 @@ function ensureStyles(){
 .gift-collectible-overlay{background:radial-gradient(circle at 50% 45%,rgba(55,36,63,.46),transparent 38%),linear-gradient(180deg,#07080f,#0b0910)}
 @keyframes giftCardShake{0%,100%{transform:translateX(0) rotate(0)}16%{transform:translateX(-3px) rotate(-3deg)}32%{transform:translateX(3px) rotate(3deg)}48%{transform:translateX(-4px) rotate(-4deg)}64%{transform:translateX(4px) rotate(4deg)}82%{transform:translateX(-2px) rotate(-1.5deg)}}
 @keyframes giftCardGlow{50%{border-color:rgba(246,218,193,.72);box-shadow:0 0 30px rgba(232,198,165,.2),inset 0 0 22px rgba(255,226,206,.08)}}
-@media(prefers-reduced-motion:reduce){.gift-bouquet-overlay,.gift-bouquet-copy{transition-duration:.12s!important;transition-delay:0s!important}}
+@keyframes giftCardPress{50%{transform:scale(.975);filter:brightness(1.12)}}@keyframes giftStageBreathe{50%{opacity:.55;transform:translate(-50%,-50%) scale(1.08)}}@keyframes giftStageOpen{0%{transform:scale(1)}55%{transform:scale(.94)}100%{transform:scale(1.12);opacity:0;filter:brightness(1.65)}}
+@media(prefers-reduced-motion:reduce){.gift-bouquet-overlay,.gift-bouquet-copy,.gift-box-stage{transition-duration:.12s!important;transition-delay:0s!important}.gift-box-stage-box:before{animation:none}.gift-box-stage-box.shaking,.gift-box-stage.opening .gift-box-stage-box{animation-duration:.12s!important}}
 `;
   document.head.appendChild(style);
+}
+
+const GIFT_STAGE_COLORS={blue:'#8fbce8',pink:'#f2adc7',white:'#f2efe8',red:'#ef6b6f'};
+function playGiftBoxReveal(options){
+  options=options||{};ensureStyles();if(activeBoxStage)activeBoxStage.stop(true);if(activeEffect)activeEffect.stop(true);
+  const color=GIFT_STAGE_COLORS[options.boxColor]||GIFT_STAGE_COLORS.blue,overlay=document.createElement('div');overlay.className='gift-box-stage';overlay.style.setProperty('--gift-line',color);overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','拆开'+safeLabel(options.giftName,'礼物'));
+  const box=document.createElement('button');box.type='button';box.className='gift-box-stage-box';box.setAttribute('aria-label','轻触唤醒礼物');box.innerHTML='<svg class="gift-box-stage-art" viewBox="0 0 300 300" aria-hidden="true"><g fill="none"><rect class="gift-stage-shape" x="50" y="99" width="200" height="150" rx="16"></rect><path class="gift-stage-shape" d="M39 91h222v34H39zM134 91h32v158M50 171h200"></path><path class="gift-stage-soft" d="M144 83c-30-35-75-36-81-10-5 21 31 27 77 22M156 83c30-35 75-36 81-10 5 21-31 27-77 22"></path><path class="gift-stage-knot" d="M136 81q14-13 28 0l-4 22h-20z"></path><path class="gift-stage-soft" d="M27 55v21M17 65h21M273 61v17M264 69h18M271 219v14M264 226h15M29 212v13M23 218h13"></path></g></svg>';
+  const name=document.createElement('span');name.className='gift-box-stage-name';const title=document.createElement('strong');title.textContent=safeLabel(options.giftName,'礼物');const english=document.createElement('small');english.textContent=safeLabel(options.english,'PRIVATE GIFT');name.append(title,english);box.appendChild(name);
+  const cue=document.createElement('div');cue.className='gift-box-stage-cue';cue.textContent='轻触礼盒';const close=document.createElement('button');close.type='button';close.className='gift-box-stage-close';close.setAttribute('aria-label','关闭礼盒');close.textContent='×';overlay.append(box,cue,close);document.body.appendChild(overlay);
+  let step=0,busy=false,stopped=false,timer=0;
+  function stop(immediate){if(stopped)return;stopped=true;clearTimeout(timer);document.removeEventListener('keydown',onKey);if(immediate){overlay.remove();if(activeBoxStage&&activeBoxStage.overlay===overlay)activeBoxStage=null;return;}overlay.classList.add('closing');timer=setTimeout(()=>{overlay.remove();if(activeBoxStage&&activeBoxStage.overlay===overlay)activeBoxStage=null;},280);}
+  function tap(){if(busy||stopped)return;busy=true;if(step===0){box.classList.add('shaking');timer=setTimeout(()=>{box.classList.remove('shaking');overlay.classList.add('ready');cue.textContent='再次轻触，打开礼物';box.setAttribute('aria-label','再次轻触，打开礼物');step=1;busy=false;},880);return;}overlay.classList.add('opening');timer=setTimeout(()=>{const open=typeof options.onOpen==='function'?options.onOpen:null;stop(true);if(open)open();},700);}
+  function onKey(e){if(e.key==='Escape')stop(false);}
+  box.addEventListener('click',tap);close.addEventListener('click',()=>stop(false));document.addEventListener('keydown',onKey);requestAnimationFrame(()=>overlay.classList.add('show'));activeBoxStage={overlay,box,stop};return activeBoxStage;
 }
 
 function edgeStart(rng,w,h){
@@ -140,7 +157,7 @@ function addLeaf(list,rng,w,h,cx,cy,angle,len,width,colors){
 }
 function buildBouquet(rng,w,h,palette,reduced){
   const particles=[],blossoms=[],petals=[];
-  const cx=w*.5,baseY=h*.685,scale=Math.min(w/390,h/760,1.28),bouquetW=Math.min(w*.82,430)*scale;
+  const cx=w*.5,baseY=h*.59,scale=Math.min(w/390,h/760,1.28),bouquetW=Math.min(w*.82,430)*scale;
   const anchors=[
     [0,-.39],[-.2,-.32],[.2,-.32],[-.39,-.19],[.39,-.19],[-.08,-.18],[.12,-.13],[-.28,-.02],[.29,-.01],[0,.03],[-.14,.13],[.16,.14]
   ];
@@ -185,7 +202,7 @@ function drawBouquetBase(ctx,bouquet,alpha){
   const x=bouquet.cx,y=bouquet.baseY,w=bouquet.bouquetW;
   ctx.save();ctx.globalCompositeOperation='source-over';ctx.lineCap='round';
   for(const b of bouquet.blossoms){ctx.strokeStyle=rgba(pick(seededRandom(b.x+'-'+b.y),bouquet.palette.leaf),alpha*.32);ctx.lineWidth=1.15*bouquet.scale;ctx.beginPath();ctx.moveTo(x,y+51*bouquet.scale);ctx.quadraticCurveTo(mix(x,b.x,.46),mix(y,b.y,.48),b.x,b.y);ctx.stroke();}
-  const wrap=ctx.createLinearGradient(x-w*.24,y,x+w*.08,y+w*.33);wrap.addColorStop(0,rgba(bouquet.palette.petals[2],alpha*.14));wrap.addColorStop(.42,rgba(bouquet.palette.wrap,alpha*.44));wrap.addColorStop(1,rgba(bouquet.palette.petals[0],alpha*.13));ctx.fillStyle=wrap;ctx.strokeStyle=rgba(bouquet.palette.petals[2],alpha*.22);ctx.lineWidth=1;
+  const wrap=ctx.createLinearGradient(x-w*.24,y,x+w*.08,y+w*.33);wrap.addColorStop(0,rgba(bouquet.palette.petals[2],alpha*.22));wrap.addColorStop(.42,rgba(bouquet.palette.wrap,alpha*.58));wrap.addColorStop(1,rgba(bouquet.palette.petals[0],alpha*.2));ctx.fillStyle=wrap;ctx.strokeStyle=rgba(bouquet.palette.petals[2],alpha*.4);ctx.lineWidth=1.15;
   ctx.beginPath();ctx.moveTo(x-w*.23,y+w*.03);ctx.quadraticCurveTo(x-w*.13,y+w*.22,x-w*.055,y+w*.31);ctx.lineTo(x+w*.055,y+w*.31);ctx.quadraticCurveTo(x+w*.14,y+w*.21,x+w*.23,y+w*.03);ctx.quadraticCurveTo(x,y+w*.09,x-w*.23,y+w*.03);ctx.closePath();ctx.fill();ctx.stroke();
   ctx.strokeStyle=rgba(bouquet.palette.petals[3],alpha*.18);ctx.beginPath();ctx.moveTo(x-w*.2,y+w*.055);ctx.lineTo(x-w*.045,y+w*.29);ctx.moveTo(x+w*.2,y+w*.055);ctx.lineTo(x+w*.045,y+w*.29);ctx.stroke();ctx.restore();
 }
@@ -338,6 +355,7 @@ global.giftEffectIsFloral=giftEffectIsFloral;
 global.playBouquetGiftEffect=playBouquetGiftEffect;
 global.playTeddyGiftEffect=options=>playCollectibleGiftEffect('teddy',options);
 global.playRingGiftEffect=options=>playCollectibleGiftEffect('ring',options);
+global.playGiftBoxReveal=playGiftBoxReveal;
 global.stopBouquetGiftEffect=stopBouquetGiftEffect;
-global.NorthGiftEffects={version:EFFECT_VERSION,isFloral:giftEffectIsFloral,createBouquetRecipe,createTeddyRecipe:options=>createCollectibleRecipe('teddy',options),createRingRecipe:options=>createCollectibleRecipe('ring',options),play:playBouquetGiftEffect,playTeddy:global.playTeddyGiftEffect,playRing:global.playRingGiftEffect,stop:stopBouquetGiftEffect,palettes:PALETTES.map(p=>p.name),flowers:FLOWER_RECIPES.map(x=>({id:x.id,name:x.name,meaning:x.meaning,palette:x.palette}))};
+global.NorthGiftEffects={version:EFFECT_VERSION,isFloral:giftEffectIsFloral,createBouquetRecipe,createTeddyRecipe:options=>createCollectibleRecipe('teddy',options),createRingRecipe:options=>createCollectibleRecipe('ring',options),play:playBouquetGiftEffect,playTeddy:global.playTeddyGiftEffect,playRing:global.playRingGiftEffect,playBox:playGiftBoxReveal,stop:stopBouquetGiftEffect,palettes:PALETTES.map(p=>p.name),flowers:FLOWER_RECIPES.map(x=>({id:x.id,name:x.name,meaning:x.meaning,palette:x.palette}))};
 })(window);

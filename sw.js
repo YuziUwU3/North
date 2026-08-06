@@ -1,5 +1,5 @@
-const BUILD='829';
-const SHELL_CACHE='north-shell-v829';
+const BUILD='830';
+const SHELL_CACHE='north-shell-v830';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -17,8 +17,8 @@ const OPTIONAL_FILES=[
   './pay-assets/wechat-contact.jpg',
   './commerce-ui.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
-  './pet-game.js?v=829',
-  './pet-game.css?v=829',
+  './pet-game.js?v=830',
+  './pet-game.css?v=830',
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',
