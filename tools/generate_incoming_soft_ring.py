@@ -36,9 +36,9 @@ class Chime:
 
 CHIMES = (
     Chime(
-        "incoming-wechat-ding-v1.wav",
+        "incoming-wechat-ding-low-v1.wav",
         first_hz=880.00,
-        second_hz=880.00,
+        second_hz=659.25,
         second_delay=0.45,
         repeat_every=0.95,
         decay=5.2,

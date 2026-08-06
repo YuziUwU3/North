@@ -1,5 +1,5 @@
-const BUILD='827';
-const SHELL_CACHE='north-shell-v827';
+const BUILD='828';
+const SHELL_CACHE='north-shell-v828';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -8,7 +8,7 @@ const CORE_FILES=[
 ];
 const OPTIONAL_FILES=[
   './icon.png',
-  './assets/incoming-wechat-ding-v1.wav',
+  './assets/incoming-wechat-ding-low-v1.wav',
   './assets/incoming-morning-chime-v1.wav',
   './assets/incoming-warm-night-v1.wav',
   './assets/pet-room-v1.webp',
@@ -16,8 +16,8 @@ const OPTIONAL_FILES=[
   './pay-assets/wechat-receive.jpg',
   './pay-assets/wechat-contact.jpg',
   './commerce-ui.js?v='+BUILD,
-  './pet-game.js?v=827',
-  './pet-game.css?v=827',
+  './pet-game.js?v=828',
+  './pet-game.css?v=828',
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',

@@ -8,9 +8,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-const ringtonePath = path.join(root, 'assets', 'incoming-wechat-ding-v1.wav');
+const ringtonePath = path.join(root, 'assets', 'incoming-wechat-ding-low-v1.wav');
 const ringtoneChoices = [
-  ['soft', 'incoming-wechat-ding-v1.wav'],
+  ['soft', 'incoming-wechat-ding-low-v1.wav'],
   ['morning', 'incoming-morning-chime-v1.wav'],
   ['night', 'incoming-warm-night-v1.wav'],
 ];
@@ -72,7 +72,7 @@ test('default bundled ringtone is an eight-second quiet seamless short chime', (
   assert.ok(activeWindows >= 60, `short chime must repeat throughout the loop, got ${activeWindows} active windows`);
   assert.ok(longestQuietRun <= 8, `continuous repeat must not leave a long one-second gap, got ${longestQuietRun * 0.05}s`);
   assert.ok(Math.abs(samples[0] - samples[frames - 1]) / 32767 < 0.012, 'loop seam must stay below an audible click');
-  assert.match(serviceWorker, /\.\/assets\/incoming-wechat-ding-v1\.wav/,'the ringtone must be available offline');
+  assert.match(serviceWorker, /\.\/assets\/incoming-wechat-ding-low-v1\.wav/,'the ringtone must be available offline');
 });
 
 test('all three selectable ringtones are bundled, distinct short chimes, and offline-ready', () => {
@@ -111,7 +111,7 @@ test('all three selectable ringtones are bundled, distinct short chimes, and off
     const correlation = Math.abs(dot / Math.sqrt(aa * bb));
     assert.ok(correlation < 0.25, `${decoded[i][0]} and ${decoded[j][0]} must sound measurably distinct (${correlation})`);
   }
-  assert.match(source, /label:'微信消息轻响'/);
+  assert.match(source, /label:'微信高低轻响'/);
   assert.match(source, /label:'清脆双响'/);
   assert.match(source, /label:'木质叮咚'/);
   assert.match(source, /点一种会立即试听并自动保存/);
@@ -137,6 +137,20 @@ test('default ringtone repeats the same soft decay used by the WeChat message di
   }
   const correlation = dot / Math.sqrt(actualEnergy * expectedEnergy);
   assert.ok(correlation > 0.999, `incoming ding must preserve the message-tone envelope (${correlation})`);
+  const secondStart = Math.round((0.18 + 0.45) * rate);
+  let lowDot = 0, lowActualEnergy = 0, lowExpectedEnergy = 0;
+  for (let i = 0; i < count; i++) {
+    const elapsed = i / rate;
+    const attack = Math.min(1, elapsed / 0.018);
+    const release = Math.exp(-5.2 * Math.max(0, elapsed - 0.018) / (0.28 - 0.018));
+    const expected = attack * release * Math.sin(2 * Math.PI * 659.25 * elapsed);
+    const actual = wav.readInt16LE(44 + (secondStart + i) * 2) / 32767;
+    lowDot += actual * expected;
+    lowActualEnergy += actual * actual;
+    lowExpectedEnergy += expected * expected;
+  }
+  const lowCorrelation = lowDot / Math.sqrt(lowActualEnergy * lowExpectedEnergy);
+  assert.ok(lowCorrelation > 0.999, `second ding must keep the same envelope at the lower pitch (${lowCorrelation})`);
   assert.match(source, /playMediaTone\(\[\[880,\.28\]\],\{key:'message-ding-soft-v3'/);
 });
 
@@ -163,7 +177,7 @@ test('incoming calls use an independent audio element and fall back to the same 
     uiToneElement: () => shared,
     clearInterval() {}, clearTimeout() {},
   });
-  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-v1.wav'},{key:'morning',url:'assets/incoming-morning-chime-v1.wav'},{key:'night',url:'assets/incoming-warm-night-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.api={start:ringStart,stop:ringStop,ring:()=>_ring};`, ctx);
+  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-low-v1.wav'},{key:'morning',url:'assets/incoming-morning-chime-v1.wav'},{key:'night',url:'assets/incoming-warm-night-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.api={start:ringStart,stop:ringStop,ring:()=>_ring};`, ctx);
 
   ctx.api.start();
   const primary = created[0];
@@ -199,7 +213,7 @@ test('sound-off calls vibrate without creating or playing a ringtone element', (
     uiToneElement() { sharedRequested++; return null; },
     clearInterval() {}, clearTimeout() {},
   });
-  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.start=ringStart;`, ctx);
+  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-low-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.start=ringStart;`, ctx);
   ctx.start();
   assert.equal(audioCreated, 0);
   assert.equal(sharedRequested, 0);
@@ -209,7 +223,7 @@ test('the old sustained pure-tone ringtone cannot return through either route', 
   const ring = functionSource('ringStart') + functionSource('ringAssetStart');
   assert.doesNotMatch(ring, /playMediaTone|webToneSequence|createOscillator/);
   assert.doesNotMatch(ring, /880|1174|520|660|repeat=|setInterval/);
-  assert.match(source, /incoming-wechat-ding-v1\.wav/);
+  assert.match(source, /incoming-wechat-ding-low-v1\.wav/);
   assert.match(source, /incoming-morning-chime-v1\.wav/);
   assert.match(source, /incoming-warm-night-v1\.wav/);
 });
