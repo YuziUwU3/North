@@ -28,6 +28,6 @@ assert.match(refund, /return \{ refunded: 0, balance:/);
 assert.match(refund, /status: "done",[\s\S]*request_id: ledgerId/);
 
 assert.match(finish, /if \(ok\) query = query\.eq\("status", "pending"\)/);
-assert.equal((backend.match(/charge-settlement-conflict/g) || []).length, 4);
+assert.equal((backend.match(/charge-settlement-conflict/g) || []).length, 3);
 
 console.log("AI billing consistency tests passed");

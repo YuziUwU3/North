@@ -123,7 +123,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v820 · 锁定目标完整性修复'/);
+  assert.match(app, /const APP_VER='v822 · 伴生命令回执与内置图片下线'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -329,19 +329,27 @@ test('a mismatched limit association can never substitute a virtual internal app
 
 test('pending and conflicting device commands never masquerade as a confirmed red lock card', () => {
   const context = vm.createContext({});
-  vm.runInContext(`${functionSource('companionLastExternalCommand')}\n${functionSource('companionExternalCommandState')}\nthis.state=companionExternalCommandState;`, context);
+  vm.runInContext(`const COMPANION_SNAPSHOT_FRESH_MS=120000,COMPANION_COMMAND_PENDING_MS=900000;${functionSource('companionLastExternalCommand')}\n${functionSource('companionSnapshotIsFresh')}\n${functionSource('companionExternalCommandState')}\nthis.state=companionExternalCommandState;`, context);
   const appRow = { id: 'ios.trip', name: '携程旅行', locked: true };
   const pending = { commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'pending', ts: 2 }] };
-  assert.equal(context.state(pending, appRow).kind, 'pendingUnlock');
+  assert.equal(context.state(pending, appRow, 4).kind, 'pendingUnlock');
   const awaitingSnapshot = { lastSync: 2, commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'completed', ts: 3 }] };
-  assert.equal(context.state(awaitingSnapshot, appRow).kind, 'awaitSnapshot');
+  assert.equal(context.state(awaitingSnapshot, appRow, 4).kind, 'awaitSnapshot');
   const conflict = { lastSync: 4, commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'completed', ts: 3 }] };
-  assert.equal(context.state(conflict, appRow).kind, 'conflict');
+  assert.equal(context.state(conflict, appRow, 4).kind, 'conflict');
+  assert.equal(context.state({ lastSync: 4, commands: [] }, appRow, 120005).kind, 'stale');
+  assert.equal(context.state({ commands: [{ action: 'lock', externalAppId: 'ios.trip', status: 'pending', ts: 2 }] }, appRow, 900003).kind, 'expired');
   const decorate = functionSource('companionDecoratePage');
   assert.match(decorate, /confirmedLocked=!!app\.locked&&\(commandState\.kind==='snapshot'\|\|commandState\.kind==='confirmed'\)/);
   assert.match(decorate, /companion-app-pending/);
   assert.doesNotMatch(functionSource('companionApplyServerPayload'), /snapshot\.generatedAt\)\|\|Date\.now\(\)/);
   assert.match(app, /网页接受命令不等于设备执行成功/);
+});
+
+test('the companion page refreshes immediately after returning to the foreground', () => {
+  assert.match(app, /visibilitychange[\s\S]{0,900}companionPollSnapshot\(true\)/);
+  assert.match(app, /pageshow[\s\S]{0,700}companionPollSnapshot\(true\)/);
+  assert.match(functionSource('companionPollSnapshot'), /document\.hidden/);
 });
 
 test('external name matching prefers the longest overlapping app name', () => {
@@ -438,7 +446,7 @@ test('companion device page has advanced locked-state cards without changing com
   assert.match(decorate, /companion-app-locked/);
   assert.match(decorate, /companion-usage-meter/);
   assert.match(decorate, /last\.actor/);
-  assert.match(phone, /v820 锁定目标完整性修复/);
+  assert.match(phone, /v822 伴生命令回执与内置图片下线/);
   assert.match(phone, /#coupage3/);
   assert.match(phone, /\.companion-app-locked/);
   assert.match(phone, /linear-gradient\(90deg,#ac2848,#ff6377\)/);

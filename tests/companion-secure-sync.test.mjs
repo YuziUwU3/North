@@ -15,6 +15,10 @@ const retentionSql = readFileSync(
   join(root, 'supabase', 'migrations', '202608050002_phone_companion_three_day_audit.sql'),
   'utf8',
 );
+const lifecycleSql = readFileSync(
+  join(root, 'supabase', 'migrations', '202608060001_phone_companion_command_lifecycle.sql'),
+  'utf8',
+);
 
 function functionSource(name) {
   const start = app.indexOf(`function ${name}(`);
@@ -78,4 +82,19 @@ test('a bound external action is enqueued only once', () => {
 test('server companion command history is reduced to three days', () => {
   assert.match(retentionSql, /created_at < now\(\) - interval '3 days'/i);
   assert.doesNotMatch(retentionSql, /30 days/i);
+});
+
+test('new lock state supersedes older pending lock and unlock commands for the same stable id', () => {
+  assert.match(lifecycleSql, /v_action in \('lock', 'unlock'\)/i);
+  assert.match(lifecycleSql, /command->>'externalAppId'/i);
+  assert.match(lifecycleSql, /'code', 'superseded'/i);
+  assert.match(lifecycleSql, /row_number\(\) over/i);
+});
+
+test('pending device commands expire safely and both pull paths apply the lifecycle cleanup', () => {
+  assert.match(lifecycleSql, /interval '15 minutes'/i);
+  assert.match(lifecycleSql, /'code', 'expired'/i);
+  assert.equal((lifecycleSql.match(/perform public\.phone_companion_expire_commands\(p_target\)/gi) || []).length, 2);
+  assert.match(lifecycleSql, /create or replace function public\.phone_companion_pull_snapshot[\s\S]+volatile/i);
+  assert.match(lifecycleSql, /create or replace function public\.phone_companion_pull_commands[\s\S]+volatile/i);
 });

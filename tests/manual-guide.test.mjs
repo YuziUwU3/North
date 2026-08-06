@@ -12,7 +12,7 @@ assert.match(app, /不会自动搬走AI用户ID和余额/);
 assert.match(app, /上传付款截图/);
 assert.match(app, /等待人工核对/);
 assert.match(app, /内置语音怎么用/);
-assert.match(app, /内置图片怎么用/);
+assert.doesNotMatch(app, /内置图片怎么用|启用图片生成/);
 assert.match(app, /设置 → AI真图/);
 assert.match(app, /\/images\/generations/);
 assert.match(app, /Failed to fetch \/ Network \/ CORS/);
