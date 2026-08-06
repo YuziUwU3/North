@@ -23,7 +23,9 @@ begin
   if not public.phone_companion_device_ok(v_target, p_device_secret) then
     return false;
   end if;
-  if v_token !~ '^[0-9a-f]{32,256}$' then
+  if length(v_token) < 32
+     or length(v_token) > 256
+     or v_token !~ '^[0-9a-f]+$' then
     raise exception 'invalid-apns-device-token';
   end if;
   if v_environment not in ('sandbox', 'production') then

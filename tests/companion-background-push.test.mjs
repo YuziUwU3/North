@@ -22,6 +22,9 @@ const nativeSync = fs.readFileSync(path.join(nativeDir, 'CompanionSyncView.swift
 test('APNs token registration stays device-secret protected', () => {
   assert.match(migration, /phone_companion_device_ok\(v_target, p_device_secret\)/);
   assert.match(migration, /invalid-apns-device-token/);
+  assert.match(migration, /length\(v_token\) > 256/);
+  assert.match(migration, /v_token !~ '\^\[0-9a-f\]\+\$'/);
+  assert.doesNotMatch(migration, /\{32,256\}/);
   assert.match(migration, /grant execute[\s\S]*phone_companion_register_push_token[\s\S]*anon, authenticated/);
   assert.match(migration, /phone_companion_get_push_context[\s\S]*to service_role/);
 });
@@ -37,8 +40,12 @@ test('edge wake validates the queued command and keeps APNs credentials in secre
 test('native app registers APNs and immediately syncs on a background wake', () => {
   assert.match(nativeApp, /registerForRemoteNotifications/);
   assert.match(nativeApp, /didReceiveRemoteNotification/);
-  assert.match(nativeApp, /wakeSequence/);
+  assert.match(nativeApp, /setBackgroundWakeHandler/);
+  assert.match(nativeApp, /backgroundWakeHandler/);
+  assert.match(nativeApp, /pendingWakeCount/);
   assert.match(nativeSync, /phone_companion_register_push_token/);
-  assert.match(nativeSync, /onChange\(of: pushCoordinator\.wakeSequence\)/);
-  assert.match(nativeSync, /finishBackgroundWake\(\.newData\)/);
+  assert.match(nativeSync, /pushCoordinator\.setBackgroundWakeHandler/);
+  assert.match(nativeSync, /didSynchronize \? \.newData : \.failed/);
+  assert.doesNotMatch(nativeSync, /onChange\(of: pushCoordinator\.wakeSequence\)/);
+  assert.match(nativeSync, /for _ in 0\.\.<80 where syncInFlight/);
 });
