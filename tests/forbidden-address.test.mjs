@@ -26,7 +26,9 @@ const context = vm.createContext({
     worldbook: [{ enabled: true, contacts: ["c1"], content: "世界书：不允许叫丫头两个字，可以叫宝贝。" }],
   },
   memoryList() { return ["我不喜欢被叫「笨蛋」"]; },
+  memoryScopeKey() { return "main"; },
   memoryText(x) { return x; },
+  summaryList(c) { return c.summaries || []; },
   summaryCleanText(c, t) { return t || ""; },
 });
 vm.runInContext(app.slice(start, end), context);

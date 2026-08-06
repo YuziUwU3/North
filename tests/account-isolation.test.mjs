@@ -6,6 +6,13 @@ const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
 assert.match(source, /function accountMessageKey\(cid,aid\)/);
 assert.match(source, /function msgsForAccount\(id,aid\)/);
+assert.match(source, /function summaryList\(c,aid\)/);
+assert.match(source, /function summaryState\(c,aid\)/);
+assert.match(source, /function maybeSummarize\(id,aid\)[\s\S]*?msgsForAccount\(id,aid\)[\s\S]*?summaryList\(c,aid\)[\s\S]*?summaryState\(c,aid\)/);
+assert.match(source, /addSummary\(c,trimSentence\(rt\.text,180\),rt\.imp,'',aid\)/);
+assert.match(source, /summarizeCall\(id,kindTxt,sess,aid\)[\s\S]*?msgsForAccount\(id,aid\)/);
+assert.match(source, /_accountSummaries/);
+assert.match(source, /_accountSummaryState/);
 assert.match(source, /# 当前联系人的独立身份（最高优先级）/);
 assert.match(source, /严禁猜测、暗示或声称ta是任何其他联系人换号、切换身份、同一个人/);
 assert.doesNotMatch(source, /# 当前聊天身份（小号与大号严格分开）/);
@@ -15,6 +22,8 @@ assert.match(source, /if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=p
 assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
 assert.doesNotMatch(source, /if\(aid==='main'\)setTimeout\(triggerAltReports/);
 assert.match(source, /# 姓名与称呼边界（重要）[\s\S]*?忆北的小手机[\s\S]*?应用\/设备名称/);
+assert.doesNotMatch(source, /if\(scope==='main'\)\(c\.summaries\|\|\[\]\)\.forEach/);
+assert.doesNotMatch(source, /if\(!c\|\|!isMain\(\)\)return '';const now=Date\.now\(\),items=\[\]/);
 
 assert.match(source, /function accountDeleteTap\(ev,id\)/);
 assert.match(source, /aria-label="删除小号"/);
@@ -83,5 +92,117 @@ active = "main";
 sandbox.resume("main");
 timers.shift()();
 assert.deepEqual(calls[1], { id: "role_2", note: "main follow-up", token: 0, aid: "main" });
+
+function extractFunction(name) {
+  const marker = `function ${name}(`;
+  let start = source.indexOf(marker);
+  assert.ok(start >= 0, `${name} must exist`);
+  if (source.slice(Math.max(0, start - 6), start) === "async ") start -= 6;
+  const brace = source.indexOf("{", start);
+  let depth = 0;
+  for (let i = brace; i < source.length; i++) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}" && --depth === 0) return source.slice(start, i + 1);
+  }
+  throw new Error(`unterminated ${name}`);
+}
+
+let summaryActive = "main";
+const summarySandbox = {
+  S: {
+    settings: { summaryRounds: 1, summaryModel: "main" },
+    me: {
+      active: "main",
+      name: "大号名",
+      accounts: [
+        { id: "main", name: "大号名", callName: "大号称呼" },
+        { id: "alt_1", name: "小号名" },
+      ],
+    },
+  },
+  actId: () => summaryActive,
+};
+vm.runInNewContext(
+  [
+    "memoryScopeKey",
+    "summaryAccountProfile",
+    "summaryUserLabel",
+    "summaryList",
+    "summaryState",
+    "summaryStateSave",
+  ]
+    .map(extractFunction)
+    .join("\n") +
+    ";globalThis.api={summaryList,summaryState,summaryStateSave,summaryUserLabel};",
+  summarySandbox,
+);
+
+const role = { callme: "大号专属昵称", summaries: [{ text: "大号记忆" }], _sumCount: 9, _summaryCursorV2: true };
+assert.equal(summarySandbox.api.summaryUserLabel(role, "main"), "大号专属昵称");
+assert.equal(summarySandbox.api.summaryUserLabel(role, "alt_1"), "小号名", "alt must not inherit the main-only nickname");
+assert.equal(summarySandbox.api.summaryList(role, "main").length, 1);
+assert.equal(summarySandbox.api.summaryList(role, "alt_1").length, 0);
+summarySandbox.api.summaryList(role, "alt_1").push({ text: "小号记忆" });
+assert.deepEqual(Array.from(summarySandbox.api.summaryList(role, "main"), x => x.text), ["大号记忆"]);
+assert.deepEqual(Array.from(summarySandbox.api.summaryList(role, "alt_1"), x => x.text), ["小号记忆"]);
+assert.equal(summarySandbox.api.summaryState(role, "main").count, 9);
+assert.equal(summarySandbox.api.summaryState(role, "alt_1").count, 0);
+summarySandbox.api.summaryStateSave(role, "alt_1", 17);
+assert.equal(summarySandbox.api.summaryState(role, "alt_1").count, 17);
+assert.equal(summarySandbox.api.summaryState(role, "main").count, 9, "alt summary cursor must not advance main");
+
+let resolveSummary;
+const asyncRole = { id: "role_async", name: "角色", summaries: [] };
+const asyncMessages = Array.from({ length: 10 }, (_, i) => ({
+  role: i % 2 ? "assistant" : "user",
+  type: "text",
+  content: `消息${i}`,
+}));
+const summaryWrites = [];
+const asyncSandbox = {
+  S: summarySandbox.S,
+  actId: () => summaryActive,
+  getC: () => asyncRole,
+  msgsForAccount: (id, aid) => {
+    assert.equal(id, "role_async");
+    assert.equal(aid, "alt_1");
+    return asyncMessages;
+  },
+  msgToText: m => m.content,
+  summaryCleanText: (c, text) => text,
+  pruneSummaries() {},
+  save() {},
+  chatAPI: () => new Promise(resolve => { resolveSummary = resolve; }),
+  rateAndText: raw => ({ imp: 3, text: raw }),
+  cleanReply: x => x,
+  trimSentence: x => x,
+  addSummary: (c, text, imp, prefix, aid) => summaryWrites.push({ c, text, imp, prefix, aid }),
+  perspRule: () => "",
+  IMP_INSTR: "",
+};
+vm.runInNewContext(
+  [
+    "memoryScopeKey",
+    "summaryAccountProfile",
+    "summaryUserLabel",
+    "summaryList",
+    "summaryState",
+    "summaryStateSave",
+    "maybeSummarize",
+  ]
+    .map(extractFunction)
+    .join("\n") +
+    ";globalThis.runSummary=maybeSummarize;globalThis.summaryStateApi=summaryState;",
+  asyncSandbox,
+);
+summaryActive = "alt_1";
+const pendingSummary = asyncSandbox.runSummary("role_async", "alt_1");
+summaryActive = "main";
+resolveSummary("小号独立总结");
+await pendingSummary;
+assert.equal(summaryWrites.length, 1);
+assert.equal(summaryWrites[0].aid, "alt_1", "async summary must remain bound to its originating account after a switch");
+assert.equal(asyncSandbox.summaryStateApi(asyncRole, "alt_1").count, 8);
+assert.equal(asyncSandbox.summaryStateApi(asyncRole, "main").count, 0);
 
 console.log("account isolation tests passed");
