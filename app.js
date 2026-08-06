@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='833'){
+if(window.__NORTH_SHELL_BUILD__!=='834'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v833 · 自然内心想法与电子宠物扩展';
+const APP_VER='v834 · 主动消息自主决策与防重复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=833';
+  const url='sw.js?v=834';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8382,7 +8382,7 @@ function roleServerPushProfile(c){let timezone='Asia/Shanghai';try{timezone=Intl
 async function roleServerPushSync(c,silent){if(!c||!c.proactive||!gateOK())return false;try{const ok=await companionRpc('phone_role_push_upsert_profile',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_profile:roleServerPushProfile(c)});if(!ok)throw new Error('真实 iPhone 尚未完成连接');if(!silent)toast(c.proactive.serverPush&&c.proactive.enabled?'服务器主动联系已开启':'服务器主动联系已关闭');return true;}catch(e){if(!silent)toast('服务器主动联系保存失败：'+e.message);return false;}}
 async function roleServerPushToggle(id){const c=getC(id);if(!c)return;if(!c.proactive.serverPush){const st=companionState();if(!st||!st.linked){toast('先在情侣空间连接真实 iPhone 伴生 App');return;}}c.proactive.serverPush=!c.proactive.serverPush;save();render();const ok=await roleServerPushSync(c,false);if(!ok){c.proactive.serverPush=false;save();render();}}
 let _roleServerPushPullBusy=false,_roleServerPushPullAt=0;
-async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||!S.couple||!isMain()||!force&&document.hidden)return false;const now=Date.now();if(!force&&now-_roleServerPushPullAt<45000)return false;_roleServerPushPullAt=now;_roleServerPushPullBusy=true;try{const rows=await companionRpc('phone_role_push_pull',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_limit:20});if(!Array.isArray(rows)||!rows.length)return true;const ack=[];let changed=false;for(const row of rows){if(!row||!row.id)continue;ack.push(row.id);const c=getC(row.roleId);if(!c||c.deleted)continue;const list=msgs(c.id);if(list.some(m=>m&&m._rolePushId===row.id))continue;const msg={role:'assistant',type:'text',content:String(row.body||'').slice(0,240),time:companionTime(row.createdAt)||Date.now(),id:uid(),_rolePushId:row.id,_serverProactive:true};if(!msg.content)continue;list.push(msg);changed=true;if(row.pushStatus!=='sent')notifyIncoming(c,msg);else if(cur().p!=='chat'||cur().id!==c.id){if(!_call)showMsgBanner(c,msg);playDing();}}
+async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||!S.couple||!isMain()||!force&&document.hidden)return false;const now=Date.now();if(!force&&now-_roleServerPushPullAt<45000)return false;_roleServerPushPullAt=now;_roleServerPushPullBusy=true;try{const rows=await companionRpc('phone_role_push_pull',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_limit:20});if(!Array.isArray(rows)||!rows.length)return true;const ack=[];let changed=false;for(const row of rows){if(!row||!row.id)continue;ack.push(row.id);const c=getC(row.roleId);if(!c||c.deleted)continue;const list=msgs(c.id);if(list.some(m=>m&&m._rolePushId===row.id))continue;const body=String(row.body||'').slice(0,240).trim();if(!body)continue;const bodyKey=replyDedupNorm(body),recentDuplicate=bodyKey&&list.some(m=>m&&m._serverProactive&&now-(m.time||0)<24*3600000&&replyDedupNorm(m.content||'')===bodyKey);if(recentDuplicate)continue;const msg={role:'assistant',type:'text',content:body,time:companionTime(row.createdAt)||Date.now(),id:uid(),_rolePushId:row.id,_serverProactive:true};list.push(msg);changed=true;if(row.pushStatus!=='sent')notifyIncoming(c,msg);else if(cur().p!=='chat'||cur().id!==c.id){if(!_call)showMsgBanner(c,msg);playDing();}}
     if(changed){save();if(cur().p==='chat'||cur().p==='home')render();}
     if(ack.length)await companionRpc('phone_role_push_ack',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_ids:ack});return true;
   }catch(_){return false;}finally{_roleServerPushPullBusy=false;}}
@@ -9634,6 +9634,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     if(initiativeNoteActive(note)&&!initiativeReplyFresh(c,note)){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
     if(_autonomyNote){if(wechatNaturalSilentDecision(content,note)){if(typingEl&&typingEl.isConnected)typingEl.remove();return initiativeNoteActive(note);}content=String(content||'').replace(/[\[【]\s*(?:保持安静|不说话)\s*[\]】]/g,'').trim();if(!content){if(typingEl&&typingEl.isConnected)typingEl.remove();return initiativeNoteActive(note);}}
+    if(initiativeNoteActive(note)&&initiativeRecentlyRepeated(id,content)){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
     if(_hlPlan)dialogueEmotionOnReply(c,content,_userText);
     content=routePhoneInspectionTags(content,c,_userText);
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
@@ -10540,6 +10541,9 @@ function initiativeNoteActive(note){return !!(note&&/这是一次【主动消息
 function initiativeConflictState(c,now){if(!c)return{active:false,cause:''};now=+now||Date.now();const e=dialogueEmotionSnapshot(c),activeThreads=e&&e.threads||[],emotional=!!(e&&e.intensity>=20&&/hurt|angry|jealous/.test(e.type||'')),cold=!!(c.coldUntil&&c.coldUntil>now),recent=msgs(c.id).filter(m=>m&&m.type!=='sys'&&now-(m.time||0)<45*60000).slice(-8).map(msgToText).join(' '),reconciled=!!(e&&!activeThreads.length&&e.repair>=85&&/warm|neutral/.test(e.type||'')),heated=!reconciled&&/(吵架|冷战|分手|闭嘴|滚开|烦死|讨厌你|你很烦|别理我|不想理你|别跟我说话|不想跟你说|你什么意思|给我说清楚|还在生气|跟你算账)/.test(recent);return{active:!!(activeThreads.length||emotional||cold||heated),cause:String(activeThreads.length?activeThreads[activeThreads.length-1].topic:e&&e.cause||c.emotionTailReason||'刚才的矛盾还没有说开').slice(0,100)};}
 function initiativeQueueNote(c,plan,note){const mark='【主动排队基线|'+(+lastUserTs(c.id)||0)+'|'+String(plan&&plan.kind||'')+'】';return String(note||'').replace(/\]\s*$/, '\n'+mark+']');}
 function initiativeReplyFresh(c,note){if(!initiativeNoteActive(note))return true;const m=String(note).match(/【主动排队基线\|(\d+)\|([^】]*)】/),queuedUser=m?+m[1]:0,kind=m&&m[2]||'',nowUser=+lastUserTs(c.id)||0;if(nowUser>queuedUser)return false;if(kind==='autonomy')return true;const conflict=initiativeConflictState(c);return kind==='conflict'?conflict.active:!conflict.active;}
+function initiativeVisibleText(content){return splitBubbles(content).map(line=>{line=String(line||'').trim();if(!line)return'';const voice=parseVoiceTagLine(line);if(voice)return voice.text||voice.trans||'';if(/^[\[【]/.test(line))return'';return cleanRolePunct(line);}).filter(Boolean).join(' ');}
+function replyLcsContainment(a,b){a=replyDedupNorm(a).slice(0,240);b=replyDedupNorm(b).slice(0,240);if(!a||!b)return 0;let short=a,long=b;if(short.length>long.length){short=b;long=a;}let prev=new Uint16Array(short.length+1),next=new Uint16Array(short.length+1);for(let i=0;i<long.length;i++){for(let j=0;j<short.length;j++)next[j+1]=long[i]===short[j]?prev[j]+1:Math.max(prev[j+1],next[j]);const swap=prev;prev=next;next=swap;next.fill(0);}return prev[short.length]/short.length;}
+function initiativeRecentlyRepeated(id,content,within){const fresh=initiativeVisibleText(content),freshKey=replyDedupNorm(fresh);if(freshKey.length<8)return false;const since=Date.now()-(within||12*3600000),candidates=[],groups=[];let group=[],lastAt=0;const flush=()=>{if(group.length){groups.push(group.join(' '));group=[];}lastAt=0;};(msgs(id)||[]).slice(-80).forEach(m=>{if(!m)return;if(m.role==='user'&&m.type!=='sys'){flush();return;}if(m.role!=='assistant'||!['text','voice'].includes(m.type)||!m.content||(m.time||0)<since)return;const text=String(m.content||'').trim();if(lastAt&&Math.abs((m.time||0)-lastAt)>5*60000)flush();candidates.push(text);group.push(text);lastAt=m.time||lastAt;});flush();return candidates.concat(groups).some(old=>{const oldKey=replyDedupNorm(old),min=Math.min(freshKey.length,oldKey.length);if(min<8)return false;if(freshKey===oldKey)return true;if(min>=12&&(freshKey.includes(oldKey)||oldKey.includes(freshKey)))return true;if(min>=12&&replyLcsContainment(fresh,old)>=.84)return true;return min>=16&&replyBigramScore(fresh,old)>=.82;});}
 function initiativeBlocksImage(note){return !!(note&&/这是一次【主动消息】/.test(note)&&!/主动联系自主决策|【本轮允许主动照片】/.test(note));}
 function initiativeBlocksLocation(note){return !!(note&&/这是一次【主动消息】/.test(note)&&!/主动联系自主决策|【本轮允许位置报备】/.test(note));}
 function initiativePhotoCaptionOk(note,content){if(!note||!/【本轮允许主动照片】/.test(note))return false;const text=String(content||'').split(/\n+/).filter(x=>!/^\s*[\[【](?:图片|照片|自拍|心情|心情值)[|｜:：]/.test(x)).join(' ').replace(/\s+/g,' ').trim();if(!text)return false;const linked=/(给你看|拍给你|拍了|发给你|发来|报备|分享|刚看到|刚拍|路过|窗外|这边|眼前|这一幕|这个|好看|天气|晚霞|云|下雨|下雪|阳光|街景|路上|桌面|早餐|午饭|晚饭|咖啡|花|猫|狗|风景|现场)/.test(text),generic=/(醒了没|醒了吗|睡醒没|睡醒了吗|怎么不回|为什么不回|在干嘛|干什么|怎么不接)/.test(text);return linked&&!generic;}

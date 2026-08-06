@@ -60,10 +60,14 @@ async function apnsJWT(teamId: string, keyId: string, privateKey: string) {
 function localClock(timezone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone || "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", hourCycle: "h23",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
   }).formatToParts(new Date());
   const value = (kind: string) => parts.find((part) => part.type === kind)?.value || "00";
-  return { day: `${value("year")}-${value("month")}-${value("day")}`, hour: Number(value("hour")) || 0 };
+  return {
+    day: `${value("year")}-${value("month")}-${value("day")}`,
+    hour: Number(value("hour")) || 0,
+    minute: Number(value("minute")) || 0,
+  };
 }
 
 function nextDue(profile: Record<string, unknown>, waitMinutes?: number) {
@@ -71,26 +75,43 @@ function nextDue(profile: Record<string, unknown>, waitMinutes?: number) {
   return new Date(Date.now() + minutes * 60_000).toISOString();
 }
 
-function fallbackMessage(profile: Record<string, unknown>) {
-  const name = String(profile.user_name || "你").trim() || "你";
-  const hour = localClock(String(profile.timezone || "Asia/Shanghai")).hour;
-  if (hour < 10) return `${name}，醒了没有？醒了就来跟我说一声。`;
-  if (hour >= 22) return `${name}，这么晚了还没睡？别又偷偷熬夜。`;
-  return `${name}，在忙什么？有空回我一下。`;
+function roleTextKey(value: unknown) {
+  return String(value || "").toLowerCase().replace(/\s+/g, "").replace(/[，。！？、,.!?~～：:；;“”"'（）()【】\[\]]/g, "");
 }
 
-async function roleMessage(profile: Record<string, unknown>) {
+function roleTextRepeated(current: string, previous: string) {
+  let a = roleTextKey(current).slice(0, 240);
+  let b = roleTextKey(previous).slice(0, 240);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (Math.min(a.length, b.length) >= 12 && (a.includes(b) || b.includes(a))) return true;
+  if (a.length > b.length) [a, b] = [b, a];
+  let prior = new Uint16Array(a.length + 1);
+  let next = new Uint16Array(a.length + 1);
+  for (let i = 0; i < b.length; i += 1) {
+    for (let j = 0; j < a.length; j += 1) {
+      next[j + 1] = b[i] === a[j] ? prior[j] + 1 : Math.max(prior[j + 1], next[j]);
+    }
+    [prior, next] = [next, prior];
+    next.fill(0);
+  }
+  return a.length >= 12 && prior[a.length] / a.length >= 0.84;
+}
+
+async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
   const key = Deno.env.get("OPENAI_API_KEY") || "";
-  if (!key) return fallbackMessage(profile);
+  if (!key) return { kind: "unavailable", body: "" };
   const base = (Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/$/, "");
   const model = Deno.env.get("ROLE_PUSH_MODEL") || Deno.env.get("CHAT_MODEL") || "gpt-4o-mini";
   const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+  const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
   const prompt = [
     `角色名：${String(profile.role_name || "角色").slice(0, 40)}`,
     `与用户关系：${String(profile.relation || "").slice(0, 80)}`,
     `角色设定摘要：${String(profile.persona || "").slice(0, 1200)}`,
     `用户称呼：${String(profile.user_name || "你").slice(0, 40)}`,
-    `当地时间：${clock.day} ${String(clock.hour).padStart(2, "0")}:00`,
+    `当地时间：${clock.day} ${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}`,
+    recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
   ].join("\n");
   try {
     const response = await fetch(`${base}/chat/completions`, {
@@ -101,17 +122,22 @@ async function roleMessage(profile: Record<string, unknown>) {
         temperature: 0.9,
         max_tokens: 90,
         messages: [
-          { role: "system", content: "你正在以角色本人身份主动发一条微信。只输出一句自然、简短、有生活感的中文消息；保持人设，不提AI、系统、定时、通知或后台，不加引号和括号，不虚构具体事件。" },
+          { role: "system", content: "这是一次角色自主联系机会，不是系统命令。请以角色本人身份，根据人设、关系和当前准确时间，自主决定此刻是否真的想联系用户。想联系时只输出一句自然、简短、有生活感的中文消息；不得复述近期已经发过的话，不得套用固定问候，不提AI、系统、定时、通知或后台，不虚构具体事件。如果按角色本人意愿此刻不想联系，只输出 [保持安静]。" },
           { role: "user", content: prompt },
         ],
       }),
     });
-    if (!response.ok) return fallbackMessage(profile);
+    if (!response.ok) return { kind: "unavailable", body: "" };
     const data = await response.json();
     const text = String(data?.choices?.[0]?.message?.content || "").trim().replace(/^[“\"']|[”\"']$/g, "");
-    return text.slice(0, 180) || fallbackMessage(profile);
+    if (!text) return { kind: "unavailable", body: "" };
+    if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
+    const body = text.slice(0, 180).trim();
+    const bodyKey = roleTextKey(body);
+    if (!bodyKey || recentBodies.some((old) => roleTextRepeated(body, old))) return { kind: "silent", body: "" };
+    return { kind: "message", body };
   } catch (_) {
-    return fallbackMessage(profile);
+    return { kind: "unavailable", body: "" };
   }
 }
 
@@ -155,7 +181,7 @@ Deno.serve(async (request) => {
     const { data: due, error } = await client.rpc("phone_role_push_claim_due", { p_limit: 20 });
     if (error) throw error;
     const profiles = Array.isArray(due) ? due : [];
-    let sent = 0;
+    let sent = 0, silent = 0, unavailable = 0;
     for (const profile of profiles) {
       const clock = localClock(profile.timezone);
       const count = profile.daily_day === clock.day ? Number(profile.daily_count || 0) : 0;
@@ -172,7 +198,23 @@ Deno.serve(async (request) => {
         continue;
       }
 
-      const body = await roleMessage(profile);
+      const { data: recentRows } = await client.from("phone_role_push_outbox")
+        .select("body").eq("target", profile.target).eq("role_id", profile.role_id)
+        .order("created_at", { ascending: false }).limit(6);
+      const recentBodies = (Array.isArray(recentRows) ? recentRows : [])
+        .map((row) => String(row?.body || "").trim()).filter(Boolean);
+      const decision = await roleMessage(profile, recentBodies);
+      if (decision.kind !== "message") {
+        if (decision.kind === "silent") silent += 1;
+        else unavailable += 1;
+        await client.from("phone_role_push_profiles").update({
+          claimed_until: null,
+          next_due_at: nextDue(profile),
+          updated_at: new Date().toISOString(),
+        }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      const body = decision.body;
       const dedupe = `${profile.target}:${profile.role_id}:${clock.day}:${count + 1}`;
       const { data: outbox, error: outboxError } = await client.from("phone_role_push_outbox").upsert({
         target: profile.target,
@@ -211,7 +253,7 @@ Deno.serve(async (request) => {
         updated_at: new Date().toISOString(),
       }).eq("target", profile.target).eq("role_id", profile.role_id);
     }
-    return reply({ ok: true, claimed: profiles.length, sent });
+    return reply({ ok: true, claimed: profiles.length, sent, silent, unavailable });
   } catch (error) {
     return reply({ error: String(error?.message || error) }, 500);
   }

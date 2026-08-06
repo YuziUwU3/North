@@ -44,7 +44,14 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /apns-push-type": "alert"/);
   assert.match(edge, /rolePush: \{ outboxId \}/);
   assert.match(edge, /OPENAI_API_KEY/);
-  assert.match(edge, /fallbackMessage/);
+  assert.doesNotMatch(edge, /fallbackMessage/);
+  assert.doesNotMatch(edge, /醒了没有|这么晚了还没睡|在忙什么|有空回我一下/);
+  assert.match(edge, /kind: "unavailable", body: ""/);
+  assert.match(edge, /kind: "silent", body: ""/);
+  assert.match(edge, /只输出 \[保持安静\]/);
+  assert.match(edge, /recentBodies\.some\(\(old\) => roleTextRepeated\(body, old\)\)/);
+  assert.match(edge, /prior\[a\.length\] \/ a\.length >= 0\.84/);
+  assert.match(edge, /phone_role_push_outbox[\s\S]{0,300}select\("body"\)/);
 });
 
 test('web client opt-in only sends a bounded role summary', () => {
@@ -62,6 +69,8 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.match(pull, /phone_role_push_pull/);
   assert.match(pull, /getC\(row\.roleId\)/);
   assert.match(pull, /_rolePushId===row\.id/);
+  assert.match(pull, /_serverProactive&&now-\(m\.time\|\|0\)<24\*3600000/);
+  assert.match(pull, /replyDedupNorm\(m\.content\|\|'\'\)===bodyKey/);
   assert.match(pull, /_serverProactive:true/);
   assert.match(pull, /phone_role_push_ack/);
   assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);

@@ -108,6 +108,31 @@ assert.equal(freshnessContext.fresh(queuedRole,conflictQueued),true,'an unresolv
 queuedConflict=false;
 assert.equal(freshnessContext.fresh(queuedRole,conflictQueued),false,'a resolved conflict must cancel a stale conflict follow-up');
 
+const repeatedMessages=[
+  {role:'assistant',type:'text',content:'别装可怜。先生给你点，你坐着等就行。想吃什么？火锅？麻辣烫？',time:Date.now()-90*60000},
+  {role:'assistant',type:'text',content:'还是随便来份简餐？',time:Date.now()-90*60000+1000},
+];
+const repeatContext=vm.createContext({
+  msgs:()=>repeatedMessages,
+  splitBubbles:(text)=>String(text||'').split('\n').map(x=>x.trim()).filter(Boolean),
+  parseVoiceTagLine:()=>null,
+  cleanRolePunct:(text)=>String(text||'').trim(),
+  replyDedupNorm:(text)=>String(text||'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,''),
+  replyBigramScore:(a,b)=>{
+    const norm=(text)=>String(text||'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');a=norm(a);b=norm(b);
+    const grams=(text)=>{const out=new Set();for(let i=0;i<text.length-1;i++)out.add(text.slice(i,i+2));return out;};
+    const x=grams(a),y=grams(b);let hit=0;x.forEach(v=>{if(y.has(v))hit++;});return x.size&&y.size?2*hit/(x.size+y.size):0;
+  },
+  Date,
+  Uint16Array,
+});
+vm.runInContext(functionSource('initiativeVisibleText')+';'+functionSource('replyLcsContainment')+';'+functionSource('initiativeRecentlyRepeated')+';globalThis.repeated=initiativeRecentlyRepeated;',repeatContext);
+assert.equal(repeatContext.repeated('r1','别装可怜。先生给你点外卖，你坐着等就行。想吃什么？'),true,'a proactive reply must not restate the same food-ordering offer with a few changed words');
+assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天最开心的一件事。'),false,'a genuinely different proactive topic must remain available to the role');
+repeatedMessages.push({role:'user',type:'text',content:'那你想听什么？',time:Date.now()-1000});
+assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天最开心的一件事。'),false,'the duplicate guard must not invent a replacement line or block unrelated speech');
+assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
+
 const planMath = Object.create(Math);
 planMath.random = () => 0.99;
 let planConflict={active:false,cause:''};
