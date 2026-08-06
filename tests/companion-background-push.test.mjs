@@ -39,6 +39,7 @@ test('native app registers APNs and immediately syncs on a background wake', () 
   assert.match(nativeApp, /didReceiveRemoteNotification/);
   assert.match(nativeApp, /wakeSequence/);
   assert.match(nativeSync, /phone_companion_register_push_token/);
-  assert.match(nativeSync, /onChange\(of: pushCoordinator\.wakeSequence\)/);
-  assert.match(nativeSync, /finishBackgroundWake\(\.newData\)/);
+  assert.match(nativeSync, /setBackgroundWakeHandler/);
+  assert.match(nativeSync, /let didSynchronize = await service\.synchronize/);
+  assert.match(nativeApp, /finishBackgroundWake\(finalResult\)/);
 });
