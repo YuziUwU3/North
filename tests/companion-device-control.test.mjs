@@ -123,7 +123,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v817 · 手机宠物触摸与来电声选择'/);
+  assert.match(app, /const APP_VER='v818 · 角色精准指代锁定'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -186,14 +186,84 @@ test('anonymous external apps receive stable matching numbers instead of upload-
 
 test('role external commands resolve a synced display name to its stable external id', () => {
   const context = vm.createContext({});
-  vm.runInContext(`${functionSource('companionExternalTargetsByText')}\nthis.pick=companionExternalTargetsByText;`, context);
+  vm.runInContext(`${functionSource('companionAllExternalIntent')}\n${functionSource('companionMentionedExternalTargets')}\n${functionSource('companionExternalTargetsByText')}\nthis.pick=companionExternalTargetsByText;`, context);
   const state = { apps: [
     { id: 'ios.stable.douyin', name: '抖音' },
     { id: 'ios.stable.wechat', name: '微信' },
   ] };
   assert.deepEqual(Array.from(context.pick(state, '抖音'), x => x.id), ['ios.stable.douyin']);
-  assert.deepEqual(Array.from(context.pick(state, '全部'), x => x.id), ['ios.stable.douyin', 'ios.stable.wechat']);
+  assert.deepEqual(Array.from(context.pick(state, '全部已选 App'), x => x.id), ['ios.stable.douyin', 'ios.stable.wechat']);
+  assert.deepEqual(Array.from(context.pick(state, '全锁'), x => x.id), []);
   assert.deepEqual(Array.from(context.pick(state, '不存在'), x => x.id), []);
+});
+
+test('role collective references resolve only the recently named external app group', () => {
+  const rows = [
+    { role: 'assistant', content: '四个里面，ChatGPT 综合能力最强，DeepSeek 推理不错，Gemini 搜索可以，豆包适合陪聊。' },
+    { role: 'user', content: '小孩子才做选择，我都要。' },
+  ];
+  const context = vm.createContext({ rows });
+  vm.runInContext(`
+    function msgs(){return rows;}
+    function msgToText(row){return row.content||'';}
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionMentionedExternalTargets')}
+    ${functionSource('companionExternalTargetsByText')}
+    ${functionSource('companionRoleReferenceCount')}
+    ${functionSource('companionLatestUserText')}
+    ${functionSource('companionRecentExternalGroup')}
+    ${functionSource('companionResolveRoleActionTarget')}
+    this.rows=rows;
+    this.resolve=companionResolveRoleActionTarget;
+  `, context);
+  const state = { apps: [
+    { id: 'ios.gemini', name: 'Gemini' },
+    { id: 'ios.doubao', name: '豆包' },
+    { id: 'ios.chatgpt', name: 'ChatGPT' },
+    { id: 'ios.deepseek', name: 'DeepSeek' },
+    { id: 'ios.bilibili', name: '哔哩哔哩' },
+  ] };
+  const resolved = context.resolve(state, { id: 'role' }, '全部', '四个。全锁。');
+  assert.equal(resolved.scope, 'external');
+  assert.deepEqual(resolved.text.split('、').sort(), ['ChatGPT', 'DeepSeek', 'Gemini', '豆包'].sort());
+  assert.doesNotMatch(resolved.text, /哔哩哔哩/);
+  context.rows.push({ role: 'user', content: '把全部已选 App 都锁上。' });
+  const all = context.resolve(state, { id: 'role' }, '全部', '都锁好了。');
+  assert.equal(all.text.split('、').length, 5);
+});
+
+test('resolved four-app reference dispatches exactly four stable external ids', () => {
+  const sent = [];
+  const context = vm.createContext({ sent });
+  vm.runInContext(`
+    const S={couple:{grant:{}}};
+    const LOCKABLE={};
+    const state={defaultScope:'both',apps:[
+      {id:'ios.gemini',name:'Gemini'},{id:'ios.doubao',name:'豆包'},
+      {id:'ios.chatgpt',name:'ChatGPT'},{id:'ios.deepseek',name:'DeepSeek'},
+      {id:'ios.bilibili',name:'哔哩哔哩'}
+    ]};
+    function companionState(){return state;}
+    function companionScope(value){return value==='external'||value==='internal'||value==='both'?value:'';}
+    function companionUnifiedLimitInternalIds(){return [];}
+    function companionDispatchBound(){return {ok:false};}
+    function companionDispatchRoleExternal(action,app){sent.push({action,id:app.id});return {ok:true};}
+    function _appKeys(){return [];}
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionMentionedExternalTargets')}
+    ${functionSource('companionExternalTargetsByText')}
+    ${functionSource('companionDispatchRoleByText')}
+    this.run=companionDispatchRoleByText;
+  `, context);
+  assert.equal(context.run('lock', 'Gemini、豆包、ChatGPT、DeepSeek', { scope: 'external', actor: '先生' }), true);
+  assert.deepEqual(Array.from(context.sent, x => x.id), ['ios.gemini', 'ios.doubao', 'ios.chatgpt', 'ios.deepseek']);
+});
+
+test('external name matching prefers the longest overlapping app name', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`${functionSource('companionMentionedExternalTargets')}\nthis.pick=companionMentionedExternalTargets;`, context);
+  const state = { apps: [{ id: 'ios.qq', name: 'QQ' }, { id: 'ios.qqmusic', name: 'QQ音乐' }] };
+  assert.deepEqual(Array.from(context.pick(state, '把 QQ音乐 锁上'), x => x.id), ['ios.qqmusic']);
 });
 
 test('role external lock uses the stable id without requiring an internal grant', () => {
@@ -226,6 +296,8 @@ test('a synced external-only app is routed to the real iPhone without silent dua
     const S={couple:{grant:{}}};
     const LOCKABLE={douyin:'抖音'};
     function _appKeys(text,keys,filter){return String(text).includes('抖音')&&filter('douyin')?['douyin']:[];}
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionMentionedExternalTargets')}
     ${functionSource('companionExternalTargetsByText')}
     ${functionSource('companionRoleScopeForText')}
     this.pick=companionRoleScopeForText;
@@ -249,6 +321,12 @@ test('role parser routes explicit and natural external controls through the comp
   assert.match(natural, /externalNames=dual&&\(deviceState\.permissions\.appControl\|\|deviceState\.permissions\.limits\)/);
   assert.match(natural, /companionDispatchRoleByText\('limit'/);
   assert.match(natural, /companionRoleScopeForText\(deviceState/);
+  assert.match(natural, /collectiveTarget/);
+  assert.match(natural, /companionResolveRoleActionTarget/);
+  const prompt = functionSource('companionRolePrompt');
+  assert.match(prompt, /回看最近一组明确提到的 App/);
+  assert.match(prompt, /按自己的性格自然发挥/);
+  assert.match(prompt, /标签会被动作引擎隐藏/);
   assert.match(bound, /needsInternal&&!\(S\.couple\.grant\|\|\{\}\)\[internalId\]/);
 });
 
@@ -275,7 +353,7 @@ test('companion device page has advanced locked-state cards without changing com
   assert.match(decorate, /companion-app-locked/);
   assert.match(decorate, /companion-usage-meter/);
   assert.match(decorate, /last\.actor/);
-  assert.match(phone, /v815 内外统一限额/);
+  assert.match(phone, /v818 角色精准指代锁定/);
   assert.match(phone, /#coupage3/);
   assert.match(phone, /\.companion-app-locked/);
   assert.match(phone, /linear-gradient\(90deg,#ac2848,#ff6377\)/);
