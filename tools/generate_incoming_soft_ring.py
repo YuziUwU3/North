@@ -31,17 +31,19 @@ class Chime:
     repeat_every: float
     decay: float
     harmonics: tuple[tuple[float, float], ...]
+    style: str = "bell"
 
 
 CHIMES = (
     Chime(
-        "incoming-soft-ring-v1.wav",
-        first_hz=783.99,
-        second_hz=587.33,
-        second_delay=0.42,
-        repeat_every=1.7,
-        decay=3.4,
-        harmonics=((1.0, 1.0), (2.01, 0.24), (3.02, 0.08)),
+        "incoming-wechat-ding-v1.wav",
+        first_hz=880.00,
+        second_hz=880.00,
+        second_delay=0.45,
+        repeat_every=0.95,
+        decay=5.2,
+        harmonics=((1.0, 1.0),),
+        style="message",
     ),
     Chime(
         "incoming-morning-chime-v1.wav",
@@ -65,8 +67,17 @@ CHIMES = (
 
 
 def note(time_s: float, start_s: float, base_hz: float, decay: float,
-         harmonics: tuple[tuple[float, float], ...]) -> float:
+         harmonics: tuple[tuple[float, float], ...], style: str) -> float:
     elapsed = time_s - start_s
+    if style == "message":
+        duration = 0.28
+        if elapsed < 0.0 or elapsed > duration:
+            return 0.0
+        attack = min(1.0, elapsed / 0.018)
+        release = math.exp(
+            -5.2 * max(0.0, elapsed - 0.018) / max(0.05, duration - 0.018)
+        )
+        return attack * release * math.sin(2.0 * math.pi * base_hz * elapsed)
     if elapsed < 0.0 or elapsed > 1.65:
         return 0.0
     attack = min(1.0, elapsed / 0.012)
@@ -90,7 +101,7 @@ def generate(chime: Chime) -> None:
     for index in range(FRAMES):
         time_s = index / RATE
         value = sum(
-            note(time_s, start_s, frequency, chime.decay, chime.harmonics)
+            note(time_s, start_s, frequency, chime.decay, chime.harmonics, chime.style)
             for start_s, frequency in starts
         )
         seam_fade = min(1.0, time_s / 0.025, (DURATION - time_s) / 0.025)
