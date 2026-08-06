@@ -123,7 +123,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v822 · 伴生命令回执与内置图片下线'/);
+  assert.match(app, /const APP_VER='v824 · 伴生后台唤醒与自然解锁'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -359,6 +359,55 @@ test('external name matching prefers the longest overlapping app name', () => {
   assert.deepEqual(Array.from(context.pick(state, '把 QQ音乐 锁上'), x => x.id), ['ios.qqmusic']);
 });
 
+test('natural GPT alias resolves uniquely to the ChatGPT stable id', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`${functionSource('companionMentionedExternalTargets')}\nthis.pick=companionMentionedExternalTargets;`, context);
+  const state = { apps: [
+    { id: 'ios.chatgpt', name: 'ChatGPT' },
+    { id: 'ios.deepseek', name: 'DeepSeek' },
+  ] };
+  assert.deepEqual(Array.from(context.pick(state, 'GPT给你开了'), x => x.id), ['ios.chatgpt']);
+});
+
+test('an indirect unlock inherits one recent app but refuses an ambiguous group', () => {
+  const context = vm.createContext({ rows: [
+    { role: 'assistant', content: 'ChatGPT先关着。' },
+    { role: 'user', content: '我想查资料。' },
+  ] });
+  vm.runInContext(`
+    function msgs(){return rows;}
+    function msgToText(row){return row.content||'';}
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionMentionedExternalTargets')}
+    ${functionSource('companionExternalTargetsByText')}
+    ${functionSource('companionRoleReferenceCount')}
+    ${functionSource('companionLatestUserText')}
+    ${functionSource('companionRecentExternalGroup')}
+    ${functionSource('companionRecentUniqueExternal')}
+    function companionScope(value){return value==='external'||value==='internal'||value==='both'?value:'';}
+    ${functionSource('companionRoleRequestedScope')}
+    ${functionSource('companionResolveRoleActionTarget')}
+    this.resolve=companionResolveRoleActionTarget;
+  `, context);
+  const state = { defaultScope: 'external', apps: [
+    { id: 'ios.chatgpt', name: 'ChatGPT' },
+    { id: 'ios.deepseek', name: 'DeepSeek' },
+  ] };
+  assert.equal(context.resolve(state, { id: 'role' }, '这个先放你用', '乖，给你开了。').text, 'ChatGPT');
+  context.rows.unshift({ role: 'assistant', content: 'ChatGPT和DeepSeek都关着。' });
+  context.rows.splice(1);
+  assert.equal(context.resolve(state, { id: 'role' }, '给你解一个', '先放你用。').resolved, false);
+});
+
+test('queued companion commands request APNs wake without treating push as the receipt', () => {
+  const send = functionSource('companionSendCommand');
+  assert.match(send, /companionNotifyNative\(id\)/);
+  assert.match(send, /companionScheduleCommandPoll\(\)/);
+  assert.doesNotMatch(functionSource('companionNotifyNative'), /status\s*=\s*['"]completed/);
+  assert.match(functionSource('companionPollMinDelay'), /6000/);
+  assert.match(app, /setInterval\(\(\)=>companionPollSnapshot\(false\),8000\)/);
+});
+
 test('role external lock uses the stable id without requiring an internal grant', () => {
   const context = vm.createContext({});
   vm.runInContext(`
@@ -446,7 +495,7 @@ test('companion device page has advanced locked-state cards without changing com
   assert.match(decorate, /companion-app-locked/);
   assert.match(decorate, /companion-usage-meter/);
   assert.match(decorate, /last\.actor/);
-  assert.match(phone, /v822 伴生命令回执与内置图片下线/);
+  assert.match(phone, /v824 伴生后台唤醒与自然解锁/);
   assert.match(phone, /#coupage3/);
   assert.match(phone, /\.companion-app-locked/);
   assert.match(phone, /linear-gradient\(90deg,#ac2848,#ff6377\)/);
