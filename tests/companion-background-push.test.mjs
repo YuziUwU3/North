@@ -45,7 +45,10 @@ test('native app registers APNs and immediately syncs on a background wake', () 
   assert.match(nativeApp, /pendingWakeCount/);
   assert.match(nativeSync, /phone_companion_register_push_token/);
   assert.match(nativeSync, /pushCoordinator\.setBackgroundWakeHandler/);
+  assert.match(nativeSync, /setBackgroundWakeHandler/);
+  assert.match(nativeSync, /let didSynchronize = await service\.synchronize/);
   assert.match(nativeSync, /didSynchronize \? \.newData : \.failed/);
+  assert.match(nativeApp, /finishBackgroundWake\(finalResult\)/);
   assert.doesNotMatch(nativeSync, /onChange\(of: pushCoordinator\.wakeSequence\)/);
   assert.match(nativeSync, /for _ in 0\.\.<80 where syncInFlight/);
 });
