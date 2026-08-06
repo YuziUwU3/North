@@ -29,7 +29,7 @@ test('supported particle gifts open from received role gift cards',()=>{
   assert.match(effect,/\.giftcard-simple\{width:210px;min-height:138px/,'the formal chat card should stay close to the compact original template');
   assert.match(effect,/\.giftcard-effect\{[^}]*border:0!important/,'the chat gift card must not regain a pale outline');
   assert.match(effect,/\.gift-box-stage\{[^}]*position:fixed;inset:0/,'opening the chat card must occupy the full screen');
-  assert.match(effect,/width:min\(92vw,360px\)/,'the full-screen stage should present a visibly large gift box');
+  assert.match(effect,/width:min\(80vw,310px\)/,'the full-screen stage should keep a centered medium gift box without filling the phone width');
   assert.match(effect,/@keyframes giftCardShake/);
   assert.doesNotMatch(effect,/content:'点击开启'/,'the formal role card should not add a pseudo-button');
 });
@@ -111,7 +111,7 @@ test('full-screen particle animation is mobile-bounded and cleans itself up',()=
 });
 
 test('the app, offline cache and gate-free preview all load the effect',()=>{
-  assert.match(html,/gift-effects\.js\?v=830/);
+  assert.match(html,/gift-effects\.js\?v=831/);
   assert.match(sw,/gift-effects\.js\?v='\+BUILD/);
   assert.match(preview,/gift-effects\.js\?v=preview-2/);
   assert.match(preview,/class="gift-cover"/);
