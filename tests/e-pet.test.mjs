@@ -130,7 +130,7 @@ test('cats have a distinct filled tail, softer body and no eyebrow-like mask lin
 });
 
 test('cats and dogs have breed choices and living reactions',()=>{
-  for(const name of ['奶油橘猫','布偶猫','银渐层','暹罗猫','柴犬','柯基','比熊','金毛'])assert.match(pet,new RegExp(name));
+  for(const name of ['奶油橘猫','布偶猫','银渐层','暹罗猫','缅因猫','柴犬','柯基','比熊','金毛'])assert.match(pet,new RegExp(name));
   assert.match(pet,/function petChooseBreed/);
   assert.match(pet,/function petAnimalVoice/);
   assert.match(pet,/\['spin','jump','lick','voice','hop'\]/);
@@ -145,7 +145,7 @@ test('cats and dogs have breed choices and living reactions',()=>{
 });
 
 test('wardrobe, visual growth, plumpness and diary controls remain discoverable',()=>{
-  assert.match(pet,/选择\$\{p\.species==='cat'\?'猫猫':'狗狗'\}品种/);
+  assert.match(pet,/选择\$\{petSpeciesName\(p\.species\)\}品种/);
   assert.match(pet,/未拥有的也可直接购买/);
   assert.match(pet,/function petChangeBreed/);
   assert.match(pet,/function petBuyWearFromStyle/);
@@ -157,13 +157,26 @@ test('wardrobe, visual growth, plumpness and diary controls remain discoverable'
   assert.match(pet,/当前需要留意/);
 });
 
+test('Maine Coon, three hamsters and three white rabbit breeds use persistent line-art pets',()=>{
+  for(const name of ['缅因猫','金丝熊','布丁仓鼠','银狐仓鼠','纯白侏儒兔','纯白垂耳兔','纯白狮子兔'])assert.match(pet,new RegExp(name));
+  assert.equal((pet.match(/hamster:\[/g)||[]).length,1);
+  assert.equal((pet.match(/rabbit:\[/g)||[]).length,1);
+  assert.match(pet,/function petSpeciesKey\(species\)/,'new species must survive save normalization');
+  assert.match(pet,/function petSmallAnimalSvg\(p,opt\)/,'hamsters and rabbits need their own SVG anatomy');
+  assert.match(pet,/pet-species-\$\{p\.species\}/);
+  assert.match(pet,/petSpeciesCards\(false\)/,'all four species should appear in first adoption');
+  assert.match(pet,/petSpeciesCards\(true\)/,'all four species should appear when adopting a second pet');
+  assert.match(pet,/十五种品种/);
+  assert.match(css,/\.pet-world \.pet-svg\.pet-species-hamster/);
+});
+
 test('preview and app load the complete visual module',()=>{
-  assert.match(html,/pet-game\.css\?v=832/);
-  assert.match(html,/pet-game\.js\?v=832/);
+  assert.match(html,/pet-game\.css\?v=833/);
+  assert.match(html,/pet-game\.js\?v=833/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);
   assert.match(css,/\.pet-painter/);
-  assert.match(sw,/pet-game\.js\?v=832/);
+  assert.match(sw,/pet-game\.js\?v=833/);
   assert.match(sw,/pet-room-v1\.webp/);
 });

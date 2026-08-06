@@ -22,6 +22,7 @@ function functionSource(name){
 const context=vm.createContext({S:{settings:{wechatNatural:true}},String});
 vm.runInContext([
   functionSource('wechatNaturalOn'),
+  functionSource('setNaturalInnerThought'),
   functionSource('wechatNaturalModuleNeeded'),
   functionSource('wechatNaturalCallEventNote'),
   functionSource('wechatNaturalAutonomyNoteActive'),
@@ -50,6 +51,17 @@ assert.doesNotMatch(context.slim(forcedMood,{natural:true,allModules:true,query:
 assert.match(context.note(),/自主决定下一步/);
 assert.match(context.note(),/\[保持安静\]/);
 assert.equal(context.silent('[心情|有点闷]\n[保持安静]',context.note()),true);
+assert.equal(context.silent('[内心|想先安静陪着ta]\n[保持安静]',context.note()),true);
+
+const thoughtContact={moodVal:41,mood:'旧心情'};
+assert.equal(vm.runInContext('setNaturalInnerThought',context)(thoughtContact,' 想先听完 ta 的话 '),true);
+assert.equal(thoughtContact.innerThought,'想先听完 ta 的话');
+assert.equal(thoughtContact.moodVal,41,'display-only inner thought must not change mood value');
+assert.equal(thoughtContact.mood,'旧心情','display-only inner thought must not overwrite stable-mode mood');
+context.S.settings.wechatNatural=false;
+assert.equal(vm.runInContext('setNaturalInnerThought',context)(thoughtContact,'不应写入'),false);
+assert.equal(thoughtContact.innerThought,'想先听完 ta 的话');
+context.S.settings.wechatNatural=true;
 
 const initiativePlan=vm.runInContext('wechatNaturalInitiativePlan()',context);
 assert.equal(initiativePlan.kind,'autonomy');
@@ -71,6 +83,11 @@ assert.match(source,/role:_naturalOn&&m\.type==='sys'\?'system':m\.role/,'system
 assert.match(source,/role:_naturalOn\?'system':'user'/,'all natural-mode event notes must be system facts, never fake user speech');
 assert.match(source,/\(_natural\?traitSpeechDesc\(c\):traitDesc\(c\)\)/,'numeric personality sliders must stay out of natural mode');
 assert.match(source,/function adjMood\(id,d\)\{if\(wechatNaturalOn\(\)\)return;/,'mood value changes must be inert in natural mode');
+assert.match(source,/function setNaturalInnerThought\(c,value\)\{if\(!c\|\|!wechatNaturalOn\(\)\)return false;/,'inner thought text must have a natural-mode-only storage path');
+assert.match(source,/# 角色内心想法（仅展示，不控制角色）/,'natural mode should request a display-only inner thought');
+assert.match(source,/不是心情值，不改变任何数值、亲密度、行为权限或自主决定/,'the inner-thought prompt must explicitly preserve autonomy');
+assert.match(source,/\[内心\|你此刻真实、简短的内心想法\]/,'inner thought must use a tag independent from mood value');
+assert.match(source,/let mm=line\.match\(\/\^\\\[内心/,'WeChat replies should consume inner-thought tags without exposing them as messages');
 assert.match(source,/function checkIgnore\(\)\{if\(wechatNaturalOn\(\)\|\|/,'legacy no-reply escalation must be disabled in natural mode');
 assert.match(source,/function checkFollowups\(\)\{if\(wechatNaturalOn\(\)\|\|/,'scheduled follow-up prompts must not force a natural-mode message');
 assert.match(source,/async function recordTaMood\(cid\)\{if\(wechatNaturalOn\(\)\)return false;/,'the system must not invent a daily mood for the role in natural mode');

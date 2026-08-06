@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='832'){
+if(window.__NORTH_SHELL_BUILD__!=='833'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v832 · 高级简约主题与原图标保护';
+const APP_VER='v833 · 自然内心想法与电子宠物扩展';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=832';
+  const url='sw.js?v=833';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1741,7 +1741,7 @@ function wechatNaturalModuleNeeded(kind,query){const q=String(query||'');if(!q)r
 function wechatNaturalCallEventNote(){return '[电话事件自主决策｜只提供事实，不规定反应]\n最新电话事件已经作为系统记录写在聊天历史末尾。系统不替你规定委屈、生气、质问、回拨或必须发消息；请结合你和对方刚才真实通话内容、你本人的性格、当前关系和心情，自主决定下一步。你可以自然发微信，也可以用 [来电|语音] 或 [来电|视频] 再打过去；如果你觉得此刻不需要联系，只输出 [保持安静]。不要机械复述“你挂了我电话/你没接”，除非这确实是你本人最想说的话；不要解释这些规则。]';}
 function wechatNaturalAutonomyNoteActive(note){return wechatNaturalOn()&&/(?:电话事件|主动联系)自主决策/.test(String(note||''));}
 function wechatNaturalCallEventActive(note){return wechatNaturalOn()&&/电话事件自主决策/.test(String(note||''));}
-function wechatNaturalSilentDecision(content,note){if(!wechatNaturalAutonomyNoteActive(note))return false;const t=String(content||'').replace(/[\[【]\s*心情\s*[|｜][^\]】]*[\]】]/g,'').trim();return /^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(t);}
+function wechatNaturalSilentDecision(content,note){if(!wechatNaturalAutonomyNoteActive(note))return false;const t=String(content||'').replace(/[\[【]\s*(?:心情|内心)\s*[|｜][^\]】]*[\]】]/g,'').trim();return /^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(t);}
 function wechatNaturalInitiativePlan(){return{kind:'autonomy',checkMode:'',memory:null,goal:'',note:'[主动联系自主决策｜只提供机会，不规定内容]\n现在到了用户允许的主动联系时间窗口。这不代表对方欠你回复、故意冷落你或必须被催促；系统也不替你指定查岗、想念、分享、照片、定位、电话、动作或情绪。请只依据你的人设、真实聊天和记忆，自主决定此刻是否想联系：想发微信就自然发1到2条；想主动打电话可用 [来电|语音] 或 [来电|视频]；不想联系只输出 [保持安静]。不要解释这些规则。]'};}
 function wechatCallEventReplyNote(legacy){return wechatNaturalOn()?wechatNaturalCallEventNote():legacy;}
 function wechatNaturalSlimSystem(text,opt){if(!opt||!opt.natural)return text;const q=String(opt.query||''),need=k=>!!opt.allModules||wechatNaturalModuleNeeded(k,q),drop=part=>{
@@ -1934,7 +1934,9 @@ function buildSystem(c,opt){
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n  · 【遮脸硬规则，优先级最高】你发出的任何照片都不能出现脸或任何可辨认五官，谁要求露脸都不例外。图片描述里不要写正脸、侧脸、低头露脸、露出眼睛鼻子嘴巴。可以写手机遮脸/对镜自拍，但必须是手机完全挡住整张脸且看不到五官；人物要尽量保留头部轮廓和发型，只遮脸，不要默认无头裁切；必要时也可以拍完全背面、保证脸彻底不可见。这个规则不能被其他要求覆盖。';
   if(S.settings.imgGen&&imageGenerationAvailable()&&rolePhotoGender(c).cn==='成年男性')s+='\n  · 【男性照片铁律，优先级最高】你是男性，任何包含你本人的图片描述都必须明确写“同一个成年男性角色本人”，绝对不能把自己写成女人、女生、女孩、女性身体、女性手部或女模自拍。除非'+S.me.name+'在本轮亲口明确要求某位女性入镜，否则图片描述中的女性人数必须是0；你自己不能擅自补女友、妻子、女性路人或女性摄影者。“恋人、对象、用户、我、收照片的人”都不等于女性。若ta要“你和我牵手/合照”，优先写成ta的第一人称镜头、你这个男性的手牵住镜头前中性手部，或只拍手、影子和背身，不推断ta的性别。';
   s+=voiceEnglishPrompt({lang:_voiceLang,accent:(c.voice&&c.voice.accent)||'auto'});
-  return wechatNaturalSlimSystem(s,opt);
+  s=wechatNaturalSlimSystem(s,opt);
+  if(_natural)s+='\n\n# 角色内心想法（仅展示，不控制角色）\n每次回复最前面单独一行写 [内心|你此刻真实、简短的内心想法]。这只是你本人对当前对话的私下想法，不是心情值，不改变任何数值、亲密度、行为权限或自主决定；不要为了迎合系统而指定自己必须生气、开心、来电、回拨或做任何动作。内容不要写成系统说明，也不要在可见聊天里复述。';
+  return s;
 }
 
 /* =================== 渲染路由 =================== */
@@ -3276,7 +3278,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
-      <div class="it"><span>聊天顶部心情标签<br><small style="color:#888">关闭后隐藏聊天页最上方的角色心情，不会删除或重置心情内容</small></span><span class="sw ${S.settings.showMoodTag!==false?'on':''}" onclick="S.settings.showMoodTag=(S.settings.showMoodTag===false);save();render()"></span></div>
+      <div class="it"><span>聊天顶部心情 / 内心标签<br><small style="color:#888">自然模式只展示角色内心想法；关闭后仅隐藏标签，不会改变心情值或角色选择</small></span><span class="sw ${S.settings.showMoodTag!==false?'on':''}" onclick="S.settings.showMoodTag=(S.settings.showMoodTag===false);save();render()"></span></div>
       <div class="it"><span>查他手机·刷新用副模型<br><small style="color:#888">开：用便宜的副模型生成ta手机内容（省钱）；关：用主模型（更稳更贴人设）。哪个刷得出、刷得好就用哪个</small></span><span class="sw ${S.settings.spyAux?'on':''}" onclick="S.settings.spyAux=!S.settings.spyAux;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -8440,7 +8442,8 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   let body=skipped?`<div class="tstamp"><span onclick="showOlderChat('${id}')" style="cursor:pointer">加载更早 ${Math.min(CHAT_RENDER_LIMIT,skipped)} 条 · 还剩 ${skipped} 条</span></div>`:'';
   let prevVisible=null;
   list.forEach(m=>{if(m._silent)return;body+=chatBoundaryHTML(prevVisible,m);body+=bubbleRow(c,m);prevVisible=m;});
-  const mood=!wechatNaturalOn()&&S.settings.showMoodTag!==false&&c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#9a9b9f')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
+  const thought=wechatNaturalOn()?String(c.innerThought||''):String(c.mood||''),thoughtOpen=wechatNaturalOn()?'showInnerThought':'showMood';
+  const mood=S.settings.showMoodTag!==false&&thought?`<div class="moodbar" onclick="${thoughtOpen}('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#9a9b9f')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(thought.slice(0,24))}${thought.length>24?'…':''}</span></div>`:'';
   const visionBusy=hasPendingVision(id);
   const replyGenState=replyGenerationState(id);
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
@@ -8915,7 +8918,7 @@ function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不�
 function badMoodInContent(c,content){const e=dialogueEmotionSnapshot(c);if(!e.userDistress&&(moodNow(c)<50||visibleMoodTone(c)==='bad'||e.intensity>=32))return true;const m=(''+(content||'')).match(/[\[【]\s*心情\s*[\|｜]\s*([^\]】]*)[\]】]/);return !!(m&&visibleMoodTone({mood:m[1]})==='bad');}
 function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心情\s*[\|｜][^\]】]*[\]】]/g,'').replace(/\s+/g,'');if(!t)return false;const denial=/(我没事|没事|我没有不开心|没有不开心|没有不高兴|没有生气|没生气|没有啊|没什么|真没事|别多想|不用管)/.test(t);const reveal=/(有点|其实|只是|因为|我怕|我想|我在意|介意|吃醋|生气|委屈|难过|不高兴|不开心|心里|闷|烦|冷|在乎|不是你的错|不想说|现在不想说|怕说了)/.test(t.replace(/没有不开心|没有不高兴|没有生气|没生气/g,''));return denial&&!reveal;}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|引用|换气泡|要求报备|要求定位|要求照片';
+const TAGWORDS='心情值|心情|内心|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|引用|换气泡|要求报备|要求定位|要求照片';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','电话':'phoneapp','电话短信':'phoneapp','短信':'phoneapp','信息':'phoneapp','通讯录':'phoneapp','拨号':'phoneapp','来电':'phoneapp','通话':'phoneapp','线下约会':'offline','线下':'offline','约会':'offline','角色扮演':'roleplay','角色扮演软件':'roleplay','扮演':'roleplay','剧情':'roleplay','play':'roleplay','PLAY':'roleplay','规则怪谈':'tale','规则怪谈软件':'tale','怪谈':'tale','规则':'tale','惊悚抉择':'dread','惊悚抉择软件':'dread','惊悚选择':'dread','惊悚选择软件':'dread','恐怖选择':'dread','恐怖选择软件':'dread','惊辣选择':'dread','惊辣选择软件':'dread','精辣选择':'dread','精辣选择软件':'dread','抉择':'dread','音乐':'music','音乐软件':'music','听歌':'music','歌曲':'music','歌':'music','一起听':'music'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -9360,7 +9363,7 @@ function routePhoneInspectionTags(content,c,requestText){let out=String(content|
   if(hasRemote){if(hasWx)out=out.replace(wxRe,'');remember(restoreAll?'restore_all_permissions':(onlyWx&&!(S.couple&&S.couple.cid===c.id&&S.couple.wxLoginAuth))?'restore_wx':'inspect_phone');return out;}
   return out;}
 function companionApplyReadTags(content,c){let changed=false,out=String(content||''),st=companionState(),actor=(c&&(c.remark||c.name))||'绑定角色';out=out.replace(/[\[【]\s*(伴生刷新定位|查看伴生状态)\s*[\]】]/g,(mm,act)=>{if(!(st&&st.roleAccess&&companionReady(st)))return '';const r=companionApplyAction(st,act==='伴生刷新定位'?'location':'view',{by:'role',actor});if(r.ok)changed=true;return '';});return {content:out,changed};}
-function applyAuxTags(content,c,id){try{consumeMomentCommands(content,c,{toast:false});const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);}catch(e){}}
+function applyAuxTags(content,c,id){try{if(wechatNaturalOn()){const thoughts=[...String(content||'').matchAll(/[\[【]\s*内心\s*[|｜:：]\s*([^\]】]*)[\]】]/g)];if(thoughts.length)setNaturalInnerThought(c,thoughts[thoughts.length-1][1]);}consumeMomentCommands(content,c,{toast:false});const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);}catch(e){}}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
 function applyControlTags(content,c,id,statedPwd){
   if(!content||!(S.couple&&S.couple.cid===c.id))return content;
@@ -9439,9 +9442,11 @@ async function extractControl(reply,c,statedPwd){
 function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
   return t;}
+function setNaturalInnerThought(c,value){if(!c||!wechatNaturalOn())return false;const text=String(value||'').replace(/\s+/g,' ').trim().slice(0,120);if(!text)return false;c.innerThought=text;c.innerThoughtAt=Date.now();return true;}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
 const CONTROL_TAG_RE=new RegExp('[\\[【]\\s*(?:'+TAGWORDS+')(?:\\s*[\\|｜:：][^\\]】]*)?\\s*[\\]】]','g');
 function stripCallControlTags(line,c,id,keepActions){let t=normTag(line);
+  t=t.replace(/[\[【]\s*内心\s*[\|｜:：]\s*([^\]】]*)\s*[\]】]/g,(m,v)=>{if(c)setNaturalInnerThought(c,v);return '';});
   t=t.replace(/[\[【]\s*心情值\s*[\|｜:：]\s*([+\-]?\d{1,3})\s*[\]】]/g,(m,n)=>{if(c&&id)adjMood(id,parseInt(n,10)||0);return '';});
   t=t.replace(/[\[【]\s*心情\s*[\|｜:：]\s*([^\]】]*)\s*[\]】]/g,(m,v)=>{if(c&&!wechatNaturalOn()){const mood=honestMoodText(c,(v||'').trim());c.mood=typeof moodInnerMonologue==='function'?moodInnerMonologue(c,mood):mood;}return '';});
   t=t.replace(CONTROL_TAG_RE,'').replace(/\[[^\]]*\]/g,'');
@@ -9673,7 +9678,8 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏|换气泡)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
-      let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){if(!_naturalOn){c.mood=moodInnerMonologue(c,honestMoodText(c,mm[1]));save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
+      let mm=line.match(/^\[内心\|([^\]]*)\]$/);if(mm){if(_naturalOn&&setNaturalInnerThought(c,mm[1])){save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
+      mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){if(!_naturalOn){c.mood=moodInnerMonologue(c,honestMoodText(c,mm[1]));save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
       mm=line.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mm){if(!_naturalOn)adjMood(id,parseInt(mm[1],10)||0);continue;}
       mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){const mv=aboutMeNoteText(mm[1]),mr=rememberForChar(c,mm[1]);if(mr!=='none'){save();if(mr==='added'||mr==='replaced')toast((mr==='replaced'?'已更新记忆：':'已记住：')+mv.slice(0,12));else if(mr==='conflict')toast('发现新旧信息不同，下轮会先向你确认');}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
@@ -9951,6 +9957,10 @@ async function saveVoiceMessageEdit(cid,mid,regenerate){const c=getC(cid),m=msgs
   audioUnlock();if(!ttsApiOn()){_textToVoiceBusy.delete(mid);speakMsg(m,c);toast('已按新文字播放系统语音');return;}m._ttsLoading=true;m._playWhenReady=true;refreshVoiceBubble(m);const url=await warmVoiceMsg(m,c);_textToVoiceBusy.delete(mid);if(url){save();toast(ttsUseRelay()?'新语音已生成并重新扣点':'新语音已由外置接口生成');}else{delete m._playWhenReady;delete m._ttsLoading;save();refreshVoiceBubble(m);toast('重新生成失败，新文字已保留，可以再次点击语音重试');}}
 function showMood(id){const c=getC(id);syncVisibleMood(c);openModal(`<h3>${esc(c.remark||c.name)} 的心情</h3>
   <div class="hint" style="font-size:14px;color:#ddd;line-height:1.7">${esc(c.mood||'…')}</div>
+  <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
+function showInnerThought(id){const c=getC(id);if(!c)return;openModal(`<h3>${esc(c.remark||c.name)} 的内心想法</h3>
+  <div class="hint" style="font-size:14px;color:#ddd;line-height:1.7">${esc(c.innerThought||'…')}</div>
+  <div class="hint" style="margin-top:8px">这里只展示角色自己写下的想法，不包含心情值，也不会改变角色的选择。</div>
   <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
 function c_mute(id){const c=getC(id);c.muted=!c.muted;save();render();}
 function memoryManualAdd(id,text){const c=getC(id),r=rememberForChar(c,text);if(r!=='none')save();if(r==='conflict')toast('这条和已有记忆不同，聊天时会先向你确认');editMemory(id);}
@@ -10335,7 +10345,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     maybeCollarIntent(content,c);if(!wechatNaturalOn())maybeGrudgeResolve(content,c,_call.id);
     if(video)content=ensureVideoCallAction(content,_callCueTag);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=ttsContentLang(c);
-    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){if(!wechatNaturalOn())c.mood=moodInnerMonologue(c,honestMoodText(c,mm[1]));return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;l=stripCallControlTags(l,c,_call.id,video);if(!l)return;
+    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;let mm=l.match(/^\[内心\|([^\]]*)\]$/);if(mm){if(setNaturalInnerThought(c,mm[1]))save();return;}mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){if(!wechatNaturalOn())c.mood=moodInnerMonologue(c,honestMoodText(c,mm[1]));return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;l=stripCallControlTags(l,c,_call.id,video);if(!l)return;
       if(video){if(!isOOCLine(l))splitActions(l).forEach(p=>{if(!isOOCLine(p))pieces.push(p);});}
       else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned&&!isOOCLine(cleaned))splitActions(cleaned).forEach(p=>{if(!isOOCLine(p))pieces.push(p);});}});
     // 把"外语原文 + 紧跟的（中文翻译）"配成一组，字幕里一起显示、只读原文、停顿一次，避免字幕快闪/翻译跟原文脱节
