@@ -104,6 +104,16 @@ test('pet dragging uses precise prop targets instead of broad accidental snap zo
   assert.match(pet,/p\.roomY=petClamp\(startY\+dy,22,86\)/);
 });
 
+test('mobile pet taps react inside the pointer lifecycle without long-press selection',()=>{
+  assert.match(pet,/function petTapDirect\(p\)[\s\S]*petAnimalVoice\(p\.species\)/,'every deliberate awake-pet tap should reach its voice path');
+  assert.match(pet,/wasActive=x\.activeId===p\.id/,'pointerdown should remember whether the touched pet was already active');
+  assert.match(pet,/else if\(canceled\)\{save\(\);setTimeout\(render,20\);\}else\{_petIgnoreTapUntil=Date\.now\(\)\+450;save\(\);if\(wasActive\)petTapDirect\(p\);else render\(\);\}/,'an unmoved pointerup must react directly instead of waiting for a synthesized mobile click');
+  assert.match(pet,/addEventListener\('contextmenu',ev=>ev\.preventDefault\(\)\)/);
+  assert.match(pet,/onclick="petCharacterTap\('\$\{q\.id\}',event\)"/,'desktop click fallback should share the guarded pet tap route');
+  assert.match(css,/\.pet-world,\.pet-world \*\{[^}]*-webkit-user-select:none;user-select:none;[^}]*-webkit-touch-callout:none;[^}]*-webkit-tap-highlight-color:transparent/);
+  assert.match(css,/\.pet-world \.pet-character \.pet-svg,\.pet-world \.pet-character \.pet-room-name\{pointer-events:none\}/,'SVG paths and labels must not steal mobile long presses from the draggable pet');
+});
+
 test('sleeping faces use pose-local ears and bichon keeps a closed crown',()=>{
   assert.match(pet,/const sleepEars=/);
   assert.match(pet,/const sleepMark=/);
@@ -148,12 +158,12 @@ test('wardrobe, visual growth, plumpness and diary controls remain discoverable'
 });
 
 test('preview and app load the complete visual module',()=>{
-  assert.match(html,/pet-game\.css\?v=816/);
-  assert.match(html,/pet-game\.js\?v=816/);
+  assert.match(html,/pet-game\.css\?v=817/);
+  assert.match(html,/pet-game\.js\?v=817/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);
   assert.match(css,/\.pet-painter/);
-  assert.match(sw,/pet-game\.js\?v=816/);
+  assert.match(sw,/pet-game\.js\?v=817/);
   assert.match(sw,/pet-room-v1\.webp/);
 });

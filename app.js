@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='816'){
+if(window.__NORTH_SHELL_BUILD__!=='817'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v816 · 电子宠物与微信自主模式';
+const APP_VER='v817 · 手机宠物触摸与来电声选择';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -366,7 +366,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:20, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
+    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRing:'soft', showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:20, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, aiImage:{enabled:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -1376,7 +1376,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=816';
+  const url='sw.js?v=817';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3292,6 +3292,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
       <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
+      <div class="it" style="display:block"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>来电铃声<br><small style="color:#888">点一种会立即试听并自动保存；只改变别人打给你时的铃声</small></span><button class="minibtn" onclick="event.stopPropagation();ringPreviewStop()">停止试听</button></div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px">${incomingRingChoices().map(x=>`<button type="button" onclick="incomingRingSelect('${x.key}')" style="min-width:0;border:1px solid ${incomingRingKey()===x.key?'#ff8fab':'#3a3a3c'};border-radius:9px;padding:8px 4px;background:${incomingRingKey()===x.key?'rgba(255,143,171,.18)':'#242426'};color:${incomingRingKey()===x.key?'#ffd3df':'#ddd'};font-size:12px;cursor:pointer">${x.label}<small style="display:block;margin-top:3px;color:#888;font-size:10px">${x.tip}</small></button>`).join('')}</div></div>
       <div class="it" style="flex-wrap:wrap"><span>${svgIc('volume',15,'#bbb')} 音量 <b style="color:#07c160">${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}%</b><small style="color:#999;display:block">后台听歌听不清ta讲话，可调到100%以上加大</small></span><input type="range" min="0" max="300" step="10" value="${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}" style="width:100%;margin-top:6px" oninput="S.settings.volume=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'" onchange="playDing()"></div>
       <div class="it">后台通知（点开授权）<span class="v" onclick="reqNotify()">允许 ›</span></div>
     </div>
@@ -9981,7 +9982,7 @@ function editSumItem(id,i){const c=getC(id);openModal(`<h3>编辑这条概要</h
   <div class="btns"><button class="btn g" onclick="editSummary('${id}')">返回</button><button class="btn p" onclick="summaryEditAt('${id}',${i},$('#si_t').value)">保存</button></div>`);}
 
 /* =================== 通话 =================== */
-let _call=null,_ring=null,_callTimer=null,_callSilTimer=null,_callMissT=null;
+let _call=null,_ring=null,_ringPreviewTimer=null,_callTimer=null,_callSilTimer=null,_callMissT=null;
 function callPersist(){
   if(_call&&_call.state==='active'){
     S._activeCall={
@@ -10027,10 +10028,20 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 他刚说完那一下，麦克风可能还收着他的尾音，继续忽略一小段再听你 */
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
 function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');callHFStop();}
-const INCOMING_RING_URL='assets/incoming-soft-ring-v1.wav';
-function ringAssetStart(a,onFail){if(!a)return false;try{a.pause();a.loop=true;a.volume=Math.max(0,Math.min(1,.42*volMul()));a.src=INCOMING_RING_URL;a.currentTime=0;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>{if(_ring===a&&onFail)onFail();});return true;}catch(_){return false;}}
+const INCOMING_RING_CHOICES=[
+  {key:'soft',label:'柔和轻响',tip:'清亮舒缓',url:'assets/incoming-soft-ring-v1.wav'},
+  {key:'morning',label:'晨光风铃',tip:'轻快温柔',url:'assets/incoming-morning-chime-v1.wav'},
+  {key:'night',label:'暖夜和弦',tip:'安静温暖',url:'assets/incoming-warm-night-v1.wav'}
+];
+function incomingRingChoices(){return INCOMING_RING_CHOICES.slice();}
+function incomingRingKey(key){key=key==null?(S.settings&&S.settings.incomingRing):key;return INCOMING_RING_CHOICES.some(x=>x.key===key)?key:'soft';}
+function incomingRingUrl(key){const k=incomingRingKey(key),row=INCOMING_RING_CHOICES.find(x=>x.key===k);return row?row.url:INCOMING_RING_CHOICES[0].url;}
+function ringAssetStart(a,onFail,url){if(!a)return false;try{a.pause();a.loop=true;a.volume=Math.max(0,Math.min(1,.42*volMul()));a.src=url||incomingRingUrl();a.currentTime=0;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>{if(_ring===a&&onFail)onFail();});return true;}catch(_){return false;}}
 function ringStart(){ringStop();if(S.settings.sound){const primary=ringToneElement(),fallback=()=>{const shared=uiToneElement();if(!shared||shared===primary){_ring=null;return false;}_ring=shared;if(!ringAssetStart(shared,()=>{if(_ring===shared)_ring=null;})){_ring=null;return false;}return true;};if(primary){_ring=primary;if(!ringAssetStart(primary,fallback)){_ring=null;fallback();}}else fallback();}if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
-function ringStop(){if(_ring){if(typeof _ring==='number')clearInterval(_ring);else try{_ring.pause();_ring.loop=false;_ring.currentTime=0;}catch(_){}_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
+function ringStop(){if(_ringPreviewTimer){clearTimeout(_ringPreviewTimer);_ringPreviewTimer=null;}if(_ring){if(typeof _ring==='number')clearInterval(_ring);else try{_ring.pause();_ring.loop=false;_ring.currentTime=0;}catch(_){}_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
+function incomingRingPreview(){if(_call){toast('通话中不能试听来电铃声');return false;}ringStop();audioUnlock();const primary=ringToneElement(),url=incomingRingUrl(),fallback=()=>{const shared=uiToneElement();if(!shared||shared===primary)return false;_ring=shared;return ringAssetStart(shared,()=>{if(_ring===shared)_ring=null;},url);};if(primary){_ring=primary;if(!ringAssetStart(primary,fallback,url)){_ring=null;if(!fallback())return false;}}else if(!fallback())return false;_ringPreviewTimer=setTimeout(()=>ringStop(),4800);return true;}
+function incomingRingSelect(key){S.settings.incomingRing=incomingRingKey(key);save();incomingRingPreview();render();toast('已选择「'+INCOMING_RING_CHOICES.find(x=>x.key===S.settings.incomingRing).label+'」');}
+function ringPreviewStop(){ringStop();toast('已停止试听');}
 function blip(freq,dur){playMediaTone([[freq,dur]],{key:'blip-'+freq+'-'+dur,level:.35});}
 function incomingCall(id,kind,opt){if(offlineFocusActive())return false;if(cinemaRoleOccupied(id))return false;const c=getC(id);if(!c||c.blocked||_call)return false;opt=opt&&typeof opt==='object'?opt:{};
   _call={id,kind,state:'incoming',dir:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null,_suspicionEvent:opt.suspicionEvent||''};initAudio();ringStart();showCallBanner(c);
