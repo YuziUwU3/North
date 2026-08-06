@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='831';</script>
+<script>window.__NORTH_SHELL_BUILD__='832';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-831';
+  var key='north-sw-reloaded-832';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=831';
+  var url='sw.js?v=832';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -468,6 +468,29 @@ body{background:#000;padding:0;}
 /* 用户自定义组件卡片颜色与透明度（覆盖主题默认，但不影响文字清晰度） */
 .home .hwwrap .hwid:not(.wpet){background:var(--widget-bg)!important;border-color:var(--widget-border)!important;}
 .home .hwwrap .hwid:not(.wpet) .wic{background:var(--widget-icon-bg)!important;}
+.home{background:linear-gradient(155deg,#18151a 0%,#211a20 44%,#171820 100%);}
+.home:before{background:radial-gradient(circle,rgba(180,105,137,.3),transparent 70%);filter:blur(13px);}
+.home:after{background:radial-gradient(circle,rgba(107,99,163,.26),transparent 70%);filter:blur(13px);}
+.hwwrap{margin-top:24px;gap:11px;}
+.hwid{border-radius:22px;border-color:rgba(255,255,255,.1);box-shadow:0 13px 30px rgba(10,8,12,.18),inset 0 1px rgba(255,255,255,.05);backdrop-filter:blur(18px) saturate(115%);-webkit-backdrop-filter:blur(18px) saturate(115%);}
+.hwid .wic{border-radius:14px;}
+.apppage{gap:18px 12px;padding:20px 22px;}
+.app .ic{width:56px;height:56px;border-radius:18px;border:.5px solid rgba(255,255,255,.12);box-shadow:0 8px 20px rgba(12,9,14,.2),inset 0 1px rgba(255,255,255,.07);}
+.home:not(.tpink):not(.twhite) .app:not(.app-locked) .ic{background:linear-gradient(145deg,rgba(50,44,51,.92),rgba(31,28,35,.88))!important;}
+.dock{margin-left:15px;margin-right:15px;padding:10px;gap:10px;border:1px solid rgba(255,255,255,.1);border-radius:28px;background:rgba(32,28,34,.72);box-shadow:0 15px 34px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.05);backdrop-filter:blur(20px) saturate(120%);-webkit-backdrop-filter:blur(20px) saturate(120%);}
+.dock .app .ic{width:54px;height:54px;}
+.home.tpink .hwid{box-shadow:0 13px 28px rgba(150,84,111,.12),inset 0 1px rgba(255,255,255,.7);}
+.home.tpink .app .ic{border-color:rgba(255,255,255,.62);}
+.home.tpink .dock{border-color:rgba(255,255,255,.7);box-shadow:0 15px 32px rgba(166,93,122,.13),inset 0 1px rgba(255,255,255,.76);}
+.home.twhite .hwid{box-shadow:0 12px 28px rgba(104,108,121,.12),inset 0 1px rgba(255,255,255,.9);}
+.home.twhite .app .ic{border-color:rgba(0,0,0,.035);}
+.home.twhite .dock{border-color:rgba(255,255,255,.92);box-shadow:0 15px 32px rgba(100,104,116,.14),inset 0 1px rgba(255,255,255,.92);}
+.wcp2 .av2 .cir{width:56px;height:56px;}
+.home-record{position:relative;width:36px;height:36px;display:block;border:5px solid #101015;border-radius:50%;box-sizing:border-box;background:repeating-radial-gradient(circle,#0f0f13 0 2px,#202028 2px 3px);box-shadow:0 4px 11px rgba(0,0,0,.28);}
+.home-record-cover{position:absolute;inset:5px;display:grid;place-items:center;border-radius:50%;background-position:center;background-size:cover;color:#f6d8e4;font-size:8px;font-style:normal;font-weight:700;overflow:hidden;}
+.home-record-empty{background:linear-gradient(145deg,#d98da8,#9f789b);}
+.home-record-hole{position:absolute;left:50%;top:50%;width:3px;height:3px;border-radius:50%;background:#f4edf1;box-shadow:0 0 0 1px rgba(0,0,0,.42);transform:translate(-50%,-50%);}
+.home-weather-icon{display:block;overflow:visible;}
 .wapbox{margin-top:16px;padding:4px 12px;background:#252529;border:1px solid #38383e;border-radius:14px;}
 .waprow{display:flex;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid rgba(255,255,255,.07);color:#bbb;font-size:13px;}
 .waprow:last-child{border-bottom:none}.waprow>span{flex:1}.waprow input[type="color"]{width:48px;height:34px;padding:0;background:none;border:none;cursor:pointer}.waprow input[type="range"]{width:118px;accent-color:#ff8fab}.waprow b{width:38px;color:#eee;font-size:12px;text-align:right;}
@@ -973,7 +996,7 @@ body{min-height:0}
 #cou_companion_audit .v{padding:3px 7px;border-radius:99px;background:rgba(255,190,99,.08)}
 @media(max-width:390px){#coupage3{padding-left:8px;padding-right:8px}#coupage3>.section{border-radius:19px!important}#cou_companion_apps>.bill.companion-app-card{padding:13px!important;border-radius:18px!important}}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=831">
+<link rel="stylesheet" href="pet-game.css?v=832">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1023,11 +1046,11 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=831" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=831" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=831" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=831" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=831" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="ai-account.js?v=831"></script>
+<script src="license-gate.js?v=832" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=832" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=832" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=832" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=832" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="ai-account.js?v=832"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='831'){
+if(window.__NORTH_SHELL_BUILD__!=='832'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v831 · 居中月光礼盒与自然送礼触发';
+const APP_VER='v832 · 高级简约主题与原图标保护';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=831';
+  const url='sw.js?v=832';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2807,7 +2807,8 @@ function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=wcol();
 function wTanow(){if(!(S.couple&&S.couple.cid))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const wn=whereNow(c);if(!wn)return '';return _wCard(svgIc('location',22,col),esc(c.remark||c.name)+' 此刻','<div class="wm">'+esc(wn)+'</div>','openCouple()');}
 function wDisc(){const col=wcol();const s=_mCur&&S.music&&S.music.songs?S.music.songs.find(x=>x.id===_mCur):null;
-  const disc='<svg class="'+(s?'wdisc':'')+'" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="12" r="3.4" opacity=".3"/><circle cx="12" cy="12" r="1.5" fill="'+col+'" stroke="none"/><circle cx="12" cy="5.4" r="1.15" fill="'+col+'" stroke="none"/><path d="M12 8.6V12" opacity=".5"/></svg>';
+  const cover=s&&s.cover?`<i class="home-record-cover" style="background-image:url(${s.cover})"></i>`:`<i class="home-record-cover home-record-empty">${esc(Array.from((s&&s.title)||'音')[0]||'音')}</i>`;
+  const disc=`<span class="home-record${s&&_mPlaying?' wdisc':''}" aria-hidden="true">${cover}<i class="home-record-hole"></i></span>`;
   const top=_mPlaying?'正在听':'音乐';
   const main=s?'<div class="wm">'+esc(s.title)+(s.artist?' · '+esc(s.artist):'')+'</div>':'<div class="wm" style="opacity:.7">还没在听 · 去挑一首</div>';
   return `<div class="hwid" style="color:${col}" onclick="openMusic()"><div class="wic">${disc}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
@@ -2833,9 +2834,10 @@ function cp2Edit(){const col='#ff8fab';const me=S.me.homeAvMe||S.me.avatar,c=S.c
    <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal();openCouple()">进入情侣空间</button><button class="btn p" onclick="closeModal()">完成</button></div>`);}
 function cp2Pic(who){pickFile('image/*',async f=>{const d=await compress(f,300,.82);if(who==='me')S.me.homeAvMe=d;else S.me.homeAvTa=d;save();render();cp2Edit();toast('主屏头像已换 🌸');});}
 function cp2Reset(who){if(who==='me')S.me.homeAvMe='';else S.me.homeAvTa='';save();render();cp2Edit();}
+function homeWeatherIcon(desc,col){desc=String(desc||'');const rain=desc.includes('雨'),cloud=desc.includes('云')||desc.includes('阴'),body=rain||cloud?`<path d="M7 16.5h10.2a3.3 3.3 0 0 0 .4-6.5 5.8 5.8 0 0 0-10.8 1.7A2.4 2.4 0 0 0 7 16.5z"/><path d="M9.2 13h.01M14.8 13h.01M10.4 15c1 .8 2.2.8 3.2 0"/>${rain?'<path d="m8.5 19-1 2M12.5 19l-1 2M16.5 19l-1 2"/>':''}`:`<circle cx="12" cy="12" r="5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M10 11h.01M14 11h.01M10.2 13.7c1 1 2.6 1 3.6 0"/>`;return `<svg class="home-weather-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="${col}" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-label="${esc(desc||'晴天')}">${body}</svg>`;}
 function wClock(){const col=wcol();const d=new Date();const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const wx=S.weather&&S.weather.place?esc(S.weather.place)+' '+esc(S.weather.desc)+' '+S.weather.temp+'°':'';
-  const pic=S.me.wPic?'<img src="'+S.me.wPic+'">':svgIc('image',26,col);
+  const pic=S.me.wPic?'<img src="'+S.me.wPic+'">':homeWeatherIcon(S.weather&&S.weather.desc,col);
   return `<div class="hwid wclk wwide" style="color:${col}"><div class="clkL" onclick="openApp('calendar')"><div class="clkT">${hm()}</div><div class="clkD">${d.getMonth()+1}月${d.getDate()}日 ${week}</div>${wx?'<div class="clkW">'+wx+'</div>':'<div class="clkW" onclick="event.stopPropagation();fetchWeather(true)" style="cursor:pointer">点这获取天气 ›</div>'}</div><div class="clkP" onclick="wPicUpload()">${pic}</div></div>`;}
 function wPicUpload(){pickFile('image/*',async f=>{S.me.wPic=await compress(f,500,.75);save();render();toast('小图已换 🖼️');});}
 const WIDR={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc,pet:wPet};
