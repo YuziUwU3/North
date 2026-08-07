@@ -9,7 +9,7 @@ assert.match(source, /function msgsForAccount\(id,aid\)/);
 assert.match(source, /function summaryList\(c,aid\)/);
 assert.match(source, /function summaryState\(c,aid\)/);
 assert.match(source, /function maybeSummarize\(id,aid\)[\s\S]*?msgsForAccount\(id,aid\)[\s\S]*?summaryList\(c,aid\)[\s\S]*?summaryState\(c,aid\)/);
-assert.match(source, /addSummary\(c,trimSentence\(rt\.text,180\),rt\.imp,'',aid\)/);
+assert.match(source, /addSummary\(c,trimSentence\(rt\.text,220\),rt\.imp,'',aid\)/);
 assert.match(source, /summarizeCall\(id,kindTxt,sess,aid\)[\s\S]*?msgsForAccount\(id,aid\)/);
 assert.match(source, /_accountSummaries/);
 assert.match(source, /_accountSummaryState/);
@@ -198,7 +198,7 @@ vm.runInNewContext(
 summaryActive = "alt_1";
 const pendingSummary = asyncSandbox.runSummary("role_async", "alt_1");
 summaryActive = "main";
-resolveSummary("小号独立总结");
+resolveSummary("小号独立总结".repeat(12));
 await pendingSummary;
 assert.equal(summaryWrites.length, 1);
 assert.equal(summaryWrites[0].aid, "alt_1", "async summary must remain bound to its originating account after a switch");

@@ -38,7 +38,7 @@ const context = vm.createContext({
   S: { me: { active: "main", name: "North", callName: "北", accounts: [{ id: "main", name: "North", callName: "北" }] } },
   actId: () => "main",
 });
-for (const name of ["parsePayCardLine", "memoryScopeKey", "summaryAccountProfile", "summaryUserLabel", "summaryStripModelNoise", "summaryCleanText", "summaryNorm", "isRefusal", "isOOCLine"]) {
+for (const name of ["parsePayCardLine", "memoryScopeKey", "summaryAccountProfile", "summaryUserLabel", "summaryStripModelNoise", "summaryReplaceAliasStable", "summaryCleanText", "summaryNorm", "isRefusal", "isOOCLine"]) {
   vm.runInContext(functionSource(name), context);
 }
 

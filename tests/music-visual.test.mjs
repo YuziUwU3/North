@@ -20,7 +20,7 @@ assert.match(source, /function musicEnsureCurrent\(\)/);
 assert.match(source, /wanted=\(S\.music\.session&&S\.music\.session\.songId\)\|\|S\.music\.lastSongId/);
 assert.match(source, /function musicLibraryRowHTML\(/);
 assert.match(source, /function renderMusicHome\(\)/);
-assert.match(source, /class="music-app"/);
+assert.match(source, /class="music-app\$\{bg\?' has-bg':''\}"/);
 assert.match(source, /class="music-app-actions"/);
 assert.match(source, /class="music-home-library"/);
 assert.match(source, /class="music-mini"/);

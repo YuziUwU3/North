@@ -2,26 +2,26 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="North" />
-<meta name="theme-color" content="#ff8fab" />
+<meta name="theme-color" content="#000000" />
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='847';</script>
+<script>window.__NORTH_SHELL_BUILD__='848';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
   var base=location.href.replace(/[?#].*$/,'');var dir=base.replace(/[^\/]*$/,'');
   var icon=dir+'icon.png?v=336';
   var al=document.getElementById('pwaAppleIcon');if(al)al.href=icon;
-  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#000000',theme_color:'#000000',icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
   var b=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});var ml=document.getElementById('pwaManifest');if(ml)ml.href=URL.createObjectURL(b);
 }catch(e){}})();
 </script>
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-847';
+  var key='north-sw-reloaded-848';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=847';
+  var url='sw.js?v=848';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1149,8 +1149,14 @@ body{min-height:0}
 #cou_companion_permissions .sw.on{background:linear-gradient(135deg,#a83958,#e75d79)!important;box-shadow:0 0 15px rgba(219,72,105,.2)}
 #cou_companion_audit .v{padding:3px 7px;border-radius:99px;background:rgba(255,190,99,.08)}
 @media(max-width:390px){#coupage3{padding-left:8px;padding-right:8px}#coupage3>.section{border-radius:19px!important}#cou_companion_apps>.bill.companion-app-card{padding:13px!important;border-radius:18px!important}}
+/* v848：PWA 顶部安全区由页面壁纸覆盖；音乐背景在首页与播放器都清楚可见。 */
+html,body,.phone,.screen{min-height:100%;min-height:100dvh;background-color:#000}
+.music-app.has-bg:before{z-index:0;background:rgba(0,0,0,.08)}
+.music-app.has-bg:after{content:"";position:absolute;inset:-12px;z-index:0;background-image:linear-gradient(180deg,rgba(8,9,11,.38),rgba(11,12,15,.78)),var(--music-bg);background-position:center;background-size:cover;filter:saturate(.82);transform:scale(1.03);pointer-events:none}
+.music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
+.music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=847">
+<link rel="stylesheet" href="pet-game.css?v=848">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1200,12 +1206,12 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=847" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=847" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=847" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=847" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=847" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=847" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=847"></script>
+<script src="license-gate.js?v=848" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=848" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=848" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=848" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=848" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=848" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=848"></script>
 </body>
 </html>
