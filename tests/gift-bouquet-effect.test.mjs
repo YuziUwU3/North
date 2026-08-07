@@ -29,6 +29,10 @@ test('supported particle gifts open from received role gift cards',()=>{
   assert.match(effect,/\.giftcard-simple\{width:210px;min-height:138px/,'the formal chat card should stay close to the compact original template');
   assert.match(effect,/\.giftcard-effect\{[^}]*border:0!important/,'the chat gift card must not regain a pale outline');
   assert.match(effect,/\.gift-box-stage\{[^}]*position:fixed;inset:0/,'opening the chat card must occupy the full screen');
+  assert.match(effect,/\.gift-box-stage\{[^}]*opacity:1/,'the full-screen box background must cover chat immediately without a transparent flash');
+  assert.doesNotMatch(effect,/\.gift-box-stage\{[^}]*opacity:0/,'the chat page must never show through while the gift box enters');
+  assert.match(effect,/\.gift-bouquet-overlay\{[^}]*opacity:1/,'the revealed gift background must be opaque before its first painted frame');
+  assert.match(effect,/if\(open\)open\(\);stop\(true\)/,'the revealed gift must cover the screen before the box layer is removed');
   assert.match(effect,/width:min\(80vw,310px\)/,'the full-screen stage should keep a centered medium gift box without filling the phone width');
   assert.match(effect,/@keyframes giftCardShake/);
   assert.doesNotMatch(effect,/content:'点击开启'/,'the formal role card should not add a pseudo-button');
