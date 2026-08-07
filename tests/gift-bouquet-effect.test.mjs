@@ -52,7 +52,21 @@ test('bouquet composition is constrained-random rather than one fixed drawing',(
   assert.match(effect,/seededRandom\(seed\)/);
   assert.match(effect,/palette:palette\.name/);
   assert.match(effect,/baseY=h\*\.59/,'the full bouquet and wrapping must sit above the bottom copy');
-  assert.match(effect,/alpha\*\.58/,'the wrapping should remain visibly distinct from the dark background');
+  assert.match(effect,/wrapBottom=Math\.min\(h\*\.82,baseY\+bouquetW\*\.47\)/,'the wrapping must continue well below the flower heads instead of ending as a shallow top flap');
+  assert.match(effect,/wrapTieY=baseY\+bouquetW\*\.335/,'the ribbon must gather the complete lower wrapping');
+  assert.match(effect,/ctx\.lineTo\(x-w\*\.31,top-w\*\.02\)/,'the bouquet must draw a full left wrapping sheet');
+  assert.match(effect,/ctx\.lineTo\(x\+w\*\.31,top-w\*\.015\)/,'the bouquet must draw a full right wrapping sheet');
+  assert.match(effect,/alpha\*\.7/,'the wrapping should remain visibly distinct from the dark background');
+});
+
+test('direct gifts never become shopping orders while role-paid purchases name the payer',()=>{
+  assert.match(app,/function shopOrderIsDirectGift\(order\)/);
+  assert.match(app,/function shopOrderRows\(\)\{return \(S\.shop&&S\.shop\.orders\|\|\[\]\)\.filter\(order=>!shopOrderIsDirectGift\(order\)\);\}/,'all order views must filter legacy direct-gift rows');
+  assert.match(app,/if\(kind!=='gift'\)\{const c=cid&&getC\(cid\),payerName=/,'parcel delivery must keep direct gifts out of order creation');
+  assert.match(app,/emoji:opts\.emoji\|\|\(kind==='pay'\?'🛍️':'🛒'\),payerName,buyTs/,'paid orders must persist who paid');
+  assert.match(app,/shopOrderPayerName\(order\)\+'代付'/,'the order card must display the role name with the paid-by label');
+  assert.match(app,/orders=shopOrderRows\(\).*shopOrderFact\(o\)/,'phone inspection must see the same filtered order history and payer label');
+  assert.match(app,/giftSend[\s\S]{0,700}parcelDeliver\(cid,name,price,'gift'/,'role gifts must still travel through the mailbox without becoming orders');
 });
 
 test('natural short gift requests are recognized without the exact phrase one bouquet',()=>{
@@ -115,7 +129,7 @@ test('full-screen particle animation is mobile-bounded and cleans itself up',()=
 });
 
 test('the app, offline cache and gate-free preview all load the effect',()=>{
-  assert.match(html,/gift-effects\.js\?v=839/);
+  assert.match(html,/gift-effects\.js\?v=840/);
   assert.match(sw,/gift-effects\.js\?v='\+BUILD/);
   assert.match(preview,/gift-effects\.js\?v=preview-2/);
   assert.match(preview,/class="gift-cover"/);

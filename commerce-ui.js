@@ -25,7 +25,8 @@
   window.renderShop=function(){
     coInit();
     var rows=S.shop.results||[],cartN=(S.shop.cart||[]).length;
-    var orderN=(S.shop.orders||[]).filter(function(order){return !order.refunded;}).length;
+    var orderRows=typeof shopOrderRows==='function'?shopOrderRows():(S.shop.orders||[]).filter(function(order){return order.kind!=='gift';});
+    var orderN=orderRows.filter(function(order){return !order.refunded;}).length;
     var co=S.shop.co||{};
     var categories=[['✨','今日上新'],['💄','美妆'],['👗','穿搭'],['🏠','家居'],['🎁','礼物']];
     return '<div class="commerce-top">'+

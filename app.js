@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='839'){
+if(window.__NORTH_SHELL_BUILD__!=='840'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v839 · 主屏自由布局与微信框架接入';
+const APP_VER='v840 · 花束包装与礼物订单修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=839';
+  const url='sw.js?v=840';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3818,8 +3818,13 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
 
 /* ---------- 购物 ---------- */
 let _shopBusy=false;
+function shopOrderIsDirectGift(order){return !!(order&&(order.kind==='gift'||(order.parcel&&order.shop==='礼物'&&order.kind!=='pay'&&order.kind!=='self')));}
+function shopOrderRows(){return (S.shop&&S.shop.orders||[]).filter(order=>!shopOrderIsDirectGift(order));}
+function shopOrderPayerName(order){if(!order||order.kind!=='pay')return'';if(order.payerName)return order.payerName;const parcel=(S.giftbox||[]).find(g=>g&&g.id===order.id),cid=order.cid||(parcel&&parcel.cid),c=cid&&getC(cid);return c?(c.remark||c.name):'TA';}
+function shopOrderTag(order){return order&&order.kind==='pay'?shopOrderPayerName(order)+'代付':order&&order.kind==='self'?'自购':'';}
+function shopOrderFact(order){const tag=shopOrderTag(order);return (order.item||order.name||'商品')+' ¥'+(+order.price||0).toFixed(2)+(tag?'（'+tag+'）':'');}
 function renderShop(){coInit();const r=S.shop.results||[];const cartN=(S.shop.cart||[]).length;
-  const orderN=(S.shop.orders||[]).filter(o=>!o.refunded).length;const co=S.shop.co;
+  const orderN=shopOrderRows().filter(o=>!o.refunded).length;const co=S.shop.co;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">购物</span><span class="r" onclick="openOrders()">${svgIc('bag',20,'#fff')}${orderN?'<span class="badge" style="margin-left:2px">'+orderN+'</span>':''}</span></div>
     <div style="padding:6px 12px;text-align:right;background:#111;border-bottom:.5px solid #2a2a2c">${co.on?'':'<button class="minibtn" style="background:#ff8fab;color:#fff" onclick="coInvite()">👫 邀他一起逛</button> '}<button class="minibtn" onclick="openCart()">购物车${cartN?'('+cartN+')':''}</button> <button class="minibtn" onclick="openOrders()">我的订单${orderN?'('+orderN+')':''}</button> <button class="minibtn" style="background:#ff6b6b;color:#fff" onclick="go('shopcs')">客服</button></div>
     ${co.on?coPanel():''}
@@ -3858,8 +3863,8 @@ function doBuy(items,who){if(!items.length)return;const total=items.reduce((s,p)
 // 购物车「自己买单」：买成功后如果在一起逛,记进记忆并自动退出
 function cartBuySelf(){const items=(S.shop.cart||[]).slice();if(doBuy(items,'self'))coFinalize(items,'me');}
 function orderEta(ts){const ms=ts-Date.now();if(ms<=0)return '即将到达';const h=Math.floor(ms/3600000);const m=Math.floor((ms%3600000)/60000);return h>0?('还有约 '+h+' 小时'+(m?m+'分':'')+' 到货'):('还有约 '+Math.max(1,m)+' 分钟到货');}
-function openOrders(){const os=S.shop.orders||[];const refN=os.filter(o=>o.refunded).length;
-  openModal(`<h3>我的订单</h3><div style="max-height:60vh;overflow:auto">${os.length?os.map(o=>{const arrived=Date.now()>=o.arriveTs;const tag=o.parcel?(o.kind==='pay'?'代付':o.kind==='self'?'自购':'礼物'):'';const refundable=(!o.parcel||o.kind==='self')&&!o.refunded;
+function openOrders(){const os=shopOrderRows(),refN=os.filter(o=>o.refunded).length;
+  openModal(`<h3>我的订单</h3><div style="max-height:60vh;overflow:auto">${os.length?os.map(o=>{const arrived=Date.now()>=o.arriveTs,tag=shopOrderTag(o),refundable=(!o.parcel||o.kind==='self')&&!o.refunded;
     const st=o.refunded?'<span style="color:#888">已退款</span>':(arrived?(o.parcel?'<span style="color:#19a463">已到信箱 · 去签收</span>':'<span style="color:#19a463">已签收</span>'):'<span style="color:#ffb83b">已发货 · 运输中 · '+orderEta(o.arriveTs)+'</span>');
     return `<div class="bill orderrow" style="${o.refunded?'opacity:.55':''}"><div class="orderinfo">${o.emoji||'🛍️'} ${esc(o.name)}${tag?'<span style="color:#ff8fab;font-size:11px;margin-left:4px">'+tag+'</span>':''}<small style="display:block;color:#888">¥${(+o.price).toFixed(2)} · ${st}</small></div><div class="orderactions"><button class="minibtn" onclick="csConsultOrder('${o.id}')">咨询客服</button>${o.parcel&&arrived?'<button class="minibtn" style="background:#ff6fa5;color:#fff" onclick="closeModal();go(\'mail\')">去信箱签收</button>':''}${refundable?`<button class="minibtn" style="color:#fa5151" onclick="refundOrder('${o.id}')">退款</button>`:(o.refunded?'<span style="color:#888;font-size:12px">已退</span>':'')}<button class="minibtn" style="color:#fa5151" onclick="delOrder('${o.id}')">删除</button></div></div>`;}).join(''):'<div class="empty">还没有订单～买点东西吧</div>'}</div>
   <button class="btn p" style="margin-top:8px;background:#ff6b6b" onclick="closeModal();go('shopcs')">联系商城客服</button>
@@ -4097,11 +4102,10 @@ function checkFoodDelivery(){if(!isMain())return;const now=Date.now();let ch=fal
     });}
   if(ch){save();const cu=cur();if(cu&&(cu.p==='chat'||cu.p==='wechat'))render();}}
 setInterval(checkFoodDelivery,60000);setTimeout(checkFoodDelivery,7000);
-// 统一"包裹配送"：进商城订单显示已发货 + 第二天到信箱签收（礼物 和 代付的商品都走这条）
+// 统一包裹配送：直接赠礼只进信箱；自购和明确代付才进入“我的订单”。
 function parcelDeliver(cid,name,price,kind,opts){opts=opts||{};name=(''+(name||'商品')).slice(0,30);price=+price||0;kind=kind||'gift';const pid=uid();const arrive=Date.now()+86400000;
   S.giftbox=S.giftbox||[];S.giftbox.push({id:pid,cid:cid||null,name,price,kind,giftRecipe:opts.giftRecipe||null,buyTs:Date.now(),arriveTs:arrive,delivered:false,notified:kind==='food'?false:true});
-  S.shop.orders=S.shop.orders||[];S.shop.orders.unshift({id:pid,name,price,shop:opts.shop||(kind==='pay'?'代付':kind==='self'?'自购':'礼物'),emoji:opts.emoji||(kind==='pay'?'🛍️':kind==='self'?'🛒':'🎁'),buyTs:Date.now(),arriveTs:arrive,refunded:false,parcel:true,kind});
-  if(S.shop.orders.length>40)S.shop.orders=S.shop.orders.slice(0,40);}
+  if(kind!=='gift'){const c=cid&&getC(cid),payerName=kind==='pay'?(opts.payerName||(c&&(c.remark||c.name))||'TA'):'';S.shop.orders=S.shop.orders||[];S.shop.orders.unshift({id:pid,cid:cid||null,name,price,shop:opts.shop||(kind==='self'?'自购':'商城'),emoji:opts.emoji||(kind==='pay'?'🛍️':'🛒'),payerName,buyTs:Date.now(),arriveTs:arrive,refunded:false,parcel:true,kind});if(S.shop.orders.length>40)S.shop.orders=S.shop.orders.slice(0,40);}}
 function giftNameIsFloral(name){return /(?:花束|鲜花|玫瑰|百合|郁金香|向日葵|满天星|雏菊|牡丹|芍药|铃兰|桔梗|康乃馨|蝴蝶兰|永生花|花礼|手捧花)/i.test(String(name||''));}
 function giftEffectKind(name){name=String(name||'');if(giftNameIsFloral(name))return'bouquet';if(/(?:玩偶|公仔|抱枕|小熊|熊熊|兔子|小兔|小狗|狗狗|小猫|猫猫)/i.test(name))return'teddy';if(/(?:订婚戒指|求婚戒指|钻戒|戒指|指环)/i.test(name))return'ring';return'';}
 const GIFT_BOX_COLORS={blue:'#8fbce8',pink:'#f2adc7',white:'#f2efe8',red:'#ef6b6f'};
@@ -4252,6 +4256,7 @@ if(!S.me.sleep)S.me.sleep={active:null,records:[]};
 if(!S.me.report)S.me.report={active:null,log:[]};
 if(!S.me.appUsage)S.me.appUsage={date:'',used:{},bonus:{}};
 if(S.shop&&!S.shop.orders)S.shop.orders=[];
+if(S.shop&&S.shop.orders){const _keptOrders=shopOrderRows();if(_keptOrders.length!==S.shop.orders.length){S.shop.orders=_keptOrders;save();}}
 if(S.shop&&!S.shop.cs)S.shop.cs={msgs:[]};
 if(!Array.isArray(S.mood))S.mood=[];
 {let _mig=false;if(pruneDailyMood())_mig=true;if(purgeRemovedHomeAppData())_mig=true;if(!Array.isArray(S.me.lifeNotes)){S.me.lifeNotes=[];_mig=true;}if(_mig)save();}
@@ -7562,7 +7567,7 @@ function myActivity(exceptId,since){let s='';since=since||0;
   s+=_dmLine(S.dy&&S.dy.dms,'她抖音私信');
   s+=_dmLine(S.x&&S.x.dms,'她X私信');
   // 购物订单
-  const ords=(S.shop&&S.shop.orders||[]).filter(o=>!o.refunded).slice(0,5);if(ords.length)s+='·她最近网购下单：'+ords.map(o=>(o.time?'['+o.time+'] ':'')+(o.item||o.name||'商品')).join('、')+'\n';
+  const ords=shopOrderRows().filter(o=>!o.refunded).slice(0,5);if(ords.length)s+='·她最近网购下单：'+ords.map(o=>(o.time?'['+o.time+'] ':'')+shopOrderFact(o)).join('、')+'\n';
   // 线下约会记录（什么时候·和谁·在哪约会）
   const _dates=[];Object.keys(S.offline||{}).forEach(cid=>{const o=S.offline[cid];const cc=getC(cid);if(!cc||cc.deleted||!o)return;if(!((o.memory&&o.memory.length)||(o.msgs&&o.msgs.length)||o.started))return;const last=(o.memory&&o.memory.length)?offMemText(o.memory[o.memory.length-1]).slice(0,30):'';_dates.push((o.when||offMemLabel(o))+' 和'+(cc.remark||cc.name)+(o.loc?'在'+o.loc:'')+'约会'+(last?'，'+last:''));});
   if(_dates.length)s+='·她的线下约会记录：'+_dates.slice(0,3).join('；')+'\n';
@@ -9066,7 +9071,7 @@ function remoteControlCouplePermissions(){if(!S.couple)return[];const cp=S.coupl
   {key:'jailAuth',name:'小黑屋权限',section:'cou_jail',enabled:!!cp.jailAuth}
 ];const gr=cp.grant||{};Object.keys(LOCKABLE).forEach(k=>rows.push({key:'grant:'+k,name:'软件管控：'+LOCKABLE[k],section:'cou_grant',enabled:!!gr[k]}));const ga=cp.gagAuth||[];gagTargetAll().forEach(t=>rows.push({key:'gag:'+t.key,name:'禁言授权：'+t.name,section:'cou_gag_auth',enabled:ga.indexOf(t.key)>=0}));return rows;}
 function remoteControlEnableCouplePermission(key){if(!S.couple)return null;const cp=S.couple,row=remoteControlCouplePermissions().find(x=>x.key===key);if(!row)return null;if(key.indexOf('grant:')===0){const k=key.slice(6);if(!LOCKABLE[k])return null;cp.grant=cp.grant||{};cp.grant[k]=true;}else if(key.indexOf('gag:')===0){const k=key.slice(4);if(!gagTargetAll().some(x=>x.key===k))return null;cp.gagAuth=cp.gagAuth||[];if(cp.gagAuth.indexOf(k)<0)cp.gagAuth.push(k);}else if(['wxLoginAuth','remoteControlAuth','remoteControlAutoApprove','walletAuth','jailAuth'].includes(key)){cp[key]=true;if(key==='remoteControlAutoApprove')cp.remoteControlAuth=true;}else return null;save();return row;}
-function remoteControlViewableSnapshot(cid){const pc=remoteControlPhoneSnapshot(),orders=(S.shop&&S.shop.orders||[]).slice(0,20).map(o=>(o.refunded?'已退款 ':'')+(o.name||o.item||'商品')+' ¥'+(+o.price||0).toFixed(2)+(o.time?' '+o.time:'')),food=foodOrderRows().slice(0,16).map(b=>(b.time||factStamp(b.ts||Date.now()))+' '+(b.note||'外卖订单')+' ¥'+(+b.amount||0).toFixed(2)),trips=(S.travel&&S.travel.trips||[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).slice(0,16).map(t=>(t.date||'未定日期')+' '+(t.from||'')+'→'+(t.to||'')+' '+(t.no||'')+' '+(t.status==='upcoming'?'待出行':t.status==='done'?'已完成':'已取消')+' ¥'+(+t.price||0)),calendar=(S.calendar||[]).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,16).map(e=>(e.date||'')+' '+(e.title||'日程')),mail=(S.mail||[]).slice(0,12).map(m=>factStamp(m.time||Date.now())+' '+mailCleanText(m.subject||'信件')+'：'+mailCleanText(m.body||'').replace(/\s+/g,' ').slice(0,80)),browser=(S.browser&&S.browser.history||[]).slice(0,14).map(h=>factStamp(h.time||Date.now())+' 搜索“'+String(h.q||'').slice(0,60)+'”'),offline=[],music=[],tasks=[];
+function remoteControlViewableSnapshot(cid){const pc=remoteControlPhoneSnapshot(),orders=shopOrderRows().slice(0,20).map(o=>(o.refunded?'已退款 ':'')+shopOrderFact(o)+(o.time?' '+o.time:'')),food=foodOrderRows().slice(0,16).map(b=>(b.time||factStamp(b.ts||Date.now()))+' '+(b.note||'外卖订单')+' ¥'+(+b.amount||0).toFixed(2)),trips=(S.travel&&S.travel.trips||[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).slice(0,16).map(t=>(t.date||'未定日期')+' '+(t.from||'')+'→'+(t.to||'')+' '+(t.no||'')+' '+(t.status==='upcoming'?'待出行':t.status==='done'?'已完成':'已取消')+' ¥'+(+t.price||0)),calendar=(S.calendar||[]).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,16).map(e=>(e.date||'')+' '+(e.title||'日程')),mail=(S.mail||[]).slice(0,12).map(m=>factStamp(m.time||Date.now())+' '+mailCleanText(m.subject||'信件')+'：'+mailCleanText(m.body||'').replace(/\s+/g,' ').slice(0,80)),browser=(S.browser&&S.browser.history||[]).slice(0,14).map(h=>factStamp(h.time||Date.now())+' 搜索“'+String(h.q||'').slice(0,60)+'”'),offline=[],music=[],tasks=[];
   Object.keys(S.offline||{}).forEach(id=>{const o=S.offline[id],cc=getC(id);if(!o||!cc||cc.deleted||!((o.memory&&o.memory.length)||(o.msgs&&o.msgs.length)||o.started))return;offline.push((o.when||offMemLabel(o))+' 和'+(cc.remark||cc.name)+(o.loc?'在'+o.loc:'')+'约会'+((o.memory&&o.memory.length)?'：'+offMemText(o.memory[o.memory.length-1]).slice(0,100):''));});
   musicInit();(S.music.chat||[]).slice(-14).reverse().forEach(m=>{const cc=getC(m.cid);music.push(factStamp(m.time||Date.now())+' '+(m.role==='user'?S.me.name:((cc&&(cc.remark||cc.name))||'角色'))+'：'+String(m.content||'').replace(/\s+/g,' ').slice(0,80));});
   const tc=taskC(),tt=tc&&tc.tasks&&tc.tasks.date===todayStr()?tc.tasks:null;if(tt)(tt.list||[]).forEach(x=>tasks.push((x.done?'已完成 ':'未完成 ')+(x.text||'任务')));

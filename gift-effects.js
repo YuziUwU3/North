@@ -186,25 +186,29 @@ function buildBouquet(rng,w,h,palette,reduced){
     const side=i%2?-1:1,t=i/(leafCount-1||1),lx=cx+side*bouquetW*(.13+.26*rng()),ly=baseY-bouquetW*(.05+.32*t);
     addLeaf(particles,rng,w,h,lx,ly,(side<0?Math.PI:.0)+(rng()-.5)*.65,bouquetW*(.15+.08*rng()),bouquetW*(.035+.025*rng()),palette.leaf);
   }
-  const wrapTop=baseY+bouquetW*.04,wrapBottom=Math.min(h*.84,baseY+bouquetW*.31);
-  for(let i=0;i<(reduced?70:120);i++){
-    const t=rng(),half=mix(bouquetW*.21,bouquetW*.065,t),x=cx+(rng()*2-1)*half,y=mix(wrapTop,wrapBottom,t);
+  const wrapTop=baseY+bouquetW*.015,wrapTieY=baseY+bouquetW*.335,wrapBottom=Math.min(h*.82,baseY+bouquetW*.47);
+  for(let i=0;i<(reduced?92:156);i++){
+    const t=rng(),half=mix(bouquetW*.245,bouquetW*.06,t),x=cx+(rng()*2-1)*half,y=mix(wrapTop,wrapBottom,t);
     particle(particles,rng,w,h,x,y,rng()<.22?palette.petals[2]:palette.wrap,.7+rng()*1.2,'wrap',420+rng()*650);
   }
   for(let i=0;i<(reduced?34:92);i++){
     const start=260+rng()*2900,side=rng()<.5?-1:1;
     petals.push({x:rng()*w,y:-24-rng()*h*.2,start,speed:44+rng()*78,drift:side*(18+rng()*42),size:2.2+rng()*4.8,rot:rng()*Math.PI,spin:(rng()-.5)*2.8,color:pick(rng,palette.petals),phase:rng()*6.28});
   }
-  return {particles,blossoms,petals,cx,baseY,scale,bouquetW,palette};
+  return {particles,blossoms,petals,cx,baseY,scale,bouquetW,wrapTop,wrapTieY,wrapBottom,palette};
 }
 
 function drawBouquetBase(ctx,bouquet,alpha){
   const x=bouquet.cx,y=bouquet.baseY,w=bouquet.bouquetW;
   ctx.save();ctx.globalCompositeOperation='source-over';ctx.lineCap='round';
   for(const b of bouquet.blossoms){ctx.strokeStyle=rgba(pick(seededRandom(b.x+'-'+b.y),bouquet.palette.leaf),alpha*.32);ctx.lineWidth=1.15*bouquet.scale;ctx.beginPath();ctx.moveTo(x,y+51*bouquet.scale);ctx.quadraticCurveTo(mix(x,b.x,.46),mix(y,b.y,.48),b.x,b.y);ctx.stroke();}
-  const wrap=ctx.createLinearGradient(x-w*.24,y,x+w*.08,y+w*.33);wrap.addColorStop(0,rgba(bouquet.palette.petals[2],alpha*.22));wrap.addColorStop(.42,rgba(bouquet.palette.wrap,alpha*.58));wrap.addColorStop(1,rgba(bouquet.palette.petals[0],alpha*.2));ctx.fillStyle=wrap;ctx.strokeStyle=rgba(bouquet.palette.petals[2],alpha*.4);ctx.lineWidth=1.15;
-  ctx.beginPath();ctx.moveTo(x-w*.23,y+w*.03);ctx.quadraticCurveTo(x-w*.13,y+w*.22,x-w*.055,y+w*.31);ctx.lineTo(x+w*.055,y+w*.31);ctx.quadraticCurveTo(x+w*.14,y+w*.21,x+w*.23,y+w*.03);ctx.quadraticCurveTo(x,y+w*.09,x-w*.23,y+w*.03);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.strokeStyle=rgba(bouquet.palette.petals[3],alpha*.18);ctx.beginPath();ctx.moveTo(x-w*.2,y+w*.055);ctx.lineTo(x-w*.045,y+w*.29);ctx.moveTo(x+w*.2,y+w*.055);ctx.lineTo(x+w*.045,y+w*.29);ctx.stroke();ctx.restore();
+  const top=bouquet.wrapTop||y+w*.015,tie=bouquet.wrapTieY||y+w*.335,bottom=bouquet.wrapBottom||y+w*.47;
+  const back=ctx.createLinearGradient(x-w*.31,top,x+w*.28,bottom);back.addColorStop(0,rgba(bouquet.palette.petals[2],alpha*.22));back.addColorStop(.5,rgba(bouquet.palette.wrap,alpha*.48));back.addColorStop(1,rgba(bouquet.palette.petals[0],alpha*.18));ctx.strokeStyle=rgba(bouquet.palette.petals[2],alpha*.38);ctx.lineWidth=1.1;
+  ctx.fillStyle=back;ctx.beginPath();ctx.moveTo(x,top+w*.08);ctx.lineTo(x-w*.31,top-w*.02);ctx.quadraticCurveTo(x-w*.2,tie-w*.02,x-w*.072,bottom);ctx.lineTo(x+ w*.012,tie);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,top+w*.08);ctx.lineTo(x+w*.31,top-w*.015);ctx.quadraticCurveTo(x+w*.2,tie-w*.015,x+w*.072,bottom);ctx.lineTo(x-w*.012,tie);ctx.closePath();ctx.fill();ctx.stroke();
+  const front=ctx.createLinearGradient(x-w*.24,top,x+w*.08,bottom);front.addColorStop(0,rgba(bouquet.palette.petals[2],alpha*.28));front.addColorStop(.42,rgba(bouquet.palette.wrap,alpha*.7));front.addColorStop(1,rgba(bouquet.palette.petals[0],alpha*.3));ctx.fillStyle=front;ctx.strokeStyle=rgba(bouquet.palette.petals[2],alpha*.5);ctx.lineWidth=1.25;
+  ctx.beginPath();ctx.moveTo(x-w*.245,top);ctx.quadraticCurveTo(x-w*.16,tie-w*.035,x-w*.065,bottom);ctx.quadraticCurveTo(x,bottom+w*.018,x+w*.065,bottom);ctx.quadraticCurveTo(x+w*.16,tie-w*.035,x+w*.245,top);ctx.quadraticCurveTo(x,top+w*.115,x-w*.245,top);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle=rgba(bouquet.palette.petals[3],alpha*.25);ctx.beginPath();ctx.moveTo(x-w*.215,top+w*.025);ctx.quadraticCurveTo(x-w*.12,tie,x-w*.048,bottom-w*.012);ctx.moveTo(x+w*.215,top+w*.025);ctx.quadraticCurveTo(x+w*.12,tie,x+w*.048,bottom-w*.012);ctx.moveTo(x-w*.078,tie);ctx.quadraticCurveTo(x,tie+w*.024,x+w*.078,tie);ctx.stroke();ctx.restore();
 }
 
 function drawSoftBloom(ctx,b,time,alpha){
@@ -219,10 +223,10 @@ function drawSoftBloom(ctx,b,time,alpha){
   const glow=ctx.createRadialGradient(0,0,0,0,0,r*.62);glow.addColorStop(0,rgba(b.core,alpha*.48));glow.addColorStop(.22,rgba(b.color,alpha*.22));glow.addColorStop(1,rgba(b.color,0));ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,0,r*.72,0,Math.PI*2);ctx.fill();ctx.restore();
 }
 function drawRibbon(ctx,bouquet,time,alpha){
-  const x=bouquet.cx,y=bouquet.baseY+bouquet.scale*76;
+  const x=bouquet.cx,y=bouquet.wrapTieY||bouquet.baseY+bouquet.bouquetW*.335;
   ctx.save();ctx.translate(x,y);ctx.globalCompositeOperation='screen';ctx.strokeStyle=rgba(bouquet.palette.petals[1],alpha*.48);ctx.lineWidth=2.2*bouquet.scale;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(-48*bouquet.scale,-34*bouquet.scale,-67*bouquet.scale,17*bouquet.scale,-9*bouquet.scale,6*bouquet.scale);ctx.bezierCurveTo(45*bouquet.scale,-22*bouquet.scale,63*bouquet.scale,24*bouquet.scale,5*bouquet.scale,9*bouquet.scale);ctx.stroke();
-  ctx.strokeStyle=rgba(bouquet.palette.petals[2],alpha*.28);ctx.beginPath();ctx.moveTo(-5*bouquet.scale,5*bouquet.scale);ctx.bezierCurveTo(-20*bouquet.scale,35*bouquet.scale,-32*bouquet.scale,55*bouquet.scale,-25*bouquet.scale,83*bouquet.scale);ctx.moveTo(5*bouquet.scale,7*bouquet.scale);ctx.bezierCurveTo(17*bouquet.scale,34*bouquet.scale,32*bouquet.scale,57*bouquet.scale,19*bouquet.scale,88*bouquet.scale);ctx.stroke();ctx.restore();
+  ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(-52*bouquet.scale,-31*bouquet.scale,-72*bouquet.scale,20*bouquet.scale,-10*bouquet.scale,7*bouquet.scale);ctx.bezierCurveTo(49*bouquet.scale,-25*bouquet.scale,69*bouquet.scale,23*bouquet.scale,7*bouquet.scale,10*bouquet.scale);ctx.stroke();
+  ctx.strokeStyle=rgba(bouquet.palette.petals[2],alpha*.34);ctx.beginPath();ctx.moveTo(-6*bouquet.scale,6*bouquet.scale);ctx.bezierCurveTo(-18*bouquet.scale,27*bouquet.scale,-31*bouquet.scale,43*bouquet.scale,-24*bouquet.scale,67*bouquet.scale);ctx.moveTo(6*bouquet.scale,8*bouquet.scale);ctx.bezierCurveTo(18*bouquet.scale,28*bouquet.scale,31*bouquet.scale,46*bouquet.scale,21*bouquet.scale,70*bouquet.scale);ctx.stroke();ctx.restore();
 }
 function drawPetal(ctx,p,elapsed,w,h,fade){
   if(elapsed<p.start)return;
