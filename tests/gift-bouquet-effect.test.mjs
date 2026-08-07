@@ -111,7 +111,7 @@ test('full-screen particle animation is mobile-bounded and cleans itself up',()=
 });
 
 test('the app, offline cache and gate-free preview all load the effect',()=>{
-  assert.match(html,/gift-effects\.js\?v=834/);
+  assert.match(html,/gift-effects\.js\?v=835/);
   assert.match(sw,/gift-effects\.js\?v='\+BUILD/);
   assert.match(preview,/gift-effects\.js\?v=preview-2/);
   assert.match(preview,/class="gift-cover"/);

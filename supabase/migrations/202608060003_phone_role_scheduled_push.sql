@@ -8,6 +8,7 @@ create table if not exists public.phone_role_push_profiles (
   relation text not null default '',
   persona text not null default '',
   user_name text not null default '你',
+  avatar_data text not null default '',
   enabled boolean not null default false,
   timezone text not null default 'Asia/Shanghai',
   start_hour smallint not null default 9 check (start_hour between 0 and 23),
@@ -37,6 +38,9 @@ create table if not exists public.phone_role_push_outbox (
   consumed_at timestamptz
 );
 
+alter table public.phone_role_push_outbox
+  add column if not exists avatar_token uuid not null default gen_random_uuid();
+
 create index if not exists phone_role_push_due_idx
   on public.phone_role_push_profiles(next_due_at)
   where enabled = true;
@@ -64,12 +68,17 @@ declare
   v_role_id text := left(trim(coalesce(p_profile->>'roleId', '')), 120);
   v_enabled boolean := coalesce((p_profile->>'enabled')::boolean, false);
   v_idle integer := greatest(15, least(1440, coalesce((p_profile->>'idleMinutes')::integer, 120)));
+  v_avatar text := trim(coalesce(p_profile->>'avatarData', ''));
 begin
   if not public.phone_companion_owner_ok(v_target, p_owner_secret) then return false; end if;
   if v_role_id = '' then raise exception 'invalid-role-id'; end if;
+  if length(v_avatar) > 50000
+     or v_avatar !~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' then
+    v_avatar := '';
+  end if;
 
   insert into public.phone_role_push_profiles (
-    target, role_id, role_name, relation, persona, user_name, enabled, timezone,
+    target, role_id, role_name, relation, persona, user_name, avatar_data, enabled, timezone,
     start_hour, end_hour, daily_limit, idle_minutes, next_due_at, updated_at
   ) values (
     v_target,
@@ -78,6 +87,7 @@ begin
     left(trim(coalesce(p_profile->>'relation', '')), 80),
     left(trim(coalesce(p_profile->>'persona', '')), 1200),
     left(trim(coalesce(p_profile->>'userName', '你')), 40),
+    v_avatar,
     v_enabled,
     case when coalesce(p_profile->>'timezone', '') ~ '^[A-Za-z0-9_+/:.-]{1,64}$'
       then p_profile->>'timezone' else 'Asia/Shanghai' end,
@@ -93,6 +103,7 @@ begin
     relation = excluded.relation,
     persona = excluded.persona,
     user_name = excluded.user_name,
+    avatar_data = excluded.avatar_data,
     enabled = excluded.enabled,
     timezone = excluded.timezone,
     start_hour = excluded.start_hour,

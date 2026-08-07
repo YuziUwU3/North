@@ -1,0 +1,15 @@
+v831 · 角色头像通信通知
+
+结果：服务器主动消息会使用对应角色的通知头像。普通 APNs 的左侧只能显示 App 图标；本包通过 Apple 官方“通信通知”能力和 Notification Service Extension 显示发送者头像。
+
+接入前提：先部署 202608070001_phone_role_avatar_notifications.sql，并重新部署 phone-role-push。不要重新授权 Screen Time、HealthKit，不要重选 App，也不要改已有 App Groups。
+
+第 1 步：在 Xcode 选中 PhoneCompanionTest 主 Target → Signing & Capabilities → + Capability → 添加 Communication Notifications。Xcode 会写入 com.apple.developer.usernotifications.communication；不要删除已有 Push Notifications、Background Modes、Family Controls 或 HealthKit。
+
+第 2 步：File → New → Target → Notification Service Extension，Product Name 填 RoleNotificationService，最低系统版本保持 iOS 15 或更高。创建后，把扩展自动生成的 NotificationService.swift 全部替换为本包同名文件。扩展 Info.plist 应保持 NSExtensionPointIdentifier = com.apple.usernotifications.service；本包附带模板供核对。
+
+第 3 步：主 Target 的 Info 增加 NSUserActivityTypes（Array），其中一项为 INSendMessageIntent。然后 Product → Build，编译通过后运行到原 iPhone。现有通知授权会保留，不需要再次授权。
+
+验证：打开一次小手机网页，让已开启服务器主动联系的角色自动同步 96×96 通知头像；下一条服务器主动消息到达时，通知应显示该角色头像。若扩展下载头像失败，系统会安全回退为无角色头像的普通通知，消息 outbox 与聊天补拉不受影响。
+
+隐私：服务器仅保存通知用的小尺寸 JPEG，不保存完整原图；头像地址包含每条 outbox 的随机 UUID，只在 7 天内可取，APNs 载荷不包含整张图片。

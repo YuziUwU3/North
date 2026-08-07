@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 function reply(body: unknown, status = 200) {
@@ -75,6 +75,58 @@ function nextDue(profile: Record<string, unknown>, waitMinutes?: number) {
   return new Date(Date.now() + minutes * 60_000).toISOString();
 }
 
+function supabaseAdmin() {
+  const url = Deno.env.get("SUPABASE_URL") || Deno.env.get("PHONE_SUPABASE_URL") || "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("PHONE_SERVICE_ROLE_KEY") || "";
+  return { url, client: createClient(url, serviceKey, { auth: { persistSession: false } }) };
+}
+
+function avatarURL(base: string, outboxId: string, token: string) {
+  if (!base || !outboxId || !token) return "";
+  const url = new URL(`${base.replace(/\/$/, "")}/functions/v1/phone-role-push/avatar`);
+  url.searchParams.set("id", outboxId);
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
+function avatarBytes(value: string) {
+  const match = value.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+  if (!match || value.length > 50000) return null;
+  try {
+    const bytes = Uint8Array.from(atob(match[2]), (char) => char.charCodeAt(0));
+    if (!bytes.length || bytes.length > 40000) return null;
+    return { bytes, type: `image/${match[1]}` };
+  } catch (_) {
+    return null;
+  }
+}
+
+async function serveAvatar(request: Request) {
+  const requestURL = new URL(request.url);
+  const id = requestURL.searchParams.get("id") || "";
+  const token = requestURL.searchParams.get("token") || "";
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(token)) {
+    return new Response("not-found", { status: 404 });
+  }
+  const { client } = supabaseAdmin();
+  const cutoff = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const { data: outbox } = await client.from("phone_role_push_outbox")
+    .select("target,role_id").eq("id", id).eq("avatar_token", token)
+    .gte("created_at", cutoff).maybeSingle();
+  if (!outbox?.target || !outbox?.role_id) return new Response("not-found", { status: 404 });
+  const { data: profile } = await client.from("phone_role_push_profiles")
+    .select("avatar_data").eq("target", outbox.target).eq("role_id", outbox.role_id).maybeSingle();
+  const avatar = avatarBytes(String(profile?.avatar_data || ""));
+  if (!avatar) return new Response("not-found", { status: 404 });
+  return new Response(avatar.bytes, {
+    headers: {
+      "Content-Type": avatar.type,
+      "Cache-Control": "private, max-age=86400",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
 function roleTextKey(value: unknown) {
   return String(value || "").toLowerCase().replace(/\s+/g, "").replace(/[，。！？、,.!?~～：:；;“”"'（）()【】\[\]]/g, "");
 }
@@ -141,7 +193,15 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
   }
 }
 
-async function sendAPNs(deviceToken: string, environment: string, roleName: string, body: string, outboxId: string) {
+async function sendAPNs(
+  deviceToken: string,
+  environment: string,
+  roleId: string,
+  roleName: string,
+  body: string,
+  outboxId: string,
+  roleAvatarURL: string,
+) {
   const keyId = Deno.env.get("APNS_KEY_ID") || "";
   const teamId = Deno.env.get("APNS_TEAM_ID") || "";
   const privateKey = Deno.env.get("APNS_PRIVATE_KEY") || "";
@@ -161,8 +221,15 @@ async function sendAPNs(deviceToken: string, environment: string, roleName: stri
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      aps: { alert: { title: roleName || "小手机", body }, sound: "default", badge: 1, "content-available": 1 },
-      rolePush: { outboxId },
+      aps: {
+        alert: { title: roleName || "小手机", body },
+        sound: "default",
+        badge: 1,
+        "content-available": 1,
+        "mutable-content": 1,
+        "thread-id": `role-${roleId}`,
+      },
+      rolePush: { outboxId, roleId, roleName, avatarURL: roleAvatarURL },
     }),
   });
   if (response.ok) return { status: "sent", error: "" };
@@ -171,13 +238,12 @@ async function sendAPNs(deviceToken: string, environment: string, roleName: stri
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (request.method === "GET") return serveAvatar(request);
   if (request.method !== "POST") return reply({ error: "method-not-allowed" }, 405);
   try {
     const input = await request.json().catch(() => ({}));
     if (input?.action !== "dispatch_due") return reply({ error: "invalid-action" }, 400);
-    const url = Deno.env.get("SUPABASE_URL") || Deno.env.get("PHONE_SUPABASE_URL") || "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("PHONE_SERVICE_ROLE_KEY") || "";
-    const client = createClient(url, serviceKey, { auth: { persistSession: false } });
+    const { url, client } = supabaseAdmin();
     const { data: due, error } = await client.rpc("phone_role_push_claim_due", { p_limit: 20 });
     if (error) throw error;
     const profiles = Array.isArray(due) ? due : [];
@@ -223,12 +289,12 @@ Deno.serve(async (request) => {
         body,
         trigger_kind: "scheduled",
         dedupe_key: dedupe,
-      }, { onConflict: "dedupe_key", ignoreDuplicates: true }).select("id,push_status").maybeSingle();
+      }, { onConflict: "dedupe_key", ignoreDuplicates: true }).select("id,push_status,avatar_token").maybeSingle();
       if (outboxError) throw outboxError;
       let outboxRow = outbox;
       if (!outboxRow?.id) {
         const { data: existing, error: existingError } = await client.from("phone_role_push_outbox")
-          .select("id,push_status").eq("dedupe_key", dedupe).maybeSingle();
+          .select("id,push_status,avatar_token").eq("dedupe_key", dedupe).maybeSingle();
         if (existingError) throw existingError;
         outboxRow = existing;
       }
@@ -239,7 +305,8 @@ Deno.serve(async (request) => {
           .select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle();
         push = await sendAPNs(
           String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"),
-          String(profile.role_name || "小手机"), body, outboxId,
+          String(profile.role_id || ""), String(profile.role_name || "小手机"), body, outboxId,
+          avatarURL(url, outboxId, String(outboxRow?.avatar_token || "")),
         );
         await client.from("phone_role_push_outbox").update({ push_status: push.status, push_error: push.error || null }).eq("id", outboxId);
         sent += push.status === "sent" ? 1 : 0;
