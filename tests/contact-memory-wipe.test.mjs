@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v842 · 朋友圈接入、屏保与通话原因修复'/);
+assert.match(source, /APP_VER='v843 · 微信与朋友圈无缝全屏'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 

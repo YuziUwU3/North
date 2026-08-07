@@ -53,17 +53,25 @@ test('formal home includes the complete edit layer and movable widgets',()=>{
   assert.match(html,/\.home-widget-ghost\{/);
 });
 
-test('WeChat receives the approved frame while original chat internals stay intact',()=>{
+test('WeChat uses a full-bleed frame while original chat internals stay intact',()=>{
   assert.match(app,/const _wxP=c\.p==='wechat'\?' wx-premium':''/);
   assert.match(app,/const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab\|\|'chats'\):''/);
   assert.match(html,/\.wx-premium>\.nav\{/);
   assert.match(html,/\.wx-premium>\.tabbar\{/);
+  assert.match(html,/\.wx-premium\{padding:0;[^}]*gap:0/);
+  assert.match(html,/\.wx-premium>\.nav\{[^}]*border-radius:0;[^}]*box-shadow:none/);
+  assert.match(html,/\.wx-premium>\.scroll\{[^}]*border-radius:0;[^}]*box-shadow:none/);
+  assert.match(html,/\.wx-premium>\.scroll>\.list\{margin:0;border-radius:0/);
+  assert.match(html,/\.wx-premium>\.tabbar\{[^}]*border-radius:0;[^}]*box-shadow:none/);
   assert.match(html,/微信高级框架只包裹四个主标签页/);
 });
 
 test('Moments content is formally integrated without replacing its data or actions',()=>{
   assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mcover\{/);
   assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mpost\{/);
+  assert.match(html,/\.wx-premium\.wx-moments>\.scroll\{padding:0;[^}]*scroll-padding-top:0/);
+  assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mcover\{[^}]*border-radius:0;[^}]*box-shadow:none/);
+  assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mpost\{margin:0;[^}]*border-bottom:\.5px solid[^}]*border-radius:0;[^}]*box-shadow:none/);
   assert.match(app,/S\.moments\.filter\(p=>\(p\.acct\|\|'main'\)===actId\(\)\)/);
   assert.match(app,/class="tm">\$\{fmtDT\(p\.time\)\}/);
   assert.match(app,/momentDelete\('\$\{p\.id\}'\)/);
