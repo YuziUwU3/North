@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='835'){
+if(window.__NORTH_SHELL_BUILD__!=='836'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v835 · 角色头像通信通知';
+const APP_VER='v836 · 高级主屏正式接入';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=835';
+  const url='sw.js?v=836';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2644,16 +2644,17 @@ function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
-  const hr=d.getHours();const greet=hr<6?'夜深了，早点睡':hr<11?'早安呀小猫':hr<14?'中午好，吃饭了吗':hr<18?'下午好～':hr<23?'晚上好呀':'还不睡吗';
-  return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}">
+  return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" id="homeDesktop" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}">
+    <div class="home-editbar"><span>长按拖动 App 或小组件</span><button onclick="homeEditFinish()">完成</button></div>
+    <header class="home-premium-head" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>
     <div class="home-scroll">${homeWidgets()}
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)" onscrollend="homeSnapPage(this)">${homeAppsHtml()}</div></div>
     <div class="pgdots">${(S.me.appLayout||APP_DEFLAYOUT).map((_,i)=>'<span class="pgdot'+(i===_homePage?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
     <div class="dock">
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}</div>
       <div class="app" onclick="openWeChat('contacts')">${aIco('contacts','👤','#54a0ff')}</div>
-      <div class="app" onclick="openWeChat('me')">${aIco('me','🐱','#feca57')}</div>
-      <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}</div>
+      <div class="app${appLocked('moments')?' app-locked':''}" onclick="appTap(event,'moments')">${aIco('moments','🌸','#ee5a6f',appLocked('moments')?'<span class="app-lock-line" aria-hidden="true">'+svgIc('lock',22,'#e3e4e8',1.55)+'</span>':'')}</div>
+      <div class="app" onclick="openWeChat('me')">${aIco('me','☺','#feca57')}</div>
     </div></div>`;
 }
 function homePageClamp(p){return Math.max(0,Math.min(APP_PAGES-1,+p||0));}
@@ -2692,7 +2693,7 @@ function appCell(k){const a=APPDEFS[k];if(!a)return '';
   const locked=!!(a.lk&&appLocked(k));
   const lockLayer=locked?'<span class="app-lock-line" aria-hidden="true">'+svgIc('lock',22,'#e3e4e8',1.55)+'</span>':'';
   return '<div class="app'+(locked?' app-locked':'')+'" data-k="'+k+'" aria-disabled="'+(locked?'true':'false')+'" onclick="appTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge+lockLayer)+'<span>'+a.t+'</span></div>';}
-function homeAppsHtml(){appLayoutInit();return S.me.appLayout.map((pg,pi)=>'<div class="apppage" data-pg="'+pi+'">'+pg.map(appCell).join('')+'</div>').join('');}
+function homeAppsHtml(){appLayoutInit();return S.me.appLayout.map((pg,pi)=>'<div class="apppage" data-pg="'+pi+'">'+(pi===0?homeInlineWidgets():'')+pg.map(appCell).join('')+'</div>').join('');}
 const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620;
 let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0,_aNoClick=0;
 function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
@@ -2709,7 +2710,7 @@ function appBeginDrag(){const p=_aPend;if(!p)return;const sw=$('#appswipe');if(!
   g.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;margin:0;z-index:9999;pointer-events:none;opacity:.94;transform:scale(1.14);';
   document.body.appendChild(g);
   _aDrag={k:p.k,ghost:g,offx:p.x-r.left,offy:p.y-r.top};
-  cell.style.opacity='.25';sw.classList.add('aedit');
+  cell.style.opacity='.25';sw.classList.add('aedit');homeEditStart();
   if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}
   appGhostMove(p.x,p.y);}
 function appGhostMove(x,y){if(!_aDrag)return;const g=_aDrag.ghost;g.style.left=(x-_aDrag.offx)+'px';g.style.top=(y-_aDrag.offy)+'px';
@@ -2738,11 +2739,13 @@ function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');const k
   if(tcell&&tcell.dataset.k&&tcell.dataset.k!==k){const ti=L[tpg].indexOf(tcell.dataset.k);if(ti>=0)idx=ti;}
   L[tpg].splice(idx,0,k);
   if(sw){sw.classList.remove('aedit');}
-  save();render();}
+  save();render();requestAnimationFrame(homeEditStart);}
 function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
   document.addEventListener('pointermove',appMove,{passive:false});
   document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appCancel);}
 initAppDrag();
+function homeEditStart(){const h=$('#homeDesktop');if(h)h.classList.add('home-editing');}
+function homeEditFinish(){appCancel();homeWidgetDragCancel();const h=$('#homeDesktop');if(h)h.classList.remove('home-editing');}
 // 用点按方式整理桌面（不用长按拖拽，苹果安卓都稳）：每个应用选放第几页 + 上下调顺序
 function appLayoutEditor(){appLayoutInit();const L=S.me.appLayout;
   openModal('<h3>桌面应用布局</h3><div class="hint">点按钮把应用放到第几页、调上下顺序，不用拖拽。改完点完成。</div>'
@@ -2771,8 +2774,10 @@ function widInit(){const m=S.me;
   m.widgets=(m.widgets||[]).filter(k=>valid(k)&&!seen[k]&&(seen[k]=1));
   // v245：桌面小猫补进来一次
   if(!m._wmigPet){if(m.widgets.indexOf('pet')<0)m.widgets.push('pet');m._wmigPet=1;}
-  // 时钟卡固定在最顶（代替原来的大时钟+问候）
-  if(m.widgets.indexOf('clock')<0)m.widgets.unshift('clock');else if(m.widgets[0]!=='clock'){m.widgets=['clock'].concat(m.widgets.filter(k=>k!=='clock'));}}
+  // 时钟卡默认在最顶；用户长按调整后保留自己的顺序
+  if(m.widgets.indexOf('clock')<0)m.widgets.unshift('clock');
+  // 只迁移从未整理过的旧默认顺序，接近已确认的 v829 预览；用户自己的排序不覆盖
+  if(!m._wmigPremiumPreview){const legacy=m.widgets.join('|')==='clock|couple2|mood|disc|pet';if(legacy){const usedPet=!!(m.petPats||m.petColor);m.widgets=['clock','disc','mood','couple2'].concat(usedPet?['pet']:[]);}m._wmigPremiumPreview=1;}}
 function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 const WIDS=[['clock','时钟·天气·小图','时间天气，右边可放一张自己上传的小图'],['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌'],['pet','桌面小猫','会动的电子小猫·白天精神晚上睡·点一下摸摸头']];
 const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>'],
@@ -2791,7 +2796,7 @@ function widgetHex(v,fallback){v=String(v||'').trim();return /^#[0-9a-f]{6}$/i.t
 function widgetOpacityValue(){if(S.me.wOpacity!=null&&isFinite(+S.me.wOpacity))return Math.max(0,Math.min(100,Math.round(+S.me.wOpacity)));return S.me.theme==='pink'?82:S.me.theme==='white'?92:13;}
 function widgetCardColor(){return widgetHex(S.me.wCardColor,S.me.theme==='pink'?'#fff8fb':'#ffffff');}
 function widgetRgba(hex,alpha){hex=widgetHex(hex,'#ffffff');const n=parseInt(hex.slice(1),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+Math.max(0,Math.min(1,alpha)).toFixed(3)+')';}
-function widgetStyleVars(){if(!S.me.wCardColor&&S.me.wOpacity==null){if(S.me.theme==='pink')return '--widget-bg:rgba(255,248,251,.82);--widget-border:rgba(255,255,255,.65);--widget-icon-bg:rgba(255,182,201,.5)';if(S.me.theme==='white')return '--widget-bg:rgba(255,255,255,.92);--widget-border:rgba(0,0,0,.05);--widget-icon-bg:rgba(120,128,150,.12)';return '--widget-bg:rgba(255,255,255,.13);--widget-border:rgba(255,255,255,.14);--widget-icon-bg:rgba(255,255,255,.16)';}const col=widgetCardColor(),a=widgetOpacityValue()/100;return '--widget-bg:'+widgetRgba(col,a)+';--widget-border:'+widgetRgba(col,Math.min(.72,a*.72+.04))+';--widget-icon-bg:'+widgetRgba(col,Math.min(.5,a*.42+.1));}
+function widgetStyleVars(){if(!S.me.wCardColor&&S.me.wOpacity==null){if(S.me.theme==='pink')return '--widget-bg:rgba(255,248,251,.82);--widget-border:rgba(255,255,255,.65);--widget-icon-bg:rgba(255,182,201,.5)';if(S.me.theme==='white')return '--widget-bg:rgba(255,255,255,.92);--widget-border:rgba(0,0,0,.05);--widget-icon-bg:rgba(120,128,150,.12)';return '--widget-bg:rgba(34,30,36,.74);--widget-border:rgba(255,255,255,.09);--widget-icon-bg:rgba(255,255,255,.08)';}const col=widgetCardColor(),a=widgetOpacityValue()/100;return '--widget-bg:'+widgetRgba(col,a)+';--widget-border:'+widgetRgba(col,Math.min(.72,a*.72+.04))+';--widget-icon-bg:'+widgetRgba(col,Math.min(.5,a*.42+.1));}
 function petcol(){return widgetHex(S.me.petColor,wcol());}
 function widgetAppearanceSet(key,value){widInit();if(key==='wOpacity'){S.me.wOpacity=Math.max(0,Math.min(100,Math.round(+value||0)));const n=$('#wopacityVal');if(n)n.textContent=S.me.wOpacity+'%';}else if(key==='wCardColor')S.me.wCardColor=widgetHex(value,'#ffffff');else if(key==='wColor')S.me.wColor=widgetHex(value,'#ffffff');else if(key==='petColor')S.me.petColor=widgetHex(value,'#ffffff');save(350);render();}
 function widgetAppearanceReset(){delete S.me.wCardColor;delete S.me.wOpacity;delete S.me.petColor;S.me.wColor='#ffffff';save();render();widgetManager();toast('已恢复当前主题的组件默认样式');}
@@ -2808,16 +2813,15 @@ function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=wcol();
   return _wCard(svgIc('calendar',22,col),'距 '+esc(best.title),main,'openCouple()');}
 function wTanow(){if(!(S.couple&&S.couple.cid))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const wn=whereNow(c);if(!wn)return '';return _wCard(svgIc('location',22,col),esc(c.remark||c.name)+' 此刻','<div class="wm">'+esc(wn)+'</div>','openCouple()');}
-function wDisc(){const col=wcol();const s=_mCur&&S.music&&S.music.songs?S.music.songs.find(x=>x.id===_mCur):null;
+function wDisc(){const col=wcol(),songs=S.music&&Array.isArray(S.music.songs)?S.music.songs:[],wanted=_mCur||(S.music&&S.music.lastSongId),s=songs.find(x=>x.id===wanted)||songs[0]||null;
   const cover=s&&s.cover?`<i class="home-record-cover" style="background-image:url(${s.cover})"></i>`:`<i class="home-record-cover home-record-empty">${esc(Array.from((s&&s.title)||'音')[0]||'音')}</i>`;
   const disc=`<span class="home-record${s&&_mPlaying?' wdisc':''}" aria-hidden="true">${cover}<i class="home-record-hole"></i></span>`;
-  const top=_mPlaying?'正在听':'音乐';
-  const main=s?'<div class="wm">'+esc(s.title)+(s.artist?' · '+esc(s.artist):'')+'</div>':'<div class="wm" style="opacity:.7">还没在听 · 去挑一首</div>';
-  return `<div class="hwid" style="color:${col}" onclick="openMusic()"><div class="wic">${disc}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
+  const main=s?'<b>'+esc(s.title)+'</b><span>'+esc(s.artist||'私人收藏')+'</span>':'<b>音乐</b><span>还没在听 · 去挑一首</span>';
+  return `<div class="hwid home-music-card" style="color:${col}" onclick="openMusic()"><div class="wic">${disc}</div><div class="home-music-meta">${main}</div><button class="home-music-play" onclick="event.stopPropagation();musicToggle()" aria-label="播放或暂停">${_mPlaying?'Ⅱ':'▶'}</button></div>`;}
 function wMood(){const col=wcol();const md=S.me.mood;const has=md.k&&md.date===wToday();
-  const ic=has?moodIc(md.k,27,col):svgIc('smile',26,col);
-  const main=has?'<div class="wm">'+(MOODS[md.k]?MOODS[md.k][0]:'')+'</div>':'<div class="wm" style="opacity:.7">点一下记录今天</div>';
-  return `<div class="hwid" style="color:${col}" onclick="wMoodPick()"><div class="wic">${ic}</div><div class="wbd"><div class="wt">今日心情</div>${main}</div></div>`;}
+  const ic=has?moodIc(md.k,34,col):moodIc('happy',34,col);
+  const main=has?(MOODS[md.k]?MOODS[md.k][0]:''):'点一下记录今天';
+  return `<div class="hwid home-mood-card" style="color:${col}" onclick="wMoodPick()"><div class="home-mood-copy"><b>今日心情</b><span>${main}</span></div><div class="home-mood-face">${ic}</div></div>`;}
 function wNote(){const n=S.me.note;const paper=n.paper||'#fff7d6',ink=n.ink||'#5b4a2f';
   const txt=n.text&&n.text.trim()?esc(n.text):'<span style="opacity:.5">点这里写点什么…</span>';
   return `<div class="hnote" style="background:${paper};color:${ink}" onclick="wNoteEdit()"><div class="nt">${svgIc('notebook',13,ink)} 便签</div><div class="nx">${txt}</div></div>`;}
@@ -2825,7 +2829,7 @@ function wCouple2(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';c
   const days=coupleDays(S.couple.startDate);
   const me=S.me.homeAvMe||S.me.avatar,ta=S.me.homeAvTa||c.avatar;
   const cir=(src)=>'<div class="cir">'+(src?'<img src="'+src+'">':svgIc('user',20,col))+'</div>';
-  return `<div class="hwid wcp2" style="color:${col}" onclick="cp2Edit()"><div class="av2">${cir(me)}${cir(ta)}</div><div class="d2">${days} <small>天</small></div></div>`;}
+  return `<div class="hwid wcp2" style="color:${col}" onclick="cp2Edit()"><div class="av2">${cir(me)}${cir(ta)}</div><div class="wcp2-copy"><b>我们</b><div class="d2">${days} <small>天</small></div></div></div>`;}
 function cp2Edit(){const col='#ff8fab';const me=S.me.homeAvMe||S.me.avatar,c=S.couple&&S.couple.cid?getC(S.couple.cid):null,ta=S.me.homeAvTa||(c&&c.avatar);
   const pv=(src,who)=>`<div onclick="cp2Pic('${who}')" style="width:62px;height:62px;border-radius:50%;border:2.5px solid #ff8fab;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#3a2a3a;cursor:pointer;margin:0 auto">${src?`<img src="${src}" style="width:100%;height:100%;object-fit:cover">`:svgIc('user',26,'#ff8fab')}</div>`;
   openModal(`<h3>主屏头像</h3><div class="hint">只改主屏这个小组件的头像，不会动到微信头像。</div>
@@ -2838,9 +2842,11 @@ function cp2Pic(who){pickFile('image/*',async f=>{const d=await compress(f,300,.
 function cp2Reset(who){if(who==='me')S.me.homeAvMe='';else S.me.homeAvTa='';save();render();cp2Edit();}
 function homeWeatherIcon(desc,col){desc=String(desc||'');const rain=desc.includes('雨'),cloud=desc.includes('云')||desc.includes('阴'),body=rain||cloud?`<path d="M7 16.5h10.2a3.3 3.3 0 0 0 .4-6.5 5.8 5.8 0 0 0-10.8 1.7A2.4 2.4 0 0 0 7 16.5z"/><path d="M9.2 13h.01M14.8 13h.01M10.4 15c1 .8 2.2.8 3.2 0"/>${rain?'<path d="m8.5 19-1 2M12.5 19l-1 2M16.5 19l-1 2"/>':''}`:`<circle cx="12" cy="12" r="5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M10 11h.01M14 11h.01M10.2 13.7c1 1 2.6 1 3.6 0"/>`;return `<svg class="home-weather-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="${col}" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-label="${esc(desc||'晴天')}">${body}</svg>`;}
 function wClock(){const col=wcol();const d=new Date();const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
-  const wx=S.weather&&S.weather.place?esc(S.weather.place)+' '+esc(S.weather.desc)+' '+S.weather.temp+'°':'';
-  const pic=S.me.wPic?'<img src="'+S.me.wPic+'">':homeWeatherIcon(S.weather&&S.weather.desc,col);
-  return `<div class="hwid wclk wwide" style="color:${col}"><div class="clkL" onclick="openApp('calendar')"><div class="clkT">${hm()}</div><div class="clkD">${d.getMonth()+1}月${d.getDate()}日 ${week}</div>${wx?'<div class="clkW">'+wx+'</div>':'<div class="clkW" onclick="event.stopPropagation();fetchWeather(true)" style="cursor:pointer">点这获取天气 ›</div>'}</div><div class="clkP" onclick="wPicUpload()">${pic}</div></div>`;}
+  const weather=S.weather&&S.weather.place?S.weather:null,place=weather?esc(String(weather.place).split('·').pop()||weather.place):'天气',desc=weather?esc(weather.desc||'晴'):'点一下更新天气',temp=weather&&Number.isFinite(+weather.temp)?Math.round(+weather.temp)+'°':'--°';
+  const custom=S.me.wPic?'<img class="clkCustom" src="'+S.me.wPic+'" alt="自定义小图">':'';
+  const pic=homeWeatherIcon(weather&&weather.desc,col)+custom;
+  const hint=weather?desc+' · '+(/雨/.test(weather.desc||'')?'记得带伞':/晴/.test(weather.desc||'')?'适合出门走走':'很适合散步'):'点击获取当前位置天气';
+  return `<div class="hwid home-weather-card" style="color:${col}" onclick="fetchWeather(true)"><span class="home-weather-eyebrow">TODAY · ${place}</span><div class="home-weather-art" onclick="event.stopPropagation();wPicUpload()">${pic}</div><strong>${temp}</strong><div class="home-weather-copy">${hint}</div><div class="home-weather-foot">${weather?'实时天气':'点这里更新'}</div></div>`;}
 function wPicUpload(){pickFile('image/*',async f=>{S.me.wPic=await compress(f,500,.75);save();render();toast('小图已换 🖼️');});}
 const WIDR={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc,pet:wPet};
 function petCatDay(col){return `<svg class="petcat petday" viewBox="0 0 76 64" width="76" height="62" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -2869,9 +2875,20 @@ function petTap(el){const box=el.querySelector('.petbox');const c=el.querySelect
   S.me.petPats=(S.me.petPats||0)+1;save();
   const night=(()=>{const hr=new Date().getHours();return hr>=21||hr<7;})();
   toast(night?'喵…（迷糊地蹭了蹭你）':'喵～ 蹭蹭你的手');}
-function homeWidgets(){widInit();
-  const html=S.me.widgets.map(k=>WIDR[k]?WIDR[k]():'').filter(Boolean).join('');
-  return html?'<div class="hwwrap" style="'+widgetStyleVars()+'">'+html+'</div>':'';}
+function homeWidgetItem(k,inline){const raw=WIDR[k]?WIDR[k]():'';if(!raw)return '';return raw.replace(/class="([^"]*(?:hwid|hnote)[^"]*)"/,`class="$1 home-widget-item home-widget-${k}${inline?' home-inline-widget':''}" data-wk="${k}" onpointerdown="homeWidgetDown(event,'${k}')"`);}
+function homeWidgets(){widInit();const top=S.me.widgets.filter(k=>['clock','disc','mood'].includes(k)).map(k=>homeWidgetItem(k,false)).filter(Boolean).join('');return top?'<div class="hwwrap" style="'+widgetStyleVars()+'">'+top+'</div>':'';}
+function homeInlineWidgets(){widInit();return S.me.widgets.filter(k=>!['clock','disc','mood'].includes(k)).map(k=>homeWidgetItem(k,true)).filter(Boolean).join('');}
+const HOME_WIDGET_DRAG_MS=560,HOME_WIDGET_MOVE=24;
+let _hwPend=null,_hwDrag=null,_hwTimer=null,_hwNoClick=0;
+function homeWidgetDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;_hwPend={k,x:e.clientX,y:e.clientY,t:Date.now()};clearTimeout(_hwTimer);_hwTimer=setTimeout(()=>homeWidgetDragBegin(),HOME_WIDGET_DRAG_MS);}
+function homeWidgetDragBegin(){const p=_hwPend,desktop=$('#homeDesktop');if(!p||!desktop)return;const item=desktop.querySelector('.home-widget-item[data-wk="'+p.k+'"]');if(!item)return;const r=item.getBoundingClientRect(),ghost=item.cloneNode(true);ghost.classList.add('home-widget-ghost');ghost.style.cssText+=';position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px;z-index:9999;pointer-events:none;';document.body.appendChild(ghost);item.classList.add('home-widget-dragging');_hwDrag={k:p.k,item,ghost,dx:p.x-r.left,dy:p.y-r.top};homeEditStart();homeWidgetGhostMove(p.x,p.y);if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}}
+function homeWidgetGhostMove(x,y){if(!_hwDrag)return;_hwDrag.ghost.style.left=(x-_hwDrag.dx)+'px';_hwDrag.ghost.style.top=(y-_hwDrag.dy)+'px';}
+function homeWidgetMove(e){if(_hwDrag){e.preventDefault();homeWidgetGhostMove(e.clientX,e.clientY);return;}if(_hwPend&&(Math.abs(e.clientX-_hwPend.x)>HOME_WIDGET_MOVE||Math.abs(e.clientY-_hwPend.y)>HOME_WIDGET_MOVE)){clearTimeout(_hwTimer);_hwPend=null;}}
+function homeWidgetUp(e){clearTimeout(_hwTimer);if(_hwDrag){homeWidgetDrop(e.clientX,e.clientY);return;}_hwPend=null;}
+function homeWidgetDrop(x,y){const d=_hwDrag;if(!d)return;_hwDrag=null;_hwNoClick=Date.now()+900;d.ghost.style.display='none';const target=document.elementFromPoint(x,y)?.closest('.home-widget-item');d.ghost.remove();d.item.classList.remove('home-widget-dragging');const order=S.me.widgets.slice(),from=order.indexOf(d.k),targetKey=target&&target.dataset.wk;if(from>=0&&targetKey!==d.k){order.splice(from,1);let at=targetKey?order.indexOf(targetKey):-1;if(at<0)at=order.length;order.splice(at,0,d.k);}S.me.widgets=order;save();render();requestAnimationFrame(homeEditStart);}
+function homeWidgetDragCancel(){clearTimeout(_hwTimer);_hwPend=null;const d=_hwDrag;_hwDrag=null;if(d){try{d.ghost.remove();}catch(_){}try{d.item.classList.remove('home-widget-dragging');}catch(_){}}}
+function initHomeWidgetDrag(){if(window._hwDragInit)return;window._hwDragInit=1;document.addEventListener('pointermove',homeWidgetMove,{passive:false});document.addEventListener('pointerup',homeWidgetUp);document.addEventListener('pointercancel',homeWidgetDragCancel);document.addEventListener('click',e=>{if(Date.now()<_hwNoClick&&e.target.closest('.home-widget-item')){e.preventDefault();e.stopImmediatePropagation();}},true);}
+initHomeWidgetDrag();
 function wNoteEdit(){widInit();const n=S.me.note;const papers=['#fff7d6','#ffd9e0','#d6f0ff','#e2ffd9','#efe2ff','#ffffff'];window._wnPaper=null;
   openModal(`<h3>可爱便签</h3>
     <textarea id="wn_t" rows="4" style="width:100%;box-sizing:border-box;background:#2c2c2e;border:1px solid #38383a;border-radius:10px;color:#eee;padding:10px;font-size:15px" placeholder="写点什么…文案、碎碎念、想说的话">${esc(n.text||'')}</textarea>
@@ -10964,7 +10981,7 @@ window.addEventListener('pagehide',()=>{audioMarkWakeRequired();if(_callHF){call
 window.addEventListener('beforeunload',()=>{audioMarkWakeRequired();sleepMarkAway();callBackgroundHold();lockPrepareAway(true);if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}});
 window.addEventListener('pageshow',e=>{lockResumeFromAway();setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),700);setTimeout(()=>companionPollSnapshot(true),760);setTimeout(()=>roleServerPushPull(true),820);setTimeout(idleOpenHeartbeatStart,1600);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){audioMarkWakeRequired();if(_callHF){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}}else{lockResumeFromAway();sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}audioProbeMicPermission();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
-setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
+setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();const homeClock=$('#homeLiveTime');if(homeClock)homeClock.textContent=hm();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);setTimeout(idleOpenHeartbeatStart,1800);});document.addEventListener('fullscreenchange',cinemaFullscreenChanged);document.addEventListener('webkitfullscreenchange',cinemaFullscreenChanged);
 function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{S.me=S.me||{};S.me.locked=true;sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();initBattery();audioProbeMicPermission();requestPersistentStorage();}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}
 if(!_coreBootRef)finishAppBoot();else{try{S.me=S.me||{};S.me.locked=true;render();}catch(_){const host=document.getElementById('app');if(host)host.innerHTML='';}}

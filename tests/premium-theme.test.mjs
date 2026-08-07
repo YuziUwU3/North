@@ -9,23 +9,47 @@ const html=fs.readFileSync(path.join(root,'小手机.html'),'utf8');
 
 test('premium home theme keeps all three established color modes',()=>{
   assert.match(html,/\.home\{background:linear-gradient\(155deg,#18151a 0%,#211a20 44%,#171820 100%\)/);
+  assert.match(html,/\.home:not\(\.tpink\):not\(\.twhite\)\{background:linear-gradient\(160deg,#3a2a52,#241d3d 45%,#3a2440 100%\)/);
   assert.match(html,/\.home\.tpink\{background:linear-gradient\(165deg,#ffe5ef,#ffd3e1 50%,#f9cfe0\)/);
   assert.match(html,/\.home\.twhite\{background:linear-gradient\(165deg,#ffffff,#f3f3f6 55%,#eaeaee\)/);
   assert.match(html,/\.dock\{[^}]*backdrop-filter:blur\(20px\) saturate\(120%\)/);
 });
 
 test('home time, couple avatars, mood face and original app line icons stay intact',()=>{
-  assert.match(app,/function wClock\(\)[\s\S]*?<div class="clkT">\$\{hm\(\)\}<\/div>/);
+  assert.match(app,/class="home-premium-head"[\s\S]*?id="homeLiveTime">\$\{hm\(\)\}<\/time>/);
+  assert.doesNotMatch(app,/class="home-premium-head"[^\n]*早上好/);
   assert.match(app,/function wCouple2\(\)[\s\S]*?<div class="av2">\$\{cir\(me\)\}\$\{cir\(ta\)\}<\/div>/);
-  assert.match(app,/const ic=has\?moodIc\(md\.k,27,col\):svgIc\('smile',26,col\)/);
+  assert.match(app,/const ic=has\?moodIc\(md\.k,34,col\):moodIc\('happy',34,col\)/);
   assert.match(app,/me:_MI\('<circle cx="12" cy="12" r="8\.4"\/>/);
 });
 
 test('music and weather widgets use live artwork without removing custom uploads',()=>{
   assert.match(app,/class="home-record-cover" style="background-image:url\(\$\{s\.cover\}\)"/);
   assert.match(app,/class="home-record\$\{s&&_mPlaying\?' wdisc':''\}"/);
+  assert.match(app,/wanted=_mCur\|\|\(S\.music&&S\.music\.lastSongId\),s=songs\.find\(x=>x\.id===wanted\)\|\|songs\[0\]\|\|null/);
   assert.match(app,/function homeWeatherIcon\(desc,col\)/);
-  assert.match(app,/const pic=S\.me\.wPic\?'<img src="'\+S\.me\.wPic\+'">':homeWeatherIcon/);
+  assert.match(app,/const custom=S\.me\.wPic\?'<img class="clkCustom" src="'\+S\.me\.wPic\+'" alt="自定义小图">':''/);
+  assert.match(app,/const pic=homeWeatherIcon\(weather&&weather\.desc,col\)\+custom/);
+});
+
+test('formal home follows the approved v829 widget grid instead of a different card stack',()=>{
+  assert.match(app,/function homeWidgets\(\)[\s\S]*?\['clock','disc','mood'\]/);
+  assert.match(app,/pi===0\?homeInlineWidgets\(\):''/);
+  assert.match(html,/\.hwwrap \.home-widget-clock\{grid-column:span 2;grid-row:span 2/);
+  assert.match(html,/\.hwwrap \.home-widget-disc,\.hwwrap \.home-widget-mood\{grid-column:span 2;grid-row:span 1/);
+  assert.match(html,/\.apppage \.home-widget-couple2\{grid-column:span 2/);
+  assert.match(html,/\.home-record\{width:58px;height:58px;border-width:8px/);
+  assert.match(html,/\.home-mood-face\{width:48px;height:48px/);
+});
+
+test('formal home includes the complete edit layer and movable widgets',()=>{
+  assert.match(app,/class="home-editbar"/);
+  assert.match(app,/function homeWidgetDragBegin\(\)/);
+  assert.match(app,/targetKey!==d\.k/);
+  assert.match(app,/data-wk="\$\{k\}" onpointerdown="homeWidgetDown/);
+  assert.match(app,/function homeEditFinish\(\)/);
+  assert.match(html,/\.home\.home-editing \.home-editbar\{display:flex/);
+  assert.match(html,/\.home-widget-ghost\{/);
 });
 
 test('WeChat keeps the formal dynamic, microphone and bottom-tab line paths',()=>{
