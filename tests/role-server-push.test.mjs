@@ -46,6 +46,12 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /apns-push-type": "alert"/);
   assert.match(edge, /rolePush: \{ outboxId/);
   assert.match(edge, /OPENAI_API_KEY/);
+  assert.match(edge, /DASHSCOPE_API_KEY/);
+  assert.match(edge, /https:\/\/dashscope\.aliyuncs\.com\/compatible-mode\/v1/);
+  assert.match(edge, /ROLE_PUSH_DASHSCOPE_MODEL/);
+  assert.match(edge, /qwen-plus/);
+  assert.match(edge, /for \(const provider of providers\)/);
+  assert.match(edge, /role-message-provider-failed/);
   assert.doesNotMatch(edge, /fallbackMessage/);
   assert.doesNotMatch(edge, /醒了没有|这么晚了还没睡|在忙什么|有空回我一下/);
   assert.match(edge, /kind: "unavailable", body: ""/);

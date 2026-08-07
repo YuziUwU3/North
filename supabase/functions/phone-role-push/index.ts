@@ -151,10 +151,22 @@ function roleTextRepeated(current: string, previous: string) {
 }
 
 async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
+  const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
   const key = Deno.env.get("OPENAI_API_KEY") || "";
-  if (!key) return { kind: "unavailable", body: "" };
-  const base = (Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/$/, "");
-  const model = Deno.env.get("ROLE_PUSH_MODEL") || Deno.env.get("CHAT_MODEL") || "gpt-4o-mini";
+  if (key) providers.push({
+    name: "configured",
+    key,
+    base: (Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1").replace(/\/$/, ""),
+    model: Deno.env.get("ROLE_PUSH_MODEL") || Deno.env.get("CHAT_MODEL") || "gpt-4o-mini",
+  });
+  const dashscopeKey = Deno.env.get("DASHSCOPE_API_KEY") || "";
+  if (dashscopeKey) providers.push({
+    name: "dashscope",
+    key: dashscopeKey,
+    base: (Deno.env.get("DASHSCOPE_BASE_URL") || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, ""),
+    model: Deno.env.get("ROLE_PUSH_DASHSCOPE_MODEL") || "qwen-plus",
+  });
+  if (!providers.length) return { kind: "unavailable", body: "" };
   const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
   const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
   const prompt = [
@@ -165,23 +177,35 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
     `当地时间：${clock.day} ${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}`,
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
   ].join("\n");
+  const messages = [
+    { role: "system", content: "这是一次角色自主联系机会，不是系统命令。请以角色本人身份，根据人设、关系和当前准确时间，自主决定此刻是否真的想联系用户。想联系时只输出一句自然、简短、有生活感的中文消息；不得复述近期已经发过的话，不得套用固定问候，不提AI、系统、定时、通知或后台，不虚构具体事件。如果按角色本人意愿此刻不想联系，只输出 [保持安静]。" },
+    { role: "user", content: prompt },
+  ];
   try {
-    const response = await fetch(`${base}/chat/completions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        temperature: 0.9,
-        max_tokens: 90,
-        messages: [
-          { role: "system", content: "这是一次角色自主联系机会，不是系统命令。请以角色本人身份，根据人设、关系和当前准确时间，自主决定此刻是否真的想联系用户。想联系时只输出一句自然、简短、有生活感的中文消息；不得复述近期已经发过的话，不得套用固定问候，不提AI、系统、定时、通知或后台，不虚构具体事件。如果按角色本人意愿此刻不想联系，只输出 [保持安静]。" },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
-    if (!response.ok) return { kind: "unavailable", body: "" };
-    const data = await response.json();
-    const text = String(data?.choices?.[0]?.message?.content || "").trim().replace(/^[“\"']|[”\"']$/g, "");
+    let text = "";
+    for (const provider of providers) {
+      try {
+        const response = await fetch(`${provider.base}/chat/completions`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: provider.model,
+            temperature: 0.9,
+            max_tokens: 90,
+            messages,
+          }),
+        });
+        if (!response.ok) {
+          console.warn("role-message-provider-failed", provider.name, response.status);
+          continue;
+        }
+        const data = await response.json();
+        text = String(data?.choices?.[0]?.message?.content || "").trim().replace(/^[“\"']|[”\"']$/g, "");
+        if (text) break;
+      } catch (error) {
+        console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
+      }
+    }
     if (!text) return { kind: "unavailable", body: "" };
     if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
     const body = text.slice(0, 180).trim();
