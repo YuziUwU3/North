@@ -46,7 +46,7 @@ assert.match(mount,/\.nav \.r/);
 assert.match(mount,/#dreadwrap/);
 assert.match(mount,/#talewrap/);
 assert.match(mount,/\.offstage/);
-assert.match(source,/const _wxP=c\.p==='wechat'\?' wx-premium':'';\s*app\.innerHTML='<div class="page'\+_wxL\+_wxP\+'">'\+html\+'<\/div>';\s*chatRouteMount\(c\);/);
+assert.match(source,/const _wxP=c\.p==='wechat'\?' wx-premium':'';\s*const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab\|\|'chats'\):'';\s*app\.innerHTML='<div class="page'\+_wxL\+_wxP\+_wxSection\+'">'\+html\+'<\/div>';\s*chatRouteMount\(c\);/);
 
 const calls=[];
 const context=vm.createContext({

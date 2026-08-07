@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='841';</script>
+<script>window.__NORTH_SHELL_BUILD__='842';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-841';
+  var key='north-sw-reloaded-842';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=841';
+  var url='sw.js?v=842';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -393,6 +393,21 @@ body{background:#000;padding:0;}
 .bill{background:#1c1c1e;color:#f0f0f0;border-bottom:.5px solid #2a2a2c;}.bill .neg{color:#eee;}
 .mpost{background:#1c1c1e;border-bottom:.5px solid #2a2a2c;}.mpost .tx{color:#eaeaea;}
 .mpost .likes,.mpost .cmts{background:#262628;}.mpost .cmt{color:#ddd;}
+/* 朋友圈正式接入新版框架：只调整容器和卡片层次，原有文字、线条、图片、互动及删除逻辑不变 */
+.wx-premium.wx-moments>.scroll{padding:10px 10px 20px;box-sizing:border-box;scroll-padding-top:10px;}
+.wx-premium.wx-moments>.scroll>.mcover{height:190px;margin:0 0 42px;border:1px solid rgba(255,255,255,.1);border-radius:20px;overflow:visible;background:linear-gradient(145deg,#393239,#211e24);box-shadow:0 16px 32px rgba(0,0,0,.25);}
+.wx-premium.wx-moments>.scroll>.mcover .coverfull,.wx-premium.wx-moments>.scroll>.mcover:after{border-radius:19px;}
+.wx-premium.wx-moments>.scroll>.mcover .me{right:14px;bottom:-30px;align-items:center;}
+.wx-premium.wx-moments>.scroll>.mcover .me .nm{margin:0 2px 0 0;color:#f7f2f5;text-shadow:0 2px 8px rgba(0,0,0,.7);}
+.wx-premium.wx-moments>.scroll>.mcover .me .avatar.lg{box-shadow:0 8px 20px rgba(0,0,0,.28);}
+.wx-premium.wx-moments>.scroll>.mpost{margin:0 0 9px;padding:14px 12px;border:1px solid rgba(255,255,255,.075);border-radius:17px;background:rgba(43,39,44,.84);box-shadow:0 9px 22px rgba(0,0,0,.14);}
+.wx-premium.wx-moments>.scroll>.mpost .likes,.wx-premium.wx-moments>.scroll>.mpost .cmts{background:rgba(255,255,255,.055);}
+.wx-premium.wx-moments>.scroll>.mpost .likes{border-radius:8px 8px 5px 5px;}
+.wx-premium.wx-moments>.scroll>.mpost .cmts{border-radius:5px 5px 8px 8px;}
+.wx-premium.wx-moments.wxlight>.scroll>.mcover{border-color:rgba(255,255,255,.94);background:linear-gradient(145deg,#eee6e8,#dcd2d6);box-shadow:0 14px 30px rgba(91,67,80,.13);}
+.wx-premium.wx-moments.wxlight>.scroll>.mcover .me .nm{color:#fff;}
+.wx-premium.wx-moments.wxlight>.scroll>.mpost{border-color:rgba(255,255,255,.92);background:rgba(255,255,255,.78);box-shadow:0 8px 21px rgba(91,67,80,.08);}
+.wx-premium.wx-moments.wxlight>.scroll>.mpost .likes,.wx-premium.wx-moments.wxlight>.scroll>.mpost .cmts{background:rgba(99,83,92,.065);}
 .cloc,.cfile{background:#2c2c2e;}.cloc .n,.cfile .n{color:#eee;}
 .empty{color:#666;}.hint{color:#888;}
 .home{background:linear-gradient(160deg,#3a2a52,#241d3d 45%,#3a2440 100%);position:relative;}
@@ -1132,7 +1147,7 @@ body{min-height:0}
 #cou_companion_audit .v{padding:3px 7px;border-radius:99px;background:rgba(255,190,99,.08)}
 @media(max-width:390px){#coupage3{padding-left:8px;padding-right:8px}#coupage3>.section{border-radius:19px!important}#cou_companion_apps>.bill.companion-app-card{padding:13px!important;border-radius:18px!important}}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=841">
+<link rel="stylesheet" href="pet-game.css?v=842">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1182,11 +1197,11 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=841" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=841" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=841" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=841" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=841" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="ai-account.js?v=841"></script>
+<script src="license-gate.js?v=842" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=842" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=842" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=842" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=842" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="ai-account.js?v=842"></script>
 </body>
 </html>

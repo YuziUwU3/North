@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='841'){
+if(window.__NORTH_SHELL_BUILD__!=='842'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v841 · 失联定位与必达联系';
+const APP_VER='v842 · 朋友圈接入、屏保与通话原因修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -867,7 +867,7 @@ async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new E
   await licenseSyncAiIdentity();
   const uid=aiUserId(),sec=aiUserSecret();
   let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},action==='image'?360000:190000);}catch(e){throw new Error(apiCaughtCN(e));}
-  const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(msg)?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
+  const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(String(msg))?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.raw=String(msg);e.source='ai-core';e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
   if(typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);
   return d;}
 function joinAIContinuation(first,more){first=''+(first||'');more=''+(more||'');if(!first)return more.trim();if(!more)return first.trim();const a=first.replace(/\s+$/,''),b=more.replace(/^\s+/,'');let overlap=0,max=Math.min(60,a.length,b.length);for(let n=max;n>=2;n--){if(a.slice(-n)===b.slice(0,n)){overlap=n;break;}}return(a+b.slice(overlap)).trim();}
@@ -883,7 +883,7 @@ async function chatAPI(messages,opt){opt=opt||{};if(gameModelSessionPage())opt.a
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
     body:JSON.stringify({model:opt.model||a.model,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,messages})},190000);}catch(e){throw new Error(apiCaughtCN(e));}
   const d=await res.json().catch(()=>null);
-  if(!res.ok)throw new Error(apiErrorCN(res.status,(d&&d.error&&(d.error.message||JSON.stringify(d.error)))||''));
+  if(!res.ok){const raw=String((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||(d&&JSON.stringify(d))||'');const e=new Error(apiErrorCN(res.status,raw));e.status=res.status;e.data=d||null;e.raw=raw;e.source='external-chat';throw e;}
   return chatResultText(messages,opt,d);
 }
 function uniq(arr){const out=[];(arr||[]).forEach(x=>{x=(x||'').trim();if(x&&!out.includes(x))out.push(x);});return out;}
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=841';
+  const url='sw.js?v=842';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1515,8 +1515,8 @@ function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return;let on=
 function lockOpen(){S.me.locked=false;save();renderLockScreen();renderLockPull();}
 function lockShow(drop){if(_call)return;const el=$('#lockScreen');if(el)el.style.transform='';const b=$('#msgBanner');if(b)b.className='msgbanner';S.me.locked=true;save();renderLockScreen(true);renderLockPull();}
 let _lockAwayAt=0;
-function lockPrepareAway(force){try{S.me=S.me||{};if(force){_lockAwayAt=0;S.me.locked=true;saveNow();return true;}if(!_lockAwayAt)_lockAwayAt=Date.now();if(_savePending)saveNow();return false;}catch(_){return false;}}
-function lockResumeFromAway(){try{const awayAt=_lockAwayAt;_lockAwayAt=0;if(!awayAt||Date.now()-awayAt<2500)return false;S.me=S.me||{};if(S.me.locked!==true){S.me.locked=true;save(0);}renderLockScreen(true);renderLockPull();return true;}catch(_){return false;}}
+function lockPrepareAway(force){try{S.me=S.me||{};_lockAwayAt=0;if(force){S.me.locked=true;saveNow();return true;}if(_savePending)saveNow();return false;}catch(_){return false;}}
+function lockResumeFromAway(){_lockAwayAt=0;return false;}
 function lockQuickTorch(e){try{e.stopPropagation();}catch(_){}toast('手电筒已点亮');}
 function lockQuickCamera(e){try{e.stopPropagation();}catch(_){}lockOpen();setTimeout(()=>openApp('moments'),80);}
 let _lockTouch=null;
@@ -2024,7 +2024,8 @@ function render(){
   else if(c.p==='momentDetail')html='';
   const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'||c.p==='contactInfo'))?' wxlight':'';
   const _wxP=c.p==='wechat'?' wx-premium':'';
-  app.innerHTML='<div class="page'+_wxL+_wxP+'">'+html+'</div>';
+  const _wxSection=c.p==='wechat'?' wx-'+String(wxTab||'chats'):'';
+  app.innerHTML='<div class="page'+_wxL+_wxP+_wxSection+'">'+html+'</div>';
   chatRouteMount(c);
   if(c.p==='drawguess'){const usage=$('#useBadge');if(usage)usage.style.display='none';}
   renderLockScreen();renderLockPull();
@@ -10324,7 +10325,15 @@ async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;cons
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   const um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);behaviorOnUserMsg(_call.id,um);lifeNoteOnUserMsg(_call.id,um);emotionOnUserMsg(_call.id,um);save();_call.sub={who:'me',text:t};updateCallSub();
   if(callOnUserSay(t))return;callAI();}
-function callFailureText(e){const msg=String(e&&e.message||e||'').toLowerCase(),status=+(e&&e.status||0);if(status===401||status===403||/unauthor|forbidden|密钥|授权/.test(msg))return'(通话服务授权失败，请检查 AI 账户)';if(status===402||/余额|点数|quota|credit/.test(msg))return'(AI 账户余额不足，充值后可继续)';if(/timeout|timed out|abort|超时/.test(msg))return'(连接超时，请再说一次)';if(e&&e.network||/network|fetch|网络|连接/.test(msg))return'(网络连接中断，请再说一次)';return'(通话回复中断，请再说一次)';}
+function callFailureText(e){const status=+(e&&e.status||0),source=String(e&&e.source||''),detail=[e&&e.message,e&&e.raw,e&&e.data&&JSON.stringify(e.data)].filter(Boolean).join(' ').toLowerCase();
+  if(/insufficient[_ -]?(quota|credit)|no[_ -]?balance|余额不足|点数不足|额度不足|credit balance|quota exceeded/.test(detail))return source==='ai-core'?'(AI 账户点数不足，请充值后再通话)':'(当前聊天接口账户余额不足，请到接口平台充值)';
+  if(status===429||/rate.?limit|too many requests|请求过于频繁|达到.{0,6}(限额|上限)/.test(detail))return'(当前聊天接口请求过于频繁或达到平台限额，请稍后再试)';
+  if(/model.?not.?found|unknown model|模型.{0,6}(不存在|无效)|endpoint.{0,6}not found/.test(detail)||status===404)return'(当前聊天模型或接口地址不存在，请检查聊天接口设置)';
+  if(/timeout|timed out|abort|超时/.test(detail)||status===408||status===504)return'(连接超时，请再说一次)';
+  if(e&&e.network||/network|failed to fetch|网络|连接中断|cors/.test(detail))return'(网络连接中断，请再说一次)';
+  if(status===401||status===403||/unauthor|forbidden|invalid.{0,6}(key|token)|密钥.{0,6}(无效|错误)|授权失败/.test(detail))return source==='ai-core'?'(内置 AI 服务授权失效，请重新登录或联系管理员)':'(当前聊天接口密钥无效或没有该模型权限，请检查聊天接口设置)';
+  if(status>=500||/upstream|service unavailable|bad gateway|服务.{0,6}(异常|拥堵)/.test(detail))return'(上游聊天服务暂时异常，请稍后再试)';
+  return'(通话回复中断，请检查当前聊天接口后再试)';}
 async function callAI(sysNote,opts){if(!_call)return;
   if(_callBusy){_callPend={sysNote,opts};return;}/* 上一轮还在说话/生成→排队，等它说完再接着，绝不并行(否则两轮消息叠一起、特别快) */
   _callBusy=true;

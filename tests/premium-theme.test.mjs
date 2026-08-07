@@ -55,9 +55,19 @@ test('formal home includes the complete edit layer and movable widgets',()=>{
 
 test('WeChat receives the approved frame while original chat internals stay intact',()=>{
   assert.match(app,/const _wxP=c\.p==='wechat'\?' wx-premium':''/);
+  assert.match(app,/const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab\|\|'chats'\):''/);
   assert.match(html,/\.wx-premium>\.nav\{/);
   assert.match(html,/\.wx-premium>\.tabbar\{/);
   assert.match(html,/微信高级框架只包裹四个主标签页/);
+});
+
+test('Moments content is formally integrated without replacing its data or actions',()=>{
+  assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mcover\{/);
+  assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mpost\{/);
+  assert.match(app,/S\.moments\.filter\(p=>\(p\.acct\|\|'main'\)===actId\(\)\)/);
+  assert.match(app,/class="tm">\$\{fmtDT\(p\.time\)\}/);
+  assert.match(app,/momentDelete\('\$\{p\.id\}'\)/);
+  assert.match(app,/momentMenu\('\$\{p\.id\}'\)/);
 });
 
 test('WeChat keeps the formal dynamic, microphone and bottom-tab line paths',()=>{
