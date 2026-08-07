@@ -26,6 +26,21 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
+function edgeFunctionSource(name) {
+  const start = edge.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `missing edge ${name}`);
+  let depth = 0;
+  let opened = false;
+  for (let i = start; i < edge.length; i += 1) {
+    if (edge[i] === '{') { depth += 1; opened = true; }
+    if (edge[i] === '}') {
+      depth -= 1;
+      if (opened && depth === 0) return edge.slice(start, i + 1);
+    }
+  }
+  throw new Error(`unterminated edge ${name}`);
+}
+
 test('server scheduler persists profiles and an idempotent outbox', () => {
   assert.match(migration, /create table if not exists public\.phone_role_push_profiles/);
   assert.match(migration, /create table if not exists public\.phone_role_push_outbox/);
@@ -53,13 +68,28 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /for \(const provider of providers\)/);
   assert.match(edge, /role-message-provider-failed/);
   assert.doesNotMatch(edge, /fallbackMessage/);
-  assert.doesNotMatch(edge, /醒了没有|这么晚了还没睡|在忙什么|有空回我一下/);
+  assert.doesNotMatch(edge, /醒了没有|这么晚了还没睡|在忙什么|有空回我一下|手放哪儿了|手还放那儿/);
   assert.match(edge, /kind: "unavailable", body: ""/);
   assert.match(edge, /kind: "silent", body: ""/);
   assert.match(edge, /只输出 \[保持安静\]/);
   assert.match(edge, /recentBodies\.some\(\(old\) => roleTextRepeated\(body, old\)\)/);
-  assert.match(edge, /prior\[a\.length\] \/ a\.length >= 0\.84/);
+  assert.match(edge, /Math\.min\(a\.length, b\.length\) >= 6/);
+  assert.match(edge, /const threshold = a\.length < 12 \? 0\.72 : 0\.84/);
+  assert.match(edge, /for \(let attempt = 0; attempt < 2; attempt \+= 1\)/);
+  assert.match(edge, /与近期已经发过的话过于相似/);
+  assert.match(edge, /不要改几个字后重复原意/);
+  assert.match(edge, /sawGeneratedCandidate \? \{ kind: "silent"/);
   assert.match(edge, /phone_role_push_outbox[\s\S]{0,300}select\("body"\)/);
+});
+
+test('short proactive messages reject one-word rewrites without blocking different topics', () => {
+  const keySource = edgeFunctionSource('roleTextKey').replace('value: unknown', 'value');
+  const repeatedSource = edgeFunctionSource('roleTextRepeated')
+    .replace('current: string', 'current')
+    .replace('previous: string', 'previous');
+  const repeated = Function(`${keySource}\n${repeatedSource}\nreturn roleTextRepeated;`)();
+  assert.equal(repeated('North，手还放那儿？', 'North，手放哪儿了？'), true);
+  assert.equal(repeated('North，今晚想吃什么？', 'North，外面下雨了。'), false);
 });
 
 test('role notification avatars use bounded thumbnails and unguessable fetch URLs', () => {

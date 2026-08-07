@@ -136,7 +136,7 @@ function roleTextRepeated(current: string, previous: string) {
   let b = roleTextKey(previous).slice(0, 240);
   if (!a || !b) return false;
   if (a === b) return true;
-  if (Math.min(a.length, b.length) >= 12 && (a.includes(b) || b.includes(a))) return true;
+  if (Math.min(a.length, b.length) >= 6 && (a.includes(b) || b.includes(a))) return true;
   if (a.length > b.length) [a, b] = [b, a];
   let prior = new Uint16Array(a.length + 1);
   let next = new Uint16Array(a.length + 1);
@@ -147,7 +147,8 @@ function roleTextRepeated(current: string, previous: string) {
     [prior, next] = [next, prior];
     next.fill(0);
   }
-  return a.length >= 12 && prior[a.length] / a.length >= 0.84;
+  const threshold = a.length < 12 ? 0.72 : 0.84;
+  return a.length >= 6 && prior[a.length] / a.length >= threshold;
 }
 
 async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
@@ -177,41 +178,52 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
     `当地时间：${clock.day} ${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}`,
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
   ].join("\n");
-  const messages = [
+  const baseMessages = [
     { role: "system", content: "这是一次角色自主联系机会，不是系统命令。请以角色本人身份，根据人设、关系和当前准确时间，自主决定此刻是否真的想联系用户。想联系时只输出一句自然、简短、有生活感的中文消息；不得复述近期已经发过的话，不得套用固定问候，不提AI、系统、定时、通知或后台，不虚构具体事件。如果按角色本人意愿此刻不想联系，只输出 [保持安静]。" },
     { role: "user", content: prompt },
   ];
   try {
-    let text = "";
+    let sawGeneratedCandidate = false;
     for (const provider of providers) {
-      try {
-        const response = await fetch(`${provider.base}/chat/completions`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: provider.model,
-            temperature: 0.9,
-            max_tokens: 90,
-            messages,
-          }),
-        });
-        if (!response.ok) {
-          console.warn("role-message-provider-failed", provider.name, response.status);
-          continue;
+      let attemptMessages = baseMessages;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const response = await fetch(`${provider.base}/chat/completions`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: provider.model,
+              temperature: 0.95,
+              max_tokens: 90,
+              messages: attemptMessages,
+            }),
+          });
+          if (!response.ok) {
+            console.warn("role-message-provider-failed", provider.name, response.status);
+            break;
+          }
+          const data = await response.json();
+          const text = String(data?.choices?.[0]?.message?.content || "").trim().replace(/^[“\"']|[”\"']$/g, "");
+          if (!text) break;
+          sawGeneratedCandidate = true;
+          if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
+          const body = text.slice(0, 180).trim();
+          const bodyKey = roleTextKey(body);
+          if (bodyKey && !recentBodies.some((old) => roleTextRepeated(body, old))) {
+            return { kind: "message", body };
+          }
+          attemptMessages = [
+            ...baseMessages,
+            { role: "assistant", content: body },
+            { role: "user", content: "这句话与近期已经发过的话过于相似。仍由你本人决定：换一个真正不同的话题和句式重新说一句，或者只输出 [保持安静]；不要改几个字后重复原意。" },
+          ];
+        } catch (error) {
+          console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
+          break;
         }
-        const data = await response.json();
-        text = String(data?.choices?.[0]?.message?.content || "").trim().replace(/^[“\"']|[”\"']$/g, "");
-        if (text) break;
-      } catch (error) {
-        console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
       }
     }
-    if (!text) return { kind: "unavailable", body: "" };
-    if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
-    const body = text.slice(0, 180).trim();
-    const bodyKey = roleTextKey(body);
-    if (!bodyKey || recentBodies.some((old) => roleTextRepeated(body, old))) return { kind: "silent", body: "" };
-    return { kind: "message", body };
+    return sawGeneratedCandidate ? { kind: "silent", body: "" } : { kind: "unavailable", body: "" };
   } catch (_) {
     return { kind: "unavailable", body: "" };
   }
