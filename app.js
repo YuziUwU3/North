@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='836'){
+if(window.__NORTH_SHELL_BUILD__!=='839'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v836 · 高级主屏正式接入';
+const APP_VER='v839 · 主屏自由布局与微信框架接入';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=836';
+  const url='sw.js?v=839';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2023,7 +2023,8 @@ function render(){
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
   const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'||c.p==='contactInfo'))?' wxlight':'';
-  app.innerHTML='<div class="page'+_wxL+'">'+html+'</div>';
+  const _wxP=c.p==='wechat'?' wx-premium':'';
+  app.innerHTML='<div class="page'+_wxL+_wxP+'">'+html+'</div>';
   chatRouteMount(c);
   if(c.p==='drawguess'){const usage=$('#useBadge');if(usage)usage.style.display='none';}
   renderLockScreen();renderLockPull();
@@ -2642,20 +2643,16 @@ async function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur)
 let _homePage=0,_homeSnapTimer=null;
 function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
+  homeLayoutInit();
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" id="homeDesktop" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}">
     <div class="home-editbar"><span>长按拖动 App 或小组件</span><button onclick="homeEditFinish()">完成</button></div>
     <header class="home-premium-head" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>
-    <div class="home-scroll">${homeWidgets()}
+    <div class="home-scroll">
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)" onscrollend="homeSnapPage(this)">${homeAppsHtml()}</div></div>
-    <div class="pgdots">${(S.me.appLayout||APP_DEFLAYOUT).map((_,i)=>'<span class="pgdot'+(i===_homePage?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
-    <div class="dock">
-      <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}</div>
-      <div class="app" onclick="openWeChat('contacts')">${aIco('contacts','👤','#54a0ff')}</div>
-      <div class="app${appLocked('moments')?' app-locked':''}" onclick="appTap(event,'moments')">${aIco('moments','🌸','#ee5a6f',appLocked('moments')?'<span class="app-lock-line" aria-hidden="true">'+svgIc('lock',22,'#e3e4e8',1.55)+'</span>':'')}</div>
-      <div class="app" onclick="openWeChat('me')">${aIco('me','☺','#feca57')}</div>
-    </div></div>`;
+    <div class="pgdots">${S.me.homeLayout.map((_,i)=>'<span class="pgdot'+(i===_homePage?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
+    <div class="dock home-dropzone" data-zone="dock">${homeDockHtml()}</div></div>`;
 }
 function homePageClamp(p){return Math.max(0,Math.min(APP_PAGES-1,+p||0));}
 function homePageDots(p){p=homePageClamp(p);for(let i=0;i<APP_PAGES;i++){const d=document.getElementById('pgdot'+i);if(d)d.className='pgdot'+(i===p?' on':'');}}
@@ -2681,19 +2678,50 @@ const APPDEFS={
 const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openApp('music'),cinema:()=>openApp('cinema'),roleplay:()=>openApp('roleplay'),tale:()=>openApp('tale'),dread:()=>openApp('dread'),travel:()=>openApp('travel'),aiaccount:()=>openAIAccount()};
 const APP_PAGES=3;
 const APP_DEFLAYOUT=[['wechat','phoneapp','settings','aiaccount','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','cinema','tale','dread'],[]];
+const HOME_DOCK_DEFAULT=['d:wechat','d:contacts','d:moments','d:me'];
+const HOME_SHORTCUTS={
+  'd:wechat':{e:'💬',c:'#07c160',t:'微信',icon:'wechat',run:()=>openWeChat()},
+  'd:contacts':{e:'👤',c:'#54a0ff',t:'通讯录',icon:'contacts',run:()=>openWeChat('contacts')},
+  'd:moments':{e:'🌸',c:'#ee5a6f',t:'朋友圈',icon:'moments',lk:'moments',run:()=>openWeChat('moments')},
+  'd:me':{e:'☺',c:'#feca57',t:'我',icon:'me',run:()=>openWeChat('me')}
+};
 function appLayoutInit(){let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
-  const seen={};const clean=p=>p.filter(k=>APPDEFS[k]&&!seen[k]&&(seen[k]=1));
+  const seen={};(Array.isArray(S.me.appDock)?S.me.appDock:[]).forEach(k=>{if(APPDEFS[k])seen[k]=1;});const clean=p=>p.filter(k=>APPDEFS[k]&&!seen[k]&&(seen[k]=1));
   L=L.map(clean);
   Object.keys(APPDEFS).forEach(k=>{if(!seen[k]){L[0].push(k);seen[k]=1;}});
   S.me.appLayout=L;}
+function homeTokenValid(k){return !!(APPDEFS[k]||HOME_SHORTCUTS[k]||(String(k).startsWith('w:')&&WIDS.some(w=>w[0]===String(k).slice(2))));}
+function homeLayoutInit(){
+  widInit();
+  let dock=Array.isArray(S.me.appDock)?S.me.appDock.slice():HOME_DOCK_DEFAULT.slice();
+  S.me.appDock=dock;
+  appLayoutInit();
+  let H=S.me.homeLayout;
+  if(!Array.isArray(H)||!Array.isArray(H[0]))H=S.me.appLayout.map((pg,i)=>(i===0?S.me.widgets.map(k=>'w:'+k):[]).concat(pg));
+  H=H.map(p=>Array.isArray(p)?p.slice():[]);while(H.length<APP_PAGES)H.push([]);H=H.slice(0,APP_PAGES);
+  const enabledWidgets=new Set(S.me.widgets.map(k=>'w:'+k)),seen=new Set(),clean=[];
+  H.forEach(pg=>clean.push(pg.filter(k=>homeTokenValid(k)&&(!String(k).startsWith('w:')||enabledWidgets.has(k))&&!seen.has(k)&&(seen.add(k),true))));
+  dock=dock.filter(k=>homeTokenValid(k)&&!String(k).startsWith('w:')&&!seen.has(k)&&(seen.add(k),true)).slice(0,4);
+  S.me.widgets.forEach(k=>{const t='w:'+k;if(!seen.has(t)){clean[0].unshift(t);seen.add(t);}});
+  Object.keys(APPDEFS).forEach(k=>{if(!seen.has(k)){clean[0].push(k);seen.add(k);}});
+  HOME_DOCK_DEFAULT.forEach(k=>{if(!seen.has(k)){if(dock.length<4)dock.push(k);else clean[0].push(k);seen.add(k);}});
+  while(dock.length<4){const candidate=clean[0].find(k=>!String(k).startsWith('w:'));if(!candidate)break;clean[0].splice(clean[0].indexOf(candidate),1);dock.push(candidate);}
+  S.me.homeLayout=clean;S.me.appDock=dock;
+  homeLayoutSyncLegacy();
+}
+function homeLayoutSyncLegacy(){const H=Array.isArray(S.me.homeLayout)?S.me.homeLayout:[];S.me.appLayout=H.map(pg=>pg.filter(k=>APPDEFS[k]));while(S.me.appLayout.length<APP_PAGES)S.me.appLayout.push([]);S.me.appLayout=S.me.appLayout.slice(0,APP_PAGES);const ws=[];H.flat().forEach(k=>{if(String(k).startsWith('w:'))ws.push(String(k).slice(2));});S.me.widgets=ws;}
+function homeShortcutTap(e,k){try{if(e)e.stopPropagation();}catch(_){}if(Date.now()<_aNoClick)return;_aNoClick=Date.now()+900;const a=HOME_SHORTCUTS[k];if(!a)return;if(a.lk&&appLocked(a.lk)){toast('「'+(LOCKABLE[a.lk]||a.t)+'」已被ta锁定，暂时无法打开');return;}if(a.run)a.run();}
+function homeShortcutCell(k){const a=HOME_SHORTCUTS[k];if(!a)return '';const locked=!!(a.lk&&appLocked(a.lk));const lockLayer=locked?'<span class="app-lock-line" aria-hidden="true">'+svgIc('lock',22,'#e3e4e8',1.55)+'</span>':'';return '<div class="app home-item'+(locked?' app-locked':'')+'" data-token="'+k+'" aria-disabled="'+(locked?'true':'false')+'" onclick="homeShortcutTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon,a.e,a.c,lockLayer)+'<span>'+a.t+'</span></div>';}
 function appCell(k){const a=APPDEFS[k];if(!a)return '';
   const badge=(k==='mail'&&(S.mail||[]).some(m=>!m.read))?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':'';
   const locked=!!(a.lk&&appLocked(k));
   const lockLayer=locked?'<span class="app-lock-line" aria-hidden="true">'+svgIc('lock',22,'#e3e4e8',1.55)+'</span>':'';
-  return '<div class="app'+(locked?' app-locked':'')+'" data-k="'+k+'" aria-disabled="'+(locked?'true':'false')+'" onclick="appTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge+lockLayer)+'<span>'+a.t+'</span></div>';}
-function homeAppsHtml(){appLayoutInit();return S.me.appLayout.map((pg,pi)=>'<div class="apppage" data-pg="'+pi+'">'+(pi===0?homeInlineWidgets():'')+pg.map(appCell).join('')+'</div>').join('');}
+  return '<div class="app home-item'+(locked?' app-locked':'')+'" data-k="'+k+'" data-token="'+k+'" aria-disabled="'+(locked?'true':'false')+'" onclick="appTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge+lockLayer)+'<span>'+a.t+'</span></div>';}
+function homeTokenCell(k){if(String(k).startsWith('w:'))return homeWidgetItem(String(k).slice(2),true);if(HOME_SHORTCUTS[k])return homeShortcutCell(k);return appCell(k);}
+function homeAppsHtml(){homeLayoutInit();return S.me.homeLayout.map((pg,pi)=>'<div class="apppage home-dropzone" data-zone="page" data-pg="'+pi+'">'+pg.map(homeTokenCell).join('')+'</div>').join('');}
+function homeDockHtml(){homeLayoutInit();return S.me.appDock.map(homeTokenCell).join('');}
 const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620;
 let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0,_aNoClick=0;
 function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
@@ -2702,21 +2730,25 @@ function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
   const f=APPRUN[k];if(f)f();}
 function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}const f=APPRUN[k];if(f)setTimeout(f,0);}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
-  _aPend={k,x:e.clientX,y:e.clientY,t:Date.now()};clearTimeout(_aTimer);
+  _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
-function appBeginDrag(){const p=_aPend;if(!p)return;const sw=$('#appswipe');if(!sw)return;
-  const cell=sw.querySelector('.app[data-k="'+p.k+'"]');if(!cell)return;
-  const r=cell.getBoundingClientRect();const g=cell.cloneNode(true);g.className='app appghost';
+function appBeginDrag(){const p=_aPend;if(!p)return;const desktop=$('#homeDesktop'),sw=$('#appswipe');if(!desktop||!sw)return;
+  const cell=p.el&&p.el.isConnected?p.el:desktop.querySelector('.home-item[data-token="'+p.k+'"]');if(!cell)return;
+  const r=cell.getBoundingClientRect();const g=cell.cloneNode(true);g.classList.add('appghost');
   g.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;margin:0;z-index:9999;pointer-events:none;opacity:.94;transform:scale(1.14);';
   document.body.appendChild(g);
-  _aDrag={k:p.k,ghost:g,offx:p.x-r.left,offy:p.y-r.top};
-  cell.style.opacity='.25';sw.classList.add('aedit');homeEditStart();
+  _aDrag={k:p.k,ghost:g,item:cell,offx:p.x-r.left,offy:p.y-r.top};
+  cell.style.opacity='.22';cell.style.pointerEvents='none';sw.classList.add('aedit');document.body.classList.add('home-drag-active');homeEditStart();
+  try{if(p.el&&p.el.setPointerCapture)p.el.setPointerCapture(p.pid);}catch(_){}
   if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}
   appGhostMove(p.x,p.y);}
 function appGhostMove(x,y){if(!_aDrag)return;const g=_aDrag.ghost;g.style.left=(x-_aDrag.offx)+'px';g.style.top=(y-_aDrag.offy)+'px';
+  appLiveReorder(x,y);
   const sw=$('#appswipe');if(!sw)return;const r=sw.getBoundingClientRect();
   let dir=0;if(x>r.right-40)dir=1;else if(x<r.left+40)dir=-1;
   if(dir!==_aFlipDir){_aFlipDir=dir;clearTimeout(_aFlip);if(dir)_aFlip=setTimeout(()=>appFlip(dir),430);}}
+function appSwapNodes(a,b){if(!a||!b||a===b)return;const ap=a.parentNode,bp=b.parentNode;if(!ap||!bp)return;const am=document.createComment('home-a'),bm=document.createComment('home-b');ap.replaceChild(am,a);bp.replaceChild(bm,b);ap.replaceChild(b,am);bp.replaceChild(a,bm);}
+function appLiveReorder(x,y){const d=_aDrag;if(!d||!d.item)return;const hit=document.elementFromPoint(x,y),target=hit&&hit.closest?hit.closest('.home-item'):null,zone=hit&&hit.closest?hit.closest('.home-dropzone'):null;if(target&&target!==d.item){const sp=d.item.parentElement,tp=target.parentElement,sd=sp&&sp.dataset.zone==='dock',td=tp&&tp.dataset.zone==='dock';if(sd!==td){appSwapNodes(d.item,target);return;}const r=target.getBoundingClientRect(),after=y>r.top+r.height*.58||(Math.abs(y-(r.top+r.height/2))<r.height*.28&&x>r.left+r.width/2);tp.insertBefore(d.item,after?target.nextSibling:target);return;}if(zone&&zone.dataset.zone==='page'&&d.item.parentElement&&d.item.parentElement.dataset.zone!=='dock'&&d.item.parentElement!==zone)zone.appendChild(d.item);}
 function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.clientWidth;let pg=Math.max(0,Math.min(APP_PAGES-1,Math.round(sw.scrollLeft/w)+dir));
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
@@ -2724,30 +2756,23 @@ function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clien
   if(_aPend){if(Math.abs(e.clientX-_aPend.x)>APP_TAP_MOVE||Math.abs(e.clientY-_aPend.y)>APP_TAP_MOVE){clearTimeout(_aTimer);_aPend=null;_aNoClick=Date.now()+450;}}}
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
-  const p=_aPend;_aPend=null;if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE)appLaunch(p.k);}
-function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(sw){sw.classList.remove('aedit');sw.querySelectorAll('.app').forEach(el=>el.style.opacity='');}}
-function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');const k=d.k;
+  const p=_aPend;_aPend=null;if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
+function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(typeof document!=='undefined'&&document.body)document.body.classList.remove('home-drag-active');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(d){if(typeof render==='function')render();if(typeof requestAnimationFrame==='function')requestAnimationFrame(homeEditStart);return;}if(sw)sw.classList.remove('aedit');}
+function homeLayoutReadDom(){const pages=Array.from(document.querySelectorAll('#appswipe .apppage')).map(pg=>Array.from(pg.children).map(el=>el.dataset.token).filter(Boolean)),dock=$('#homeDesktop .dock');if(pages.length!==APP_PAGES||!dock)return false;const dockItems=Array.from(dock.children).map(el=>el.dataset.token).filter(Boolean);if(dockItems.length!==4)return false;S.me.homeLayout=pages;S.me.appDock=dockItems;homeLayoutSyncLegacy();return true;}
+function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');
   _aNoClick=Date.now()+900;
-  if(d.ghost)d.ghost.style.display='none';
-  const tgt=document.elementFromPoint(x,y);
-  if(d.ghost)d.ghost.remove();
-  const tcell=tgt&&tgt.closest?tgt.closest('.app'):null;
-  const tpageEl=tgt&&tgt.closest?tgt.closest('.apppage'):null;
-  let tpg=tpageEl?(+tpageEl.dataset.pg||0):(sw?Math.max(0,Math.min(APP_PAGES-1,Math.round(sw.scrollLeft/sw.clientWidth))):0);
-  const L=S.me.appLayout;L.forEach(pg=>{const j=pg.indexOf(k);if(j>=0)pg.splice(j,1);});
-  if(!L[tpg])tpg=0;let idx=L[tpg].length;
-  if(tcell&&tcell.dataset.k&&tcell.dataset.k!==k){const ti=L[tpg].indexOf(tcell.dataset.k);if(ti>=0)idx=ti;}
-  L[tpg].splice(idx,0,k);
-  if(sw){sw.classList.remove('aedit');}
+  if(d.ghost)d.ghost.remove();if(d.item){d.item.style.opacity='';d.item.style.pointerEvents='';}
+  document.body.classList.remove('home-drag-active');if(sw)sw.classList.remove('aedit');
+  if(!homeLayoutReadDom()){render();requestAnimationFrame(homeEditStart);return;}
   save();render();requestAnimationFrame(homeEditStart);}
 function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
   document.addEventListener('pointermove',appMove,{passive:false});
-  document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appCancel);}
+  document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appCancel);document.addEventListener('click',e=>{if(Date.now()<_aNoClick&&e.target.closest('.home-item')){e.preventDefault();e.stopImmediatePropagation();}},true);}
 initAppDrag();
 function homeEditStart(){const h=$('#homeDesktop');if(h)h.classList.add('home-editing');}
 function homeEditFinish(){appCancel();homeWidgetDragCancel();const h=$('#homeDesktop');if(h)h.classList.remove('home-editing');}
 // 用点按方式整理桌面（不用长按拖拽，苹果安卓都稳）：每个应用选放第几页 + 上下调顺序
-function appLayoutEditor(){appLayoutInit();const L=S.me.appLayout;
+function appLayoutEditor(){homeLayoutInit();const L=S.me.homeLayout.map(pg=>pg.filter(k=>APPDEFS[k]));
   openModal('<h3>桌面应用布局</h3><div class="hint">点按钮把应用放到第几页、调上下顺序，不用拖拽。改完点完成。</div>'
    +L.map((pg,pi)=>'<div class="section" style="margin-bottom:10px"><div style="padding:8px 12px;font-weight:600;color:#b8a4e3">第 '+(pi+1)+' 页（'+pg.length+'个）</div>'
      +(pg.length?pg.map((k,j)=>{const a=APPDEFS[k]||{};
@@ -2758,8 +2783,8 @@ function appLayoutEditor(){appLayoutInit();const L=S.me.appLayout;
        }).join(''):'<div class="empty" style="padding:12px">这页是空的</div>')
      +'</div>').join('')
    +'<button class="btn p" style="margin-top:6px" onclick="closeModal();render()">完成</button>');}
-function appMoveOrder(k,dir){const L=S.me.appLayout;for(const pg of L){const j=pg.indexOf(k);if(j>=0){const nj=j+dir;if(nj<0||nj>=pg.length)return;pg.splice(j,1);pg.splice(nj,0,k);save();appLayoutEditor();return;}}}
-function appMovePage(k,tp){const L=S.me.appLayout;L.forEach(pg=>{const i=pg.indexOf(k);if(i>=0)pg.splice(i,1);});if(!L[tp])tp=0;L[tp].push(k);save();appLayoutEditor();}
+function appMoveOrder(k,dir){homeLayoutInit();for(const pg of S.me.homeLayout){const j=pg.indexOf(k);if(j<0)continue;const apps=pg.map((v,i)=>APPDEFS[v]?i:-1).filter(i=>i>=0),pos=apps.indexOf(j),np=pos+dir;if(np<0||np>=apps.length)return;const ni=apps[np],tmp=pg[ni];pg[ni]=k;pg[j]=tmp;homeLayoutSyncLegacy();save();appLayoutEditor();return;}}
+function appMovePage(k,tp){homeLayoutInit();S.me.homeLayout.forEach(pg=>{const i=pg.indexOf(k);if(i>=0)pg.splice(i,1);});if(!S.me.homeLayout[tp])tp=0;S.me.homeLayout[tp].push(k);homeLayoutSyncLegacy();save();appLayoutEditor();}
 // ===== 主屏小组件 =====
 function widInit(){const m=S.me;
   if(!Array.isArray(m.widgets))m.widgets=['clock','couple2','mood','disc','pet'];
@@ -2779,7 +2804,7 @@ function widInit(){const m=S.me;
   // 只迁移从未整理过的旧默认顺序，接近已确认的 v829 预览；用户自己的排序不覆盖
   if(!m._wmigPremiumPreview){const legacy=m.widgets.join('|')==='clock|couple2|mood|disc|pet';if(legacy){const usedPet=!!(m.petPats||m.petColor);m.widgets=['clock','disc','mood','couple2'].concat(usedPet?['pet']:[]);}m._wmigPremiumPreview=1;}}
 function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-const WIDS=[['clock','时钟·天气·小图','时间天气，右边可放一张自己上传的小图'],['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌'],['pet','桌面小猫','会动的电子小猫·白天精神晚上睡·点一下摸摸头']];
+const WIDS=[['clock','时间·天气','显示主屏时间、地点和实时天气图案'],['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌'],['pet','桌面小猫','会动的电子小猫·白天精神晚上睡·点一下摸摸头']];
 const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>'],
   neutral:['平淡','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.8 14.7h6.4"/>'],
   distress:['烦躁','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.2l2.4 1.3M16 9.2l-2.4 1.3M9.2 15.4c.9-1.4 4.7-1.4 5.6 0"/>'],
@@ -2843,11 +2868,9 @@ function cp2Reset(who){if(who==='me')S.me.homeAvMe='';else S.me.homeAvTa='';save
 function homeWeatherIcon(desc,col){desc=String(desc||'');const rain=desc.includes('雨'),cloud=desc.includes('云')||desc.includes('阴'),body=rain||cloud?`<path d="M7 16.5h10.2a3.3 3.3 0 0 0 .4-6.5 5.8 5.8 0 0 0-10.8 1.7A2.4 2.4 0 0 0 7 16.5z"/><path d="M9.2 13h.01M14.8 13h.01M10.4 15c1 .8 2.2.8 3.2 0"/>${rain?'<path d="m8.5 19-1 2M12.5 19l-1 2M16.5 19l-1 2"/>':''}`:`<circle cx="12" cy="12" r="5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M10 11h.01M14 11h.01M10.2 13.7c1 1 2.6 1 3.6 0"/>`;return `<svg class="home-weather-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="${col}" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-label="${esc(desc||'晴天')}">${body}</svg>`;}
 function wClock(){const col=wcol();const d=new Date();const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const weather=S.weather&&S.weather.place?S.weather:null,place=weather?esc(String(weather.place).split('·').pop()||weather.place):'天气',desc=weather?esc(weather.desc||'晴'):'点一下更新天气',temp=weather&&Number.isFinite(+weather.temp)?Math.round(+weather.temp)+'°':'--°';
-  const custom=S.me.wPic?'<img class="clkCustom" src="'+S.me.wPic+'" alt="自定义小图">':'';
-  const pic=homeWeatherIcon(weather&&weather.desc,col)+custom;
+  const pic=homeWeatherIcon(weather&&weather.desc,col);
   const hint=weather?desc+' · '+(/雨/.test(weather.desc||'')?'记得带伞':/晴/.test(weather.desc||'')?'适合出门走走':'很适合散步'):'点击获取当前位置天气';
-  return `<div class="hwid home-weather-card" style="color:${col}" onclick="fetchWeather(true)"><span class="home-weather-eyebrow">TODAY · ${place}</span><div class="home-weather-art" onclick="event.stopPropagation();wPicUpload()">${pic}</div><strong>${temp}</strong><div class="home-weather-copy">${hint}</div><div class="home-weather-foot">${weather?'实时天气':'点这里更新'}</div></div>`;}
-function wPicUpload(){pickFile('image/*',async f=>{S.me.wPic=await compress(f,500,.75);save();render();toast('小图已换 🖼️');});}
+  return `<div class="hwid home-weather-card" style="color:${col}" onclick="fetchWeather(true)"><span class="home-weather-eyebrow">TODAY · ${place}</span><div class="home-weather-art">${pic}</div><strong>${temp}</strong><div class="home-weather-copy">${hint}</div><div class="home-weather-foot">${weather?'实时天气':'点这里更新'}</div></div>`;}
 const WIDR={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc,pet:wPet};
 function petCatDay(col){return `<svg class="petcat petday" viewBox="0 0 76 64" width="76" height="62" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
   <path class="ptail" d="M56 52 q15 1 9 -17"/>
@@ -2875,19 +2898,19 @@ function petTap(el){const box=el.querySelector('.petbox');const c=el.querySelect
   S.me.petPats=(S.me.petPats||0)+1;save();
   const night=(()=>{const hr=new Date().getHours();return hr>=21||hr<7;})();
   toast(night?'喵…（迷糊地蹭了蹭你）':'喵～ 蹭蹭你的手');}
-function homeWidgetItem(k,inline){const raw=WIDR[k]?WIDR[k]():'';if(!raw)return '';return raw.replace(/class="([^"]*(?:hwid|hnote)[^"]*)"/,`class="$1 home-widget-item home-widget-${k}${inline?' home-inline-widget':''}" data-wk="${k}" onpointerdown="homeWidgetDown(event,'${k}')"`);}
+function homeWidgetItem(k,inline){const raw=WIDR[k]?WIDR[k]():'';if(!raw)return `<div class="home-widget-item home-item home-widget-${k}${inline?' home-inline-widget':''}" data-wk="${k}" data-token="w:${k}" style="display:none"></div>`;return raw.replace(/class="([^"]*(?:hwid|hnote)[^"]*)"/,`class="$1 home-widget-item home-item home-widget-${k}${inline?' home-inline-widget':''}" data-wk="${k}" data-token="w:${k}" onpointerdown="appDown(event,'w:${k}')"`);}
 function homeWidgets(){widInit();const top=S.me.widgets.filter(k=>['clock','disc','mood'].includes(k)).map(k=>homeWidgetItem(k,false)).filter(Boolean).join('');return top?'<div class="hwwrap" style="'+widgetStyleVars()+'">'+top+'</div>':'';}
 function homeInlineWidgets(){widInit();return S.me.widgets.filter(k=>!['clock','disc','mood'].includes(k)).map(k=>homeWidgetItem(k,true)).filter(Boolean).join('');}
 const HOME_WIDGET_DRAG_MS=560,HOME_WIDGET_MOVE=24;
 let _hwPend=null,_hwDrag=null,_hwTimer=null,_hwNoClick=0;
-function homeWidgetDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;_hwPend={k,x:e.clientX,y:e.clientY,t:Date.now()};clearTimeout(_hwTimer);_hwTimer=setTimeout(()=>homeWidgetDragBegin(),HOME_WIDGET_DRAG_MS);}
+function homeWidgetDown(e,k){appDown(e,'w:'+k);}
 function homeWidgetDragBegin(){const p=_hwPend,desktop=$('#homeDesktop');if(!p||!desktop)return;const item=desktop.querySelector('.home-widget-item[data-wk="'+p.k+'"]');if(!item)return;const r=item.getBoundingClientRect(),ghost=item.cloneNode(true);ghost.classList.add('home-widget-ghost');ghost.style.cssText+=';position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px;z-index:9999;pointer-events:none;';document.body.appendChild(ghost);item.classList.add('home-widget-dragging');_hwDrag={k:p.k,item,ghost,dx:p.x-r.left,dy:p.y-r.top};homeEditStart();homeWidgetGhostMove(p.x,p.y);if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}}
 function homeWidgetGhostMove(x,y){if(!_hwDrag)return;_hwDrag.ghost.style.left=(x-_hwDrag.dx)+'px';_hwDrag.ghost.style.top=(y-_hwDrag.dy)+'px';}
 function homeWidgetMove(e){if(_hwDrag){e.preventDefault();homeWidgetGhostMove(e.clientX,e.clientY);return;}if(_hwPend&&(Math.abs(e.clientX-_hwPend.x)>HOME_WIDGET_MOVE||Math.abs(e.clientY-_hwPend.y)>HOME_WIDGET_MOVE)){clearTimeout(_hwTimer);_hwPend=null;}}
 function homeWidgetUp(e){clearTimeout(_hwTimer);if(_hwDrag){homeWidgetDrop(e.clientX,e.clientY);return;}_hwPend=null;}
 function homeWidgetDrop(x,y){const d=_hwDrag;if(!d)return;_hwDrag=null;_hwNoClick=Date.now()+900;d.ghost.style.display='none';const target=document.elementFromPoint(x,y)?.closest('.home-widget-item');d.ghost.remove();d.item.classList.remove('home-widget-dragging');const order=S.me.widgets.slice(),from=order.indexOf(d.k),targetKey=target&&target.dataset.wk;if(from>=0&&targetKey!==d.k){order.splice(from,1);let at=targetKey?order.indexOf(targetKey):-1;if(at<0)at=order.length;order.splice(at,0,d.k);}S.me.widgets=order;save();render();requestAnimationFrame(homeEditStart);}
 function homeWidgetDragCancel(){clearTimeout(_hwTimer);_hwPend=null;const d=_hwDrag;_hwDrag=null;if(d){try{d.ghost.remove();}catch(_){}try{d.item.classList.remove('home-widget-dragging');}catch(_){}}}
-function initHomeWidgetDrag(){if(window._hwDragInit)return;window._hwDragInit=1;document.addEventListener('pointermove',homeWidgetMove,{passive:false});document.addEventListener('pointerup',homeWidgetUp);document.addEventListener('pointercancel',homeWidgetDragCancel);document.addEventListener('click',e=>{if(Date.now()<_hwNoClick&&e.target.closest('.home-widget-item')){e.preventDefault();e.stopImmediatePropagation();}},true);}
+function initHomeWidgetDrag(){if(window._hwDragInit)return;window._hwDragInit=1;}
 initHomeWidgetDrag();
 function wNoteEdit(){widInit();const n=S.me.note;const papers=['#fff7d6','#ffd9e0','#d6f0ff','#e2ffd9','#efe2ff','#ffffff'];window._wnPaper=null;
   openModal(`<h3>可爱便签</h3>
@@ -2918,7 +2941,8 @@ function widgetManager(){widInit();const meta={};WIDS.forEach(w=>meta[w[0]]=w);
    <button class="minibtn" style="margin-top:10px" onclick="widgetAppearanceReset()">恢复主题默认</button>
    <div class="btns" style="margin-top:10px"><button class="btn p" onclick="closeModal()">完成</button></div>`);}
 function wManRow(k,w,on){return `<div class="wrow" data-k="${k}">${on?`<span class="whandle" onpointerdown="wDragDown(event,'${k}')">${svgIc('dots',20,'#888')}</span>`:'<span style="width:26px;flex:none"></span>'}<div class="wnm">${w[1]}<small>${w[2]}</small></div><span class="sw ${on?'on':''}" onclick="wToggle('${k}')"></span></div>`;}
-function wToggle(k){widInit();const i=S.me.widgets.indexOf(k);if(i>=0)S.me.widgets.splice(i,1);else S.me.widgets.push(k);widInit();save();render();widgetManager();}
+function homeWidgetOrderApply(order){homeLayoutInit();const tokens=order.map(k=>'w:'+k),slots=[];S.me.homeLayout.forEach((pg,pi)=>pg.forEach((v,i)=>{if(String(v).startsWith('w:'))slots.push([pi,i]);}));const keep=Math.min(tokens.length,slots.length);for(let n=0;n<keep;n++){const s=slots[n];S.me.homeLayout[s[0]][s[1]]=tokens[n];}for(let n=slots.length-1;n>=tokens.length;n--){const s=slots[n];S.me.homeLayout[s[0]].splice(s[1],1);}for(let n=slots.length;n<tokens.length;n++)S.me.homeLayout[0].unshift(tokens[n]);S.me.widgets=order.slice();homeLayoutSyncLegacy();}
+function wToggle(k){homeLayoutInit();const order=S.me.widgets.slice(),i=order.indexOf(k);if(i>=0)order.splice(i,1);else order.push(k);homeWidgetOrderApply(order);save();render();widgetManager();}
 let _wdg=null;
 function wDragDown(e,k){const row=e.target.closest('.wrow');if(!row)return;_wdg={k,row};row.classList.add('wdrag');try{row.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();}
 function wDragMove(e){if(!_wdg)return;e.preventDefault();const list=document.getElementById('wlist');if(!list)return;
@@ -2927,7 +2951,7 @@ function wDragMove(e){if(!_wdg)return;e.preventDefault();const list=document.get
   if(after){if(after!==_wdg.row.nextSibling)list.insertBefore(_wdg.row,after);}else if(_wdg.row!==list.lastElementChild)list.appendChild(_wdg.row);}
 function wDragEnd(){if(!_wdg)return;_wdg.row.classList.remove('wdrag');const list=document.getElementById('wlist');
   if(list){const order=[...list.querySelectorAll('.wrow')].map(r=>r.dataset.k).filter(k=>WIDS.some(w=>w[0]===k));
-    if(order.length){S.me.widgets=order;widInit();save();render();}}
+    if(order.length){homeWidgetOrderApply(order);save();render();}}
   _wdg=null;}
 // 简约线条图标库（白色，替代 emoji，更高级）
 const _MI=(p,f)=>'<svg viewBox="0 0 24 24" width="26" height="26" fill="'+(f?'#fff':'none')+'" stroke="'+(f?'none':'#fff')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
@@ -3367,7 +3391,7 @@ async function clearAllData(){
   fresh.settings=old.settings;// 保留 API 设置
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
-  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','appIcons','appIconTone','appTextTone','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
+  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
   const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
@@ -10831,7 +10855,7 @@ async function emergencyRestoreConfirm(){const c=_recoveryCandidate;if(!c)return
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
-    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
+    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
     phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
     phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
     music:pickObj(music,['bg','cover','theme','layout','widgets']),
@@ -10847,7 +10871,7 @@ function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
-  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
+  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
   const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
   const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});

@@ -74,12 +74,25 @@ test('Douyin repairs incomplete restored data every time it opens', () => {
 });
 
 test('the four-icon dock and page dots stay fixed above scrollable home content', () => {
-  assert.match(source, /<div class="home-scroll">\$\{homeWidgets\(\)\}[\s\S]*?<div class="appswipe"/);
+  assert.match(source, /<div class="home-scroll">[\s\S]*?<div class="appswipe"/);
+  assert.match(source, /<div class="dock home-dropzone" data-zone="dock">\$\{homeDockHtml\(\)\}<\/div>/);
+  assert.match(source, /const HOME_DOCK_DEFAULT=\['d:wechat','d:contacts','d:moments','d:me'\]/);
   assert.match(html, /\.home\{[^}]*overflow:hidden/);
   assert.match(html, /\.home-scroll\{[^}]*flex:1;[^}]*overflow-y:auto/);
   assert.match(html, /\.pgdots\{position:relative;[^}]*flex:none/);
   assert.match(html, /\.dock\{position:relative;[^}]*flex:none/);
   assert.doesNotMatch(html, /\.apps,\.dock\{position:relative/);
+});
+
+test('home widgets, apps, and dock share live reorder data without browser text selection', () => {
+  assert.match(source, /function homeLayoutInit\(\)/);
+  assert.match(source, /function homeTokenCell\(k\)/);
+  assert.match(source, /function appLiveReorder\(x,y\)/);
+  assert.match(source, /appSwapNodes\(d\.item,target\)/);
+  assert.match(source, /function homeLayoutReadDom\(\)/);
+  assert.match(source, /data-token="w:\$\{k\}" onpointerdown="appDown\(event,'w:\$\{k\}'\)"/);
+  assert.match(html, /\.home,\.home \*\{[^}]*-webkit-user-select:none;user-select:none;-webkit-touch-callout:none/);
+  assert.match(html, /\.home\.home-editing \.dock \.app/);
 });
 
 test('preferences adjust all home app icons and labels with portable state', () => {

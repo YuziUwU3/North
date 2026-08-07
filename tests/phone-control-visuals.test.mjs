@@ -10,7 +10,7 @@ const app = readFileSync(join(root, 'app.js'), 'utf8');
 const html = readFileSync(join(root, '小手机.html'), 'utf8');
 
 test('locked apps are visually disabled without an emoji label', () => {
-  assert.ok(app.includes(`class="app'+(locked?' app-locked':'')+'"`));
+  assert.ok(app.includes(`class="app home-item'+(locked?' app-locked':'')+'"`));
 });
 
 test('locked apps use a line lock and reject home-screen launches', () => {

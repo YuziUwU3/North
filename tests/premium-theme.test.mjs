@@ -23,20 +23,21 @@ test('home time, couple avatars, mood face and original app line icons stay inta
   assert.match(app,/me:_MI\('<circle cx="12" cy="12" r="8\.4"\/>/);
 });
 
-test('music and weather widgets use live artwork without removing custom uploads',()=>{
+test('music and weather widgets use live artwork without the obsolete tiny upload overlay',()=>{
   assert.match(app,/class="home-record-cover" style="background-image:url\(\$\{s\.cover\}\)"/);
   assert.match(app,/class="home-record\$\{s&&_mPlaying\?' wdisc':''\}"/);
   assert.match(app,/wanted=_mCur\|\|\(S\.music&&S\.music\.lastSongId\),s=songs\.find\(x=>x\.id===wanted\)\|\|songs\[0\]\|\|null/);
   assert.match(app,/function homeWeatherIcon\(desc,col\)/);
-  assert.match(app,/const custom=S\.me\.wPic\?'<img class="clkCustom" src="'\+S\.me\.wPic\+'" alt="自定义小图">':''/);
-  assert.match(app,/const pic=homeWeatherIcon\(weather&&weather\.desc,col\)\+custom/);
+  assert.match(app,/const pic=homeWeatherIcon\(weather&&weather\.desc,col\);/);
+  assert.doesNotMatch(app,/function wPicUpload\(\)/);
+  assert.doesNotMatch(app,/class="clkCustom"/);
 });
 
 test('formal home follows the approved v829 widget grid instead of a different card stack',()=>{
-  assert.match(app,/function homeWidgets\(\)[\s\S]*?\['clock','disc','mood'\]/);
-  assert.match(app,/pi===0\?homeInlineWidgets\(\):''/);
-  assert.match(html,/\.hwwrap \.home-widget-clock\{grid-column:span 2;grid-row:span 2/);
-  assert.match(html,/\.hwwrap \.home-widget-disc,\.hwwrap \.home-widget-mood\{grid-column:span 2;grid-row:span 1/);
+  assert.match(app,/function homeLayoutInit\(\)/);
+  assert.match(app,/S\.me\.widgets\.map\(k=>'w:'\+k\)/);
+  assert.match(html,/\.apppage \.home-widget-clock\{grid-column:span 2;grid-row:span 2/);
+  assert.match(html,/\.apppage \.home-widget-disc,\.apppage \.home-widget-mood\{grid-column:span 2;grid-row:span 1/);
   assert.match(html,/\.apppage \.home-widget-couple2\{grid-column:span 2/);
   assert.match(html,/\.home-record\{width:58px;height:58px;border-width:8px/);
   assert.match(html,/\.home-mood-face\{width:48px;height:48px/);
@@ -44,12 +45,19 @@ test('formal home follows the approved v829 widget grid instead of a different c
 
 test('formal home includes the complete edit layer and movable widgets',()=>{
   assert.match(app,/class="home-editbar"/);
-  assert.match(app,/function homeWidgetDragBegin\(\)/);
-  assert.match(app,/targetKey!==d\.k/);
-  assert.match(app,/data-wk="\$\{k\}" onpointerdown="homeWidgetDown/);
+  assert.match(app,/function appLiveReorder\(x,y\)/);
+  assert.match(app,/function homeLayoutReadDom\(\)/);
+  assert.match(app,/data-token="w:\$\{k\}" onpointerdown="appDown/);
   assert.match(app,/function homeEditFinish\(\)/);
   assert.match(html,/\.home\.home-editing \.home-editbar\{display:flex/);
   assert.match(html,/\.home-widget-ghost\{/);
+});
+
+test('WeChat receives the approved frame while original chat internals stay intact',()=>{
+  assert.match(app,/const _wxP=c\.p==='wechat'\?' wx-premium':''/);
+  assert.match(html,/\.wx-premium>\.nav\{/);
+  assert.match(html,/\.wx-premium>\.tabbar\{/);
+  assert.match(html,/微信高级框架只包裹四个主标签页/);
 });
 
 test('WeChat keeps the formal dynamic, microphone and bottom-tab line paths',()=>{
