@@ -8,6 +8,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const app = readFileSync(join(root, 'app.js'), 'utf8');
 const migration = readFileSync(join(root, 'supabase', 'migrations', '202608060003_phone_role_scheduled_push.sql'), 'utf8');
 const avatarMigration = readFileSync(join(root, 'supabase', 'migrations', '202608070001_phone_role_avatar_notifications.sql'), 'utf8');
+const contextMigration = readFileSync(join(root, 'supabase', 'migrations', '202608080001_phone_role_push_context_reset.sql'), 'utf8');
 const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
 const notificationService = readFileSync(join(root, 'docs', 'ios', 'v831角色头像通信通知', 'NotificationService.swift'), 'utf8');
 
@@ -80,6 +81,15 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /不要改几个字后重复原意/);
   assert.match(edge, /sawGeneratedCandidate \? \{ kind: "silent"/);
   assert.match(edge, /phone_role_push_outbox[\s\S]{0,300}select\("body"\)/);
+  assert.match(edge, /profile\.recent_context/);
+  assert.match(edge, /profile\.memory_context/);
+  assert.match(edge, /最近的真实聊天/);
+  assert.match(edge, /长期记忆、对话总结与世界设定/);
+  assert.match(edge, /真实恋人的日常聊天/);
+  assert.match(edge, /严禁使用破折号或横杠字符/);
+  assert.match(edge, /roleMessageStyleInvalid\(body\)/);
+  assert.match(edge, /select\("enabled,next_due_at,last_user_at,recent_context,memory_context"\)/);
+  assert.match(edge, /Date\.parse\(String\(latestProfile\.next_due_at/);
 });
 
 test('short proactive messages reject one-word rewrites without blocking different topics', () => {
@@ -116,15 +126,41 @@ test('iOS notification service upgrades role pushes to communication notificatio
   assert.match(notificationService, /data\?\.count \?\? 0\) <= 64_000/);
 });
 
-test('web client opt-in only sends a bounded role summary', () => {
+test('web client opt-in sends bounded memory and recent context', () => {
   const profile = functionSource('roleServerPushProfile');
   assert.match(profile, /roleName/);
   assert.match(profile, /persona/);
   assert.match(profile, /slice\(0,1200\)/);
-  assert.doesNotMatch(profile, /messages|health|location|screenTime/);
+  assert.match(profile, /recentContext:roleServerPushRecentContext\(c\)/);
+  assert.match(profile, /memoryContext:roleServerPushMemoryContext\(c\)/);
+  assert.match(profile, /lastUserAt:roleServerPushLastUserAt\(c\)/);
+  assert.match(functionSource('roleServerPushRecentContext'), /slice\(-8000\)/);
+  assert.match(functionSource('roleServerPushMemoryContext'), /slice\(0,16000\)/);
+  assert.match(functionSource('roleServerPushMemoryContext'), /memoryList\(c,scope\)/);
+  assert.match(functionSource('roleServerPushMemoryContext'), /summaryList\(c,scope\)/);
+  assert.match(functionSource('roleServerPushMemoryContext'), /aiMemoryDocs\(c\)/);
+  assert.match(functionSource('roleServerPushMemoryContext'), /S\.worldbook/);
+  assert.match(functionSource('roleServerPushMemoryContext'), /lifeNotes\(\)/);
   assert.match(app, /关闭小手机后仍可主动联系/);
+  assert.match(app, /会同步该角色的长期记忆、对话总结和最近聊天上下文/);
   assert.match(functionSource('roleServerPushToggle'), /phone_role_push_upsert_profile|roleServerPushSync/);
   assert.match(functionSource('roleServerPushSyncEnabled'), /21600000/);
+});
+
+test('every visible user message resets the server idle timer with synced context', () => {
+  assert.match(contextMigration, /recent_context text not null default ''/);
+  assert.match(contextMigration, /memory_context text not null default ''/);
+  assert.match(contextMigration, /last_user_at timestamptz/);
+  assert.match(contextMigration, /phone_role_push_touch_activity/);
+  assert.match(contextMigration, /next_due_at = case when enabled then v_activity \+ make_interval\(mins => idle_minutes\)/);
+  assert.match(contextMigration, /claimed_until = null/);
+  assert.match(contextMigration, /grant execute on function public\.phone_role_push_touch_activity/);
+  const touch = functionSource('roleServerPushTouchActivity');
+  assert.match(touch, /p_recent_context:roleServerPushRecentContext\(c\)/);
+  assert.match(touch, /p_memory_context:roleServerPushMemoryContext\(c\)/);
+  assert.match(touch, /p_activity_ms:\+activityAt\|\|Date\.now\(\)/);
+  const push = functionSource('pushMsg');
+  assert.match(push, /msgs\(id\)\.push\(m\);save\(\);if\(m\.role==='user'&&m\.type!=='sys'\)roleServerPushTouchActivity\(id,m\.time,true\)/);
 });
 
 test('returned role messages are deduplicated and appended to the matching chat', () => {

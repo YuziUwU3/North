@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='848'){
+if(window.__NORTH_SHELL_BUILD__!=='849'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v848 · 线下复读与总结存档修复';
+const APP_VER='v849 · 主动消息记忆上下文同步';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1373,7 +1373,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=848';
+  const url='sw.js?v=849';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8156,7 +8156,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
       <div class="it"><span>消息免打扰</span><span class="sw ${c.muted?'on':''}" onclick="c_mute('${id}')"></span></div>
       <div class="it"><span>主动消息</span><span class="sw ${c.proactive.enabled?'on':''}" onclick="togProactive('${id}')"></span></div>
-      <div class="it"><span>关闭小手机后仍可主动联系<br><small style="color:#888">由服务器按时段触发，并通过真实 iPhone 伴生 App 通知；只上传角色摘要和时段，不上传完整聊天或健康数据</small></span><span class="sw ${c.proactive.serverPush?'on':''}" onclick="roleServerPushToggle('${id}')"></span></div>
+      <div class="it"><span>关闭小手机后仍可主动联系<br><small style="color:#888">由服务器按时段触发，并通过真实 iPhone 伴生 App 通知；会同步该角色的长期记忆、对话总结和最近聊天上下文，不上传健康数据或其他角色聊天</small></span><span class="sw ${c.proactive.serverPush?'on':''}" onclick="roleServerPushToggle('${id}')"></span></div>
       <div class="it" style="flex-wrap:wrap"><span>时段/每天次数<br><small style="color:#888">设好点「存」；要真生效记得打开上面的主动消息开关<br>当前 ${hm()} · ${initiativeWindow(c,new Date())?'在主动时段内':'不在主动时段内，暂不发送'}</small></span><span class="v" style="max-width:100%"><input type="number" min="0" max="23" id="pa_s" value="${hourOf(c.proactive.start,9)}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">点-<input type="number" min="0" max="23" id="pa_e" value="${hourOf(c.proactive.end,23)}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">点 <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:38px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>
     </div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#5b6b9c">查岗（让ta看我的手机）</div>
@@ -8441,12 +8441,22 @@ async function doClear(id,mode){const list=msgs(id);let keep,tip='';
     const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>{const t=msgClearTime(m);return m._call||!t||t<t0||t>t1;});tip='删除 '+a+' 到 '+b+' 的文字聊天？没有日期的旧消息和通话记录会保留。';}
   const n=list.length-keep.length;if(n<=0){toast('没有可删除的文字聊天');return;}if(!await uiConfirm(tip+'\n\n预计删除 '+n+' 条。'))return;
   S.messages[mkey(id)]=keep;await persistWechatMessagesNow();closeModal();render();toast('已删除 '+n+' 条文字聊天（通话记录保留）');}
-function roleServerPushProfile(c){let timezone='Asia/Shanghai';try{timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||timezone;}catch(_){}return {roleId:c.id,roleName:(c.remark||c.name||'角色').slice(0,40),relation:String(c.relation||'').slice(0,80),persona:String(c.persona||'').slice(0,1200),userName:String(S.me&&S.me.name||'你').slice(0,40),enabled:!!(c.proactive&&c.proactive.enabled&&c.proactive.serverPush),timezone,startHour:hourOf(c.proactive&&c.proactive.start,9),endHour:hourOf(c.proactive&&c.proactive.end,23),dailyLimit:Math.max(1,Math.min(24,+(c.proactive&&c.proactive.times)||2)),idleMinutes:Math.max(15,Math.min(1440,+S.settings.proactiveIdleMin||120))};}
+function roleServerPushRecentContext(c){if(!c)return'';const lines=[];msgs(c.id).slice(-40).forEach(m=>{if(!m||m._call||m.type==='sys')return;const text=String(msgToText(m)||'').replace(/\s+/g,' ').trim();if(!text)return;const who=m.role==='user'?((S.me&&S.me.name)||'用户'):(c.remark||c.name||'角色'),time=msgClearTime(m);lines.push((time?new Date(time).toLocaleString('zh-CN',{hour12:false})+' ':'')+who+'：'+text.slice(0,500));});return lines.join('\n').slice(-8000);}
+function roleServerPushMemoryContext(c){if(!c)return'';const scope=memoryScopeKey(),sections=[],add=(title,rows)=>{rows=(rows||[]).map(v=>String(v||'').replace(/\s+/g,' ').trim()).filter(Boolean);if(rows.length)sections.push('【'+title+'】\n'+rows.map(v=>'· '+v).join('\n').slice(-2800));};
+  add('长期记忆',memoryList(c,scope).map(memoryText));
+  add('对话总结',summaryList(c,scope).map(v=>summaryCleanText(c,v&&v.text||'',scope)));
+  if(scope==='main')add('外部导入记忆',aiMemoryDocs(c).flatMap(doc=>(doc&&doc.chunks||[]).map(v=>String(v&&typeof v==='object'?v.text:v||'').trim())));
+  add('角色世界设定',(S.worldbook||[]).filter(w=>w&&w.enabled&&w.content&&(!w.contacts||!w.contacts.length||w.contacts.includes(c.id))).map(w=>(w.name||'世界书')+'：'+w.content));
+  if(scope==='main'&&typeof isLover==='function'&&isLover(c)){const cut=+c._lifeNotesClearedAt||0;add('近期生活记忆',lifeNotes().filter(v=>v&&v.text&&(+v.ts||0)>cut).map(v=>v.text));}
+  return sections.join('\n\n').slice(0,16000);}
+function roleServerPushLastUserAt(c){const m=[...msgs(c.id)].reverse().find(v=>v&&v.role==='user'&&v.type!=='sys'&&!v._call);return m?msgClearTime(m):0;}
+function roleServerPushProfile(c){let timezone='Asia/Shanghai';try{timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||timezone;}catch(_){}return {roleId:c.id,roleName:(c.remark||c.name||'角色').slice(0,40),relation:String(c.relation||'').slice(0,80),persona:String(c.persona||'').slice(0,1200),userName:String(S.me&&S.me.name||'你').slice(0,40),recentContext:roleServerPushRecentContext(c),memoryContext:roleServerPushMemoryContext(c),lastUserAt:roleServerPushLastUserAt(c),enabled:!!(c.proactive&&c.proactive.enabled&&c.proactive.serverPush),timezone,startHour:hourOf(c.proactive&&c.proactive.start,9),endHour:hourOf(c.proactive&&c.proactive.end,23),dailyLimit:Math.max(1,Math.min(24,+(c.proactive&&c.proactive.times)||2)),idleMinutes:Math.max(15,Math.min(1440,+S.settings.proactiveIdleMin||120))};}
 function rolePushAvatarSource(c){const v=String(c&&c.avatar||'');if(isStoredImgRef(v))return _imgCache[v.slice(4)]||'';return v;}
 function rolePushAvatarFallback(canvas,c){const x=canvas.getContext('2d'),name=String(c&&c.remark||c&&c.name||'角').trim(),raw=rolePushAvatarSource(c),label=raw&&!isImg(raw)&&raw.length<=4?raw:(Array.from(name)[0]||'角');x.fillStyle='#20232b';x.fillRect(0,0,canvas.width,canvas.height);const g=x.createLinearGradient(0,0,canvas.width,canvas.height);g.addColorStop(0,'#8a6cff');g.addColorStop(1,'#ff7da7');x.fillStyle=g;x.beginPath();x.arc(canvas.width/2,canvas.height/2,canvas.width*.44,0,Math.PI*2);x.fill();x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';x.font=`600 ${label.length>1?38:46}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;x.fillText(label,canvas.width/2,canvas.height/2+2);}
 async function rolePushAvatarData(c){if(!c||typeof document==='undefined')return'';const canvas=document.createElement('canvas');canvas.width=96;canvas.height=96;const src=rolePushAvatarSource(c),x=canvas.getContext('2d');let drawn=false;if(src&&isImg(src)){try{const img=await new Promise((resolve,reject)=>{const el=new Image(),timer=setTimeout(()=>reject(new Error('avatar-timeout')),5000);if(/^https?:/i.test(src))el.crossOrigin='anonymous';el.onload=()=>{clearTimeout(timer);resolve(el);};el.onerror=()=>{clearTimeout(timer);reject(new Error('avatar-load-failed'));};el.src=src;});const side=Math.min(img.naturalWidth||img.width,img.naturalHeight||img.height),sx=((img.naturalWidth||img.width)-side)/2,sy=((img.naturalHeight||img.height)-side)/2;x.fillStyle='#fff';x.fillRect(0,0,96,96);x.drawImage(img,sx,sy,side,side,0,0,96,96);drawn=true;}catch(_){}}
   if(!drawn)rolePushAvatarFallback(canvas,c);try{const data=canvas.toDataURL('image/jpeg',.78);return data.length<=50000?data:'';}catch(_){return'';}}
 async function roleServerPushSync(c,silent){if(!c||!c.proactive||!gateOK())return false;try{const profile=roleServerPushProfile(c);profile.avatarData=await rolePushAvatarData(c);const ok=await companionRpc('phone_role_push_upsert_profile',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_profile:profile});if(!ok)throw new Error('真实 iPhone 尚未完成连接');if(!silent)toast(c.proactive.serverPush&&c.proactive.enabled?'服务器主动联系已开启':'服务器主动联系已关闭');return true;}catch(e){if(!silent)toast('服务器主动联系保存失败：'+e.message);return false;}}
+async function roleServerPushTouchActivity(id,activityAt,retry){const c=getC(id);if(!c||!c.proactive||!c.proactive.enabled||!c.proactive.serverPush||!gateOK())return false;try{const ok=await companionRpc('phone_role_push_touch_activity',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_role_id:id,p_recent_context:roleServerPushRecentContext(c),p_memory_context:roleServerPushMemoryContext(c),p_activity_ms:+activityAt||Date.now()});if(!ok)throw new Error('profile-not-ready');return true;}catch(_){if(retry!==false)setTimeout(()=>roleServerPushTouchActivity(id,activityAt,false),4000);return false;}}
 async function roleServerPushToggle(id){const c=getC(id);if(!c)return;if(!c.proactive.serverPush){const st=companionState();if(!st||!st.linked){toast('先在情侣空间连接真实 iPhone 伴生 App');return;}}c.proactive.serverPush=!c.proactive.serverPush;save();render();const ok=await roleServerPushSync(c,false);if(!ok){c.proactive.serverPush=false;save();render();}}
 let _roleServerPushPullBusy=false,_roleServerPushPullAt=0,_roleServerPushProfilesAt=0;
 async function roleServerPushSyncEnabled(){const now=Date.now();if(now-_roleServerPushProfilesAt<21600000)return;_roleServerPushProfilesAt=now;const list=(S.contacts||[]).filter(c=>c&&!c.deleted&&c.proactive&&c.proactive.serverPush);for(const c of list)await roleServerPushSync(c,true);}
@@ -8704,7 +8714,7 @@ function afterChat(id){
   if(ta)ta._chatId=id;
   maybeProactive(id);maybeSpyIdle(id);}
 
-function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);if(!wechatNaturalOn())suspicionOnUserMsg(id,m);}msgs(id).push(m);save();
+function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);if(!wechatNaturalOn())suspicionOnUserMsg(id,m);}msgs(id).push(m);save();if(m.role==='user'&&m.type!=='sys')roleServerPushTouchActivity(id,m.time,true);
   if(m.role==='user'){behaviorOnUserMsg(id,m);lifeNoteOnUserMsg(id,m);emotionOnUserMsg(id,m);}
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)cb.scrollTop=cb.scrollHeight;}}}
 

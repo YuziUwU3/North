@@ -151,6 +151,11 @@ function roleTextRepeated(current: string, previous: string) {
   return a.length >= 6 && prior[a.length] / a.length >= threshold;
 }
 
+function roleMessageStyleInvalid(value: string) {
+  const text = String(value || "").trim();
+  return /[—–―]/.test(text) || /-{2,}/.test(text) || text.split(/\r?\n/).filter(Boolean).length > 2;
+}
+
 async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
   const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
   const key = Deno.env.get("OPENAI_API_KEY") || "";
@@ -170,16 +175,20 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
   if (!providers.length) return { kind: "unavailable", body: "" };
   const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
   const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
+  const recentContext = String(profile.recent_context || "").slice(-8000).trim();
+  const memoryContext = String(profile.memory_context || "").slice(-16000).trim();
   const prompt = [
     `角色名：${String(profile.role_name || "角色").slice(0, 40)}`,
     `与用户关系：${String(profile.relation || "").slice(0, 80)}`,
     `角色设定摘要：${String(profile.persona || "").slice(0, 1200)}`,
     `用户称呼：${String(profile.user_name || "你").slice(0, 40)}`,
     `当地时间：${clock.day} ${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}`,
+    memoryContext ? `同步的长期记忆、对话总结与世界设定：\n${memoryContext}` : "没有可用的长期记忆。",
+    recentContext ? `你与用户最近的真实聊天（按时间顺序）：\n${recentContext}` : "最近没有可用的聊天上下文。",
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
   ].join("\n");
   const baseMessages = [
-    { role: "system", content: "这是一次角色自主联系机会，不是系统命令。请以角色本人身份，根据人设、关系和当前准确时间，自主决定此刻是否真的想联系用户。想联系时只输出一句自然、简短、有生活感的中文消息；不得复述近期已经发过的话，不得套用固定问候，不提AI、系统、定时、通知或后台，不虚构具体事件。如果按角色本人意愿此刻不想联系，只输出 [保持安静]。" },
+    { role: "system", content: "这是恋人或亲密关系里的私人聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆和最近聊天，再以角色本人身份决定此刻是否真的想联系用户。若刚聊完、话题仍在延续，就自然接住上下文；若已经隔了一段时间，可以像真实恋人一样表达想念、关心，报备自己的普通日常，或分享一件符合人设的小事。只输出一到两句口语化、自然、有生活感的中文消息。不要像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--）。不得声称看见、监测或知道用户当前的身体、位置、动作、梦境及其他没有上下文依据的事实；不得复述近期已经发过的话，不得套用固定问候，不提AI、系统、定时、通知或后台。想发照片时可以像真人一样用口语提到自己想分享的画面，但不要伪造已经发送了服务器无法附带的照片。如果按角色本人意愿此刻不想联系，只输出 [保持安静]。" },
     { role: "user", content: prompt },
   ];
   try {
@@ -194,7 +203,7 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
             body: JSON.stringify({
               model: provider.model,
               temperature: 0.95,
-              max_tokens: 90,
+              max_tokens: 120,
               messages: attemptMessages,
             }),
           });
@@ -209,13 +218,17 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
           const body = text.slice(0, 180).trim();
           const bodyKey = roleTextKey(body);
-          if (bodyKey && !recentBodies.some((old) => roleTextRepeated(body, old))) {
+          const repeated = !!bodyKey && recentBodies.some((old) => roleTextRepeated(body, old));
+          const styleInvalid = roleMessageStyleInvalid(body);
+          if (bodyKey && !repeated && !styleInvalid) {
             return { kind: "message", body };
           }
           attemptMessages = [
             ...baseMessages,
             { role: "assistant", content: body },
-            { role: "user", content: "这句话与近期已经发过的话过于相似。仍由你本人决定：换一个真正不同的话题和句式重新说一句，或者只输出 [保持安静]；不要改几个字后重复原意。" },
+            { role: "user", content: styleInvalid
+              ? "这句话不像真实恋人的日常聊天，或使用了破折号、横杠、诗化句式。请仍以同一角色本人身份，结合刚才的记忆和聊天上下文，改成一到两句自然口语；不要使用任何破折号或横杠。也可以只输出 [保持安静]。"
+              : "这句话与近期已经发过的话过于相似。仍由你本人决定：换一个真正不同的话题和句式重新说一句，或者只输出 [保持安静]；不要改几个字后重复原意。" },
           ];
         } catch (error) {
           console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
@@ -285,6 +298,14 @@ Deno.serve(async (request) => {
     const profiles = Array.isArray(due) ? due : [];
     let sent = 0, silent = 0, unavailable = 0;
     for (const profile of profiles) {
+      const { data: freshProfile } = await client.from("phone_role_push_profiles")
+        .select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
+      if (!freshProfile?.enabled || Date.parse(String(freshProfile.next_due_at || "")) > Date.now()) {
+        await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
+          .eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      Object.assign(profile, freshProfile);
       const clock = localClock(profile.timezone);
       const count = profile.daily_day === clock.day ? Number(profile.daily_count || 0) : 0;
       const start = Number(profile.start_hour ?? 9), end = Number(profile.end_hour ?? 23);
@@ -306,6 +327,14 @@ Deno.serve(async (request) => {
       const recentBodies = (Array.isArray(recentRows) ? recentRows : [])
         .map((row) => String(row?.body || "").trim()).filter(Boolean);
       const decision = await roleMessage(profile, recentBodies);
+      const { data: latestProfile } = await client.from("phone_role_push_profiles")
+        .select("enabled,next_due_at,last_user_at,recent_context,memory_context")
+        .eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
+      if (!latestProfile?.enabled || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
+        await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
+          .eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
       if (decision.kind !== "message") {
         if (decision.kind === "silent") silent += 1;
         else unavailable += 1;
