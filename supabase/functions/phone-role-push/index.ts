@@ -300,7 +300,7 @@ Deno.serve(async (request) => {
     for (const profile of profiles) {
       const { data: freshProfile } = await client.from("phone_role_push_profiles")
         .select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
-      if (!freshProfile?.enabled || Date.parse(String(freshProfile.next_due_at || "")) > Date.now()) {
+      if (!freshProfile?.enabled || !freshProfile.last_user_at || Date.parse(String(freshProfile.next_due_at || "")) > Date.now()) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
@@ -330,7 +330,7 @@ Deno.serve(async (request) => {
       const { data: latestProfile } = await client.from("phone_role_push_profiles")
         .select("enabled,next_due_at,last_user_at,recent_context,memory_context")
         .eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
-      if (!latestProfile?.enabled || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
+      if (!latestProfile?.enabled || !latestProfile.last_user_at || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;

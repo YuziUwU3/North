@@ -89,6 +89,8 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /严禁使用破折号或横杠字符/);
   assert.match(edge, /roleMessageStyleInvalid\(body\)/);
   assert.match(edge, /select\("enabled,next_due_at,last_user_at,recent_context,memory_context"\)/);
+  assert.match(edge, /!freshProfile\.last_user_at/);
+  assert.match(edge, /!latestProfile\.last_user_at/);
   assert.match(edge, /Date\.parse\(String\(latestProfile\.next_due_at/);
 });
 
