@@ -36,10 +36,15 @@ function candidateContext(messages = []) {
   vm.runInContext(`
     ${functionSource('companionDuration')}
     ${functionSource('companionAutomationDay')}
+    ${functionSource('companionAutomationClock')}
+    ${functionSource('companionAutomationMinute')}
+    ${functionSource('companionAutomationWindow')}
+    ${functionSource('companionAutomationGoodMorning')}
     ${functionSource('companionAutomationFresh')}
     ${functionSource('companionAutomationRecentUser')}
     ${functionSource('companionAutomationNote')}
     ${functionSource('companionBatteryIsCharging')}
+    ${functionSource('companionMorningSleepCandidate')}
     ${functionSource('companionAutomationCandidate')}
   `, context);
   return context;
@@ -47,9 +52,10 @@ function candidateContext(messages = []) {
 
 function baseState(now) {
   return {
-    permissions: { screenTime: true, battery: true, health: true },
+    permissions: { screenTime: true, battery: true, health: true, location: true },
     automations: { eveningScreen: false, morningSleep: false, absenceBattery: false, criticalBattery: false, emotionCare: false, manualUnlockAlert: false },
     automationRuns: {},
+    automationWindows: { sleepStart: '07:00', sleepEnd: '12:00', usageStart: '21:30', usageEnd: '23:59' },
     lastSync: now,
     screenTimeAvailable: true,
     screenTimeMode: 'per_app',
@@ -57,14 +63,16 @@ function baseState(now) {
     apps: [{ name: 'QQ', usedSec: 1800 }, { name: '音乐', usedSec: 600 }],
     battery: { level: 0.42, state: '使用电池', lowPower: false, ts: now },
     health: { ts: now, sleepSeconds: 8 * 3600, heartRateBpm: 76, heartRateAt: now },
+    location: { place: '家', accuracy: 12, ts: now },
   };
 }
 
-test('all companion proactive checks are opt-in and shown in one permission panel', () => {
-  assert.match(app, /eveningScreen:false,morningSleep:false,absenceBattery:false,criticalBattery:false,emotionCare:false,manualUnlockAlert:false/);
+test('daily sleep and usage checks are mandatory while the other proactive checks remain opt-in', () => {
+  assert.match(app, /eveningScreen:true,morningSleep:true,absenceBattery:false,criticalBattery:false,emotionCare:false,manualUnlockAlert:false/);
   assert.match(app, /id="cou_companion_automations"/);
-  assert.match(app, /晚间查看今日屏幕与逐 App/);
-  assert.match(app, /醒来查看昨晚睡眠/);
+  assert.match(app, /每日总时长与全部 App 记录必查/);
+  assert.match(app, /每日睡眠记录必查/);
+  assert.match(app, /保存每日必查时段/);
   assert.match(app, /失联时查看 iPhone 电量/);
   assert.match(app, /电量 5% 及以下提醒充电/);
   assert.match(app, /难过时参考最新心率/);
@@ -111,6 +119,40 @@ test('daily morning and evening checks require real fresh snapshots', () => {
   vm.runInContext('this.pick=companionAutomationCandidate(c,st,now)', ec);
   assert.equal(ec.pick.kind, 'eveningScreen');
   assert.match(ec.pick.note, /QQ 30分钟/);
+  assert.match(ec.pick.note, /音乐 10分钟/);
+  es.automationRuns.eveningScreen = ec.pick.runValue;
+  vm.runInContext('this.repeat=companionAutomationCandidate(c,st,now)', ec);
+  assert.equal(ec.repeat, null);
+});
+
+test('custom windows support overnight ranges and stay once per logical day', () => {
+  const now = new Date(2026, 7, 7, 1, 0, 0).getTime();
+  const context = candidateContext([{ role: 'assistant', type: 'text', content: '晚安', time: now - 60000, id: 'a1' }]);
+  const st = baseState(now);
+  st.automations.eveningScreen = true;
+  st.automationWindows.usageStart = '22:30';
+  st.automationWindows.usageEnd = '02:00';
+  context.st = st; context.now = now; context.c = { id: 'role' };
+  vm.runInContext('this.pick=companionAutomationCandidate(c,st,now)', context);
+  assert.equal(context.pick.kind, 'eveningScreen');
+  assert.equal(context.pick.runValue, '2026-08-06');
+});
+
+test('good morning triggers the daily sleep check immediately with authorized live context', () => {
+  const now = new Date(2026, 7, 6, 6, 20, 0).getTime();
+  const context = candidateContext([{ role: 'user', type: 'text', content: '早安老公', time: now, id: 'u-morning' }]);
+  const st = baseState(now);
+  st.automations.morningSleep = true;
+  st.automationWindows.sleepStart = '09:00';
+  st.automationWindows.sleepEnd = '11:00';
+  context.st = st; context.now = now; context.c = { id: 'role' };
+  vm.runInContext('this.pick=companionMorningSleepCandidate(c,st,now)', context);
+  assert.equal(context.pick.kind, 'morningSleep');
+  assert.equal(context.pick.replyingToGoodMorning, true);
+  assert.match(context.pick.note, /正常接住这句早安/);
+  assert.match(context.pick.note, /最新心率 76 次\/分/);
+  assert.match(context.pick.note, /iPhone 电量 42%/);
+  assert.match(context.pick.note, /最近位置“家”/);
 });
 
 test('emotion care never treats heart rate as proof of lying or crying', () => {
@@ -144,4 +186,6 @@ test('companion automation reuses the existing initiative queue and its wake che
   assert.match(app, /scheduleReply\(c\.id,candidate\.note/);
   assert.match(app, /initiativeQueueNote\(c,\{kind:'companion-'/);
   assert.match(app, /document\.visibilityState==='hidden'/);
+  assert.match(functionSource('sendText'), /companionGoodMorningSchedule\(c,t\)/);
+  assert.match(functionSource('companionAutomationMaybeSend'), /required=!!\(candidate&&candidate\.requiredDaily\)/);
 });

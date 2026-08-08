@@ -28,18 +28,24 @@ function functionSource(name) {
 test('wellness permissions are privacy scoped and health is off by default', () => {
   const context = vm.createContext({});
   vm.runInContext(`${functionSource('companionDefaultState')}this.value=companionDefaultState();`, context);
-  assert.equal(context.value.schema, 5);
+  assert.equal(context.value.schema, 6);
   assert.equal(context.value.permissions.battery, true);
   assert.equal(context.value.permissions.health, false);
   assert.equal(context.value.battery, null);
   assert.equal(context.value.health, null);
   assert.deepEqual(JSON.parse(JSON.stringify(context.value.automations)), {
-    eveningScreen: false,
-    morningSleep: false,
+    eveningScreen: true,
+    morningSleep: true,
     absenceBattery: false,
     criticalBattery: false,
     emotionCare: false,
     manualUnlockAlert: false,
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.value.automationWindows)), {
+    sleepStart: '07:00',
+    sleepEnd: '12:00',
+    usageStart: '21:30',
+    usageEnd: '23:59',
   });
 });
 
