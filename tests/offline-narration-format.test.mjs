@@ -35,7 +35,8 @@ const sandbox = {
 vm.runInNewContext(
   source.slice(parserStart, parserEnd) +
     ';globalThis.parse=offResponseParts;' +
-    'globalThis.narration=offNarrationText;',
+    'globalThis.narration=offNarrationText;' +
+    'globalThis.implicitNarration=offImplicitNarrationText;',
   sandbox,
 );
 
@@ -50,6 +51,11 @@ for (const [input, expected] of [
 }
 
 assert.equal(sandbox.narration('他是谁？'), null, 'ordinary dialogue must not be guessed as narration');
+assert.equal(sandbox.implicitNarration('他没动。'), '他没动。', 'bare third-person action must be detected before it becomes role dialogue');
+assert.equal(sandbox.implicitNarration('她的声音从十几米外砸过来，视线已经锁在那个方向。'), '她的声音从十几米外砸过来，视线已经锁在那个方向。', 'long bare action prose must be detected');
+assert.equal(sandbox.implicitNarration('过来。'), null, 'short spoken imperative must remain dialogue');
+assert.equal(sandbox.implicitNarration('他是谁？'), null, 'spoken third-person question must remain dialogue');
+assert.equal(sandbox.implicitNarration('他不爱我。'), null, 'ordinary spoken reference to a third party must remain dialogue');
 assert.deepEqual(
   Array.from(sandbox.parse('【他停下脚步。】\n别怕，我在这里。'), (part) => ({ ...part })),
   [
@@ -66,6 +72,8 @@ assert.deepEqual(
 );
 
 assert.match(source, /!parts\.some\(x=>x\.kind==='nar'\)/, 'malformed replies without narration must be rewritten');
+assert.match(source, /parts\.some\(x=>x\.implicit\)/, 'mixed replies with bare narration must also be rewritten');
+assert.match(source, /personaPin\(c\)\+offlineFormatPin\(c\)/, 'format contract must be repeated at the end of the offline request');
 assert.match(source, /const whole=offResponsePart\(l\);if\(whole\.kind==='nar'\)\{items\.push\(\{id:uid\(\),who:'旁白'/, 'explicit narration must be stored as narration');
 assert.match(source, /who:part\.kind==='nar'\?'旁白':'ta'/, 'mixed narration and dialogue must keep separate storage roles');
 
