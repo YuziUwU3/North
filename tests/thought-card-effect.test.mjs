@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import vm from 'node:vm';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const app=readFileSync(join(root,'app.js'),'utf8');
@@ -21,14 +22,24 @@ test('the hidden card is a role-chosen rare easter egg with a three-day minimum 
   assert.match(app,/thoughtEggSimilarity\(signature,old\.words\|\|\[\]\)>=\.62/);
 });
 
-test('the relationship question is a guaranteed card trigger even during autonomous cooldown',()=>{
+test('relationship questions and direct spoken requests guarantee a card even during autonomous cooldown',()=>{
   assert.match(app,/function thoughtEggRequestIntent/);
   assert.match(app,/在一起\|认识\|陪着彼此/);
+  const start=app.indexOf('function thoughtEggRequestIntent');
+  const end=app.indexOf('\nfunction thoughtEggRequested',start);
+  const requestIntent=vm.runInNewContext('('+app.slice(start,end)+')');
+  assert.equal(requestIntent('给我发那个心情彩蛋'),true);
+  assert.equal(requestIntent('心声彩蛋给我看一下'),true);
+  assert.equal(requestIntent('我要他发那个隐藏卡片'),true);
+  assert.equal(requestIntent('别给我发心情彩蛋'),false);
+  assert.equal(requestIntent('我不要你发心情彩蛋'),false);
+  assert.equal(requestIntent('我不想看心声彩蛋'),false);
+  assert.equal(requestIntent('给我惊喜'),false);
   assert.match(app,/隐藏心声卡为用户明确索取（必须触发）/);
   assert.match(app,/优先级高于三天自主彩蛋冷却/);
-  assert.match(app,/明确入口不受该冷却限制/);
+  assert.match(app,/用户明确索取不受该冷却限制/);
   assert.match(app,/_thoughtIntent&&!\/\\\[心声彩蛋\\\|\/\.test\(content\)/);
-  assert.match(app,/系统最终纠正：对方刚才使用了隐藏心声卡的明确必触发问法/);
+  assert.match(app,/系统最终纠正：对方刚才明确索取了隐藏心声卡/);
   assert.match(app,/thoughtEggMessage\(cch,tm\[1\],tm\[2\],tm\[3\],thoughtEggRequested\(cch\)\)/);
 });
 
@@ -80,6 +91,6 @@ test('the preview and offline shell load the hidden-card effect',()=>{
   assert.match(preview,/opening:'我攒了一些没来得及说的话/);
   assert.match(preview,/frameCount:100/);
   assert.match(preview,/我没有时时刻刻说想你，但我一直在想你/);
-  assert.match(html,/thought-card-effects\.js\?v=849/);
+  assert.match(html,/thought-card-effects\.js\?v=851/);
   assert.match(sw,/thought-card-effects\.js\?v='\+BUILD/);
 });
