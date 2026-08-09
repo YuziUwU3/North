@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='861'){
+if(window.__NORTH_SHELL_BUILD__!=='862'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -355,7 +355,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v861 · 角色手机密码同步与主屏时间开关';
+const APP_VER='v862 · 共同生活到家状态同步修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1375,7 +1375,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=861';
+  const url='sw.js?v=862';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -5886,7 +5886,9 @@ function cohabOnlineQuiet(id){const r=cohabRoot();if(!r.enabled||r.paused||r.cid
 function cohabAdvance(id,now){const d=cohabData(id);if(!d)return null;now=+now||Date.now();let guard=0,changed=false;while(d.nextAt&&d.nextAt<=now&&guard++<3){const at=d.nextAt,next=d.nextPhase||'home';d.phase=next;d.activity=cohabPhaseDefaultActivity(next);d.phaseAt=at;changed=true;if(next==='returning'){d.nextAt=at+30*60000;d.nextPhase='home';}else{d.nextAt=0;d.nextPhase='';if(next==='home'){d.returnedAt=at;d.unreadReturn=true;}}}if(changed)save();return d;}
 function cohabSetPhase(id,phase,minutes,opt){const d=cohabData(id);if(!d)return;opt=opt||{};phase=['home','work','returning','away'].includes(phase)?phase:'home';const prev=d.phase;d.phase=phase;d.activity=cohabActivityClean(opt.activity)||cohabPhaseDefaultActivity(phase);d.phaseAt=Date.now();d.nextAt=0;d.nextPhase='';d.stateSource=opt.source||'manual';if(phase==='work'){d.nextAt=d.phaseAt+Math.max(15,+minutes||480)*60000;d.nextPhase='returning';}else if(phase==='returning'){d.nextAt=d.phaseAt+Math.max(5,+minutes||30)*60000;d.nextPhase='home';}else if(phase==='home'&&prev!=='home'){d.returnedAt=d.phaseAt;d.unreadReturn=true;}if(!opt.silent){const c=getC(id),name=c&&(c.remark||c.name)||'TA';toast(phase==='home'?name+'回来了':'状态已切换为“'+cohabStatusLabel(d)+'”');}save();if(cohabSceneActive())render();}
 function cohabApplyStateTags(text,id,opt){let out=String(text||''),matched=false;out=out.replace(/\[(?:共同生活|同居)状态\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(_,body)=>{const parts=String(body||'').split(/[|｜]/).map(x=>x.trim()).filter(Boolean),raw=parts.shift()||'';if(!/^(?:上班|工作|回家路上|在路上|到家|回家|外出)$/.test(raw))return'';matched=true;const phase=/上班|工作/.test(raw)?'work':/回家路上|在路上/.test(raw)?'returning':/外出/.test(raw)?'away':'home';let minutes=0;if(parts.length&&/^\d{1,3}$/.test(parts[0]))minutes=+parts.shift()||0;const activity=cohabActivityClean(parts.join(' '));cohabSetPhase(id,phase,minutes,{silent:true,activity,source:opt&&opt.source||'role'});return'';});return{matched,text:out.replace(/\n{3,}/g,'\n\n').trim()};}
-function cohabConsumeOnlineState(text,c,id){const d=cohabWechatState(c);return d?cohabApplyStateTags(text,id,{source:'wechat'}).text:String(text||'');}
+function cohabOnlineVisibleClauses(text){return String(text||'').replace(/[\[【][^\]】]*[\]】]/g,'\n').split(/[，,；;。！？!?\n]+/).map(x=>x.replace(/[“”"'‘’]/g,'').replace(/\s+/g,'').trim()).filter(Boolean);}
+function cohabInferOnlineState(text,id,d){if(!d||d.phase==='home')return false;const clauses=cohabOnlineVisibleClauses(text),arrived=clauses.some(x=>/^(?:嗯|好|好了|行)?(?:我)?(?:(?:已经|刚刚|刚|现在|终于))?(?:到家|回到家|回来|进门|进屋|进来|在家|到玄关)(?:了|啦|咯)?(?:呀|啊)?$/.test(x));if(arrived){cohabSetPhase(id,'home',0,{silent:true,activity:'在家',source:'wechat-natural-arrival'});return true;}const atDoor=clauses.some(x=>/^(?:我)?(?:(?:已经|刚刚|刚|现在|终于))?(?:到门口|到楼下|快到家)(?:了|啦|咯)?(?:呀|啊)?$/.test(x)||/^(?:给我|帮我)?开门(?:吧|呀|啊|啦)?$/.test(x));if(atDoor&&d.phase!=='returning'){cohabSetPhase(id,'returning',5,{silent:true,activity:'在门口',source:'wechat-natural-arrival'});return true;}return false;}
+function cohabConsumeOnlineState(text,c,id){const d=cohabWechatState(c);if(!d)return String(text||'');const state=cohabApplyStateTags(text,id,{source:'wechat'});if(!state.matched)cohabInferOnlineState(state.text,id,d);return state.text;}
 function cohabToggle(){const r=cohabRoot(),cid=cohabDefaultCid();if(!cid){toast('先创建一个角色');return;}r.cid=cid;r.enabled=!r.enabled;r.paused=!r.enabled;const d=cohabData(cid);if(r.enabled&&!d.msgs.length)cohabPushMessage(d,{id:uid(),who:'日期',source:'system',text:'共同生活开始 · '+offDateTime(d.startedAt)+'\n这段生活不会因退出软件而结束'});save();openOfflineMenu();toast(r.enabled?'共同生活测试已开启':'共同生活已暂停，记录仍然保留');}
 function cohabSelectRole(id){const r=cohabRoot();if(!getC(id))return;r.cid=id;cohabData(id);save();openOfflineMenu();}
 function cohabEnter(id){const r=cohabRoot();id=id||cohabDefaultCid();if(!r.enabled||r.paused){toast('先开启“共同生活 · 测试版”');return;}if(!id||!getC(id))return;closeModal();r.cid=id;cohabAdvance(id);save();_off={id,busy:false,mode:'cohab'};go('off',{id,mode:'cohab'});}

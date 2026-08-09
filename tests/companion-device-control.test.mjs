@@ -124,7 +124,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v861 · 角色手机密码同步与主屏时间开关'/);
+  assert.match(app, /const APP_VER='v862 · 共同生活到家状态同步修复'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {

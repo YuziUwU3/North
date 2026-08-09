@@ -48,6 +48,13 @@ test('co-living state pauses without deleting and advances work to return home',
     cohabSetPhase('c1','away',0,{silent:true,activity:'买晚饭'});
     const applied=cohabApplyStateTags('开门。\\n[共同生活状态|到家|在玄关]','c1',{source:'wechat'});
     globalThis.roleState={phase:d.phase,activity:d.activity,text:applied.text,matched:applied.matched,source:d.stateSource};
+    cohabSetPhase('c1','away',0,{silent:true,activity:'买晚饭'});
+    const thoughtOnly=cohabInferOnlineState('[内心|她开门了，终于见到我的小狗了。]\\n你先等等。','c1',d);
+    globalThis.thoughtState={phase:d.phase,changed:thoughtOnly};
+    const atDoor=cohabInferOnlineState('开门。','c1',d);
+    globalThis.doorState={phase:d.phase,activity:d.activity,changed:atDoor};
+    const entered=cohabInferOnlineState('进来了。\\n过来，让我看看你。','c1',d);
+    globalThis.enteredState={phase:d.phase,activity:d.activity,changed:entered,source:d.stateSource,unreadReturn:d.unreadReturn};
   `,sandbox);
   assert.deepEqual({...sandbox.enabled},{enabled:true,paused:false,msgs:1,startedAt:sandbox.enabled.startedAt});
   assert.equal(sandbox.paused.enabled,false);
@@ -60,6 +67,9 @@ test('co-living state pauses without deleting and advances work to return home',
   assert.equal(sandbox.returning.nextPhase,'home');
   assert.deepEqual({...sandbox.homeState},{phase:'home',unreadReturn:true});
   assert.deepEqual({...sandbox.roleState},{phase:'home',activity:'在玄关',text:'开门。',matched:true,source:'wechat'});
+  assert.deepEqual({...sandbox.thoughtState},{phase:'away',changed:false});
+  assert.deepEqual({...sandbox.doorState},{phase:'returning',activity:'在门口',changed:true});
+  assert.deepEqual({...sandbox.enteredState},{phase:'home',activity:'在家',changed:true,source:'wechat-natural-arrival',unreadReturn:true});
 });
 
 test('online and face-to-face activity use a narrow shared status boundary',()=>{
@@ -72,6 +82,7 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|offlineFocusActive\(\)\|\|cohabOnlineQuiet\(id\)/);
   assert.match(source,/去微信联系TA吧/);
   assert.match(source,/function cohabConsumeOnlineState\(text,c,id\)/);
+  assert.match(source,/function cohabInferOnlineState\(text,id,d\)/);
   assert.match(source,/content=cohabConsumeOnlineState\(content,c,id\)/);
   assert.match(source,/只有你确实已经抵达、说“我到家了\/开门”时才能切到到家/);
   assert.match(source,/你可以自己选择挂什么简短状态/);
