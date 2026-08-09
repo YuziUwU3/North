@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='860'){
+if(window.__NORTH_SHELL_BUILD__!=='861'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -355,7 +355,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v860 · 伴生推送上线与固定仓库交接';
+const APP_VER='v861 · 角色手机密码同步与主屏时间开关';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1375,7 +1375,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=860';
+  const url='sw.js?v=861';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2657,6 +2657,8 @@ async function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur)
   if(ln.t!=null){if(!_ma||_mAudioSongId!==_mCur){if(!await musicPlay(_mCur))return;}if(_ma&&_mAudioSongId===_mCur){_ma.currentTime=ln.t;if(_ma.paused)_ma.play().catch(()=>{});}}
   _mLyricManualUntil=0;_mLyricFollowPending=true;_mLyricIndex=-2;mLyricTick(true);}
 let _homePage=0,_homeSnapTimer=null;
+function homeClockVisible(){return !(S.settings&&S.settings.homeClock===false);}
+function homeClockToggle(){S.settings=S.settings||{};S.settings.homeClock=!homeClockVisible();save();render();toast(S.settings.homeClock?'主屏幕时间和日期已显示':'主屏幕时间和日期已隐藏');}
 function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
   homeLayoutInit();
@@ -2664,7 +2666,7 @@ function renderHome(){
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" id="homeDesktop" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}">
     <div class="home-editbar"><span>长按拖动 App 或小组件</span><button onclick="homeEditFinish()">完成</button></div>
-    <header class="home-premium-head" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>
+    ${homeClockVisible()?`<header class="home-premium-head" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>`:''}
     <div class="home-scroll">
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)" onscrollend="homeSnapPage(this)">${homeAppsHtml()}</div></div>
     <div class="pgdots">${S.me.homeLayout.map((_,i)=>'<span class="pgdot'+(i===_homePage?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
@@ -3326,6 +3328,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>语音逐句生成<br><small style="color:#888">关闭：沿用整轮预生成；开启：聊天语音、语音通话和视频通话按顺序一条条生成，首句更早开始且降低并发异常</small></span><span class="sw ${voiceProgressiveOn()?'on':''}" onclick="S.settings.voiceProgressive=!voiceProgressiveOn();save();render()"></span></div>
+      <div class="it"><span>主屏幕时间和日期<br><small style="color:#888">关闭后隐藏主屏幕左上角的时间与日期，其他 App、组件和锁屏时间不受影响</small></span><span class="sw ${homeClockVisible()?'on':''}" onclick="homeClockToggle()"></span></div>
       <div style="padding:11px 14px 5px;font-weight:700;color:#ffafc9">手动回复场景（可多选）</div>
       <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
@@ -9502,7 +9505,7 @@ function routePhoneInspectionTags(content,c,requestText){let out=String(content|
   return out;}
 function companionApplyReadTags(content,c){let changed=false,out=String(content||''),st=companionState(),actor=(c&&(c.remark||c.name))||'绑定角色';out=out.replace(/[\[【]\s*(伴生刷新定位|查看伴生状态)\s*[\]】]/g,(mm,act)=>{if(!(st&&st.roleAccess&&companionReady(st)))return '';const r=companionApplyAction(st,act==='伴生刷新定位'?'location':'view',{by:'role',actor});if(r.ok)changed=true;return '';});return {content:out,changed};}
 function applyAuxTags(content,c,id){try{if(wechatNaturalOn()){const thoughts=[...String(content||'').matchAll(/[\[【]\s*内心\s*[|｜:：]\s*([^\]】]*)[\]】]/g)];if(thoughts.length)setNaturalInnerThought(c,thoughts[thoughts.length-1][1]);}consumeMomentCommands(content,c,{toast:false});const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);cohabConsumeOnlineState(content,c,id);}catch(e){}}
-function rolePhonePasswordDigits(value){const map={零:'0',〇:'0',一:'1',二:'2',两:'2',三:'3',四:'4',五:'5',六:'6',七:'7',八:'8',九:'9'},chars=String(value||'').replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-65248)).match(/[0-9零〇一二两三四五六七八九]/g)||[];if(chars.length!==4)return'';return chars.map(ch=>map[ch]||ch).join('');}
+function rolePhonePasswordDigits(value){const map={零:'0',〇:'0',一:'1',二:'2',两:'2',三:'3',四:'4',五:'5',六:'6',七:'7',八:'8',九:'9'},chars=String(value||'').replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFF10)).match(/[0-9零〇一二两三四五六七八九]/g)||[];if(chars.length!==4)return'';return chars.map(ch=>map[ch]||ch).join('');}
 function rolePhonePasswordIntent(content){const text=String(content||'').replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/\s+/g,' ').trim();if(!text)return'';const negative=/(?:密码|解锁码).{0,12}(?:还是|仍是|保持|没变|未变|不变)|(?:没|没有|还没|并没|未|别|不要|不想|不会|不能).{0,10}(?:改|换|设|重设).{0,10}(?:密码|解锁)|(?:密码|解锁码).{0,10}(?:没|没有|还没|并没|未).{0,8}(?:改|换|变)/;if(negative.test(text))return'';const d='[0-9０-９零〇一二两三四五六七八九]',token='('+d+'(?:[\\s·•,，、._-]*'+d+'){3})(?!'+d+')',pwd='(?:(?:手机|解锁|锁屏)\\s*)?密码|解锁码',patterns=[new RegExp('(?:新(?:的)?(?:手机|解锁|锁屏)?密码|新解锁码)\\s*(?:是|为|用|改成|换成|设成|：|:)?\\s*'+token,'i'),new RegExp('(?:'+pwd+')\\s*(?:已经|现在|又)?\\s*(?:改成|改为|换成|换为|设成|设为|设置为|重设为)\\s*[：:是]?\\s*'+token,'i'),new RegExp('(?:'+pwd+')\\s*(?:已经|现在|又)?\\s*(?:改好(?:了)?|改完(?:了)?|换好(?:了)?|换完(?:了)?|设置好(?:了)?|设好(?:了)?|重设好(?:了)?)\\s*[,，。！？!：:]?\\s*(?:新(?:的)?(?:手机|解锁|锁屏)?密码\\s*)?(?:是|为|用|：|:)?\\s*'+token,'i'),new RegExp('(?:改好(?:了)?|改完(?:了)?|换好(?:了)?|换完(?:了)?|设置好(?:了)?|设好(?:了)?|重设好(?:了)?)[^。！？!?\\n]{0,28}(?:新(?:的)?(?:手机|解锁|锁屏)?密码|(?:'+pwd+')|新的)\\s*(?:是|为|用|：|:)?\\s*'+token,'i'),new RegExp('(?:以后|之后|从现在开始)[^。！？!?\\n]{0,18}'+token+'[^。！？!?\\n]{0,10}(?:当|做|作为|用作)?\\s*(?:'+pwd+')','i'),new RegExp('(?:我的|我这台|现在的|目前的)\\s*(?:'+pwd+')\\s*(?:是|为|用|：|:)\\s*'+token,'i')];for(const re of patterns){const m=text.match(re),digits=m&&rolePhonePasswordDigits(m[1]);if(digits)return digits;}if(new RegExp('(?:'+pwd+')[^。！？!?\\n]{0,10}(?:改了|换了|重设了|改好(?:了)?|换好(?:了)?|设置好(?:了)?)(?:[。！!]|$)|(?:改好(?:了)?|换好(?:了)?|设置好(?:了)?)[^。！？!?\\n]{0,10}(?:'+pwd+')(?:[。！!]|$)','i').test(text))return'random';return'';}
 function rolePhonePasswordApply(c,value){if(!c)return false;const sp=getSpy(c),fixed=rolePhonePasswordDigits(value),next=fixed||String(1000+Math.floor(Math.random()*9000));sp.pwd=next;if(typeof _spyUnlock!=='undefined')_spyUnlock[c.id]=false;return true;}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）

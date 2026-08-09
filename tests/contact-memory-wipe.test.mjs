@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v860 · 伴生推送上线与固定仓库交接'/);
+assert.match(source, /APP_VER='v861 · 角色手机密码同步与主屏时间开关'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 

@@ -26,21 +26,66 @@ const context=vm.createContext({
   Math,
 });
 vm.runInContext([
+  functionSource('rolePhonePasswordDigits'),
   functionSource('rolePhonePasswordIntent'),
   functionSource('rolePhonePasswordApply'),
-  ';globalThis.intent=rolePhonePasswordIntent;globalThis.apply=rolePhonePasswordApply;',
+  ';globalThis.digits=rolePhonePasswordDigits;globalThis.intent=rolePhonePasswordIntent;globalThis.apply=rolePhonePasswordApply;',
 ].join('\n'),context);
 
 assert.equal(context.intent('我把手机密码改成 4826 了。'),'4826');
+assert.equal(context.intent('改好了，新密码是 7315。'),'7315');
+assert.equal(context.intent('手机密码换好了，是 2480。'),'2480');
+assert.equal(context.intent('以后就用 2580 当手机密码。'),'2580');
+assert.equal(context.digits('６８２４'),'6824');
+assert.equal(context.intent('我的锁屏密码是 6824。'),'6824');
+assert.equal(context.intent('我的锁屏密码是 ６８２４。'),'6824');
+assert.equal(context.intent('密码已经改好了，新密码是零六一九。'),'0619');
 assert.equal(context.intent('密码还是1111，没改。'),'','a statement that the password did not change must not mutate it');
+assert.equal(context.intent('验证码是4826。'),'','an unrelated four-digit code must not mutate the phone password');
 assert.equal(context.intent('我把解锁密码换了。'),'random');
 assert.equal(context.apply({id:'r1'},'4826'),true);
 assert.equal(spy.pwd,'4826','a role-spoken explicit password must replace the old password');
 assert.equal(unlock.r1,false,'changing the password must invalidate the previous unlocked session');
+assert.equal(context.apply({id:'r1'},'零六一九'),true);
+assert.equal(spy.pwd,'0619','spoken Chinese digits must be stored as the same four digits the user enters');
+
+const role={id:'r1',spy:{pwd:'1111'}},state={couple:{cid:'r1',grant:{},gagAuth:[]}},unlock2={r1:true};
+let saveCount=0,renderCount=0;
+const integration=vm.createContext({
+  S:state,
+  Math,
+  getSpy:c=>c.spy,
+  _spyUnlock:unlock2,
+  _collarTagFired:false,
+  routePhoneInspectionTags:text=>text,
+  companionApplyReadTags:text=>({content:text,changed:false}),
+  save:()=>{saveCount++;},
+  cur:()=>({p:'chat'}),
+  render:()=>{renderCount++;},
+});
+vm.runInContext([
+  functionSource('rolePhonePasswordDigits'),
+  functionSource('rolePhonePasswordIntent'),
+  functionSource('rolePhonePasswordApply'),
+  functionSource('applyControlTags'),
+  functionSource('spyPwd'),
+  ';globalThis.control=applyControlTags;globalThis.currentPwd=spyPwd;',
+].join('\n'),integration);
+const visible=integration.control('已经给你改好了，新密码是零六一九。',role,'r1',null);
+assert.equal(visible,'已经给你改好了，新密码是零六一九。','the spoken reply must remain visible');
+assert.equal(role.spy.pwd,'0619','the full reply pipeline must write the spoken password');
+assert.equal(integration.currentPwd(role),'0619','the lock screen must read the exact password written by the reply pipeline');
+assert.equal(unlock2.r1,false,'the full reply pipeline must invalidate the old unlocked session');
+assert.equal(saveCount,1,'the full reply pipeline must persist the changed password');
+assert.equal(renderCount,1,'the active chat should refresh after the password changes');
+integration.control('[改密码|２４八〇]',role,'r1',null);
+assert.equal(role.spy.pwd,'2480','the control tag and spoken-number normalization must share one write path');
 
 const control=functionSource('applyControlTags');
 assert.match(control,/rolePhonePasswordIntent\(content\)/);
 assert.match(control,/rolePhonePasswordApply\(c,naturalPhonePwd\)/);
 assert.match(control,/phonePwdChanged/);
+assert.match(source,/标签里的数字和你说出口的数字必须完全一致/);
+assert.match(functionSource('spyPin'),/_spyPin===String\(spyPwd\(c\)\)/,'PIN entry must validate against the same role phone password');
 
 console.log('phone password regression tests passed');
