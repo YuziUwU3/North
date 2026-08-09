@@ -63,6 +63,7 @@ test('control defaults to both while role reads default to external only', () =>
   assert.equal(context.value.readScope, 'external');
   assert.equal(context.value.screenTimeMode, 'total_only');
   assert.equal(context.value.screenTimeAvailable, false);
+  assert.equal(context.value.dynamicSync, 0);
   assert.equal(context.value.roleAccess, false);
   assert.match(app, /内外同时/);
   assert.match(app, /读取来源铁律/);
@@ -123,15 +124,24 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v856 · 共同生活与聊天输入不中断'/);
+  assert.match(app, /const APP_VER='v857 · 伴生极速回执与持久快照'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
   const source = functionSource('companionRequestSync');
   assert.match(source, /companionApplyAction\(st,'view'/);
   assert.match(source, /scope:'external'/);
-  assert.match(source, /setTimeout\(\(\)=>companionPollSnapshot\(true\),35000\)/);
-  assert.match(source, /最迟约 30 秒回传/);
+  assert.match(source, /setTimeout\(\(\)=>companionPollSnapshot\(true\),15000\)/);
+  assert.match(source, /可以离开此页/);
+});
+
+test('control-only wake snapshots preserve last-known dynamic data', () => {
+  assert.match(app, /controlOnly=snapshot\.controlOnly===true/);
+  assert.match(app, /app\.usedSec=Math\.max\(0,\+old\.usedSec\|\|0\)/);
+  assert.match(app, /st\.screenTimeSec=priorScreenTimeSec/);
+  assert.match(app, /st\.dynamicSync=priorDynamicSync/);
+  assert.match(app, /st\.location=priorLocation/);
+  assert.match(app, /st\.health=controlOnly&&!snapshot\.health\?priorHealth/);
 });
 
 test('unbound external apps remain lockable but cannot receive an independent limit', () => {
@@ -337,10 +347,12 @@ test('pending and conflicting device commands never masquerade as a confirmed re
   assert.equal(context.state(awaitingSnapshot, appRow, 4).kind, 'awaitSnapshot');
   const conflict = { lastSync: 4, commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'completed', ts: 3 }] };
   assert.equal(context.state(conflict, appRow, 4).kind, 'conflict');
-  assert.equal(context.state({ lastSync: 4, commands: [] }, appRow, 120005).kind, 'stale');
+  assert.equal(context.state({ lastSync: 4, commands: [] }, appRow, 120005).kind, 'snapshotStale');
+  const durableConfirmation = { lastSync: 4, commands: [{ action: 'lock', externalAppId: 'ios.trip', status: 'completed', ts: 3 }] };
+  assert.equal(context.state(durableConfirmation, appRow, 120005).kind, 'confirmed');
   assert.equal(context.state({ commands: [{ action: 'lock', externalAppId: 'ios.trip', status: 'pending', ts: 2 }] }, appRow, 900003).kind, 'expired');
   const decorate = functionSource('companionDecoratePage');
-  assert.match(decorate, /confirmedLocked=!!app\.locked&&\(commandState\.kind==='snapshot'\|\|commandState\.kind==='confirmed'\)/);
+  assert.match(decorate, /commandState\.kind==='snapshotStale'/);
   assert.match(decorate, /companion-app-pending/);
   assert.doesNotMatch(functionSource('companionApplyServerPayload'), /snapshot\.generatedAt\)\|\|Date\.now\(\)/);
   assert.match(app, /网页接受命令不等于设备执行成功/);
@@ -401,10 +413,13 @@ test('an indirect unlock inherits one recent app but refuses an ambiguous group'
 
 test('queued companion commands request APNs wake without treating push as the receipt', () => {
   const send = functionSource('companionSendCommand');
-  assert.match(send, /companionNotifyNative\(id\)/);
+  assert.match(send, /await companionNotifyNative\(id\)/);
+  assert.match(send, /wakeStatus=wake\.pushed\?'pushed':'queued'/);
+  assert.match(send, /wake\.reason==='no-token'/);
   assert.match(send, /companionScheduleCommandPoll\(\)/);
   assert.doesNotMatch(functionSource('companionNotifyNative'), /status\s*=\s*['"]completed/);
-  assert.match(functionSource('companionPollMinDelay'), /6000/);
+  assert.match(functionSource('companionPollMinDelay'), /4000/);
+  assert.match(functionSource('companionAudit'), /后台唤醒未确认/);
   assert.match(app, /setInterval\(\(\)=>companionPollSnapshot\(false\),8000\)/);
 });
 

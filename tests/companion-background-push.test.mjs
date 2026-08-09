@@ -14,7 +14,7 @@ const edge = fs.readFileSync(
 );
 const nativeDir = path.resolve(
   root,
-  '../PhoneCompanion/CompanionSync_v816后台通知与即时唤醒',
+  'native/phone-companion-v857/Xcode主App文件',
 );
 const nativeApp = fs.readFileSync(path.join(nativeDir, 'PhoneCompanionTestApp.swift'), 'utf8');
 const nativeSync = fs.readFileSync(path.join(nativeDir, 'CompanionSyncView.swift'), 'utf8');
@@ -37,7 +37,7 @@ test('edge wake validates the queued command and keeps APNs credentials in secre
   assert.doesNotMatch(edge, /BEGIN PRIVATE KEY-----\s+[A-Za-z0-9+/]{40}/);
 });
 
-test('native app registers APNs and immediately syncs on a background wake', () => {
+test('native app registers APNs and uses a command-first background wake', () => {
   assert.match(nativeApp, /registerForRemoteNotifications/);
   assert.match(nativeApp, /didReceiveRemoteNotification/);
   assert.match(nativeApp, /setBackgroundWakeHandler/);
@@ -46,9 +46,16 @@ test('native app registers APNs and immediately syncs on a background wake', () 
   assert.match(nativeSync, /phone_companion_register_push_token/);
   assert.match(nativeSync, /pushCoordinator\.setBackgroundWakeHandler/);
   assert.match(nativeSync, /setBackgroundWakeHandler/);
-  assert.match(nativeSync, /let didSynchronize = await service\.synchronize/);
+  assert.match(nativeSync, /let didSynchronize = await service\.synchronizeCommandsOnly/);
   assert.match(nativeSync, /didSynchronize \? \.newData : \.failed/);
   assert.match(nativeApp, /finishBackgroundWake\(finalResult\)/);
   assert.doesNotMatch(nativeSync, /onChange\(of: pushCoordinator\.wakeSequence\)/);
-  assert.match(nativeSync, /for _ in 0\.\.<80 where syncInFlight/);
+  assert.match(nativeSync, /processPendingCommandsSerialized/);
+  assert.match(nativeSync, /waitForExisting: false/);
+  assert.match(nativeSync, /resolvePlaceNames: false/);
+  assert.match(nativeSync, /controlOnly: true/);
+  assert.doesNotMatch(nativeSync.slice(
+    nativeSync.indexOf('pushCoordinator.setBackgroundWakeHandler'),
+    nativeSync.indexOf('locationManager.resumeTrackingIfAuthorized'),
+  ), /wellnessService\.refresh|service\.synchronize\(/);
 });
