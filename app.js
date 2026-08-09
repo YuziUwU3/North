@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='869'){
+if(window.__NORTH_SHELL_BUILD__!=='870'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -355,7 +355,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v869 · 共同生活限额与每日必查';
+const APP_VER='v870 · 主辅模型统一路线与就近保存';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1380,7 +1380,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=869';
+  const url='sw.js?v=870';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3245,17 +3245,21 @@ const MANUAL_REPLY_SCENE_OPTIONS=[
 function manualReplyScenes(){S.settings=S.settings||{};let m=S.settings.manualReplyScenes;if(!m||typeof m!=='object'||Array.isArray(m)){const legacy=S.settings.manualReply!==false;m={wechat:legacy,games:legacy,roleplay:legacy,offline:legacy};S.settings.manualReplyScenes=m;}const fallback=S.settings.manualReply!==false;MANUAL_REPLY_SCENE_OPTIONS.forEach(x=>{if(typeof m[x.key]!=='boolean')m[x.key]=fallback;});S.settings.manualReply=!!m.wechat;return m;}
 function manualReplySceneOn(key){return manualReplyScenes()[key]===true;}
 function manualReplySceneToggle(key){const m=manualReplyScenes();if(!Object.prototype.hasOwnProperty.call(m,key))return;m[key]=!m[key];if(key==='wechat')S.settings.manualReply=m[key];save();render();}
-function chatRouteCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),temp:x.temp==null?0.8:x.temp,maxTokens:x.maxTokens==null?900:x.maxTokens};}
-function chatRoutesInit(){S.settings=S.settings||{};let raw=S.settings.chatRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[chatRouteCopy(S.settings.chat||{})]:raw.slice(0,CHAT_ROUTE_NAMES.length).map(chatRouteCopy);
-  while(rs.length<CHAT_ROUTE_NAMES.length)rs.push(chatRouteCopy());S.settings.chatRoutes=rs;S.settings.chatRouteActive=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.chatRouteActive,10)||0));return rs;}
-function chatRouteSummary(r){r=r||{};return r.model||(r.base?'已保存地址':'未填写');}
+function chatMainCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),temp:x.temp==null?0.8:x.temp,maxTokens:x.maxTokens==null?900:x.maxTokens};}
+function chatAuxCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||'')};}
+function chatRouteCopy(x,legacyAux){x=x||{};const ownAux=Object.prototype.hasOwnProperty.call(x,'aux');return Object.assign(chatMainCopy(x),{aux:chatAuxCopy(ownAux?x.aux:legacyAux)});}
+function chatRoutesInit(){S.settings=S.settings||{};const legacyAux=chatAuxCopy(S.settings.aux||{});let raw=S.settings.chatRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[chatRouteCopy(S.settings.chat||{},legacyAux)]:raw.slice(0,CHAT_ROUTE_NAMES.length).map(r=>chatRouteCopy(r,legacyAux));
+  while(rs.length<CHAT_ROUTE_NAMES.length)rs.push(chatRouteCopy({aux:{}}));S.settings.chatRoutes=rs;S.settings.chatRouteActive=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.chatRouteActive,10)||0));return rs;}
+function chatRouteSummary(r){r=chatRouteCopy(r);const main=r.model||(r.base?'已保存地址':'未填写'),aux=r.aux.model||'同主模型';return main+' · 辅：'+aux;}
 function chatRouteCaptureForm(){const rs=chatRoutesInit(),i=S.settings.chatRouteActive,val=id=>{const el=$('#'+id);return el?String(el.value||'').trim():'';};if(!$('#s_cbase'))return rs[i];
-  const c={base:val('s_cbase'),key:val('s_ckey'),model:val('s_cmodel'),temp:val('s_ctemp')||0.8,maxTokens:val('s_cmax')||900};rs[i]=chatRouteCopy(c);S.settings.chat=chatRouteCopy(c);return rs[i];}
-function chatRouteFillForm(c){c=chatRouteCopy(c);[['s_cbase','base'],['s_ckey','key'],['s_cmodel','model'],['s_ctemp','temp'],['s_cmax','maxTokens']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=c[x[1]];});const out=$('#testC');if(out)out.textContent='';}
+  const c={base:val('s_cbase'),key:val('s_ckey'),model:val('s_cmodel'),temp:val('s_ctemp')||0.8,maxTokens:val('s_cmax')||900},aux=$('#s_xmodel')?{base:val('s_xbase'),key:val('s_xkey'),model:val('s_xmodel')}:rs[i].aux;rs[i]=chatRouteCopy(Object.assign({},c,{aux}));S.settings.chat=chatMainCopy(c);S.settings.aux=chatAuxCopy(aux);return rs[i];}
+function chatRouteApply(r){r=chatRouteCopy(r);S.settings.chat=chatMainCopy(r);S.settings.aux=chatAuxCopy(r.aux);return r;}
+function chatRouteFillForm(r){r=chatRouteCopy(r);[['s_cbase','base'],['s_ckey','key'],['s_cmodel','model'],['s_ctemp','temp'],['s_cmax','maxTokens']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r[x[1]];});[['s_xbase','base'],['s_xkey','key'],['s_xmodel','model']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r.aux[x[1]];});const out=$('#testC'),auxOut=$('#testX');if(out)out.textContent='';if(auxOut)auxOut.textContent='';}
 function chatRouteRefreshUI(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;try{document.querySelectorAll('[data-chat-route]').forEach((btn,i)=>{const on=i===active;btn.style.background=on?'#07c160':'#24242a';btn.style.borderColor=on?'#07c160':'rgba(255,255,255,.1)';btn.style.color=on?'#fff':'#ddd';const sm=btn.querySelector('small');if(sm)sm.textContent=chatRouteSummary(rs[i]);});}catch(_){}}
-function chatRouteSwitch(i){chatRoutesInit();chatRouteCaptureForm();const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));S.settings.chatRouteActive=i;S.settings.chat=chatRouteCopy(rs[i]);chatRouteFillForm(S.settings.chat);save();chatRouteRefreshUI();toast('已切换到'+CHAT_ROUTE_NAMES[i]);}
+function chatRouteSwitch(i){chatRoutesInit();chatRouteCaptureForm();const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));S.settings.chatRouteActive=i;const r=chatRouteApply(rs[i]);chatRouteFillForm(r);save();chatRouteRefreshUI();toast('已切换到'+CHAT_ROUTE_NAMES[i]+'（主聊天＋辅助模型）');}
+function chatRouteSaveCurrent(){const r=chatRouteCaptureForm(),i=S.settings.chatRouteActive;save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[i]+' 的主聊天＋辅助模型 ✅');return r;}
 function chatRouteQuickOpen(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;openModal(`<h3>API 路线</h3><div class="hint">可在聊天或游戏进行中随时切换。已发出的请求不会中断，新路线从下一次回复开始生效；这里只切换已有路线，不会修改地址、Key 或模型。</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px">${rs.map((r,i)=>{const ready=!!(r.base&&r.key&&r.model),on=i===active;return `<button type="button" onclick="chatRouteQuickSwitch(${i})" style="min-width:0;border:1px solid ${on?'#74d8ef':ready?'rgba(255,255,255,.12)':'rgba(255,255,255,.06)'};border-radius:12px;padding:11px 10px;background:${on?'linear-gradient(145deg,rgba(38,115,139,.72),rgba(24,67,84,.72))':'#222328'};color:${ready?'#edf9fc':'#74777d'};text-align:left;cursor:pointer"><span style="display:flex;align-items:center;justify-content:space-between;gap:6px"><b style="font-size:13px">${CHAT_ROUTE_NAMES[i]}</b>${on?`<span style="font-size:10px;color:#bdeffa">使用中</span>`:''}</span><small style="display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`;}).join('')}</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
-function chatRouteQuickSwitch(i){const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));const r=rs[i];if(!(r&&r.base&&r.key&&r.model)){toast('这条路线还没配置，请先去设置填写');return false;}S.settings.chatRouteActive=i;S.settings.chat=chatRouteCopy(r);save();closeModal();render();toast('已切换到'+CHAT_ROUTE_NAMES[i]);return true;}
+function chatRouteQuickSwitch(i){const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));const r=rs[i];if(!(r&&r.base&&r.key&&r.model)){toast('这条路线还没配置，请先去设置填写');return false;}S.settings.chatRouteActive=i;chatRouteApply(r);save();closeModal();render();toast('已切换到'+CHAT_ROUTE_NAMES[i]+'（主聊天＋辅助模型）');return true;}
 function chatRouteQuickButton(color){chatRoutesInit();const i=S.settings.chatRouteActive||0,c=color||'#c7d7e3';return `<button type="button" data-chat-route-quick="1" onclick="event.stopPropagation();chatRouteQuickOpen()" title="切换API路线" aria-label="切换API路线，当前${CHAT_ROUTE_NAMES[i]}" style="width:30px;height:26px;padding:0;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.055);color:${c};display:inline-flex;align-items:center;justify-content:center;gap:1px;cursor:pointer;flex:0 0 auto">${svgIc('route',14,c)}<small style="font-size:9px;line-height:1;color:inherit">${i+1}</small></button>`;}
 function ttsRouteCopy(x){x=x||{};return{provider:String(x.provider||''),base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),voice:String(x.voice||''),group:String(x.group||'')};}
 function ttsRoutesInit(){S.settings=S.settings||{};let raw=S.settings.ttsRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[ttsRouteCopy(S.settings.tts||{})]:raw.slice(0,TTS_ROUTE_NAMES.length).map(ttsRouteCopy);while(rs.length<TTS_ROUTE_NAMES.length)rs.push(ttsRouteCopy());S.settings.ttsRoutes=rs;S.settings.ttsRouteActive=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.ttsRouteActive,10)||0));return rs;}
@@ -3276,8 +3280,8 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     <div id="setpage1" style="display:${_setTab===1?'block':'none'}">
     ${quickJumpBar([['聊天',"settingsJump(1,'set_chat')"],['辅助',"settingsJump(1,'set_aux')"],['联网',"settingsJump(1,'set_search')"],['识图',"settingsJump(1,'set_vision')"],['语音',"settingsJump(1,'set_tts')"],['AI真图',"settingsJump(1,'set_image')"]])}
     <div class="hint">聊天和识图可以用不同模型。地址已经预填好了，填上 Key 就能用。</div>
-    <div class="section" id="set_chat"><div style="padding:12px 14px;font-weight:600;color:#07c160">聊天模型</div>
-      <div style="padding:0 14px 10px"><div style="font-size:12px;color:#aaa;margin-bottom:7px">API 路线 · 点击即可保存当前路线并一键回填</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">${routes.map((r,i)=>`<button type="button" data-chat-route="${i}" onclick="chatRouteSwitch(${i})" style="min-width:0;border:1px solid ${i===routeActive?'#07c160':'rgba(255,255,255,.1)'};border-radius:8px;padding:8px 9px;background:${i===routeActive?'#07c160':'#24242a'};color:${i===routeActive?'#fff':'#ddd'};text-align:left;cursor:pointer"><b style="display:block;font-size:13px">${CHAT_ROUTE_NAMES[i]}</b><small style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`).join('')}</div><div style="font-size:11px;color:#777;line-height:1.5;margin-top:7px">每条路线独立保存接口地址、Key、模型、随机度和回复长度。切换后可直接测试或使用。</div></div>
+    <div class="section" id="set_chat"><div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600;color:#07c160"><span>聊天模型</span><button type="button" class="minibtn" onclick="chatRouteSaveCurrent()" style="background:#07c160;color:#fff;border-color:#07c160">保存</button></div>
+      <div style="padding:0 14px 10px"><div style="font-size:12px;color:#aaa;margin-bottom:7px">API 路线 · 点击会先保存当前主聊天＋辅助模型，再一起回填目标路线</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">${routes.map((r,i)=>`<button type="button" data-chat-route="${i}" onclick="chatRouteSwitch(${i})" style="min-width:0;border:1px solid ${i===routeActive?'#07c160':'rgba(255,255,255,.1)'};border-radius:8px;padding:8px 9px;background:${i===routeActive?'#07c160':'#24242a'};color:${i===routeActive?'#fff':'#ddd'};text-align:left;cursor:pointer"><b style="display:block;font-size:13px">${CHAT_ROUTE_NAMES[i]}</b><small style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`).join('')}</div><div style="font-size:11px;color:#777;line-height:1.5;margin-top:7px">每条路线同时保存主聊天的地址、Key、模型、随机度、回复长度，以及辅助模型的地址、Key、模型。切换时两组设置一起切换。</div></div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_cbase" value="${esc(a.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_ckey" type="password" value="${esc(a.key)}" placeholder="sk-…"></div>
       <div class="field" style="padding:0 14px"><label>模型名</label><div style="display:flex;gap:6px"><input id="s_cmodel" value="${esc(a.model)}" style="flex:1"><button class="minibtn" onclick="fetchModels('s_cbase','s_ckey','s_cmodel')">拉取</button></div></div>
@@ -3285,7 +3289,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
         <div class="field"><label>回复长度</label><input id="s_cmax" type="number" value="${a.maxTokens}"></div></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testMain()">测试主模型</button></div><div id="testC" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
-    <div class="section" id="set_aux"><div style="padding:12px 14px;font-weight:600;color:#6c5ce7">辅助模型（省钱·给次要功能用）</div>
+    <div class="section" id="set_aux"><div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600;color:#6c5ce7"><span>辅助模型（省钱·给次要功能用）</span><button type="button" class="minibtn" onclick="chatRouteSaveCurrent()" style="background:#6c5ce7;color:#fff;border-color:#6c5ce7">保存</button></div>
       <div class="hint" style="padding:0 14px">只有【微信聊天 · 朋友圈 · 信箱】用主模型；其余全用这个便宜的辅助模型：游戏、购物刷新、外卖、X的所有内容、查他手机、联网搜索等。只填「模型名」就行，地址/Key留空会自动复用上面的聊天模型。不填模型名=全部都用主模型。</div>
       <div class="field" style="padding:0 14px"><label>模型名（如 gpt-4o-mini / 更便宜的）</label><div style="display:flex;gap:6px"><input id="s_xmodel" value="${esc((S.settings.aux||{}).model||'')}" placeholder="留空=全部都用主模型" style="flex:1"><button class="minibtn" onclick="fetchModels('s_xbase','s_xkey','s_xmodel')">拉取</button></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>接口地址(可选)</label><input id="s_xbase" value="${esc((S.settings.aux||{}).base||'')}" placeholder="留空=同聊天"></div>
@@ -3402,8 +3406,9 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
 }
 function saveSettings(){const g=id=>$('#'+id).value.trim();
   const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive;
-  S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};routes[routeActive]=chatRouteCopy(S.settings.chat);
+  S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};
   S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel')};
+  routes[routeActive]=chatRouteCopy(Object.assign({},S.settings.chat,{aux:S.settings.aux}));
   S.settings.search={mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
   {const ov=S.settings.vision||{};S.settings.vision={base:g('s_vbase'),key:g('s_vkey'),model:g('s_vmodel'),fallbackModel:g('s_vfallback'),protocols:ov.protocols||{},lastGoodModel:ov.lastGoodModel||'',chatImageFailedKey:ov.chatImageFailedKey||'',chatImageFailedAt:+ov.chatImageFailedAt||0};}
   const oldTts=S.settings.tts||{},tbase=g('s_tbase'),tkey=g('s_tkey'),explicitTts=oldTts.enabled===true||oldTts.enabled===false;
@@ -4967,7 +4972,7 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
     <div style="padding:13px 0;border-top:1px solid rgba(255,255,255,.12)">
       <b style="font-size:15px;color:#ffd0df">二、聊天模型与外置接口</b><br>
       · 日常微信、电话、线下约会和多数游戏回复，使用<b>设置里的聊天模型</b>。<br>
-      · 聊天模型支持<b>路线一至路线四</b>。每条路线可独立保存接口地址、API Key、模型名、随机度和回复长度；点击路线会先保存当前输入，再一键回填目标路线。<br>
+      · 聊天模型支持<b>路线一至路线四</b>。每条路线会一起保存主聊天与辅助模型；点击路线会先保存当前两组输入，再一键回填目标路线。主聊天和辅助模型标题右上角都有就近“保存”按钮。<br>
       · 接口地址填写平台给你的 Base URL。OpenAI兼容接口通常以 <b>/v1</b> 结尾，不要填写控制台、注册页或模型广场网址。<br>
       · API Key 只填密钥本身，不要带“Bearer”、引号、空格或换行。模型名必须和平台模型列表完全一致。<br>
       · 主模型负责普通回复；副模型可用于总结或部分省钱功能。副模型留空时会回到主模型。<br>
