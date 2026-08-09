@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const source = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+
+function functionSource(name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `missing ${name}`);
+  const brace = source.indexOf('{', start);
+  let depth = 0, quote = '', escaped = false;
+  for (let i = brace; i < source.length; i++) {
+    const ch = source[i];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === quote) quote = '';
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
+    if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
+  }
+  throw new Error(`unterminated ${name}`);
+}
+
+let input = {
+  value: '我正在写但还没发',
+  selectionStart: 4,
+  selectionEnd: 7,
+  scrollTop: 9,
+  style: {height: '54px'},
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; },
+  focus() { document.activeElement = this; this.focused = true; },
+};
+const document = {activeElement: input};
+const context = vm.createContext({
+  document,
+  $: selector => selector === '#cinput' ? input : null,
+  renderPageKey: route => route.p === 'chat' ? `chat:${route.id}` : route.p,
+});
+vm.runInContext(`${functionSource('captureChatComposer')}\n${functionSource('restoreChatComposer')}`, context);
+
+const route = {p: 'chat', id: 'role-1'};
+const saved = context.captureChatComposer(route);
+input = {
+  value: '', selectionStart: 0, selectionEnd: 0, scrollTop: 0, style: {},
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; },
+  focus() { document.activeElement = this; this.focused = true; },
+};
+context.restoreChatComposer(route, saved);
+assert.equal(input.value, '我正在写但还没发', 'a full repaint must restore the unsent draft');
+assert.equal(input.selectionStart, 4, 'selection start must survive a repaint');
+assert.equal(input.selectionEnd, 7, 'selection end must survive a repaint');
+assert.equal(input.style.height, '54px', 'composer height must survive a repaint');
+assert.equal(input.scrollTop, 9, 'composer scroll offset must survive a repaint');
+assert.equal(input.focused, true, 'focused composer must regain focus after a fallback repaint');
+
+const render = functionSource('render');
+assert.ok(render.indexOf('captureChatComposer(c)') < render.indexOf('app.innerHTML='), 'composer state must be captured before replacing the page');
+assert.ok(render.indexOf('restoreChatComposer(c,_composerState)') > render.indexOf('app.innerHTML='), 'composer state must be restored after replacing the page');
+
+const refresh = functionSource('refreshChatMessages');
+assert.match(refresh, /cb\.innerHTML=chatMessageListHTML\(id,c\)/, 'incoming messages must repaint only the message list');
+assert.doesNotMatch(refresh, /app\.innerHTML|render\(\)/, 'incoming message refresh must never replace the composer');
+
+const serverPull = functionSource('roleServerPushPull');
+assert.match(serverPull, /if\(cur\(\)\.p==='chat'\)refreshChatMessages\(cur\(\)\.id\)/, 'server push pull must preserve the open composer');
+
+const replyRefresh = functionSource('replyGenerationRefresh');
+assert.match(replyRefresh, /document\.querySelector\('\.manual-reply-chip'\)/, 'reply state must update its chip in place');
+assert.doesNotMatch(replyRefresh, /render\(\)/, 'reply completion must not repaint and clear a draft');
+
+assert.match(source, /\[点外卖\\\|[\s\S]*?refreshChatMessages\(id\);continue;/, 'special role cards must use the safe message-only refresh');
+assert.match(source, /\[表情\\\|[\s\S]*?refreshChatMessages\(id\);/, 'role stickers must use the safe message-only refresh');
+
+console.log('chat composer preservation tests passed');
