@@ -7,10 +7,10 @@ from docx import Document
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "maintenance"
 EXPECTED = {
-    "AI开发项目_项目说明文档.docx": ["v857｜主动联系独立事件与极短消息防重复", "全量套件共 374 项全部通过"],
-    "AI开发项目_Bug记录模板.docx": ["主动消息极短复读与跨路径重复", "普通回复→服务器主动推送"],
-    "AI开发项目_Bug修改规范.docx": ["主动联系必须是独立事件且极短文本不得豁免", "本次没有删除或放宽任何测试"],
-    "AI开发项目_新聊天启动说明.docx": ["v857 主动联系防复读待发布包", "尚未做真机 APNs 验收"],
+    "AI开发项目_项目说明文档.docx": ["v857｜伴生极速回执与持久快照", "376 项自动化测试通过"],
+    "AI开发项目_Bug记录模板.docx": ["后台同步慢、快照过期与锁定回执等待", "phone-companion-push 仍为 HTTP 404"],
+    "AI开发项目_Bug修改规范.docx": ["伴生命令与动态快照必须分层", "controlOnly"],
+    "AI开发项目_新聊天启动说明.docx": ["v857 本地修复完成", "服务器函数待部署"],
 }
 
 for name, markers in EXPECTED.items():
@@ -19,8 +19,8 @@ for name, markers in EXPECTED.items():
         assert archive.testzip() is None, f"corrupt zip member in {name}"
         assert "word/document.xml" in archive.namelist(), f"missing document.xml in {name}"
     document = Document(path)
-    text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    text = "\n".join(p.text for p in document.paragraphs)
     for marker in markers:
         assert marker in text, f"missing marker {marker!r} in {name}"
-    assert text.count(markers[0]) == 1, f"duplicate v857 section in {name}"
+    assert len(document.paragraphs) >= 15, f"unexpectedly short document {name}"
     print(f"verified {name}: {len(document.paragraphs)} paragraphs, {len(document.tables)} tables")

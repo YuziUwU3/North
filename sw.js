@@ -1,5 +1,5 @@
-const BUILD='857';
-const SHELL_CACHE='north-shell-v857';
+const BUILD='859';
+const SHELL_CACHE='north-shell-v859';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -18,8 +18,8 @@ const OPTIONAL_FILES=[
   './commerce-ui.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './thought-card-effects.js?v='+BUILD,
-  './pet-game.js?v=857',
-  './pet-game.css?v=857',
+  './pet-game.js?v=859',
+  './pet-game.css?v=859',
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',
@@ -151,7 +151,7 @@ self.addEventListener('fetch',event=>{
     })());
     return;
   }
-  if(/\/commerce-ui\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/pay-assets\//.test(url.pathname)||/\/vendor\//.test(url.pathname)){
+  if(/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/pay-assets\//.test(url.pathname)||/\/vendor\//.test(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       const cached=await cache.match(request,{ignoreSearch:true});

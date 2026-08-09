@@ -45,6 +45,9 @@ test('co-living state pauses without deleting and advances work to return home',
     globalThis.returning={phase:d.phase,nextPhase:d.nextPhase,nextAt:d.nextAt};
     cohabAdvance('c1',d.nextAt);
     globalThis.homeState={phase:d.phase,unreadReturn:d.unreadReturn};
+    cohabSetPhase('c1','away',0,{silent:true,activity:'买晚饭'});
+    const applied=cohabApplyStateTags('开门。\\n[共同生活状态|到家|在玄关]','c1',{source:'wechat'});
+    globalThis.roleState={phase:d.phase,activity:d.activity,text:applied.text,matched:applied.matched,source:d.stateSource};
   `,sandbox);
   assert.deepEqual({...sandbox.enabled},{enabled:true,paused:false,msgs:1,startedAt:sandbox.enabled.startedAt});
   assert.equal(sandbox.paused.enabled,false);
@@ -56,17 +59,22 @@ test('co-living state pauses without deleting and advances work to return home',
   assert.equal(sandbox.returning.phase,'returning');
   assert.equal(sandbox.returning.nextPhase,'home');
   assert.deepEqual({...sandbox.homeState},{phase:'home',unreadReturn:true});
+  assert.deepEqual({...sandbox.roleState},{phase:'home',activity:'在玄关',text:'开门。',matched:true,source:'wechat'});
 });
 
 test('online and face-to-face activity use a narrow shared status boundary',()=>{
   assert.match(source,/function cohabWechatPrompt\(c,d\)/);
-  assert.match(source,/只共享这一条事实/);
+  assert.match(source,/仅在共同生活开关开启时生效/);
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
   assert.match(source,/function offlineFocusActive\(\)\{if\(typeof cohabSceneActive==='function'&&cohabSceneActive\(\)\)return true/);
   assert.match(source,/function incomingCall\(id,kind,opt\)\{if\(offlineFocusActive\(\)\)return false;if\(cohabOnlineQuiet\(id\)\)return false/);
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|offlineFocusActive\(\)\|\|cohabOnlineQuiet\(id\)/);
   assert.match(source,/去微信联系TA吧/);
+  assert.match(source,/function cohabConsumeOnlineState\(text,c,id\)/);
+  assert.match(source,/content=cohabConsumeOnlineState\(content,c,id\)/);
+  assert.match(source,/只有你确实已经抵达、说“我到家了\/开门”时才能切到到家/);
+  assert.match(source,/你可以自己选择挂什么简短状态/);
 });
 
 test('co-living UI exposes persistent status, return notice and test controls',()=>{
@@ -78,6 +86,9 @@ test('co-living UI exposes persistent status, return notice and test controls',(
   assert.match(html,/\.cohab-status-chip/);
   assert.match(html,/\.cohab-return-banner/);
   assert.match(html,/\.cohab-away-panel/);
+  assert.match(html,/\.cohab-wx-state/);
+  assert.match(source,/function cohabWechatNavBadge\(c\)/);
+  assert.match(source,/page\.p==='off'&&stage\.querySelector\('\.cohab-status-chip'\)/);
   assert.match(preview,/共同生活 · 测试版/);
   assert.match(preview,/data-phase="work"/);
   assert.match(preview,/先生\^\^回来了/);
