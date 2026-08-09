@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const start=source.indexOf('function wechatAuxConfigured()');
+const start=source.indexOf('function wechatAuxConfigured(');
 const end=source.indexOf('async function aiReply(id,note,replyToken,replyAccount,replyIntent)',start);
 assert.ok(start>=0&&end>start,'wechat fallback helpers must exist');
 
@@ -17,6 +17,7 @@ assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|
 const calls=[];
 const sandbox={
   S:{settings:{aux:{model:'backup-model'}}},
+  chatRequestRoute:()=>null,
   mode:'normal',
   async chatAPI(_messages,md){
     calls.push(!!md.aux);

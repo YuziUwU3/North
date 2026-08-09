@@ -53,6 +53,8 @@ const context=vm.createContext({
   S:{settings:{chat:{base:'https://primary.example/v1',key:'primary-key',model:'primary-model',temp:.7,maxTokens:700},aux:{base:'https://aux.example/v1',key:'aux-key',model:'aux-model'},gameUseAux:false}},
   cur:()=>({p:'off'}),
   aiCoreOn:()=>false,
+  chatRequestRoute:()=>null,
+  chatMainCopy:x=>({...x}),
   fetchT:async(url,opt)=>{calls.push({url,body:JSON.parse(opt.body)});return{ok:true,json:async()=>({choices:[{message:{content:'ok'}}]})};},
   chatResultText:async(_messages,_opt,data)=>data.choices[0].message.content,
   apiCaughtCN:e=>String(e),

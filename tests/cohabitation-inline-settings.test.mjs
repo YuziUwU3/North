@@ -31,14 +31,16 @@ test('common-life settings are persisted per home with backward-compatible defau
   vm.createContext(sandbox);
   vm.runInContext(`${functionSource('cohabSettings')};globalThis.read=cohabSettings`,sandbox);
   const first={},second={};
-  assert.deepEqual({...sandbox.read(first)},{contextLimit:42,summaryRounds:6,summaryMemoryLimit:8,summaryMode:'split',replyRoute:'role',summaryRoute:'aux'});
+  assert.deepEqual({...sandbox.read(first)},{contextLimit:42,summaryRounds:6,summaryMemoryLimit:8,summaryMode:'split',replyModel:'role',replyApiRoute:'follow',summaryModel:'aux',summaryApiRoute:'reply'});
   first.settings.contextLimit=77;
   first.settings.summaryRounds=0;
   first.settings.summaryMemoryLimit=18;
   first.settings.summaryMode='single';
-  first.settings.replyRoute='main';
-  first.settings.summaryRoute='reply';
-  assert.deepEqual({...sandbox.read(first)},{contextLimit:77,summaryRounds:0,summaryMemoryLimit:18,summaryMode:'single',replyRoute:'main',summaryRoute:'reply'});
+  first.settings.replyModel='main';
+  first.settings.replyApiRoute='2';
+  first.settings.summaryModel='reply';
+  first.settings.summaryApiRoute='follow';
+  assert.deepEqual({...sandbox.read(first)},{contextLimit:77,summaryRounds:0,summaryMemoryLimit:18,summaryMode:'single',replyModel:'main',replyApiRoute:'2',summaryModel:'reply',summaryApiRoute:'follow'});
   assert.equal(sandbox.read(second).contextLimit,42,'another role home must keep its own defaults');
 });
 
@@ -53,8 +55,10 @@ test('all common-life controls are inline above the chat and save without a page
   assert.match(panel,/最近上下文/);
   assert.match(panel,/自动总结/);
   assert.match(panel,/旧总结引用/);
-  assert.match(panel,/对话模型路线/);
-  assert.match(panel,/总结模型路线/);
+  assert.match(panel,/replyModel/);
+  assert.match(panel,/replyApiRoute/);
+  assert.match(panel,/summaryModel/);
+  assert.match(panel,/summaryApiRoute/);
   assert.ok(render.indexOf('cohabSettingsPanel(id,o)')<render.indexOf('id="offbg"'),'settings must stay above the scrollable chat');
   assert.match(setter,/save\(\)/);
   assert.doesNotMatch(setter,/render\(/,'changing a select must not replace the current chat composer');
@@ -65,7 +69,9 @@ test('context, reply route and summary route feed the real common-life model cha
   assert.match(functionSource('cohabReplyCore'),/offlineHistoryMessages\(o,cohabContextLimit\(o\)/);
   assert.match(functionSource('cohabRepairMessages'),/offlineHistoryMessages\(o,cohabContextLimit\(o\)/);
   assert.match(functionSource('cohabRoleChat'),/aux:cohabReplyAux\(c,d\)/);
+  assert.match(functionSource('cohabRoleChat'),/routeIndex:cohabReplyRouteIndex\(d\)/);
   assert.match(functionSource('cohabSummarize'),/aux=cohabSummaryAux\(c,d\)/);
+  assert.match(functionSource('cohabSummarize'),/routeIndex=cohabSummaryRouteIndex\(d\)/);
   assert.match(functionSource('cohabMemoryPrompt'),/cohabSummaryMemoryLimit\(d\)/);
   assert.match(functionSource('cohabSystem'),/offlineSharedContext\(c,contextLimit\)/);
 });

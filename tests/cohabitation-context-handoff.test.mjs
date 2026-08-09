@@ -23,6 +23,7 @@ test('co-living may use the role-selected auxiliary model without changing old s
   const sandbox={
     S:{settings:{chat:{base:'https://main.example',key:'m',model:'main-model',temp:.8,maxTokens:300},aux:{base:'https://aux.example',key:'a',model:'aux-model'}}},
     gameModelSessionPage:()=>false,chatRouteSessionPage:()=>true,aiCoreOn:()=>false,
+    chatRequestRoute:()=>null,chatMainCopy:x=>({...x}),
     fetchT:async(url,opt)=>{calls.push({url,body:JSON.parse(opt.body)});return{ok:true,json:async()=>({choices:[{message:{content:'ok'}}]})};},
     chatResultText:async(_m,_o,d)=>d.choices[0].message.content,apiErrorCN:()=>'',Object
   };
@@ -92,8 +93,9 @@ test('common-life reply core is wired to the common-life repair prompt and arriv
   const notices=[],calls=[];
   const sandbox={
     String,Object,Map,
-    cohabData:()=>({settings:{replyRoute:'main'}}),
+    cohabData:()=>({settings:{replyModel:'main',replyApiRoute:'follow'}}),
     cohabReplyAux:()=>false,
+    cohabReplyRouteIndex:()=>null,
     wechatAuxConfigured:()=>true,
     toast:(text,ms)=>notices.push([text,ms]),
     chatAPI:async(_messages,opt)=>{calls.push(opt.aux?'aux':'main');if(calls.length===1)throw new Error('primary failed');return calls.length===2?'aux rewrite':'main reply';}

@@ -114,7 +114,7 @@ test('co-living condenses the user-selected number of completed rounds into isol
   assert.match(source,/function cohabSummarizeNow\(id\)/);
   assert.match(source,/function cohabMemoryPrompt\(d,query\)/);
   assert.match(source,/共同生活已经自动整理的旧记忆/);
-  assert.match(source,/if\(life\)cohabMaybeSummarize\(c\.id,o\)/);
+  assert.match(source,/if\(life&&!inspection\)cohabMaybeSummarize\(c\.id,o\)/);
   assert.doesNotMatch(source,/c\.summaries\.push\([^\n]*共同生活/);
 });
 

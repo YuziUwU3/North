@@ -118,6 +118,27 @@ test('only the originating channel receives the inspection reaction',()=>{
   assert.match(logout,/else\{if\(!c\.blocked&&!unchanged\)/);
 });
 
+test('a co-living reply-tag turn produces only the completed inspection reaction',()=>{
+  const timers=[];
+  const context=vm.createContext({
+    cohabPhoneTarget:target=>String(target||'').trim(),
+    cohabRunPhoneInspection:()=>true,
+    companionDispatchRoleByText:()=>true,
+    setTimeout:fn=>{timers.push(fn);return timers.length;},
+    String,parseInt
+  });
+  vm.runInContext(`${functionSource('cohabApplyPhoneTags')}this.apply=cohabApplyPhoneTags;`,context);
+  const parsed=context.apply('我先看一下。\n[共同生活查看|微信聊天]',{id:'c1',remark:'角色'},null,{schedule:false});
+  assert.equal(parsed.inspect,'微信聊天');
+  assert.equal(timers.length,0,'the initiating reply must not schedule a second parallel delivery');
+  const core=functionSource('cohabReplyCore'),send=functionSource('offAI');
+  assert.match(core,/inspectionOwner==='offAI'&&phone\.inspect/);
+  assert.match(core,/inspection=phone\.inspect;items=\[\]/);
+  assert.match(send,/await cohabRunPhoneInspection\(c\.id,inspection/);
+  assert.match(send,/if\(!items\.length&&!inspection\)toast/);
+  assert.match(send,/if\(life&&!inspection\)cohabMaybeSummarize/);
+});
+
 test('real companion sleep, steps, battery and screen-time facts are available to co-living',()=>{
   assert.match(functionSource('cohabPhoneTargets'),/per\.health/);
   assert.match(functionSource('cohabPhoneTargets'),/iPhone心率/);
