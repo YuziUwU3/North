@@ -93,7 +93,7 @@ test('common-life reply core is wired to the common-life repair prompt and arriv
 
 test('the existing online-offline sync switch also gates common-life context',()=>{
   assert.match(source,/function cohabWechatState\(c\)\{[^}]*!offlineWechatLiveOn\(\)/);
-  assert.match(source,/const shared=offlineWechatLiveOn\(\)\?offlineSharedContext/);
+  assert.match(source,/const contextLimit=cohabContextLimit\(o\),shared=offlineWechatLiveOn\(\)\?offlineSharedContext\(c,contextLimit\)/);
   assert.match(source,/约会中同步到线上 · 含共同生活/);
   assert.match(source,/可见记录与格式不互相复制/);
   assert.match(source,/const _liveScene=!!\(_offlineLive\|\|_cohabLive\)/);

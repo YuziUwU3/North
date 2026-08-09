@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v865 · 主屏时间隐藏保持原布局'/);
+assert.match(source, /APP_VER='v866 · 共同生活记忆与 iOS 底部适配'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);

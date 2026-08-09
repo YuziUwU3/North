@@ -105,11 +105,13 @@ test('co-living UI exposes persistent status, return notice and test controls',(
   assert.match(preview,/先生\^\^回来了/);
 });
 
-test('co-living automatically condenses each six completed rounds into isolated role memories',()=>{
+test('co-living condenses the user-selected number of completed rounds into isolated role memories',()=>{
   assert.match(source,/function cohabSummaryCompletedRounds\(rows\)/);
-  assert.match(source,/cohabSummaryCompletedRounds\(rows\)<6/);
+  assert.match(source,/roundLimit=cohabSummaryRoundLimit\(d\)/);
+  assert.match(source,/!opt\.force&&\(!roundLimit\|\|Date\.now\(\)<d\.summaryRetryAt\|\|rounds<roundLimit\)/);
   assert.match(source,/function cohabMaybeSummarize\(id,d\)/);
-  assert.match(source,/d\.summaries\.push\(\{id:uid\(\),ts:Date\.now\(\),fromSeq:/);
+  assert.match(source,/d\.summaries\.push\(\{id:uid\(\),batchId,ts:now,fromSeq:/);
+  assert.match(source,/function cohabSummarizeNow\(id\)/);
   assert.match(source,/function cohabMemoryPrompt\(d,query\)/);
   assert.match(source,/共同生活已经自动整理的旧记忆/);
   assert.match(source,/if\(life\)cohabMaybeSummarize\(c\.id,o\)/);

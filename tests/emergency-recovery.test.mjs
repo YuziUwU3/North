@@ -63,12 +63,12 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v865 shell and service worker are aligned',()=>{
+test('v866 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v865 · 主屏时间隐藏保持原布局'/);
-  assert.match(html,/app\.js\?v=865/);
-  assert.match(sw,/BUILD='865'/);
+  assert.match(app,/APP_VER='v866 · 共同生活记忆与 iOS 底部适配'/);
+  assert.match(html,/app\.js\?v=866/);
+  assert.match(sw,/BUILD='866'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

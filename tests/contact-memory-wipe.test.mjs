@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v865 · 主屏时间隐藏保持原布局'/);
+assert.match(source, /APP_VER='v866 · 共同生活记忆与 iOS 底部适配'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 
