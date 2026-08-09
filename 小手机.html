@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='854';</script>
+<script>window.__NORTH_SHELL_BUILD__='855';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-854';
+  var key='north-sw-reloaded-855';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=854';
+  var url='sw.js?v=855';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1001,6 +1001,9 @@ body{background:#000;padding:0;}
 .offinput .send{border-radius:5px!important;box-shadow:none!important;font-weight:500!important;}
 .offinput .off-narrate{background:#111!important;border:1px solid #3b3730!important;color:#b8a78d!important;}
 .offinput .off-note{background:#c8beaf!important;border:1px solid #c8beaf!important;color:#171513!important;}
+.cohab-menu-card{position:relative;margin:12px 0 16px;padding:16px;border:1px solid rgba(180,165,145,.22);border-radius:16px;background:radial-gradient(circle at 88% 5%,rgba(215,194,162,.11),transparent 32%),linear-gradient(145deg,#11110f,#080808);box-shadow:0 18px 38px rgba(0,0,0,.32);overflow:hidden}.cohab-menu-card.active{border-color:rgba(198,178,146,.42)}
+.cohab-menu-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.cohab-menu-kicker{font:8px/1.2 Georgia,"Times New Roman",serif;letter-spacing:2.8px;color:#72695d}.cohab-menu-title{margin-top:5px;font:500 19px/1.2 "Songti SC","STSong","Noto Serif SC",serif;color:#eee7dc;letter-spacing:1px}.cohab-menu-copy{margin-top:11px;color:#827b71;font-size:11px;line-height:1.75}.cohab-role-select{width:100%;margin-top:12px;padding:9px 10px;border:1px solid #2c2924;border-radius:9px;background:#0a0a09;color:#cfc6b8;font:12px "Songti SC","STSong","Noto Serif SC",serif}.cohab-live-row{margin-top:12px;padding:11px 0 0;border-top:1px solid #24211d;display:flex;align-items:center;gap:9px}.cohab-live-row>div{flex:1;min-width:0}.cohab-live-row b{display:block;color:#ded5c8;font:500 13px "Songti SC","STSong","Noto Serif SC",serif}.cohab-live-row small{display:block;margin-top:3px;color:#756e64;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cohab-live-row>span:last-child{color:#655f56;font-size:9px}.cohab-live-dot{width:7px;height:7px;border-radius:50%;background:#8a857b;box-shadow:0 0 0 4px rgba(138,133,123,.08)}.cohab-live-dot.phase-home{background:#c8b58f;box-shadow:0 0 10px rgba(200,181,143,.45)}.cohab-live-dot.phase-work{background:#778ca3}.cohab-live-dot.phase-returning{background:#b99178;box-shadow:0 0 9px rgba(185,145,120,.35)}.cohab-menu-actions{display:grid;grid-template-columns:1.35fr .85fr;gap:8px;margin-top:12px}.cohab-menu-actions button,.cohab-test-grid button{border:1px solid #3a352d;border-radius:9px;background:#15130f;color:#cfc3b0;padding:9px;font:11px "Songti SC","STSong","Noto Serif SC",serif}.cohab-menu-actions button:first-child{background:#c9bdab;color:#161411;border-color:#c9bdab}.cohab-paused{margin-top:12px;padding-top:11px;border-top:1px solid #24211d;color:#69645c;font-size:10px}.offline-once-label{margin:0 2px 9px;display:flex;align-items:center;justify-content:space-between;color:#b8afa1;font:500 13px "Songti SC","STSong","Noto Serif SC",serif}.offline-once-label small{color:#5f5a53;font:9px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}.cohab-test-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.cohab-stage{background:radial-gradient(circle at 50% 0,rgba(98,82,62,.12),transparent 32%),#050505}.cohab-nav .t{display:flex!important;flex-direction:column;align-items:center;line-height:1.15}.cohab-nav .t small{color:#6c665e;font:7px Georgia,"Times New Roman",serif;letter-spacing:2.2px;margin-bottom:3px}.cohab-status-chip{margin-right:2px;padding:5px 8px;border:1px solid #312e29;border-radius:13px;color:#928a7f;font-size:9px;display:inline-flex;align-items:center;gap:5px;cursor:pointer}.cohab-status-chip i{display:block;width:5px;height:5px;border-radius:50%;background:#7f7a72}.cohab-status-chip.phase-home i{background:#c7b590;box-shadow:0 0 7px rgba(199,181,144,.55)}.cohab-status-chip.phase-work i{background:#71849a}.cohab-status-chip.phase-returning i{background:#b88d72}.cohab-meta{flex:0 0 auto;height:31px;padding:0 13px;border-bottom:1px solid #181715;color:#68625b;font-size:9px;display:flex;align-items:center;justify-content:space-between}.cohab-meta button{border:0;background:transparent;color:#82796d;font:inherit}.cohab-return-banner{flex:0 0 auto;margin:10px 12px 0;padding:11px 12px;border:1px solid rgba(191,166,126,.3);border-radius:10px;background:linear-gradient(120deg,rgba(191,166,126,.13),rgba(255,255,255,.025));display:flex;align-items:center;gap:10px}.cohab-return-banner span{flex:1}.cohab-return-banner b,.cohab-return-banner small{display:block}.cohab-return-banner b{color:#ded2bf;font:500 13px "Songti SC","STSong","Noto Serif SC",serif}.cohab-return-banner small{margin-top:3px;color:#766e63;font-size:9px}.cohab-return-banner button{border:0;background:transparent;color:#ad9c82;font-size:10px}.cohab-scroll{padding-top:12px}.cohab-date{color:#746d63!important}.cohab-empty{min-height:54vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 22px}.cohab-empty:before{content:"";width:1px;height:44px;margin-bottom:20px;background:linear-gradient(transparent,#6f6252)}.cohab-empty span{color:#4f4942;font:8px Georgia,"Times New Roman",serif;letter-spacing:3px}.cohab-empty b{margin-top:13px;color:#cfc5b6;font:500 17px/1.7 "Songti SC","STSong","Noto Serif SC",serif}.cohab-empty small{margin-top:8px;color:#5f5a53;font-size:10px}.cohab-away-panel{flex:0 0 auto;margin:0 10px 10px;padding:12px;border:1px solid #292622;border-radius:10px;background:#0d0c0b;display:flex;align-items:center;gap:10px}.cohab-away-panel span{flex:1}.cohab-away-panel b,.cohab-away-panel small{display:block}.cohab-away-panel b{color:#cfc5b8;font:500 12px "Songti SC","STSong","Noto Serif SC",serif}.cohab-away-panel small{margin-top:4px;color:#68625a;font-size:9px}.cohab-away-panel button{border:1px solid #4a4338;border-radius:8px;background:#181510;color:#bda98c;padding:8px 10px;font:10px "Songti SC","STSong","Noto Serif SC",serif}
 .offselect{display:flex;gap:8px;padding:9px 12px;background:#080808;border-top:1px solid #1d1c19;}
 .offselect button{flex:1;height:38px;border:1px solid #33302b;border-radius:5px;background:#111;color:#b7b0a6;}
 .offselect .danger{border-color:#633f3f;color:#bd8580;}
@@ -1156,7 +1159,7 @@ html,body,.phone,.screen{min-height:100%;min-height:100dvh;background-color:#000
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=854">
+<link rel="stylesheet" href="pet-game.css?v=855">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1206,12 +1209,12 @@ html,body,.phone,.screen{min-height:100%;min-height:100dvh;background-color:#000
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=854" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=854" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=854" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=854" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=854" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=854" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=854"></script>
+<script src="license-gate.js?v=855" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=855" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=855" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=855" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=855" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=855" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=855"></script>
 </body>
 </html>

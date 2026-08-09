@@ -54,7 +54,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v854 · 自然主动联系与回归保护/);
+assert.match(source, /v855 · 共同生活测试与线下记忆优化/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -268,16 +268,16 @@ vm.runInNewContext(
   source.slice(revealStart, revealEnd) +
     ";globalThis.narrTiming=offRevealTiming({who:'旁白',text:'一'.repeat(60)});" +
     "globalThis.talkTiming=offRevealTiming({who:'ta',text:'一'.repeat(60)});" +
-    "globalThis.revealHtml=offRevealText({_reveal:true,_revealStep:42,text:'字幕渐显'});" +
+    "globalThis.revealHtml=offRevealText({_reveal:true,_revealStep:50,text:'字幕渐显'});" +
     "globalThis.safeHtml=offRevealText({_reveal:false,text:'<b>'});",
   revealSandbox,
 );
-assert.equal(revealSandbox.narrTiming.step, 42);
-assert.equal(revealSandbox.talkTiming.step, 30);
-assert.ok(revealSandbox.narrTiming.total > revealSandbox.talkTiming.total);
+assert.equal(revealSandbox.narrTiming.step, 50);
+assert.equal(revealSandbox.talkTiming.step, 50);
+assert.equal(revealSandbox.narrTiming.reveal, revealSandbox.talkTiming.reveal);
 assert.equal((revealSandbox.revealHtml.match(/class="offglyph"/g) || []).length, 4);
 assert.match(revealSandbox.revealHtml, /animation-delay:0ms/);
-assert.match(revealSandbox.revealHtml, /animation-delay:126ms/);
+assert.match(revealSandbox.revealHtml, /animation-delay:150ms/);
 assert.equal(revealSandbox.safeHtml, "&lt;b>");
 
 assert.match(source, /function offClearMemory\(id\)/);
@@ -556,8 +556,7 @@ const perspective = fallbackSandbox.offSummaryParsePoints(
   { msgs: [{ who: "旁白", source: "ta", text: "他把外套披到她肩上。" }, { who: "旁白", source: "me", text: "她握住了他的手。" }] },
   fallbackContact,
 );
-assert.match(perspective[0].text, /我记得我当时：「他把外套披到她肩上。」；我记得宝宝当时：「她握住了他的手。」/);
-assert.doesNotMatch(perspective[0].text, /旁白|角色动作|现场原文/);
+assert.equal(perspective.length, 0);
 
 const handoff = fallbackSandbox.offCreateWechatHandoff(fallbackContact, { session: "h1", loc: "咖啡店", when: "今晚", daypart: "晚上", msgs: fallbackHistory.msgs });
 fallbackContact._offlineHandoff = handoff;
@@ -641,6 +640,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=854/);
+assert.match(html, /app\.js\?v=855/);
 
 console.log("offline date tests passed");
