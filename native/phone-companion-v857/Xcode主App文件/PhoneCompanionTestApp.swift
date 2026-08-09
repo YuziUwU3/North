@@ -46,6 +46,9 @@ final class CompanionPushCoordinator: ObservableObject {
     }
 
     func refreshAuthorizationStatus() async {
+        // Silent background pushes do not require alert authorization. Register
+        // for the APNs token even when visible notifications are disabled.
+        UIApplication.shared.registerForRemoteNotifications()
         let settings = await UNUserNotificationCenter.current()
             .notificationSettings()
         switch settings.authorizationStatus {
@@ -55,27 +58,21 @@ final class CompanionPushCoordinator: ObservableObject {
                 : "后台通知已开启"
             UIApplication.shared.registerForRemoteNotifications()
         case .denied:
-            statusText = "通知已关闭，请在系统设置中允许"
+            statusText = deviceToken.isEmpty
+                ? "正在登记静默后台唤醒"
+                : "静默后台唤醒已开启"
         case .notDetermined:
-            statusText = "尚未开启后台通知"
+            statusText = deviceToken.isEmpty
+                ? "正在登记静默后台唤醒"
+                : "静默后台唤醒已开启"
         @unknown default:
             statusText = "通知状态未知"
         }
     }
 
     func requestAuthorization() async {
-        do {
-            let granted = try await UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .badge, .sound])
-            guard granted else {
-                statusText = "没有允许通知"
-                return
-            }
-            statusText = "通知已允许，正在登记设备"
-            UIApplication.shared.registerForRemoteNotifications()
-        } catch {
-            statusText = "开启通知失败：\(error.localizedDescription)"
-        }
+        statusText = "正在登记静默后台唤醒"
+        UIApplication.shared.registerForRemoteNotifications()
     }
 
     func updateDeviceToken(_ data: Data) {
@@ -223,6 +220,6 @@ final class CompanionPushAppDelegate: NSObject,
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound, .badge, .list]
+        []
     }
 }

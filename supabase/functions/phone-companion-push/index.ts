@@ -74,15 +74,6 @@ async function apnsJWT(teamId: string, keyId: string, privateKey: string) {
   return `${input}.${base64url(derToRaw(signed))}`;
 }
 
-function actionText(action: string, appName: string) {
-  const target = appName ? `「${appName}」` : "伴生设备";
-  if (action === "lock") return `请立即锁定${target}`;
-  if (action === "unlock") return `请立即解锁${target}`;
-  if (action === "limit") return `请更新${target}的使用限额`;
-  if (action === "location") return "请立即刷新最近位置";
-  return "请立即同步真实 iPhone 数据";
-}
-
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -127,16 +118,8 @@ Deno.serve(async (request) => {
     const host = context.environment === "production"
       ? "https://api.push.apple.com"
       : "https://api.sandbox.push.apple.com";
-    const actor = String(context.actor || "小手机").slice(0, 40);
-    const appName = String(context.externalAppName || "").slice(0, 60);
     const payload = {
       aps: {
-        alert: {
-          title: `${actor}发来伴生命令`,
-          body: actionText(String(context.action || "view"), appName),
-        },
-        sound: "default",
-        badge: 1,
         "content-available": 1,
       },
       companion: { commandId },
@@ -148,8 +131,9 @@ Deno.serve(async (request) => {
         headers: {
           authorization: `bearer ${token}`,
           "apns-topic": bundleId,
-          "apns-push-type": "alert",
-          "apns-priority": "10",
+          "apns-push-type": "background",
+          "apns-priority": "5",
+          "apns-collapse-id": "phone-companion-commands",
           "apns-expiration": String(Math.floor(Date.now() / 1000) + 900),
           "content-type": "application/json",
         },

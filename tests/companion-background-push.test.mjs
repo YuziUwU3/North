@@ -18,6 +18,10 @@ const nativeDir = path.resolve(
 );
 const nativeApp = fs.readFileSync(path.join(nativeDir, 'PhoneCompanionTestApp.swift'), 'utf8');
 const nativeSync = fs.readFileSync(path.join(nativeDir, 'CompanionSyncView.swift'), 'utf8');
+const atomicMigration = fs.readFileSync(
+  path.join(root, 'supabase/migrations/202608100001_phone_companion_atomic_snapshot.sql'),
+  'utf8',
+);
 
 test('APNs token registration stays device-secret protected', () => {
   assert.match(migration, /phone_companion_device_ok\(v_target, p_device_secret\)/);
@@ -33,7 +37,10 @@ test('edge wake validates the queued command and keeps APNs credentials in secre
   assert.match(edge, /phone_companion_get_push_context/);
   assert.match(edge, /APNS_PRIVATE_KEY/);
   assert.match(edge, /content-available/);
-  assert.match(edge, /apns-push-type/);
+  assert.match(edge, /"apns-push-type": "background"/);
+  assert.match(edge, /"apns-priority": "5"/);
+  assert.match(edge, /"apns-collapse-id": "phone-companion-commands"/);
+  assert.doesNotMatch(edge, /alert:|sound:|badge:/);
   assert.doesNotMatch(edge, /BEGIN PRIVATE KEY-----\s+[A-Za-z0-9+/]{40}/);
 });
 
@@ -51,11 +58,43 @@ test('native app registers APNs and uses a command-first background wake', () =>
   assert.match(nativeApp, /finishBackgroundWake\(finalResult\)/);
   assert.doesNotMatch(nativeSync, /onChange\(of: pushCoordinator\.wakeSequence\)/);
   assert.match(nativeSync, /processPendingCommandsSerialized/);
-  assert.match(nativeSync, /waitForExisting: false/);
+  assert.doesNotMatch(nativeSync, /waitForExisting/);
+  assert.match(nativeSync, /上一轮命令仍在执行，请稍后重试/);
   assert.match(nativeSync, /resolvePlaceNames: false/);
   assert.match(nativeSync, /controlOnly: true/);
+  assert.match(nativeApp, /Silent background pushes do not require alert authorization/);
+  assert.match(nativeApp, /willPresent[\s\S]*?\{\s*\[\]\s*\}/);
   assert.doesNotMatch(nativeSync.slice(
     nativeSync.indexOf('pushCoordinator.setBackgroundWakeHandler'),
     nativeSync.indexOf('locationManager.resumeTrackingIfAuthorized'),
   ), /wellnessService\.refresh|service\.synchronize\(/);
+});
+
+test('full sync processes commands before refreshing heavyweight usage data', () => {
+  const fullSync = nativeSync.slice(
+    nativeSync.indexOf('fileprivate func synchronize('),
+    nativeSync.indexOf('fileprivate func synchronizeCommandsOnly('),
+  );
+  assert.ok(fullSync.indexOf('processPendingCommandsSerialized(') >= 0);
+  assert.ok(fullSync.indexOf('fetchTodayDirectUsage()') >= 0);
+  assert.ok(
+    fullSync.indexOf('processPendingCommandsSerialized(') <
+      fullSync.indexOf('fetchTodayDirectUsage()'),
+  );
+});
+
+test('successful commands are verified and atomically completed with a monotonic snapshot', () => {
+  assert.match(nativeSync, /manualLockStore\.shield\.applications \?\? \[\]/);
+  assert.match(nativeSync, /snapshotSequenceKey/);
+  assert.match(nativeSync, /"snapshotSequence": nextSnapshotSequence\(\)/);
+  assert.match(nativeSync, /try await applyRemoteCommand/);
+  assert.match(nativeSync, /系统未确认锁定，未发送成功回执/);
+  assert.match(nativeSync, /phone_companion_complete_command/);
+  assert.match(atomicMigration, /phone_companion_snapshot_sequence/);
+  assert.match(atomicMigration, /create or replace function public\.phone_companion_complete_command/);
+  assert.match(atomicMigration, /for update/);
+  assert.match(atomicMigration, /status = 'completed'/);
+  assert.match(atomicMigration, /snapshot = p_snapshot/);
+  assert.match(atomicMigration, /raise exception 'stale-snapshot'/);
+  assert.match(atomicMigration, /v_sequence is null[\s\S]*snapshotSequence/);
 });

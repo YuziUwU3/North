@@ -498,6 +498,7 @@ final class CompanionSyncService: ObservableObject {
     private let tokenRegistryKey = "companion.sync.token-registry.v1"
     private let footprintStorageKey = "PhoneCompanionTodayFootprint"
     private let shieldActorKey = "companion.shield.actor.v1"
+    private let snapshotSequenceKey = "companion.snapshot.sequence.v1"
 
     private let manualLockStore = ManagedSettingsStore()
     private let dailyLimitStore = ManagedSettingsStore(named: .dailyLimit)
@@ -517,6 +518,12 @@ final class CompanionSyncService: ObservableObject {
             pairedTarget = target
             isPaired = true
             statusText = "已连接，等待上传真实数据"
+        }
+
+        let savedLockedTokens = loadLockedTokens()
+        if manualLockStore.shield.applications == nil,
+           !savedLockedTokens.isEmpty {
+            manualLockStore.shield.applications = savedLockedTokens
         }
     }
 
@@ -813,6 +820,27 @@ final class CompanionSyncService: ObservableObject {
         syncInFlight = true
         defer { syncInFlight = false }
 
+        do {
+            let appliedCount = try await processPendingCommandsSerialized(
+                secret: secret,
+                locationManager: locationManager,
+                wellnessService: wellnessService
+            )
+            if locationRefreshRequested {
+                locationRefreshRequested = false
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+            }
+            if appliedCount > 0 {
+                commandStatusText = "已执行、验证并回执 \(appliedCount) 条命令"
+            } else if !quiet {
+                commandStatusText = "已检查，没有待执行命令"
+            }
+        } catch {
+            commandStatusText =
+                "命令处理失败：\(error.localizedDescription)"
+            return false
+        }
+
         var report = latestDirectUsageSnapshot
         let automaticUsageRefreshDue =
             dataAccessModeText == "个人直读模式" &&
@@ -828,26 +856,6 @@ final class CompanionSyncService: ObservableObject {
             } else {
                 report = nil
             }
-        }
-
-        do {
-            let appliedCount = try await processPendingCommandsSerialized(
-                secret: secret,
-                locationManager: locationManager
-            )
-            if locationRefreshRequested {
-                locationRefreshRequested = false
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-            }
-            if appliedCount > 0 {
-                commandStatusText = "已执行并回执 \(appliedCount) 条命令"
-            } else if !quiet {
-                commandStatusText = "已检查，没有待执行命令"
-            }
-        } catch {
-            commandStatusText =
-                "命令处理失败：\(error.localizedDescription)"
-            return false
         }
 
         do {
@@ -907,28 +915,30 @@ final class CompanionSyncService: ObservableObject {
             let appliedCount = try await processPendingCommandsSerialized(
                 secret: secret,
                 locationManager: locationManager,
-                waitForExisting: false
+                wellnessService: wellnessService
             )
             if appliedCount > 0 {
                 commandStatusText = "后台已执行并回执 \(appliedCount) 条命令"
             }
 
-            let snapshot = await makeSnapshot(
-                locationManager: locationManager,
-                report: latestDirectUsageSnapshot,
-                wellnessService: wellnessService,
-                resolvePlaceNames: false,
-                controlOnly: true
-            )
-            let accepted: Bool = try await rpc(
-                "phone_companion_push_snapshot",
-                body: [
-                    "p_target": pairedTarget,
-                    "p_device_secret": secret,
-                    "p_snapshot": snapshot
-                ]
-            )
-            guard accepted else { return false }
+            if appliedCount == 0 {
+                let snapshot = await makeSnapshot(
+                    locationManager: locationManager,
+                    report: latestDirectUsageSnapshot,
+                    wellnessService: wellnessService,
+                    resolvePlaceNames: false,
+                    controlOnly: true
+                )
+                let accepted: Bool = try await rpc(
+                    "phone_companion_push_snapshot",
+                    body: [
+                        "p_target": pairedTarget,
+                        "p_device_secret": secret,
+                        "p_snapshot": snapshot
+                    ]
+                )
+                guard accepted else { return false }
+            }
             lastSyncDate = Date()
             return true
         } catch {
@@ -1066,7 +1076,7 @@ final class CompanionSyncService: ObservableObject {
         controlOnly: Bool = false
     ) async -> [String: Any] {
         let selection = loadSelection()
-        let lockedTokens = loadLockedTokens()
+        let lockedTokens = manualLockStore.shield.applications ?? []
         let limitSettings = loadLimitSettings()
 
         let usageByID = Dictionary(
@@ -1204,6 +1214,7 @@ final class CompanionSyncService: ObservableObject {
 
         var snapshot: [String: Any] = [
             "schema": 2,
+            "snapshotSequence": nextSnapshotSequence(),
             "controlOnly": controlOnly,
             "deviceId": deviceID(),
             "deviceName": UIDevice.current.name,
@@ -1286,27 +1297,29 @@ final class CompanionSyncService: ObservableObject {
     private func processPendingCommandsSerialized(
         secret: String,
         locationManager: LocationManager,
-        waitForExisting: Bool = true
+        wellnessService: CompanionWellnessService
     ) async throws -> Int {
         // 同一个 App 进程里最多保留一个拉取/执行/回执流程，避免前台同步和
         // APNs 唤醒同时拿到同一条 pending 命令并重复执行。
-        if waitForExisting {
-            for _ in 0..<100 where commandSyncInFlight {
-                try await Task.sleep(nanoseconds: 50_000_000)
-            }
+        for _ in 0..<100 where commandSyncInFlight {
+            try await Task.sleep(nanoseconds: 50_000_000)
         }
-        guard !commandSyncInFlight else { return 0 }
+        guard !commandSyncInFlight else {
+            throw CompanionSyncError.message("上一轮命令仍在执行，请稍后重试")
+        }
         commandSyncInFlight = true
         defer { commandSyncInFlight = false }
         return try await processPendingCommands(
             secret: secret,
-            locationManager: locationManager
+            locationManager: locationManager,
+            wellnessService: wellnessService
         )
     }
 
     private func processPendingCommands(
         secret: String,
-        locationManager: LocationManager
+        locationManager: LocationManager,
+        wellnessService: CompanionWellnessService
     ) async throws -> Int {
         let rows: [RemoteCommandEnvelope] = try await rpc(
             "phone_companion_pull_commands",
@@ -1319,23 +1332,12 @@ final class CompanionSyncService: ObservableObject {
         var appliedCount = 0
 
         for row in rows {
+            let result: String
             do {
-                let result = try applyRemoteCommand(
+                result = try await applyRemoteCommand(
                     row.command,
                     locationManager: locationManager
                 )
-                let _: Bool = try await rpc(
-                    "phone_companion_ack_command",
-                    body: [
-                        "p_target": pairedTarget,
-                        "p_device_secret": secret,
-                        "p_command_id": row.id,
-                        "p_ok": true,
-                        "p_result": ["message": result]
-                    ]
-                )
-                appliedCount += 1
-                commandStatusText = result
             } catch {
                 let _: Bool = try await rpc(
                     "phone_companion_ack_command",
@@ -1350,7 +1352,33 @@ final class CompanionSyncService: ObservableObject {
                     ]
                 )
                 commandStatusText = "失败：\(error.localizedDescription)"
+                continue
             }
+
+            let snapshot = await makeSnapshot(
+                locationManager: locationManager,
+                report: latestDirectUsageSnapshot,
+                wellnessService: wellnessService,
+                resolvePlaceNames: false,
+                controlOnly: true
+            )
+            let completed: Bool = try await rpc(
+                "phone_companion_complete_command",
+                body: [
+                    "p_target": pairedTarget,
+                    "p_device_secret": secret,
+                    "p_command_id": row.id,
+                    "p_snapshot": snapshot,
+                    "p_result": ["message": result]
+                ]
+            )
+            guard completed else {
+                throw CompanionSyncError.message(
+                    "服务器未能原子保存命令回执与设备快照"
+                )
+            }
+            appliedCount += 1
+            commandStatusText = result
         }
 
         return appliedCount
@@ -1359,7 +1387,7 @@ final class CompanionSyncService: ObservableObject {
     private func applyRemoteCommand(
         _ command: RemoteCommand,
         locationManager: LocationManager
-    ) throws -> String {
+    ) async throws -> String {
         if command.action == "location" {
             locationManager.refreshCurrentLocation()
             locationRefreshRequested = true
@@ -1379,20 +1407,44 @@ final class CompanionSyncService: ObservableObject {
 
         switch command.action {
         case "lock":
+            guard screenTimeControlIsAuthorized() else {
+                throw CompanionSyncError.message(
+                    "屏幕使用时间控制权限不可用，未执行锁定"
+                )
+            }
             rememberShieldActor(command.actor)
-            var tokens = loadLockedTokens()
+            let previousTokens = manualLockStore.shield.applications ?? []
+            var tokens = previousTokens
             tokens.insert(token)
-            saveLockedTokens(tokens)
             manualLockStore.shield.applications = tokens
-            return "真实 App 已锁定"
+            try await Task.sleep(nanoseconds: 120_000_000)
+            guard (manualLockStore.shield.applications ?? []).contains(token) else {
+                manualLockStore.shield.applications = previousTokens.isEmpty
+                    ? nil
+                    : previousTokens
+                throw CompanionSyncError.message("系统未确认锁定，未发送成功回执")
+            }
+            saveLockedTokens(tokens)
+            return "真实 App 已锁定并由系统设置读回确认"
 
         case "unlock":
-            var tokens = loadLockedTokens()
+            guard screenTimeControlIsAuthorized() else {
+                throw CompanionSyncError.message(
+                    "屏幕使用时间控制权限不可用，未执行解锁"
+                )
+            }
+            let previousTokens = manualLockStore.shield.applications ?? []
+            var tokens = previousTokens
             tokens.remove(token)
-            saveLockedTokens(tokens)
             manualLockStore.shield.applications =
                 tokens.isEmpty ? nil : tokens
-            return "真实 App 已解锁"
+            try await Task.sleep(nanoseconds: 120_000_000)
+            guard !(manualLockStore.shield.applications ?? []).contains(token) else {
+                manualLockStore.shield.applications = previousTokens
+                throw CompanionSyncError.message("系统未确认解锁，未发送成功回执")
+            }
+            saveLockedTokens(tokens)
+            return "真实 App 已解锁并由系统设置读回确认"
 
         case "limit":
             rememberShieldActor(command.actor)
@@ -1426,6 +1478,33 @@ final class CompanionSyncService: ObservableObject {
             ? "绑定角色"
             : String(trimmed.prefix(24))
         sharedDefaults?.set(actor, forKey: shieldActorKey)
+    }
+
+    private func screenTimeControlIsAuthorized() -> Bool {
+        if #available(iOS 26.0, *) {
+            switch AuthorizationCenter.shared.authorizationStatus {
+            case .approved, .approvedWithDataAccess:
+                return true
+            case .notDetermined, .denied:
+                return false
+            @unknown default:
+                return false
+            }
+        }
+        return AuthorizationCenter.shared.authorizationStatus == .approved
+    }
+
+    private func nextSnapshotSequence() -> Int64 {
+        let previous = Int64(
+            UserDefaults.standard.integer(forKey: snapshotSequenceKey)
+        )
+        let clock = Int64(Date().timeIntervalSince1970 * 1_000)
+        let next = max(clock, previous + 1)
+        UserDefaults.standard.set(
+            NSNumber(value: next),
+            forKey: snapshotSequenceKey
+        )
+        return next
     }
 
     private func rebuildDailyLimitMonitoring(
