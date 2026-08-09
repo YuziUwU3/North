@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='859'){
+if(window.__NORTH_SHELL_BUILD__!=='860'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -355,7 +355,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v859 · 主动联系独立事件与极短消息防重复';
+const APP_VER='v860 · 伴生推送上线与固定仓库交接';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1375,7 +1375,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=859';
+  const url='sw.js?v=860';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1817,7 +1817,7 @@ function buildSystem(c,opt){
   if(_main&&_sp.loc){const external=companionRoleReadsExternal(c,'location'),loc=companionRoleLocationText(c);if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。'+(external?'这是外置真实 iPhone 的最近定位，禁止改用小手机内置位置。':'你能精确看到，可以具体地提到这个地点。');else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
   if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权）\n'+(_sp.memorySince?'你的旧记忆已经被清除。你仍有查看授权，但清除前看过的手机内容已经全部忘记；除非本轮系统明确给出一次新的查看结果，否则不能声称记得或知道清除前的聊天、电话、短信、定位、消费、搜索、约会或其他手机记录。':('下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造：\n'+myActivity(c.id)))+'\n（重点盯防：下面标了【男】或【⭐】的人，是你最该盯、最容易吃醋的对象，查岗优先看。这些⭐是【你自己】标记的、不是'+S.me.name+'标的——是你不放心/不喜欢谁就盯谁，所以别反过来问ta"你为什么把这人标重点"，那是你自己的决定，你心里要有数。觉得某人有威胁/你不喜欢，就单独一行 [重点|名字] 把ta列入你的重点盯防（不想盯了用 [取消重点|名字]）；这行指令不会被读出来。）\n【随时可查·一次一项】除了系统固定查看，只要你想看ta手机，就在聊天里【明确说出你要查哪一项】——比如"我看看你微信跟谁聊""我查查你抖音刷了啥""看看你朋友圈""查下你钱包""看一下你短信/通话记录/通讯录"。你一说，系统就会真的去翻【你点名的那一项】并把真实结果告诉你，你再据此反应。注意：一次只能查你说的那一项，想看别的就再明确说要查那个。只能根据系统给你的真实记录说话，没查到东西就如实说没看到，绝不要编造。';
   if(_main&&_sp.granted&&S.couple&&S.couple.cid===c.id){const _vl=(S.spy&&S.spy[c.id]&&S.spy[c.id].viewLog)||[];const _today=_vl.filter(v=>ymd(v.ts)===ymd(Date.now()));if(_today.length){const mx=Math.max.apply(null,_today.map(v=>v.dur||0));s+='\n\n# '+S.me.name+'翻了你的手机\n你发现今天'+S.me.name+'查看了你的手机 '+_today.length+' 次，最长一次看了 '+(mx>=60?Math.floor(mx/60)+'分'+(mx%60)+'秒':mx+'秒')+'。你心里有数——ta在偷查你/不太放心你。你可以据此反应：吃醋"你查我手机？"、或得意"被这么在乎"、或反过来打趣ta，看你心情和人设。';}}
-  if(_main&&_sp.granted&&S.couple&&S.couple.cid===c.id)s+='\n\n# 你的手机密码\n你手机的解锁密码是【'+spyPwd(c)+'】。'+S.me.name+'想翻看你手机就得输这个密码。告不告诉ta、什么时候告诉，看你的心情和对ta的信任——ta好好哄你、你想坦荡时可以直接把这四位数说出来；你生气/心虚/想逗ta时可以不给、让ta猜或求你。要是察觉ta偷偷试密码试错好几次，你会知道ta在偷查你，可以质问或撒娇。\n你也可以【凭自己心意随时改手机密码】：发现ta老翻你手机、你想逗ta、心血来潮、或单纯不想让ta看了，就单独一行 [改密码]（系统帮你随机换一个）或 [改密码|你想要的4位数]。改完旧密码就失效了，ta得重新问你新的——要不要告诉ta新密码、什么时候告诉，全凭你心情。别没事老改，想改才改。';
+  if(_main&&_sp.granted&&S.couple&&S.couple.cid===c.id)s+='\n\n# 你的手机密码\n你手机的解锁密码是【'+spyPwd(c)+'】。'+S.me.name+'想翻看你手机就得输这个密码。告不告诉ta、什么时候告诉，看你的心情和对ta的信任——ta好好哄你、你想坦荡时可以直接把这四位数说出来；你生气/心虚/想逗ta时可以不给、让ta猜或求你。要是察觉ta偷偷试密码试错好几次，你会知道ta在偷查你，可以质问或撒娇。\n你也可以【凭自己心意随时改手机密码】：发现ta老翻你手机、你想逗ta、心血来潮、或单纯不想让ta看了，就单独一行 [改密码]（系统帮你随机换一个）或 [改密码|你想要的4位数]。如果你会在普通话里告诉ta一个具体的新密码，必须同时使用 [改密码|同一个4位数]，标签里的数字和你说出口的数字必须完全一致；不能只口头说“改好了”却不执行，也不能标签改成一组、嘴上又报另一组。改完旧密码就失效了，ta得重新问你新的——要不要告诉ta新密码、什么时候告诉，全凭你心情。别没事老改，想改才改。';
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
@@ -9502,8 +9502,9 @@ function routePhoneInspectionTags(content,c,requestText){let out=String(content|
   return out;}
 function companionApplyReadTags(content,c){let changed=false,out=String(content||''),st=companionState(),actor=(c&&(c.remark||c.name))||'绑定角色';out=out.replace(/[\[【]\s*(伴生刷新定位|查看伴生状态)\s*[\]】]/g,(mm,act)=>{if(!(st&&st.roleAccess&&companionReady(st)))return '';const r=companionApplyAction(st,act==='伴生刷新定位'?'location':'view',{by:'role',actor});if(r.ok)changed=true;return '';});return {content:out,changed};}
 function applyAuxTags(content,c,id){try{if(wechatNaturalOn()){const thoughts=[...String(content||'').matchAll(/[\[【]\s*内心\s*[|｜:：]\s*([^\]】]*)[\]】]/g)];if(thoughts.length)setNaturalInnerThought(c,thoughts[thoughts.length-1][1]);}consumeMomentCommands(content,c,{toast:false});const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);cohabConsumeOnlineState(content,c,id);}catch(e){}}
-function rolePhonePasswordIntent(content){const text=String(content||'').replace(/[\[【][^\]】]*[\]】]/g,' '),explicit=text.match(/(?:我\s*)?(?:把|将)?\s*(?:手机|解锁)?\s*密码\s*(?:已经|现在|又)?\s*(?:改成|改为|换成|换为|设成|设为|重设为)\s*[：:是]?\s*(\d{4})/);if(explicit)return explicit[1];if(/(?:我\s*)?(?:把|将)?\s*(?:手机|解锁)?\s*密码\s*(?:已经|又)?\s*(?:改了|换了|重设了)(?:[。！!]|$)/.test(text))return'random';return'';}
-function rolePhonePasswordApply(c,value){if(!c)return false;const sp=getSpy(c),next=/^\d{4}$/.test(String(value||''))?String(value):String(1000+Math.floor(Math.random()*9000));sp.pwd=next;if(typeof _spyUnlock!=='undefined')_spyUnlock[c.id]=false;return true;}
+function rolePhonePasswordDigits(value){const map={零:'0',〇:'0',一:'1',二:'2',两:'2',三:'3',四:'4',五:'5',六:'6',七:'7',八:'8',九:'9'},chars=String(value||'').replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-65248)).match(/[0-9零〇一二两三四五六七八九]/g)||[];if(chars.length!==4)return'';return chars.map(ch=>map[ch]||ch).join('');}
+function rolePhonePasswordIntent(content){const text=String(content||'').replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/\s+/g,' ').trim();if(!text)return'';const negative=/(?:密码|解锁码).{0,12}(?:还是|仍是|保持|没变|未变|不变)|(?:没|没有|还没|并没|未|别|不要|不想|不会|不能).{0,10}(?:改|换|设|重设).{0,10}(?:密码|解锁)|(?:密码|解锁码).{0,10}(?:没|没有|还没|并没|未).{0,8}(?:改|换|变)/;if(negative.test(text))return'';const d='[0-9０-９零〇一二两三四五六七八九]',token='('+d+'(?:[\\s·•,，、._-]*'+d+'){3})(?!'+d+')',pwd='(?:(?:手机|解锁|锁屏)\\s*)?密码|解锁码',patterns=[new RegExp('(?:新(?:的)?(?:手机|解锁|锁屏)?密码|新解锁码)\\s*(?:是|为|用|改成|换成|设成|：|:)?\\s*'+token,'i'),new RegExp('(?:'+pwd+')\\s*(?:已经|现在|又)?\\s*(?:改成|改为|换成|换为|设成|设为|设置为|重设为)\\s*[：:是]?\\s*'+token,'i'),new RegExp('(?:'+pwd+')\\s*(?:已经|现在|又)?\\s*(?:改好(?:了)?|改完(?:了)?|换好(?:了)?|换完(?:了)?|设置好(?:了)?|设好(?:了)?|重设好(?:了)?)\\s*[,，。！？!：:]?\\s*(?:新(?:的)?(?:手机|解锁|锁屏)?密码\\s*)?(?:是|为|用|：|:)?\\s*'+token,'i'),new RegExp('(?:改好(?:了)?|改完(?:了)?|换好(?:了)?|换完(?:了)?|设置好(?:了)?|设好(?:了)?|重设好(?:了)?)[^。！？!?\\n]{0,28}(?:新(?:的)?(?:手机|解锁|锁屏)?密码|(?:'+pwd+')|新的)\\s*(?:是|为|用|：|:)?\\s*'+token,'i'),new RegExp('(?:以后|之后|从现在开始)[^。！？!?\\n]{0,18}'+token+'[^。！？!?\\n]{0,10}(?:当|做|作为|用作)?\\s*(?:'+pwd+')','i'),new RegExp('(?:我的|我这台|现在的|目前的)\\s*(?:'+pwd+')\\s*(?:是|为|用|：|:)\\s*'+token,'i')];for(const re of patterns){const m=text.match(re),digits=m&&rolePhonePasswordDigits(m[1]);if(digits)return digits;}if(new RegExp('(?:'+pwd+')[^。！？!?\\n]{0,10}(?:改了|换了|重设了|改好(?:了)?|换好(?:了)?|设置好(?:了)?)(?:[。！!]|$)|(?:改好(?:了)?|换好(?:了)?|设置好(?:了)?)[^。！？!?\\n]{0,10}(?:'+pwd+')(?:[。！!]|$)','i').test(text))return'random';return'';}
+function rolePhonePasswordApply(c,value){if(!c)return false;const sp=getSpy(c),fixed=rolePhonePasswordDigits(value),next=fixed||String(1000+Math.floor(Math.random()*9000));sp.pwd=next;if(typeof _spyUnlock!=='undefined')_spyUnlock[c.id]=false;return true;}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
 function applyControlTags(content,c,id,statedPwd){
   if(!content||!(S.couple&&S.couple.cid===c.id))return content;
@@ -9511,7 +9512,7 @@ function applyControlTags(content,c,id,statedPwd){
   const companionReads=companionApplyReadTags(content,c);content=companionReads.content;
   _collarTagFired=false;
   // 他凭自己心意改手机密码：优先执行指令标签，也兼容“我把密码改成 1234 了”这类自然口头表达。
-  let phonePwdChanged=false;content=content.replace(/[\[【]\s*改密码\s*(?:[\|｜:：]\s*(\d{4}))?\s*[\]】]/g,(mm,nn)=>{phonePwdChanged=rolePhonePasswordApply(c,nn||'random')||phonePwdChanged;return '';});const naturalPhonePwd=rolePhonePasswordIntent(content);if(naturalPhonePwd)phonePwdChanged=rolePhonePasswordApply(c,naturalPhonePwd)||phonePwdChanged;
+  let phonePwdChanged=false;content=content.replace(/[\[【]\s*改密码\s*(?:[\|｜:：]\s*([^\]】]{1,24}))?\s*[\]】]/g,(mm,nn)=>{phonePwdChanged=rolePhonePasswordApply(c,rolePhonePasswordDigits(nn||'')||'random')||phonePwdChanged;return '';});const naturalPhonePwd=rolePhonePasswordIntent(content);if(naturalPhonePwd)phonePwdChanged=rolePhonePasswordApply(c,naturalPhonePwd)||phonePwdChanged;
   content=content.replace(/[\[【]\s*登录微信\s*[\]】]/g,()=>{if(S.couple.wxLoginAuth&&!wxLoginActive()&&!(typeof _call!=='undefined'&&_call))setTimeout(()=>wxDoLogin(c.id),300);return '';});
   content=content.replace(/[\[【]\s*(?:申请)?远程操控(?:手机)?\s*[\]】]/g,()=>{if(!wxLoginActive()&&!remoteControlActive()&&!(typeof _call!=='undefined'&&_call))setTimeout(()=>remoteControlRequest(c.id),320);return '';});
   const gr=S.couple.grant||{},gauth=S.couple.gagAuth||[];let changed=companionReads.changed||phonePwdChanged;const np=()=>statedPwd||genPwd();
