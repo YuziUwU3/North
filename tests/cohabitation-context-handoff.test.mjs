@@ -103,7 +103,7 @@ test('the existing online-offline sync switch also gates common-life context',()
 test('common-life supplies exact current time and elapsed state durations',()=>{
   const now=Date.UTC(2026,7,10,4,0,0),sandbox={
     Date:{now:()=>now},Math,
-    fmtDT:ts=>new globalThis.Date(ts).toISOString(),fmtDur:ms=>`${Math.round(ms/60000)}m`,
+    fmtDT:ts=>new globalThis.Date(ts).toISOString(),fmtDur:ms=>`${Math.round(ms/60000)}m`,cohabClockText:()=>`2026年8月10日 周一 12:00`,
     cohabStatusLabel:d=>d.phase
   };
   vm.runInNewContext(functionSource('cohabTimeContext')+';globalThis.run=cohabTimeContext;',sandbox);
