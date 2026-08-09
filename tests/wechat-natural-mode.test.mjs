@@ -17,7 +17,7 @@ assert.match(source,/need\('finance'\)/);
 assert.match(source,/need\('social'\)/);
 assert.match(source,/_stableSys=_naturalOn\?buildSystem/,'natural prompts need a complete stable fallback');
 assert.match(source,/natural:true,allModules:true/,'fallback may restore capability rules without restoring numeric behavior control');
-assert.match(source,/catch\(e\)\{if\(!_naturalOn\)throw e;/,'stable mode errors must keep their original behavior');
+assert.match(source,/catch\(e\)\{if\(!_naturalOn\|\|_routeState\.fallback\)throw e;/,'stable mode errors must keep their original behavior and a used auxiliary fallback must not run twice');
 assert.match(source,/wechatRoleDrift\(content\)[\s\S]{0,1600}content:_stableSys/,'role drift in natural mode must retry with the stable prompt');
 
 console.log('WeChat natural mode safety tests passed');
