@@ -131,12 +131,21 @@ function roleTextKey(value: unknown) {
   return String(value || "").toLowerCase().replace(/\s+/g, "").replace(/[，。！？、,.!?~～：:；;“”"'（）()【】\[\]]/g, "");
 }
 
+function roleRepeatThreshold(length: number) {
+  if (length < 2) return 1;
+  if (length === 2) return 1;
+  if (length < 8) return (length - 1) / length;
+  if (length < 12) return 0.72;
+  return 0.84;
+}
+
 function roleTextRepeated(current: string, previous: string) {
   let a = roleTextKey(current).slice(0, 240);
   let b = roleTextKey(previous).slice(0, 240);
   if (!a || !b) return false;
   if (a === b) return true;
-  if (Math.min(a.length, b.length) >= 6 && (a.includes(b) || b.includes(a))) return true;
+  const min = Math.min(a.length, b.length);
+  if (min >= 2 && (a.includes(b) || b.includes(a))) return true;
   if (a.length > b.length) [a, b] = [b, a];
   let prior = new Uint16Array(a.length + 1);
   let next = new Uint16Array(a.length + 1);
@@ -147,8 +156,7 @@ function roleTextRepeated(current: string, previous: string) {
     [prior, next] = [next, prior];
     next.fill(0);
   }
-  const threshold = a.length < 12 ? 0.72 : 0.84;
-  return a.length >= 6 && prior[a.length] / a.length >= threshold;
+  return a.length >= 2 && prior[a.length] / a.length >= roleRepeatThreshold(a.length);
 }
 
 function roleMessageParts(value: string, maxParts = 4) {
@@ -168,6 +176,16 @@ function roleMessageParts(value: string, maxParts = 4) {
     }
   }
   return out;
+}
+
+function roleRecentAssistantMessages(profile) {
+  const roleName = String(profile?.role_name || "角色").trim();
+  if (!roleName) return [];
+  const marker = `${roleName}：`;
+  return String(profile?.recent_context || "").split(/\r?\n/).map((line) => String(line || "").trim()
+    .replace(/^\d{4}\/\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}:\d{2}\s+/, ""))
+    .filter((line) => line.startsWith(marker))
+    .map((line) => line.slice(marker.length).trim()).filter(Boolean).slice(-20);
 }
 
 function roleVisibleMessageText(value: string) {
@@ -238,6 +256,7 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
   const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
   const recentContext = String(profile.recent_context || "").slice(-8000).trim();
   const memoryContext = String(profile.memory_context || "").slice(-16000).trim();
+  const repeatCandidates = [...recentBodies, ...roleRecentAssistantMessages(profile)];
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
   const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
   const prompt = [
@@ -251,6 +270,7 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
   ].join("\n");
   const baseMessages = [
+    { role: "system", content: "这是一次与上一轮分开的主动联系新事件。最近聊天只是已经结束的事实背景，不是等待你继续回答的当前回合；绝不能隔一段时间后补答、复述或改写上一条回复。" },
     { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。图片和位置也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: prompt },
   ];
@@ -281,7 +301,7 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
           const body = roleMessageParts(text.slice(0, 1200), messageMax).join("\n").trim();
           const bodyKey = roleTextKey(body);
-          const repeated = !!bodyKey && recentBodies.some((old) => roleMessageRepeated(body, old));
+          const repeated = !!bodyKey && repeatCandidates.some((old) => roleMessageRepeated(body, old));
           const ungrounded = roleUserFactUnsupported(body, `${recentContext}\n${memoryContext}`);
           const styleInvalid = roleMessageStyleInvalid(body, messageMax);
           if (bodyKey && !repeated && !ungrounded && !styleInvalid) {

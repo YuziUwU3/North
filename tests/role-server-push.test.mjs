@@ -74,9 +74,10 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /kind: "unavailable", body: ""/);
   assert.match(edge, /kind: "silent", body: ""/);
   assert.match(edge, /只输出 \[保持安静\]/);
-  assert.match(edge, /recentBodies\.some\(\(old\) => roleMessageRepeated\(body, old\)\)/);
-  assert.match(edge, /Math\.min\(a\.length, b\.length\) >= 6/);
-  assert.match(edge, /const threshold = a\.length < 12 \? 0\.72 : 0\.84/);
+  assert.match(edge, /repeatCandidates\.some\(\(old\) => roleMessageRepeated\(body, old\)\)/);
+  assert.match(edge, /const min = Math\.min\(a\.length, b\.length\)/);
+  assert.match(edge, /if \(length < 8\) return \(length - 1\) \/ length/);
+  assert.match(edge, /if \(length < 12\) return 0\.72/);
   assert.match(edge, /for \(let attempt = 0; attempt < 2; attempt \+= 1\)/);
   assert.match(edge, /与近期已经发过的话过于相似/);
   assert.match(edge, /不要只改几个字重复原意/);
@@ -100,12 +101,29 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
 
 test('short proactive messages reject one-word rewrites without blocking different topics', () => {
   const keySource = edgeFunctionSource('roleTextKey').replace('value: unknown', 'value');
+  const thresholdSource = edgeFunctionSource('roleRepeatThreshold').replace('length: number', 'length');
   const repeatedSource = edgeFunctionSource('roleTextRepeated')
     .replace('current: string', 'current')
     .replace('previous: string', 'previous');
-  const repeated = Function(`${keySource}\n${repeatedSource}\nreturn roleTextRepeated;`)();
+  const repeated = Function(`${keySource}\n${thresholdSource}\n${repeatedSource}\nreturn roleTextRepeated;`)();
   assert.equal(repeated('North，手还放那儿？', 'North，手放哪儿了？'), true);
+  assert.equal(repeated('嗯，去吧宝宝。', '嗯，去吧宝宝。'), true);
+  assert.equal(repeated('嗯，去吧宝贝。', '嗯，去吧宝宝。'), true);
   assert.equal(repeated('North，今晚想吃什么？', 'North，外面下雨了。'), false);
+  assert.equal(repeated('刚下班，路上买了束花。', '嗯，去吧宝宝。'), false);
+});
+
+test('server proactive contact compares ordinary role replies and starts a new event', () => {
+  const recentSource = edgeFunctionSource('roleRecentAssistantMessages');
+  const recent = Function(`${recentSource}\nreturn roleRecentAssistantMessages;`)();
+  const profile = {
+    role_name: '小北',
+    recent_context: '2026/8/9 21:20:00 North：我先去洗澡\n2026/8/9 21:20:08 小北：嗯，去吧宝宝。',
+  };
+  assert.deepEqual(recent(profile), ['嗯，去吧宝宝。']);
+  assert.match(edge, /repeatCandidates\.some\(\(old\) => roleMessageRepeated\(body, old\)\)/);
+  assert.match(edge, /这是一次与上一轮分开的主动联系新事件/);
+  assert.match(edge, /不是等待你继续回答的当前回合/);
 });
 
 test('role notification avatars use bounded thumbnails and unguessable fetch URLs', () => {

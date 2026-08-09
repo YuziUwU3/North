@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='856'){
+if(window.__NORTH_SHELL_BUILD__!=='857'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -355,7 +355,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v856 · 共同生活与聊天输入不中断';
+const APP_VER='v857 · 主动联系独立事件与极短消息防重复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1375,7 +1375,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=856';
+  const url='sw.js?v=857';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1748,7 +1748,10 @@ function wechatNaturalCallEventNote(){return '[电话事件自主决策｜只提
 function wechatNaturalAutonomyNoteActive(note){return wechatNaturalOn()&&/(?:电话事件|主动联系)自主决策/.test(String(note||''));}
 function wechatNaturalCallEventActive(note){return wechatNaturalOn()&&/电话事件自主决策/.test(String(note||''));}
 function wechatNaturalSilentDecision(content,note){if(!wechatNaturalAutonomyNoteActive(note))return false;const t=String(content||'').replace(/[\[【]\s*(?:心情|内心)\s*[|｜][^\]】]*[\]】]/g,'').trim();return /^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(t);}
-function wechatNaturalInitiativePlan(c){const min=Math.max(1,Math.min(10,+c.msgMin||1)),max=Math.max(min,Math.min(10,+c.msgMax||4));return{kind:'autonomy',checkMode:'',memory:null,goal:'',note:'[主动联系自主决策｜只提供机会，不规定内容]\n现在到了用户允许的主动联系时间窗口。这不代表对方欠你回复、故意冷落你或必须被催促。先完整理解最近聊天、长期记忆、对话总结和人设，再由你本人判断此刻是否想联系以及想联系什么。若对方很久没出现且没有交代去向，可以按你的性格自然担心、询问、想念或焦虑；若对方已经说过要去做什么，就承接那个真实交代，正常想念、报备或分享你自己的日常。不要编造对方发过自拍、穿过什么、去了哪里或做过什么；只有上下文明确出现过的事才能提。想发微信时，在'+min+'到'+max+'条之间自由决定，不要为了凑数拆句；每条单独一行，句号结束且语意已经完整时优先另起一条。你可以按本人意愿发普通文字、[图片|你此刻想分享的具体画面]、[位置|地点|地址]，也可以用 [来电|语音] 或 [来电|视频]；不想联系只输出 [保持安静]。不要使用破折号或横杠，不要解释这些规则。]'};}
+function wechatNaturalInitiativePlan(c){
+  const min=Math.max(1,Math.min(10,+c.msgMin||1)),max=Math.max(min,Math.min(10,+c.msgMax||4));
+  return{kind:'autonomy',checkMode:'',memory:null,goal:'',note:'[主动联系自主决策｜只提供机会，不规定内容]\n这是一次与上一轮分开的主动联系独立的新事件。最近聊天只用于理解已经发生的事实、关系和对方最后交代，不是等待你继续回答的当前回合；绝不能隔一段时间后补答、复述或改写上一条回复。\n现在到了用户允许的主动联系时间窗口。这不代表对方欠你回复、故意冷落你或必须被催促。先完整理解最近聊天、长期记忆、对话总结和人设，再由你本人判断此刻是否想联系以及想联系什么。若对方很久没出现且没有交代去向，可以按你的性格自然担心、询问、想念或焦虑；若对方已经说过要去做什么，就承接那个真实交代，正常想念、报备或分享你自己的日常。不要编造对方发过自拍、穿过什么、去了哪里或做过什么；只有上下文明确出现过的事才能提。想发微信时，在'+min+'到'+max+'条之间自由决定，不要为了凑数拆句；每条单独一行，句号结束且语意已经完整时优先另起一条。你可以按本人意愿发普通文字、[图片|你此刻想分享的具体画面]、[位置|地点|地址]，也可以用 [来电|语音] 或 [来电|视频]；不想联系只输出 [保持安静]。不要使用破折号或横杠，不要解释这些规则。]'};
+}
 function wechatCallEventReplyNote(legacy){return wechatNaturalOn()?wechatNaturalCallEventNote():legacy;}
 function wechatNaturalSlimSystem(text,opt){if(!opt||!opt.natural)return text;const q=String(opt.query||''),need=k=>!!opt.allModules||wechatNaturalModuleNeeded(k,q),drop=part=>{
   const h=((part.match(/^\n\n# ([^\n]+)/)||[])[1]||'').trim();if(!h)return false;
@@ -10690,7 +10693,8 @@ function initiativeUserFactClaims(content){const text=initiativeVisibleText(cont
 function initiativeFactGrounded(claim,context){const norm=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,''),a=norm(claim),b=norm(context);if(!a||!b)return false;if(a.length>=8&&b.includes(a.slice(0,Math.min(16,a.length))))return true;const grams=new Set;for(let i=0;i<a.length-1;i++){const g=a.slice(i,i+2);if(!/^(?:你的?|刚才|今天|今早|昨晚|看到|发现)$/.test(g))grams.add(g);}let hit=0;grams.forEach(g=>{if(b.includes(g))hit++;});return grams.size>=3&&hit/grams.size>=.42;}
 function initiativeUnsupportedUserFact(c,content){const context=initiativeGroundingContext(c);return initiativeUserFactClaims(content).some(claim=>!initiativeFactGrounded(claim,context));}
 function replyLcsContainment(a,b){a=replyDedupNorm(a).slice(0,240);b=replyDedupNorm(b).slice(0,240);if(!a||!b)return 0;let short=a,long=b;if(short.length>long.length){short=b;long=a;}let prev=new Uint16Array(short.length+1),next=new Uint16Array(short.length+1);for(let i=0;i<long.length;i++){for(let j=0;j<short.length;j++)next[j+1]=long[i]===short[j]?prev[j]+1:Math.max(prev[j+1],next[j]);const swap=prev;prev=next;next=swap;next.fill(0);}return prev[short.length]/short.length;}
-function initiativeRecentlyRepeated(id,content,within){const fresh=initiativeVisibleText(content),freshKey=replyDedupNorm(fresh);if(freshKey.length<8)return false;const since=Date.now()-(within||12*3600000),candidates=[],groups=[];let group=[],lastAt=0;const flush=()=>{if(group.length){groups.push(group.join(' '));group=[];}lastAt=0;};(msgs(id)||[]).slice(-80).forEach(m=>{if(!m)return;if(m.role==='user'&&m.type!=='sys'){flush();return;}if(m.role!=='assistant'||!['text','voice'].includes(m.type)||!m.content||(m.time||0)<since)return;const text=String(m.content||'').trim();if(lastAt&&Math.abs((m.time||0)-lastAt)>5*60000)flush();candidates.push(text);group.push(text);lastAt=m.time||lastAt;});flush();return candidates.concat(groups).some(old=>{const oldKey=replyDedupNorm(old),min=Math.min(freshKey.length,oldKey.length);if(min<8)return false;if(freshKey===oldKey)return true;if(min>=12&&(freshKey.includes(oldKey)||oldKey.includes(freshKey)))return true;if(min>=12&&replyLcsContainment(fresh,old)>=.84)return true;return min>=16&&replyBigramScore(fresh,old)>=.82;});}
+function proactiveRepeatThreshold(length){if(length<2)return 1;if(length===2)return 1;if(length<8)return(length-1)/length;if(length<12)return.72;return.84;}
+function initiativeRecentlyRepeated(id,content,within){const fresh=initiativeVisibleText(content),freshKey=replyDedupNorm(fresh);if(!freshKey)return false;const since=Date.now()-(within||12*3600000),candidates=[],groups=[];let group=[],lastAt=0;const flush=()=>{if(group.length){groups.push(group.join(' '));group=[];}lastAt=0;};(msgs(id)||[]).slice(-80).forEach(m=>{if(!m)return;if(m.role==='user'&&m.type!=='sys'){flush();return;}if(m.role!=='assistant'||!['text','voice'].includes(m.type)||!m.content||(m.time||0)<since)return;const text=String(m.content||'').trim();if(lastAt&&Math.abs((m.time||0)-lastAt)>5*60000)flush();candidates.push(text);group.push(text);lastAt=m.time||lastAt;});flush();return candidates.concat(groups).some(old=>{const oldKey=replyDedupNorm(old),min=Math.min(freshKey.length,oldKey.length);if(!oldKey)return false;if(freshKey===oldKey)return true;if(min>=2&&(freshKey.includes(oldKey)||oldKey.includes(freshKey)))return true;if(min>=2&&replyLcsContainment(fresh,old)>=proactiveRepeatThreshold(min))return true;return min>=16&&replyBigramScore(fresh,old)>=.82;});}
 function initiativeBlocksImage(note){return !!(note&&/这是一次【主动消息】/.test(note)&&!/主动联系自主决策|【本轮允许主动照片】/.test(note));}
 function initiativeBlocksLocation(note){return !!(note&&/这是一次【主动消息】/.test(note)&&!/主动联系自主决策|【本轮允许位置报备】/.test(note));}
 function initiativePhotoCaptionOk(note,content){if(!note||!/【本轮允许主动照片】/.test(note))return false;const text=String(content||'').split(/\n+/).filter(x=>!/^\s*[\[【](?:图片|照片|自拍|心情|心情值)[|｜:：]/.test(x)).join(' ').replace(/\s+/g,' ').trim();if(!text)return false;const linked=/(给你看|拍给你|拍了|发给你|发来|报备|分享|刚看到|刚拍|路过|窗外|这边|眼前|这一幕|这个|好看|天气|晚霞|云|下雨|下雪|阳光|街景|路上|桌面|早餐|午饭|晚饭|咖啡|花|猫|狗|风景|现场)/.test(text),generic=/(醒了没|醒了吗|睡醒没|睡醒了吗|怎么不回|为什么不回|在干嘛|干什么|怎么不接)/.test(text);return linked&&!generic;}

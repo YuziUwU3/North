@@ -126,12 +126,19 @@ const repeatContext=vm.createContext({
   Date,
   Uint16Array,
 });
-vm.runInContext(functionSource('initiativeVisibleText')+';'+functionSource('replyLcsContainment')+';'+functionSource('initiativeRecentlyRepeated')+';globalThis.repeated=initiativeRecentlyRepeated;',repeatContext);
+vm.runInContext(functionSource('initiativeVisibleText')+';'+functionSource('replyLcsContainment')+';'+functionSource('proactiveRepeatThreshold')+';'+functionSource('initiativeRecentlyRepeated')+';globalThis.repeated=initiativeRecentlyRepeated;',repeatContext);
 assert.equal(repeatContext.repeated('r1','别装可怜。先生给你点外卖，你坐着等就行。想吃什么？'),true,'a proactive reply must not restate the same food-ordering offer with a few changed words');
 assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天最开心的一件事。'),false,'a genuinely different proactive topic must remain available to the role');
+repeatedMessages.push({role:'assistant',type:'text',content:'嗯，去吧宝宝。',time:Date.now()-20*60000});
+assert.equal(repeatContext.repeated('r1','嗯，去吧宝宝。'),true,'an exact very short ordinary reply must block a later proactive replay');
+assert.equal(repeatContext.repeated('r1','嗯，去吧宝贝。'),true,'a one-character rewrite of a short reply must also be blocked');
+assert.equal(repeatContext.repeated('r1','刚下班，路上买了束花。'),false,'a different everyday update must not be blocked by short-message protection');
 repeatedMessages.push({role:'user',type:'text',content:'那你想听什么？',time:Date.now()-1000});
 assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天最开心的一件事。'),false,'the duplicate guard must not invent a replacement line or block unrelated speech');
+assert.equal(repeatContext.repeated('r1','那你想听什么？'),false,'user text must not be treated as a prior assistant reply');
 assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
+assert.match(functionSource('wechatNaturalInitiativePlan'),/独立的新事件/,'local proactive contact must be framed as a new event');
+assert.match(functionSource('wechatNaturalInitiativePlan'),/不是等待你继续回答的当前回合/,'recent chat must be background rather than an unanswered turn');
 
 const groundingContext=vm.createContext({
   msgs:()=>[{role:'user',type:'text',content:'我先去洗澡，晚点回来',time:Date.now()}],
