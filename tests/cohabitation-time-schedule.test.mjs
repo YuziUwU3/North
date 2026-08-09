@@ -23,6 +23,8 @@ test('the shared role schedule distinguishes weekdays from weekends',()=>{
   const sandbox={Date,Math,String};
   vm.runInNewContext([
     functionSource('toMin'),functionSource('weekdayCN'),functionSource('roleWorkday'),
+    functionSource('scheduleDateKey'),functionSource('scheduleDateParse'),functionSource('scheduleLeaveDays'),
+    functionSource('scheduleLeaves'),functionSource('roleLeaveOn'),
     functionSource('activityHash'),functionSource('activityPick'),
     functionSource('whereNow'),functionSource('activitySpec'),
     'globalThis.spec=activitySpec;globalThis.where=whereNow;'
@@ -34,6 +36,34 @@ test('the shared role schedule distinguishes weekdays from weekends',()=>{
   assert.match(sandbox.where(role,monday),/医院.*上班/);
   assert.equal(sandbox.spec(role,sunday).key,'weekend-morning');
   assert.doesNotMatch(sandbox.where(role,sunday),/上班|公司|医院/);
+  role.sched.leaves=[{start:'2026-08-10',end:'2026-08-10',reason:'临时请假'}];
+  assert.equal(sandbox.spec(role,monday).key,'leave-morning');
+  assert.match(sandbox.where(role,monday),/请假日/);
+  assert.equal(sandbox.spec(role,new Date(2026,7,11,9,0,0)).key,'work-am');
+});
+
+test('role leave and schedule tags persist real dated exceptions and stay hidden',()=>{
+  let saves=0,seq=0;
+  const sandbox={Date,Math,String,Array,Object,uid:()=>`u${++seq}`,save:()=>{saves++;}};
+  vm.runInNewContext([
+    functionSource('toMin'),functionSource('scheduleDateKey'),functionSource('scheduleDateParse'),
+    functionSource('scheduleLeaveDays'),functionSource('cohabApplyScheduleTags'),
+    'globalThis.apply=cohabApplyScheduleTags;'
+  ].join('\n'),sandbox);
+  const role={id:'c1'};
+  const text='我明天请一天假。\n[共同生活请假|2026-08-11|2026-08-11|处理私事]\n[共同生活作息|08:30|12:00|13:30|18:30]';
+  const applied=sandbox.apply(text,role,{source:'role'});
+  assert.equal(applied.text,'我明天请一天假。');
+  assert.equal(applied.leaveChanged,true);
+  assert.equal(applied.scheduleChanged,true);
+  assert.equal(role.sched.on,true);
+  assert.deepEqual([role.sched.amS,role.sched.amE,role.sched.pmS,role.sched.pmE],['08:30','12:00','13:30','18:30']);
+  assert.equal(role.sched.leaves.length,1);
+  assert.equal(role.sched.leaves[0].reason,'处理私事');
+  const cancelled=sandbox.apply('[共同生活销假|2026-08-11|2026-08-11]',role,{source:'role'});
+  assert.equal(cancelled.text,'');
+  assert.equal(role.sched.leaves.length,0);
+  assert.ok(saves>=2);
 });
 
 test('time awareness pins today, yesterday and tomorrow to the real calendar',()=>{
@@ -53,13 +83,30 @@ test('time awareness pins today, yesterday and tomorrow to the real calendar',()
 });
 
 test('common life shows a live calendar and reuses the editable role schedule',()=>{
-  const system=functionSource('cohabSystem'),panel=functionSource('cohabSettingsPanel'),render=functionSource('renderCohab');
+  const system=functionSource('cohabSystem'),online=functionSource('cohabWechatPrompt'),panel=functionSource('cohabSettingsPanel'),schedule=functionSource('schedSet'),render=functionSource('renderCohab');
   assert.match(system,/timeAwarenessPrompt\(S\.me\.name,'cohab'\)/);
   assert.match(system,/roleSchedulePrompt\(c\)/);
   assert.match(system,/真正离开后再输出上班状态/);
   assert.match(panel,/作息时间表/);
   assert.match(panel,/schedSet\('\$\{id\}'\)/);
+  assert.match(panel,/roleScheduleBrief\(c\)/);
+  assert.match(system,/共同生活请假\|开始日期YYYY-MM-DD/);
+  assert.match(online,/共同生活作息\|上午上班HH:MM/);
+  assert.match(schedule,/请假安排/);
+  assert.match(schedule,/角色也能在共同生活或同步微信里自主请假/);
   assert.match(render,/id="cohabLiveTime"/);
   assert.match(source,/cohabClock\.textContent=cohabClockText\(\)/);
   assert.match(html,/\.cohab-meta time\{/);
+});
+
+test('phone inspection reactions reuse the normal progressive reveal cadence',()=>{
+  const deliver=functionSource('cohabPhoneDeliverFact');
+  assert.match(deliver,/offRevealTiming\(item\)/);
+  assert.match(deliver,/_revealStep/);
+  assert.match(deliver,/await new Promise/);
+  assert.match(deliver,/每句单独一行/);
+  assert.match(deliver,/cohabPhonePlaybackItems\(result\.items\)/);
+  const playback=functionSource('cohabPhonePlaybackItems');
+  assert.match(playback,/item\.who!=='ta'/);
+  assert.match(playback,/parts\.forEach/);
 });

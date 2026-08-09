@@ -53,6 +53,7 @@ test('an online arrival queues and writes one real face-to-face handoff without 
   const sandbox={
     S:{me:{name:'我'}},Date,Set,String,Math,
     cohabWechatState:()=>d,
+    cohabApplyScheduleTags:text=>({text}),
     cohabApplyStateTags:text=>{d.phase='home';return{matched:true,text:String(text).replace(/\[[^\]]+\]/g,'').trim()};},
     cohabInferOnlineState:()=>false,
     cohabRoot:()=>root,cohabData:()=>d,getC:()=>({id:'c1',name:'先生',model:'aux'}),
