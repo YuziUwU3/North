@@ -62,4 +62,6 @@ assert.match(functionSource('rpSaveNarrate'),/goOn\|\|!manualReplySceneOn\('role
 
 assert.match(functionSource('renderOff'),/manualReplySceneOn\('offline'\)/);
 assert.match(functionSource('offSay'),/!manualReplySceneOn\('offline'\).*offAI\(\)/);
-assert.match(functionSource('offNarrate'),/!manualReplySceneOn\('offline'\).*offAI\(\)/);
+assert.match(functionSource('offNarrate'),/narrateMode=!offNarrationMode\(\)/);
+assert.doesNotMatch(functionSource('offNarrate'),/prompt\(/);
+assert.match(functionSource('offSay'),/offNarrationMode\(\).*who:'旁白',source:'me'/);

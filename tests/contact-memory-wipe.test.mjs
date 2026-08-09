@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v866 · 共同生活记忆与 iOS 底部适配'/);
+assert.match(source, /APP_VER='v867 · 共同生活真实查岗与旁白输入切换'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
 
