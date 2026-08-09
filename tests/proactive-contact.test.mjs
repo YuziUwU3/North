@@ -133,6 +133,25 @@ repeatedMessages.push({role:'user',type:'text',content:'那你想听什么？',t
 assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天最开心的一件事。'),false,'the duplicate guard must not invent a replacement line or block unrelated speech');
 assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
 
+const groundingContext=vm.createContext({
+  msgs:()=>[{role:'user',type:'text',content:'我先去洗澡，晚点回来',time:Date.now()}],
+  msgToText:m=>m.content||'',
+  roleServerPushMemoryContext:()=>'',
+  splitBubbles:text=>String(text||'').split(/\n+/),
+  parseVoiceTagLine:()=>null,
+  cleanRolePunct:text=>String(text||'').trim(),
+});
+vm.runInContext([
+  functionSource('initiativeVisibleText'),
+  functionSource('initiativeGroundingContext'),
+  functionSource('initiativeUserFactClaims'),
+  functionSource('initiativeFactGrounded'),
+  functionSource('initiativeUnsupportedUserFact'),
+  ';globalThis.unsupported=initiativeUnsupportedUserFact;',
+].join('\n'),groundingContext);
+assert.equal(groundingContext.unsupported({id:'r1'},'刚翻了你今早发的自拍，领口松了两颗扣。'),true,'proactive messages must reject invented user selfies and clothing details');
+assert.equal(groundingContext.unsupported({id:'r1'},'洗完了吗？\n有点想你。'),false,'questions and feelings that do not assert user facts must remain available');
+
 const planMath = Object.create(Math);
 planMath.random = () => 0.99;
 let planConflict={active:false,cause:''};

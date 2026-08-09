@@ -9,6 +9,7 @@ const app = readFileSync(join(root, 'app.js'), 'utf8');
 const migration = readFileSync(join(root, 'supabase', 'migrations', '202608060003_phone_role_scheduled_push.sql'), 'utf8');
 const avatarMigration = readFileSync(join(root, 'supabase', 'migrations', '202608070001_phone_role_avatar_notifications.sql'), 'utf8');
 const contextMigration = readFileSync(join(root, 'supabase', 'migrations', '202608080001_phone_role_push_context_reset.sql'), 'utf8');
+const naturalMigration = readFileSync(join(root, 'supabase', 'migrations', '202608090001_phone_role_push_natural_messages.sql'), 'utf8');
 const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
 const notificationService = readFileSync(join(root, 'docs', 'ios', 'v831角色头像通信通知', 'NotificationService.swift'), 'utf8');
 
@@ -73,12 +74,12 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /kind: "unavailable", body: ""/);
   assert.match(edge, /kind: "silent", body: ""/);
   assert.match(edge, /只输出 \[保持安静\]/);
-  assert.match(edge, /recentBodies\.some\(\(old\) => roleTextRepeated\(body, old\)\)/);
+  assert.match(edge, /recentBodies\.some\(\(old\) => roleMessageRepeated\(body, old\)\)/);
   assert.match(edge, /Math\.min\(a\.length, b\.length\) >= 6/);
   assert.match(edge, /const threshold = a\.length < 12 \? 0\.72 : 0\.84/);
   assert.match(edge, /for \(let attempt = 0; attempt < 2; attempt \+= 1\)/);
   assert.match(edge, /与近期已经发过的话过于相似/);
-  assert.match(edge, /不要改几个字后重复原意/);
+  assert.match(edge, /不要只改几个字重复原意/);
   assert.match(edge, /sawGeneratedCandidate \? \{ kind: "silent"/);
   assert.match(edge, /phone_role_push_outbox[\s\S]{0,300}select\("body"\)/);
   assert.match(edge, /profile\.recent_context/);
@@ -87,11 +88,14 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /长期记忆、对话总结与世界设定/);
   assert.match(edge, /真实恋人的日常聊天/);
   assert.match(edge, /严禁使用破折号或横杠字符/);
-  assert.match(edge, /roleMessageStyleInvalid\(body\)/);
+  assert.match(edge, /roleMessageStyleInvalid\(body, messageMax\)/);
   assert.match(edge, /select\("enabled,next_due_at,last_user_at,recent_context,memory_context"\)/);
   assert.match(edge, /!freshProfile\.last_user_at/);
   assert.match(edge, /!latestProfile\.last_user_at/);
   assert.match(edge, /Date\.parse\(String\(latestProfile\.next_due_at/);
+  assert.match(edge, /roleUserFactUnsupported\(body/);
+  assert.match(edge, /roleMessageParts\(text\.slice\(0, 1200\), messageMax\)/);
+  assert.match(edge, /roleNotificationPreview\(body\)/);
 });
 
 test('short proactive messages reject one-word rewrites without blocking different topics', () => {
@@ -136,6 +140,7 @@ test('web client opt-in sends bounded memory and recent context', () => {
   assert.match(profile, /recentContext:roleServerPushRecentContext\(c\)/);
   assert.match(profile, /memoryContext:roleServerPushMemoryContext\(c\)/);
   assert.match(profile, /lastUserAt:roleServerPushLastUserAt\(c\)/);
+  assert.match(profile, /messageMin:min,messageMax:max/);
   assert.match(functionSource('roleServerPushRecentContext'), /slice\(-8000\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /slice\(0,16000\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /memoryList\(c,scope\)/);
@@ -170,12 +175,17 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.match(pull, /phone_role_push_pull/);
   assert.match(pull, /getC\(row\.roleId\)/);
   assert.match(pull, /_rolePushId===row\.id/);
-  assert.match(pull, /_serverProactive&&now-\(m\.time\|\|0\)<24\*3600000/);
-  assert.match(pull, /replyDedupNorm\(m\.content\|\|'\'\)===bodyKey/);
-  assert.match(pull, /_serverProactive:true/);
+  assert.match(pull, /initiativeRecentlyRepeated\(c\.id,body,24\*3600000\)/);
+  assert.match(pull, /roleServerPushParts\(c,body\)/);
+  assert.match(pull, /msg\._serverProactive=true/);
   assert.match(pull, /phone_role_push_ack/);
   assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);
   assert.match(app, /visibilitychange[\s\S]{0,1600}roleServerPushPull\(true\)/);
+});
+
+test('server push respects the configured 1-10 message range', () => {
+  assert.match(naturalMigration, /message_min smallint not null default 1/);
+  assert.match(naturalMigration, /message_max smallint not null default 4/);
 });
 
 test('deleting a role disables its server schedule', () => {

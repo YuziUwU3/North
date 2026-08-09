@@ -151,9 +151,70 @@ function roleTextRepeated(current: string, previous: string) {
   return a.length >= 6 && prior[a.length] / a.length >= threshold;
 }
 
-function roleMessageStyleInvalid(value: string) {
-  const text = String(value || "").trim();
-  return /[—–―]/.test(text) || /-{2,}/.test(text) || text.split(/\r?\n/).filter(Boolean).length > 2;
+function roleMessageParts(value: string, maxParts = 4) {
+  const limit = Math.max(1, Math.min(10, Number(maxParts) || 4));
+  const out: string[] = [];
+  for (const raw of String(value || "").split(/\r?\n+/)) {
+    const line = raw.trim();
+    if (!line || out.length >= limit) continue;
+    if (/^[\[【](?:图片|位置)[|｜]/.test(line)) {
+      out.push(line);
+      continue;
+    }
+    const sentences = line.match(/[^。！？!?~～…]+[。！？!?~～…]+|[^。！？!?~～…]+$/g) || [line];
+    for (const sentence of sentences) {
+      const part = sentence.trim();
+      if (part && out.length < limit) out.push(part);
+    }
+  }
+  return out;
+}
+
+function roleVisibleMessageText(value: string) {
+  return roleMessageParts(value, 10).filter((part) => !/^[\[【](?:图片|位置)[|｜]/.test(part)).join(" ");
+}
+
+function roleMessageRepeated(current: string, previous: string) {
+  if (roleTextRepeated(current, previous)) return true;
+  const oldParts = roleMessageParts(previous, 10);
+  return roleMessageParts(current, 10).some((part) => oldParts.some((old) => roleTextRepeated(part, old)));
+}
+
+function roleUserFactClaims(value: string) {
+  return roleMessageParts(roleVisibleMessageText(value), 10).filter((part) => {
+    if (/[吗呢？?]$/.test(part) || /是不是|有没有|能不能|要不要/.test(part)) return false;
+    return /(?:刚|今早|今天|昨晚|刚才)?[^。！？]{0,8}(?:看见|看到|看了|翻到|翻了|摸到|摸了|注意到|发现|记得)[^。！？]{0,16}(?:你|你的)|(?:你|你的)[^。！？]{0,18}(?:自拍|照片|睡衣|衣领|领口|扣子|登机牌|位置|心率|睡眠记录|去了|拍了|发了|穿了|留在|落在|做了)/.test(part);
+  });
+}
+
+function roleFactGrounded(claim: string, context: string) {
+  const norm = (text: string) => String(text || "").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  const a = norm(claim), b = norm(context);
+  if (!a || !b) return false;
+  if (a.length >= 8 && b.includes(a.slice(0, Math.min(16, a.length)))) return true;
+  const grams = new Set<string>();
+  for (let i = 0; i < a.length - 1; i += 1) {
+    const gram = a.slice(i, i + 2);
+    if (!/^(?:你的?|刚才|今天|今早|昨晚|看到|发现)$/.test(gram)) grams.add(gram);
+  }
+  let hits = 0;
+  grams.forEach((gram) => { if (b.includes(gram)) hits += 1; });
+  return grams.size >= 3 && hits / grams.size >= 0.42;
+}
+
+function roleUserFactUnsupported(value: string, context: string) {
+  return roleUserFactClaims(value).some((claim) => !roleFactGrounded(claim, context));
+}
+
+function roleNotificationPreview(value: string) {
+  const visible = roleVisibleMessageText(value).replace(/\s+/g, " ").trim();
+  return Array.from(visible || "发来了一条消息").slice(0, 160).join("");
+}
+
+function roleMessageStyleInvalid(value: string, maxParts = 4) {
+  const text = String(value || "").trim(), parts = roleMessageParts(text, maxParts);
+  return !parts.length || /[—–―]/.test(text) || /-{2,}/.test(text) || parts.length > maxParts
+    || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:图片|位置)[|｜][^\]】]+[\]】]$/.test(part));
 }
 
 async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
@@ -177,6 +238,8 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
   const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
   const recentContext = String(profile.recent_context || "").slice(-8000).trim();
   const memoryContext = String(profile.memory_context || "").slice(-16000).trim();
+  const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
+  const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
   const prompt = [
     `角色名：${String(profile.role_name || "角色").slice(0, 40)}`,
     `与用户关系：${String(profile.relation || "").slice(0, 80)}`,
@@ -188,7 +251,7 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
   ].join("\n");
   const baseMessages = [
-    { role: "system", content: "这是恋人或亲密关系里的私人聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆和最近聊天，再以角色本人身份决定此刻是否真的想联系用户。若刚聊完、话题仍在延续，就自然接住上下文；若已经隔了一段时间，可以像真实恋人一样表达想念、关心，报备自己的普通日常，或分享一件符合人设的小事。只输出一到两句口语化、自然、有生活感的中文消息。不要像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--）。不得声称看见、监测或知道用户当前的身体、位置、动作、梦境及其他没有上下文依据的事实；不得复述近期已经发过的话，不得套用固定问候，不提AI、系统、定时、通知或后台。想发照片时可以像真人一样用口语提到自己想分享的画面，但不要伪造已经发送了服务器无法附带的照片。如果按角色本人意愿此刻不想联系，只输出 [保持安静]。" },
+    { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。图片和位置也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: prompt },
   ];
   try {
@@ -203,7 +266,7 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
             body: JSON.stringify({
               model: provider.model,
               temperature: 0.95,
-              max_tokens: 120,
+              max_tokens: Math.min(700, 120 + messageMax * 70),
               messages: attemptMessages,
             }),
           });
@@ -216,19 +279,22 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
           if (!text) break;
           sawGeneratedCandidate = true;
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
-          const body = text.slice(0, 180).trim();
+          const body = roleMessageParts(text.slice(0, 1200), messageMax).join("\n").trim();
           const bodyKey = roleTextKey(body);
-          const repeated = !!bodyKey && recentBodies.some((old) => roleTextRepeated(body, old));
-          const styleInvalid = roleMessageStyleInvalid(body);
-          if (bodyKey && !repeated && !styleInvalid) {
+          const repeated = !!bodyKey && recentBodies.some((old) => roleMessageRepeated(body, old));
+          const ungrounded = roleUserFactUnsupported(body, `${recentContext}\n${memoryContext}`);
+          const styleInvalid = roleMessageStyleInvalid(body, messageMax);
+          if (bodyKey && !repeated && !ungrounded && !styleInvalid) {
             return { kind: "message", body };
           }
           attemptMessages = [
             ...baseMessages,
             { role: "assistant", content: body },
-            { role: "user", content: styleInvalid
-              ? "这句话不像真实恋人的日常聊天，或使用了破折号、横杠、诗化句式。请仍以同一角色本人身份，结合刚才的记忆和聊天上下文，改成一到两句自然口语；不要使用任何破折号或横杠。也可以只输出 [保持安静]。"
-              : "这句话与近期已经发过的话过于相似。仍由你本人决定：换一个真正不同的话题和句式重新说一句，或者只输出 [保持安静]；不要改几个字后重复原意。" },
+            { role: "user", content: ungrounded
+              ? "上一版编造了聊天和记忆里没有发生过的用户自拍、衣着、位置、动作、身体状态或其他具体事件。删除所有没有真实依据的用户事实，只使用已经给出的上下文；可以按人设表达想念、担心、询问，或分享你自己的普通日常。不要解释纠正过程。"
+              : styleInvalid
+              ? `上一版格式不像真人微信聊天，或使用了破折号、横杠、错误标签。请保持角色本人身份，在 ${messageMin} 到 ${messageMax} 条之间自由决定，每条单独一行；不要为了凑数拆句，不要使用任何破折号或横杠。也可以只输出 [保持安静]。`
+              : "这次内容与近期已经发过的话过于相似。仍由你本人决定：换一个真正不同的话题、事实和句式，或者只输出 [保持安静]；不要只改几个字重复原意。" },
           ];
         } catch (error) {
           console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
@@ -271,7 +337,7 @@ async function sendAPNs(
     },
     body: JSON.stringify({
       aps: {
-        alert: { title: roleName || "小手机", body },
+        alert: { title: roleName || "小手机", body: roleNotificationPreview(body) },
         sound: "default",
         badge: 1,
         "content-available": 1,

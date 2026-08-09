@@ -54,7 +54,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v853 · 每日设备必查与综合修复/);
+assert.match(source, /v854 · 自然主动联系与回归保护/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -293,6 +293,9 @@ assert.match(source, /function offlineRepairState\(\)/);
 assert.match(source, /function offlineDeactivate\(id,o,clearMsgs\)/);
 assert.match(source, /function offlineCanResume\(o\)/);
 assert.match(source, /function offlineResume\(id,o\)/);
+assert.match(source, /function spyEditOffMem\(id,i\)[\s\S]*?id="off_mem_edit"[\s\S]*?min-height:42vh/,'appointment-memory editing must use a fully expanded multiline editor');
+assert.match(source, /function offDeleteHistory\(id,hid\)/,'a failed or placeholder appointment record must be individually deletable');
+assert.match(source, /onclick="offDeleteHistory\('\$\{id\}','\$\{h\.id\}'\)"/);
 assert.match(source, /function offlinePickTap\(ev,cid\)/);
 assert.match(source, /ontouchend="offlinePickTap\(event,'\$\{c\.id\}'\)"/);
 assert.doesNotMatch(source, /Object\.values\(S\.offline\|\|\{\}\)\.some\(o=>o&&o\.started\)/);
@@ -638,6 +641,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=853/);
+assert.match(html, /app\.js\?v=854/);
 
 console.log("offline date tests passed");

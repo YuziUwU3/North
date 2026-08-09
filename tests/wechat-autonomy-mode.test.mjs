@@ -63,10 +63,12 @@ assert.equal(vm.runInContext('setNaturalInnerThought',context)(thoughtContact,'�
 assert.equal(thoughtContact.innerThought,'想先听完 ta 的话');
 context.S.settings.wechatNatural=true;
 
-const initiativePlan=vm.runInContext('wechatNaturalInitiativePlan()',context);
+const initiativePlan=vm.runInContext("wechatNaturalInitiativePlan({msgMin:1,msgMax:10})",context);
 assert.equal(initiativePlan.kind,'autonomy');
 assert.match(initiativePlan.note,/主动联系自主决策/);
 assert.match(initiativePlan.note,/\[保持安静\]/);
+assert.match(initiativePlan.note,/1到10条之间自由决定/);
+assert.match(initiativePlan.note,/不要编造对方发过自拍/);
 
 assert.match(source,/_hlPlan=humanLikeOn\(\)&&!_naturalOn\?/,'behavior planner must not decide natural-mode replies');
 assert.match(source,/_relIntent=_naturalOn\?null:relationshipIntent/,'numeric relationship policy must be absent in natural mode');
