@@ -82,13 +82,27 @@ test('an online arrival queues and writes one real face-to-face handoff without 
   assert.ok(!d.msgs.some(x=>x.text.includes('进来了')));
 });
 
-test('common-life reply core is wired to the common-life repair prompt and arrival retry',()=>{
+test('common-life reply core is wired to the common-life repair prompt and arrival retry',async()=>{
   assert.match(source,/async function cohabReplyCore\(/);
   assert.match(source,/cohabRepairMessages\(c,o,turn/);
   assert.match(source,/cohabRoleChat\(c,offlineRequestMessages/);
   assert.match(source,/allowSessionModel:true/);
   assert.match(source,/function offReply\(\).*pendingArrival.*cohabGenerateArrival/s);
   assert.match(source,/cohabSystem\(c,o,query\).*offlineSharedContext/s);
+  const notices=[],calls=[];
+  const sandbox={
+    String,Object,Map,
+    cohabData:()=>({settings:{replyRoute:'main'}}),
+    cohabReplyAux:()=>false,
+    wechatAuxConfigured:()=>true,
+    toast:(text,ms)=>notices.push([text,ms]),
+    chatAPI:async(_messages,opt)=>{calls.push(opt.aux?'aux':'main');if(calls.length===1)throw new Error('primary failed');return calls.length===2?'aux rewrite':'main reply';}
+  };
+  vm.runInNewContext(`const _cohabActualModelRoute=new Map();${functionSource('cohabModelRouteNotice')}${functionSource('cohabRoleChat')}globalThis.run=cohabRoleChat;`,sandbox);
+  await sandbox.run({id:'c1'},[],{},{});
+  await sandbox.run({id:'c1'},[],{},{});
+  assert.deepEqual(calls,['main','aux','main']);
+  assert.deepEqual(notices,[['本轮已切换到副模型',3000],['本轮已切换到主模型',3000]]);
 });
 
 test('the existing online-offline sync switch also gates common-life context',()=>{

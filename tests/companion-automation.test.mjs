@@ -45,6 +45,7 @@ function candidateContext(messages = []) {
     ${functionSource('companionAutomationNote')}
     ${functionSource('companionBatteryIsCharging')}
     ${functionSource('companionMorningSleepCandidate')}
+    ${functionSource('companionRequiredDailyCandidate')}
     ${functionSource('companionAutomationCandidate')}
   `, context);
   return context;
@@ -62,16 +63,16 @@ function baseState(now) {
     screenTimeSec: 7200,
     apps: [{ name: 'QQ', usedSec: 1800 }, { name: '音乐', usedSec: 600 }],
     battery: { level: 0.42, state: '使用电池', lowPower: false, ts: now },
-    health: { ts: now, sleepSeconds: 8 * 3600, heartRateBpm: 76, heartRateAt: now },
+    health: { ts: now, sleepSeconds: 8 * 3600, steps: 4321, heartRateBpm: 76, heartRateAt: now },
     location: { place: '家', accuracy: 12, ts: now },
   };
 }
 
-test('daily sleep and usage checks are mandatory while the other proactive checks remain opt-in', () => {
+test('daily sleep, steps and usage checks are mandatory while the other proactive checks remain opt-in', () => {
   assert.match(app, /eveningScreen:true,morningSleep:true,absenceBattery:false,criticalBattery:false,emotionCare:false,manualUnlockAlert:false/);
   assert.match(app, /id="cou_companion_automations"/);
   assert.match(app, /每日总时长与全部 App 记录必查/);
-  assert.match(app, /每日睡眠记录必查/);
+  assert.match(app, /每日睡眠与步数必查/);
   assert.match(app, /保存每日必查时段/);
   assert.match(app, /失联时查看 iPhone 电量/);
   assert.match(app, /电量 5% 及以下提醒充电/);
@@ -150,9 +151,9 @@ test('good morning triggers the daily sleep check immediately with authorized li
   assert.equal(context.pick.kind, 'morningSleep');
   assert.equal(context.pick.replyingToGoodMorning, true);
   assert.match(context.pick.note, /正常接住这句早安/);
-  assert.match(context.pick.note, /最新心率 76 次\/分/);
-  assert.match(context.pick.note, /iPhone 电量 42%/);
-  assert.match(context.pick.note, /最近位置“家”/);
+  assert.match(context.pick.note, /今日步数 4321 步/);
+  assert.doesNotMatch(context.pick.note, /最新心率|iPhone 电量|最近位置/);
+  assert.match(context.pick.note, /本次必查不包含心率、电量或位置/);
 });
 
 test('emotion care never treats heart rate as proof of lying or crying', () => {

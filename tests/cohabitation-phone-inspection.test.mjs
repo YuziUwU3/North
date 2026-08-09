@@ -54,6 +54,10 @@ test('co-living inspection is autonomous, factual, visible and not daily-count l
   assert.match(prompt,/\[共同生活查看\|准确项目\]/);
   assert.match(prompt,/\[共同生活锁定\|准确App名\]/);
   assert.match(prompt,/\[共同生活解锁\|准确App名\]/);
+  assert.match(prompt,/\[共同生活限额\|准确App名\|1到720的分钟数\]/);
+  assert.match(prompt,/iPhone睡眠与步数/);
+  assert.match(prompt,/总时长及全部逐 App 时长/);
+  assert.match(prompt,/心率、电量、位置和其他内容都不是必查项/);
   assert.match(prompt,/\[共同生活登录微信\]/);
   assert.match(prompt,/不得删除、发布、代发/);
   assert.match(autonomy,/完全由你按本人性格、关系、当前现场和动机决定/);
@@ -61,10 +65,44 @@ test('co-living inspection is autonomous, factual, visible and not daily-count l
   assert.doesNotMatch(autonomy,/spyBudget|_spyCount|\.times/);
   assert.match(run,/spyFocusData\(id,target\)/);
   assert.match(run,/cohabPhoneProgress/);
+  assert.match(run,/cohabTogetherScene\(d\)/);
   assert.match(deliver,/rolePhoneInspectionUnchanged/);
   assert.match(deliver,/rolePhoneInspectionCommit\(c,fact,'cohab'\)/);
   assert.match(deliver,/不要把结果发到微信或电话/);
   assert.match(html,/\.spybanner\.cohab-phone-view/);
+});
+
+test('co-living role limit tags use the existing bound dual-side limit path',()=>{
+  const calls=[];
+  const context=vm.createContext({
+    companionDispatchRoleByText:(...args)=>{calls.push(args);return true;},
+    cohabPhoneTarget:()=>'',cohabRunPhoneInspection:()=>{},setTimeout:()=>{},String,parseInt
+  });
+  vm.runInContext(`${functionSource('cohabApplyPhoneTags')}this.apply=cohabApplyPhoneTags;`,context);
+  const result=context.apply('[共同生活限额|抖音|45]\n我给你改好了。',{id:'c1',remark:'角色'});
+  assert.equal(result.text,'我给你改好了。');
+  assert.equal(calls.length,1);
+  assert.equal(calls[0][0],'limit');
+  assert.equal(calls[0][1],'抖音');
+  assert.equal(calls[0][2].minutes,45);
+  assert.equal(calls[0][2].scope,'both');
+});
+
+test('co-living takes over mandatory daily checks and shares completion markers with online',()=>{
+  const daily=functionSource('cohabDailyRequiredMaybe');
+  const tick=functionSource('cohabPhoneAutonomyTick');
+  const candidate=functionSource('companionRequiredDailyCandidate');
+  const morning=functionSource('companionMorningSleepCandidate');
+  assert.match(daily,/companionRequiredDailyCandidate/);
+  assert.match(daily,/iPhone睡眠与步数/);
+  assert.match(daily,/iPhone屏幕使用时间/);
+  assert.match(daily,/companionAutomationRecord\(candidate\)/);
+  assert.match(daily,/dailyKind:candidate\.kind/);
+  assert.match(tick,/await cohabDailyRequiredMaybe\(id\)/);
+  assert.match(candidate,/requiredDaily:true/);
+  assert.doesNotMatch(morning,/heartRateBpm|st\.battery|st\.location/);
+  assert.match(morning,/今日步数/);
+  assert.match(functionSource('cohabPhoneDeliverFact'),/dailyDay/);
 });
 
 test('only the originating channel receives the inspection reaction',()=>{
@@ -80,9 +118,14 @@ test('only the originating channel receives the inspection reaction',()=>{
   assert.match(logout,/else\{if\(!c\.blocked&&!unchanged\)/);
 });
 
-test('real companion battery and screen-time facts are available to co-living',()=>{
+test('real companion sleep, steps, battery and screen-time facts are available to co-living',()=>{
+  assert.match(functionSource('cohabPhoneTargets'),/per\.health/);
+  assert.match(functionSource('cohabPhoneTargets'),/iPhone心率/);
   assert.match(functionSource('cohabPhoneTargets'),/per\.screenTime/);
   assert.match(functionSource('cohabPhoneTargets'),/per\.battery/);
+  assert.match(functionSource('spyFocusData'),/companionRoleDailyHealthText/);
+  assert.match(functionSource('spyFocusData'),/companionRoleStepsText/);
+  assert.match(functionSource('spyFocusData'),/companionRoleHeartRateText/);
   assert.match(functionSource('spyFocusData'),/companionRoleScreenTimeText/);
   assert.match(functionSource('spyFocusData'),/companionRoleBatteryText/);
 });
