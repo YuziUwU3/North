@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='864'){
+if(window.__NORTH_SHELL_BUILD__!=='865'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -355,7 +355,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v864 · 共同生活长期上下文与到家承接';
+const APP_VER='v865 · 主屏时间隐藏保持原布局';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1375,7 +1375,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=864';
+  const url='sw.js?v=865';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2666,9 +2666,10 @@ function renderHome(){
   homeLayoutInit();
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  const clockOn=homeClockVisible();
   return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" id="homeDesktop" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}">
     <div class="home-editbar"><span>长按拖动 App 或小组件</span><button onclick="homeEditFinish()">完成</button></div>
-    ${homeClockVisible()?`<header class="home-premium-head" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>`:''}
+    <header class="home-premium-head${clockOn?'':' home-clock-hidden'}" aria-hidden="${clockOn?'false':'true'}" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>
     <div class="home-scroll">
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)" onscrollend="homeSnapPage(this)">${homeAppsHtml()}</div></div>
     <div class="pgdots">${S.me.homeLayout.map((_,i)=>'<span class="pgdot'+(i===_homePage?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
@@ -3330,7 +3331,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>语音逐句生成<br><small style="color:#888">关闭：沿用整轮预生成；开启：聊天语音、语音通话和视频通话按顺序一条条生成，首句更早开始且降低并发异常</small></span><span class="sw ${voiceProgressiveOn()?'on':''}" onclick="S.settings.voiceProgressive=!voiceProgressiveOn();save();render()"></span></div>
-      <div class="it"><span>主屏幕时间和日期<br><small style="color:#888">关闭后隐藏主屏幕左上角的时间与日期，其他 App、组件和锁屏时间不受影响</small></span><span class="sw ${homeClockVisible()?'on':''}" onclick="homeClockToggle()"></span></div>
+      <div class="it"><span>主屏幕时间和日期<br><small style="color:#888">关闭后仅隐藏文字并保留原位置，主屏布局、其他 App、组件和锁屏时间都不移动</small></span><span class="sw ${homeClockVisible()?'on':''}" onclick="homeClockToggle()"></span></div>
       <div style="padding:11px 14px 5px;font-weight:700;color:#ffafc9">手动回复场景（可多选）</div>
       <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}

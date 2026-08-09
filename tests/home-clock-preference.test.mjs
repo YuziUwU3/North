@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const shell=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 
 function functionSource(name){
   const start=source.indexOf(`function ${name}`);
@@ -43,9 +44,13 @@ assert.equal(context.visible(),true);
 
 const home=functionSource('renderHome');
 const settings=functionSource('renderSettings');
-assert.match(home,/homeClockVisible\(\)\?`<header class="home-premium-head"/);
+assert.match(home,/const clockOn=homeClockVisible\(\)/);
+assert.match(home,/<header class="home-premium-head\$\{clockOn\?'':' home-clock-hidden'\}"/);
+assert.doesNotMatch(home,/homeClockVisible\(\)\?`<header/,'hiding the clock must not remove its layout slot');
+assert.match(shell,/\.home-premium-head\.home-clock-hidden\{visibility:hidden;pointer-events:none;\}/,'the hidden clock must retain its height while becoming non-interactive');
 assert.match(settings,/主屏幕时间和日期/);
 assert.match(settings,/onclick="homeClockToggle\(\)"/);
-assert.match(settings,/其他 App、组件和锁屏时间不受影响/);
+assert.match(settings,/关闭后仅隐藏文字并保留原位置/);
+assert.match(settings,/主屏布局、其他 App、组件和锁屏时间都不移动/);
 
 console.log('home clock preference tests passed');

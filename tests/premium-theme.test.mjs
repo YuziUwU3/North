@@ -16,7 +16,7 @@ test('premium home theme keeps all three established color modes',()=>{
 });
 
 test('home time, couple avatars, mood face and original app line icons stay intact',()=>{
-  assert.match(app,/class="home-premium-head"[\s\S]*?id="homeLiveTime">\$\{hm\(\)\}<\/time>/);
+  assert.match(app,/class="home-premium-head\$\{clockOn\?'':' home-clock-hidden'\}"[\s\S]*?id="homeLiveTime">\$\{hm\(\)\}<\/time>/);
   assert.match(html,/@font-face\{font-family:"North Stencil Clock"[^}]*data:font\/woff2;base64,/);
   assert.match(html,/\.home-premium-clock time\{[^}]*font-family:var\(--north-clock-font\)[^}]*font-size:34px/);
   assert.match(html,/\.locktime\{[^}]*font-family:var\(--north-clock-font\)[^}]*font-size:96px/);
