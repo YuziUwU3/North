@@ -74,7 +74,7 @@ test('co-living state pauses without deleting and advances work to return home',
 
 test('online and face-to-face activity use a narrow shared status boundary',()=>{
   assert.match(source,/function cohabWechatPrompt\(c,d\)/);
-  assert.match(source,/仅在共同生活开关开启时生效/);
+  assert.match(source,/仅在“约会中同步到线上”开关开启时生效/);
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
   assert.match(source,/function offlineFocusActive\(\)\{if\(typeof cohabSceneActive==='function'&&cohabSceneActive\(\)\)return true/);
@@ -84,7 +84,7 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/function cohabConsumeOnlineState\(text,c,id\)/);
   assert.match(source,/function cohabInferOnlineState\(text,id,d\)/);
   assert.match(source,/content=cohabConsumeOnlineState\(content,c,id\)/);
-  assert.match(source,/只有你确实已经抵达、说“我到家了\/开门”时才能切到到家/);
+  assert.match(source,/只有你确实已经抵达、说“我到家了\/进门了”时才能切到到家/);
   assert.match(source,/你可以自己选择挂什么简短状态/);
 });
 
