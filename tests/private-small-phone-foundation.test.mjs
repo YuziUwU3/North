@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.5 \(5\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.6 \(6\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -99,8 +99,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 5;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.5;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 6;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.6;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -149,7 +149,7 @@ test('private app keeps device management in Settings and clears stale app badge
   assert.match(notificationService, /content\.badge = nil/);
 });
 
-test('private app supplies native microphone transcription and keyboard-safe call input', () => {
+test('private app commits native speech and leaves keyboard avoidance to WKWebView', () => {
   const bridge = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'
   );
@@ -171,14 +171,16 @@ test('private app supplies native microphone transcription and keyboard-safe cal
   assert.match(bridge, /case "speech\.start"/);
   assert.match(bridge, /SFSpeechAudioBufferRecognitionRequest/);
   assert.match(bridge, /AVAudioApplication\.requestRecordPermission/);
+  assert.match(bridge, /schedulePartialCommit\(transcript\)/);
+  assert.match(bridge, /Task\.sleep\(nanoseconds: 1_150_000_000\)/);
+  assert.match(bridge, /transcript: self\.latestTranscript,[\s\S]{0,80}isFinal: true/);
   assert.match(app, /window\.SmallPhoneNativeSpeech&&window\.SmallPhoneNativeSpeech\.create/);
-  assert.match(webView, /keyboardWillChangeFrameNotification/);
-  assert.match(webView, /keyboardFrameEndUserInfoKey/);
-  assert.match(webView, /__smallPhoneNativeKeyboard/);
-  assert.match(html, /north-native-keyboard-open \.callinput:focus-within/);
-  assert.match(html, /north-native-keyboard-open \.music-chat-dock:focus-within/);
-  assert.match(webView, /const browserCovered = Math\.max/);
-  assert.match(webView, /const missingOffset = Math\.max\(0, height - browserCovered\)/);
-  assert.match(html, /--north-native-keyboard-offset/);
-  assert.doesNotMatch(html, /bottom:calc\([^)]*--north-native-keyboard-height/);
+  assert.match(app, /if\(ev\.results\[i\]\.isFinal\)fin\+=text/);
+  assert.match(app, /if\(t\)[\s\S]{0,500}hfHeard\(t\)/);
+  assert.doesNotMatch(webView, /keyboardWillChangeFrameNotification/);
+  assert.doesNotMatch(webView, /keyboardFrameEndUserInfoKey/);
+  assert.doesNotMatch(webView, /__smallPhoneNativeKeyboard/);
+  assert.doesNotMatch(webView, /window\.scrollTo\(0,0\)/);
+  assert.doesNotMatch(html, /north-native-keyboard-open/);
+  assert.doesNotMatch(html, /--north-native-keyboard-offset/);
 });

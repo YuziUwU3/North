@@ -17,18 +17,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 name: UIDevice.orientationDidChangeNotification,
                 object: nil
             )
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(keyboardFrameChanged(_:)),
-                name: UIResponder.keyboardWillChangeFrameNotification,
-                object: nil
-            )
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(keyboardWillHide(_:)),
-                name: UIResponder.keyboardWillHideNotification,
-                object: nil
-            )
         }
 
         deinit {
@@ -41,33 +29,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 guard let self, let webView else { return }
                 self.updateSafeArea(in: webView)
             }
-        }
-
-        @objc private func keyboardFrameChanged(_ notification: Notification) {
-            guard let webView = bridge.webView,
-                  let screenFrame = notification.userInfo?[
-                      UIResponder.keyboardFrameEndUserInfoKey
-                  ] as? CGRect else {
-                return
-            }
-            let frame = webView.convert(screenFrame, from: nil)
-            let overlap = max(0, webView.bounds.maxY - frame.minY)
-            updateKeyboard(in: webView, height: overlap)
-        }
-
-        @objc private func keyboardWillHide(_ notification: Notification) {
-            guard let webView = bridge.webView else { return }
-            updateKeyboard(in: webView, height: 0)
-        }
-
-        private func updateKeyboard(in webView: WKWebView, height: CGFloat) {
-            let safeHeight = max(0, height)
-            let script = """
-            window.__smallPhoneNativeKeyboard && window.__smallPhoneNativeKeyboard({
-              height: \(safeHeight), visible: \(safeHeight > 0)
-            });
-            """
-            webView.evaluateJavaScript(script)
         }
 
         func webView(
@@ -262,7 +223,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.5 (5)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.6 (6)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -275,26 +236,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
         root.style.setProperty('--north-native-safe-bottom', safe(payload && payload.bottom, 'safe-area-inset-bottom'));
         root.style.setProperty('--north-native-safe-left', safe(payload && payload.left, 'safe-area-inset-left'));
         root.style.setProperty('--north-native-safe-right', safe(payload && payload.right, 'safe-area-inset-right'));
-      };
-      const nativeKeyboardBaselineHeight = Math.max(
-        window.innerHeight || 0,
-        document.documentElement && document.documentElement.clientHeight || 0
-      );
-      window.__smallPhoneNativeKeyboard = payload => {
-        const height = Math.max(0, Number(payload && payload.height) || 0);
-        const viewport = window.visualViewport;
-        const visibleHeight = viewport
-          ? Math.max(0, Number(viewport.height) || 0)
-          : Math.max(0, window.innerHeight || 0);
-        const visibleTop = viewport ? Math.max(0, Number(viewport.offsetTop) || 0) : 0;
-        const browserCovered = Math.max(
-          0,
-          nativeKeyboardBaselineHeight - visibleHeight - visibleTop
-        );
-        const missingOffset = Math.max(0, height - browserCovered);
-        root.style.setProperty('--north-native-keyboard-offset', `${missingOffset}px`);
-        root.classList.toggle('north-native-keyboard-open', height > 0);
-        if (height > 0) requestAnimationFrame(() => window.scrollTo(0, 0));
       };
       let sequence = 0;
       const waiting = new Map();

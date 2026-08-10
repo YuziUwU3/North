@@ -282,6 +282,8 @@ private final class NativeSpeechRecognitionController {
     private var eventHandler: (([String: Any]) -> Void)?
     private var startToken = UUID()
     private var tapInstalled = false
+    private var partialCommitTask: Task<Void, Never>?
+    private var latestTranscript = ""
 
     func start(
         sessionID: String,
@@ -326,6 +328,8 @@ private final class NativeSpeechRecognitionController {
 
     func stop(notify: Bool) {
         startToken = UUID()
+        partialCommitTask?.cancel()
+        partialCommitTask = nil
         if audioEngine.isRunning {
             audioEngine.stop()
         }
@@ -384,13 +388,19 @@ private final class NativeSpeechRecognitionController {
             Task { @MainActor in
                 guard let self, !self.sessionID.isEmpty else { return }
                 if let result {
+                    let transcript = result.bestTranscription.formattedString
+                    self.latestTranscript = transcript
                     self.emit(
                         type: "result",
-                        transcript: result.bestTranscription.formattedString,
+                        transcript: transcript,
                         isFinal: result.isFinal
                     )
                     if result.isFinal {
+                        self.partialCommitTask?.cancel()
+                        self.partialCommitTask = nil
                         self.finishCurrentSession()
+                    } else {
+                        self.schedulePartialCommit(transcript)
                     }
                 } else if error != nil {
                     self.emit(type: "error", error: "recognition_failed")
@@ -400,7 +410,31 @@ private final class NativeSpeechRecognitionController {
         }
     }
 
+    private func schedulePartialCommit(_ transcript: String) {
+        partialCommitTask?.cancel()
+        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            partialCommitTask = nil
+            return
+        }
+        let session = sessionID
+        partialCommitTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 1_150_000_000)
+            guard !Task.isCancelled else { return }
+            guard let self,
+                  self.sessionID == session,
+                  !self.latestTranscript.isEmpty else { return }
+            self.emit(
+                type: "result",
+                transcript: self.latestTranscript,
+                isFinal: true
+            )
+            self.finishCurrentSession()
+        }
+    }
+
     private func finishCurrentSession() {
+        partialCommitTask?.cancel()
+        partialCommitTask = nil
         if audioEngine.isRunning {
             audioEngine.stop()
         }
@@ -436,10 +470,13 @@ private final class NativeSpeechRecognitionController {
     }
 
     private func reset() {
+        partialCommitTask?.cancel()
+        partialCommitTask = nil
         request = nil
         task = nil
         sessionID = ""
         eventHandler = nil
+        latestTranscript = ""
     }
 
     private enum NativeSpeechError: Error {

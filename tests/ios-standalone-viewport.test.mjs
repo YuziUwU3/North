@@ -55,30 +55,31 @@ test('manual safe-area mode is available only to Apple home-screen web apps',()=
   assert.equal(compatOn(false,false),false,'the ordinary browser keeps its existing opt-in behavior');
 });
 
-test('Apple compatibility switch uses CSS viewport and safe-area insets only',()=>{
+test('Apple compatibility switch preserves the proven shell and guarantees nonzero safe areas',()=>{
   assert.match(functionSource('renderSettings'),/苹果主屏幕适配/);
   assert.match(functionSource('renderSettings'),/Safari 浏览器和安卓始终不受影响/);
-  assert.match(html,/html\.north-ios-home-safe[^}]*height:100dvh/);
-  assert.match(html,/\.north-ios-home-safe \.home-premium-head\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.inputbar\{[^}]*safe-area-inset-bottom/);
-  assert.match(html,/\.north-ios-home-safe \.xnav\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.music-topbar\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.smshead\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.dytab\{[^}]*safe-area-inset-bottom/);
-  assert.match(html,/\.north-ios-home-safe \.msgbanner\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.spybanner\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.callscreen\.mini\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.cin-nav,html\.north-ios-home-safe \.cin-watch-nav,html\.north-ios-home-safe \.cin-reader-nav,html\.north-ios-home-safe \.dg-nav\{[^}]*safe-area-inset-top/);
+  assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:max\(env\(safe-area-inset-bottom,0px\),34px\)\}/);
+  assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');
+  assert.match(html,/\.north-ios-home-safe \.home-premium-head\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.inputbar\{[^}]*var\(--north-ios-home-safe-bottom\)/);
+  assert.match(html,/\.north-ios-home-safe \.xnav\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.music-topbar\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.smshead\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.dytab\{[^}]*var\(--north-ios-home-safe-bottom\)/);
+  assert.match(html,/\.north-ios-home-safe \.msgbanner\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.spybanner\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.callscreen\.mini\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.cin-nav,html\.north-ios-home-safe \.cin-watch-nav,html\.north-ios-home-safe \.cin-reader-nav,html\.north-ios-home-safe \.dg-nav\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(app,/class="nav shop-nav"/);
   assert.match(app,/class="nav food-nav"/);
-  assert.match(html,/\.north-ios-home-safe \.shop-nav,html\.north-ios-home-safe \.food-nav\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.shop-nav,html\.north-ios-home-safe \.food-nav\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(app,/class="dynav dy-safe-nav"/);
   assert.match(app,/class="dy-feed-back"/);
-  assert.match(html,/\.north-ios-home-safe \.dy-safe-nav\{[^}]*safe-area-inset-top/);
-  assert.match(html,/\.north-ios-home-safe \.dy-feed-back\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.dy-safe-nav\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.dy-feed-back\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(app,/class="travel-app"/);
   assert.match(app,/class="travel-head"/);
-  assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
   assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of per-app offsets');
   assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container reserves the entire tappable top safe area');
