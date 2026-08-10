@@ -184,6 +184,14 @@ struct CompanionSyncView: View {
                         }
                         .disabled(service.isWorking)
 
+                        Button("重新授权屏幕使用时间") {
+                            Task {
+                                await service.prepareDataAccess()
+                                await requestLiveUsageAndSynchronize()
+                            }
+                        }
+                        .disabled(service.isWorking)
+
                         HStack {
                             Text("当前任务")
                             Spacer()
@@ -373,6 +381,7 @@ struct CompanionSyncView: View {
             }
 
             Task {
+                await service.refreshDataAccessState()
                 await wellnessService.refresh()
                 await service.synchronize(
                     locationManager: locationManager,
@@ -416,12 +425,12 @@ fileprivate struct CompanionSelectedApp: Identifiable {
     let bindingCode: String
 }
 
-private struct DeviceReportAppUsage: Codable {
+private struct DeviceReportAppUsage: Codable, Sendable {
     let externalAppID: String
     let usedSeconds: Double
 }
 
-private struct DeviceReportSnapshot: Codable {
+private struct DeviceReportSnapshot: Codable, Sendable {
     let schema: Int
     let requestID: String
     let requestedAt: Date
@@ -432,6 +441,12 @@ private struct DeviceReportSnapshot: Codable {
     var hasPositiveAppUsage: Bool {
         apps.contains { $0.usedSeconds > 0 }
     }
+}
+
+private enum UsageReadOutcome: Sendable {
+    case report(DeviceReportSnapshot)
+    case unavailable
+    case timedOut
 }
 
 private struct SavedDailyLimitMirror: Codable {
@@ -455,6 +470,7 @@ private struct RemoteCommand: Decodable {
 
 @MainActor
 final class CompanionSyncService: ObservableObject {
+    private let usageReadTimeoutNanoseconds: UInt64 = 8_000_000_000
     @Published private(set) var isPaired = false
     @Published private(set) var pairedTarget = ""
     @Published private(set) var statusText = "等待连接小手机"
@@ -767,6 +783,17 @@ final class CompanionSyncService: ObservableObject {
         updateDataAccessMode()
     }
 
+    fileprivate func refreshDataAccessState() async {
+        guard #available(iOS 26.0, *) else {
+            dataAccessModeText = "分享兼容模式"
+            reportGenerationText = "兼容模式"
+            reportStatusText = "当前系统不支持主 App 直读逐 App 时长"
+            return
+        }
+
+        updateDataAccessMode()
+    }
+
     @available(iOS 26.0, *)
     private func updateDataAccessMode() {
         switch AuthorizationCenter.shared.authorizationStatus {
@@ -863,17 +890,25 @@ final class CompanionSyncService: ObservableObject {
         }
 
         var report = latestDirectUsageSnapshot
-        let automaticUsageRefreshDue =
-            dataAccessModeText == "个人直读模式" &&
-            Date().timeIntervalSince(lastUsageRefreshDate ?? .distantPast) >= 60
-        if refreshUsage || automaticUsageRefreshDue {
+        if refreshUsage {
             lastUsageRefreshDate = Date()
             if !quiet {
                 reportStatusText = "正在从主 App 读取真实使用数据"
                 reportGenerationText = "读取中"
             }
             if #available(iOS 26.0, *) {
-                report = await fetchTodayDirectUsage()
+                switch await fetchTodayDirectUsageWithTimeout() {
+                case .report(let snapshot):
+                    report = snapshot
+                case .unavailable:
+                    report = nil
+                case .timedOut:
+                    report = nil
+                    latestDirectUsageSnapshot = nil
+                    reportGenerationText = "读取超时"
+                    reportStatusText =
+                        "读取超过 8 秒，已跳过使用量并继续上传其他真实数据"
+                }
             } else {
                 report = nil
             }
@@ -965,6 +1000,36 @@ final class CompanionSyncService: ObservableObject {
         } catch {
             commandStatusText = "后台命令处理失败：\(error.localizedDescription)"
             return false
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func fetchTodayDirectUsageWithTimeout() async
+        -> UsageReadOutcome {
+        let timeout = usageReadTimeoutNanoseconds
+        return await withTaskGroup(
+            of: UsageReadOutcome.self,
+            returning: UsageReadOutcome.self
+        ) { group in
+            group.addTask { @MainActor [weak self] in
+                guard let self else { return .unavailable }
+                guard let report = await self.fetchTodayDirectUsage() else {
+                    return .unavailable
+                }
+                return .report(report)
+            }
+            group.addTask {
+                do {
+                    try await Task.sleep(nanoseconds: timeout)
+                } catch {
+                    return .unavailable
+                }
+                return .timedOut
+            }
+
+            let outcome = await group.next() ?? .unavailable
+            group.cancelAll()
+            return outcome
         }
     }
 
@@ -1439,7 +1504,7 @@ final class CompanionSyncService: ObservableObject {
         case "lock":
             guard screenTimeControlIsAuthorized() else {
                 throw CompanionSyncError.message(
-                    "屏幕使用时间控制权限不可用，未执行锁定"
+                    "屏幕使用时间授权已失效，请在伴生 App 重新授权后再锁定"
                 )
             }
             rememberShieldActor(command.actor)
@@ -1467,14 +1532,14 @@ final class CompanionSyncService: ObservableObject {
                     : previousLedgerTokens
                 saveLockedTokens(previousManualTokens)
                 savePersistentLockLedger(previousLedgerTokens)
-                throw CompanionSyncError.message("系统未确认锁定，未发送成功回执")
+                throw CompanionSyncError.message("本地屏蔽配置写入失败，未发送成功回执")
             }
-            return "真实 App 已锁定并由系统设置读回确认"
+            return "屏蔽配置已写入；最终是否生效请以打开目标 App 时的系统屏蔽页为准"
 
         case "unlock":
             guard screenTimeControlIsAuthorized() else {
                 throw CompanionSyncError.message(
-                    "屏幕使用时间控制权限不可用，未执行解锁"
+                    "屏幕使用时间授权已失效，请在伴生 App 重新授权后再解锁"
                 )
             }
             let previousManualTokens =
@@ -1517,9 +1582,9 @@ final class CompanionSyncService: ObservableObject {
                 saveLockedTokens(previousManualTokens)
                 saveLimitLockedTokens(previousLimitTokens)
                 savePersistentLockLedger(previousLedgerTokens)
-                throw CompanionSyncError.message("系统未确认解锁，未发送成功回执")
+                throw CompanionSyncError.message("本地屏蔽配置移除失败，未发送成功回执")
             }
-            return "真实 App 已解锁并由系统设置读回确认"
+            return "屏蔽配置已移除；最终是否生效请以目标 App 能否正常打开为准"
 
         case "limit":
             rememberShieldActor(command.actor)

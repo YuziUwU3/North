@@ -76,10 +76,10 @@ test('full sync processes commands before refreshing heavyweight usage data', ()
     nativeSync.indexOf('fileprivate func synchronizeCommandsOnly('),
   );
   assert.ok(fullSync.indexOf('processPendingCommandsSerialized(') >= 0);
-  assert.ok(fullSync.indexOf('fetchTodayDirectUsage()') >= 0);
+  assert.ok(fullSync.indexOf('fetchTodayDirectUsageWithTimeout()') >= 0);
   assert.ok(
     fullSync.indexOf('processPendingCommandsSerialized(') <
-      fullSync.indexOf('fetchTodayDirectUsage()'),
+      fullSync.indexOf('fetchTodayDirectUsageWithTimeout()'),
   );
 });
 
@@ -89,7 +89,7 @@ test('successful commands are verified and atomically completed with a monotonic
   assert.match(nativeSync, /snapshotSequenceKey/);
   assert.match(nativeSync, /"snapshotSequence": nextSnapshotSequence\(\)/);
   assert.match(nativeSync, /try await applyRemoteCommand/);
-  assert.match(nativeSync, /系统未确认锁定，未发送成功回执/);
+  assert.match(nativeSync, /本地屏蔽配置写入失败，未发送成功回执/);
   assert.match(nativeSync, /phone_companion_complete_command/);
   assert.match(atomicMigration, /phone_companion_snapshot_sequence/);
   assert.match(atomicMigration, /create or replace function public\.phone_companion_complete_command/);

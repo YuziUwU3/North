@@ -124,7 +124,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v880 · 持久锁定与当日同步'/);
+  assert.match(app, /const APP_VER='v881 · 真机同步抗卡死'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -358,9 +358,9 @@ test('pending and conflicting device commands never masquerade as a confirmed re
   assert.match(app, /网页接受命令不等于设备执行成功/);
 });
 
-test('snapshot conflict copy explains that the lock failed instead of calling it expired', () => {
-  assert.match(app, /锁定未生效：iPhone 最新状态仍为未锁定（不是快照过期）/);
-  assert.match(app, /解锁未生效：iPhone 最新状态仍为已锁（不是快照过期）/);
+test('snapshot conflict copy reports a configuration mismatch without claiming enforcement', () => {
+  assert.match(app, /锁定配置未写入：iPhone 新快照未含锁/);
+  assert.match(app, /解锁配置未移除：iPhone 新快照仍含锁/);
   assert.match(app, /percent=Math\.max\(0,/);
 });
 
