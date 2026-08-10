@@ -9,13 +9,51 @@ struct LocalPhoneWebView: UIViewRepresentable {
         let bridge = PhoneNativeBridge()
         private var showingLoadFailure = false
 
+        override init() {
+            super.init()
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(deviceOrientationChanged),
+                name: UIDevice.orientationDidChangeNotification,
+                object: nil
+            )
+        }
+
+        deinit {
+            NotificationCenter.default.removeObserver(self)
+        }
+
+        @objc private func deviceOrientationChanged() {
+            guard let webView = bridge.webView else { return }
+            DispatchQueue.main.async { [weak self, weak webView] in
+                guard let self, let webView else { return }
+                self.updateSafeArea(in: webView)
+            }
+        }
+
         func webView(
             _ webView: WKWebView,
             didFinish navigation: WKNavigation!
         ) {
             if !showingLoadFailure {
+                updateSafeArea(in: webView)
                 bridge.announceReady()
             }
+        }
+
+        func updateSafeArea(in webView: WKWebView) {
+            let viewInsets = webView.safeAreaInsets
+            let windowInsets = webView.window?.safeAreaInsets ?? .zero
+            let top = max(viewInsets.top, windowInsets.top)
+            let bottom = max(viewInsets.bottom, windowInsets.bottom)
+            let left = max(viewInsets.left, windowInsets.left)
+            let right = max(viewInsets.right, windowInsets.right)
+            let script = """
+            window.__smallPhoneNativeInsets && window.__smallPhoneNativeInsets({
+              top: \(top), bottom: \(bottom), left: \(left), right: \(right)
+            });
+            """
+            webView.evaluateJavaScript(script)
         }
 
         func webView(
@@ -97,6 +135,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.bridge.openDeviceManagement =
             onOpenDeviceManagement
+        DispatchQueue.main.async {
+            context.coordinator.updateSafeArea(in: webView)
+        }
     }
 
     static func dismantleUIView(
@@ -167,6 +208,15 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
+      const root = document.documentElement;
+      root.classList.add('north-native-app');
+      window.__smallPhoneNativeInsets = payload => {
+        const number = value => Math.max(0, Number(value) || 0) + 'px';
+        root.style.setProperty('--north-native-safe-top', number(payload && payload.top));
+        root.style.setProperty('--north-native-safe-bottom', number(payload && payload.bottom));
+        root.style.setProperty('--north-native-safe-left', number(payload && payload.left));
+        root.style.setProperty('--north-native-safe-right', number(payload && payload.right));
+      };
       let sequence = 0;
       const waiting = new Map();
       window.__smallPhoneNativeReply = payload => {

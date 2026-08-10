@@ -27,6 +27,9 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /url\.scheme == "about"/);
   assert.match(webView, /loadFileURL/);
   assert.match(webView, /window\.__SMALL_PHONE_PRIVATE__ = true/);
+  assert.match(webView, /window\.__smallPhoneNativeInsets/);
+  assert.match(webView, /webView\.window\?\.safeAreaInsets/);
+  assert.match(webView, /north-native-app/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 

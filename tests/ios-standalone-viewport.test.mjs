@@ -13,8 +13,8 @@ function functionSource(name){
   return app.slice(start,next<0?app.length:next).trim();
 }
 
-function compatEnvironment(navigator,standaloneMedia=false){
-  const context=vm.createContext({navigator,matchMedia:()=>({matches:standaloneMedia})});
+function compatEnvironment(navigator,standaloneMedia=false,privateApp=false){
+  const context=vm.createContext({navigator,matchMedia:()=>({matches:standaloneMedia}),window:{__SMALL_PHONE_PRIVATE__:privateApp}});
   vm.runInContext(functionSource('appleHomeCompatEnvironment')+';globalThis.result=appleHomeCompatEnvironment();',context);
   return context.result;
 }
@@ -43,6 +43,7 @@ test('manual safe-area mode is available only to Apple home-screen web apps',()=
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:false}),false,'ordinary iPhone Safari must keep its existing layout');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Linux; Android 15)',platform:'Linux armv8l',maxTouchPoints:5,standalone:false},true),false,'Android standalone must never receive the Apple workaround');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Macintosh)',platform:'MacIntel',maxTouchPoints:5,standalone:true}),true,'iPad desktop user agent is still supported');
+  assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),true,'the real private app must receive its native safe area');
 });
 
 test('Apple compatibility switch uses CSS viewport and safe-area insets only',()=>{
@@ -69,4 +70,10 @@ test('Apple compatibility switch uses CSS viewport and safe-area insets only',()
   assert.match(app,/class="travel-app"/);
   assert.match(app,/class="travel-head"/);
   assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*safe-area-inset-top/);
+  assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
+  assert.match(html,/\.north-native-app\.north-ios-home-safe \.home-premium-head\{[^}]*north-native-safe-top/);
+  assert.match(html,/\.north-native-app\.north-ios-home-safe \.nav\{[^}]*north-native-safe-top/);
+  assert.match(html,/\.north-native-app\.north-ios-home-safe \.inputbar\{[^}]*north-native-safe-bottom/);
+  assert.match(html,/\.north-native-app\.north-ios-home-safe \.shop-nav[^}]*north-native-safe-top/);
+  assert.match(html,/\.north-native-app\.north-ios-home-safe \.callscreen\.mini \.cav\{[^}]*margin:0/);
 });

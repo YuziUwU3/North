@@ -2685,7 +2685,7 @@ async function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur)
 let _homePage=0,_homeSnapTimer=null;
 function homeClockVisible(){return !(S.settings&&S.settings.homeClock===false);}
 function homeClockToggle(){S.settings=S.settings||{};S.settings.homeClock=!homeClockVisible();save();render();toast(S.settings.homeClock?'主屏幕时间和日期已显示':'主屏幕时间和日期已隐藏');}
-function appleHomeCompatEnvironment(){const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
+function appleHomeCompatEnvironment(){const nativePrivate=typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true;if(nativePrivate)return true;const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
 function appleHomeCompatOn(){return !!(S.settings&&S.settings.appleHomeCompat);}
 function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,on=appleHomeCompatEnvironment()&&appleHomeCompatOn();if(root&&root.classList)root.classList.toggle('north-ios-home-safe',on);return on;}
 function appleHomeCompatToggle(){S.settings=S.settings||{};S.settings.appleHomeCompat=!appleHomeCompatOn();applyAppleHomeCompat();save();render();toast(S.settings.appleHomeCompat?(appleHomeCompatEnvironment()?'苹果主屏幕适配已开启':'设置已保存；只会在苹果主屏幕模式生效'):'苹果主屏幕适配已关闭');}
