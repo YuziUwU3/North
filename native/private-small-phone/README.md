@@ -1,6 +1,6 @@
 # 私人「小手机」iOS App
 
-这是私人真实 iOS App 工程，不是远程网页壳。`XcodeProject` 已从用户 2026-08-11 提供的真实 Mac 工程导入，保留主 App、Report、Monitor、Shield 和通知扩展。主界面从安装包内的 `PhoneWeb.bundle/小手机.html` 加载共享网页核心；Family Controls、Device Activity、Managed Settings、Keychain 和后台同步仍由原生 Target/扩展提供。
+这是私人真实 iOS App 工程，不是远程网页壳。`XcodeProject` 已从用户 2026-08-11 提供的真实 Mac 工程导入，保留主 App、Report、Monitor、Shield 和通知扩展。主界面从安装包内的 `PhoneWeb.bundle/index.html` 加载共享网页核心（由 `小手机.html` 自动生成，不维护第二份业务源码）；Family Controls、Device Activity、Managed Settings、Keychain 和后台同步仍由原生 Target/扩展提供。
 
 私人副本沿用真实工程已经签名可用的 Bundle ID、App Group、Apple Team 和扩展 ID，仅把显示名称改为「小手机」。它会替换本人设备上同 Bundle ID 的 North/伴生开发包，因此两者无法同时安装和控制；公开审核包的工程与提交不在这里修改。
 
@@ -21,6 +21,8 @@ node native/private-small-phone/scripts/stage-private-phone-web.mjs native/priva
 ```
 
 输出 `PhoneWeb.bundle`。Xcode 的同步目录会把它作为资源包加入私人主 Target。每次网页核心变更后重新生成；不要直接编辑生成目录。
+
+工程内已提交共享 `PhoneCompanionTest` Scheme。Mac 解压并打开 `.xcodeproj` 后应直接选择真实 iPhone 运行主 App，不再手动创建 Scheme，也不要误选 Report、Monitor、Shield 或通知扩展运行。
 
 ## 当前证据边界
 

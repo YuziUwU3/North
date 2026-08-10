@@ -69,4 +69,51 @@ append_section(
     ],
 )
 
+append_section(
+    "AI开发项目_项目说明文档.docx",
+    "私人 App 首次真机安装与本地网页白屏修复（2026-08-11）",
+    [
+        "私人「小手机」已在真实 iPhone 成功安装，并因沿用 com.qianyi.PhoneCompanionTest 覆盖同 Bundle ID 的旧伴生开发包。原生屏幕时间管理页、既有授权和伴生数据仍可见，说明五个 Target 与原生能力没有因主界面改造丢失。",
+        "私人网页主界面第一次打开为白屏。Xcode 真机日志明确记录 WebPageProxy::maybeInitializeSandboxExtensionHandle: url is not inside resource directory url、Could not create a sandbox extension、Ignoring request to load this main resource because it is outside the sandbox。该问题不是网络失败，也不是用户数据丢失。",
+        "修复方案保持单一共享核心：构建脚本继续复制同一份小手机.html，同时生成只作原生入口的 PhoneWeb.bundle/index.html；WKWebView 从 index.html 的标准化 URL 直接推导父目录，并把同一父目录传给 allowingReadAccessTo，保证主资源在授权目录之内。导航加载失败时改为显示可见诊断页，不再保留无提示白屏。",
+        "用户现有 North备份_2026-08-10.json 已只读校验有效：文件约 4.5 MB，JSON 完整，包含 55 个顶层数据块。备份含聊天、角色、设置及密钥类私人数据，只能用于本次本地迁移；必须先复测主页面成功加载，再预览并导入，原备份不得删除或被空容器覆盖。",
+        "当前完成边界：真机安装和根因取证已完成，白屏修复已进入源码和静态回归；仍须重新生成安装包、在 Mac 编译并二次安装，确认主页面与相对资源全部显示后才能开始数据迁移。",
+    ],
+)
+
+append_section(
+    "AI开发项目_Bug记录模板.docx",
+    "真机根因补充｜WKWebView 本地资源越过沙盒导致白屏（2026-08-11）",
+    [
+        "现象：私人 App 可以安装和进入，右上角原生管理入口可打开完整屏幕时间页面，但内置小手机网页区域全白。原生功能可用而网页不可见，不能误判为网络、Family Controls 授权或备份损坏。",
+        "决定性日志：url is not inside resource directory url；Could not create a sandbox extension for PhoneCompanionTest.app；WebProcessProxy::hasAssumedReadAccessToURL: no access；Ignoring request to load this main resource because it is outside the sandbox。WebKit 在创建网页进程沙盒扩展时拒绝了主文件。",
+        "根因：旧实现分别通过嵌套 Bundle 查询中文主文件和 PhoneWeb.bundle 目录，再交给 loadFileURL。真机 WebKit 计算出的主资源 URL 与读取授权目录不满足同一标准化父子路径约束，因此加载请求在任何 HTML 或 JavaScript 执行前就被拒绝。原错误页使用 about:blank，而导航策略又只允许 file URL，错误页也可能被取消，最终只剩白屏。",
+        "修复：生成 ASCII 入口 index.html；从该入口的 standardizedFileURL 直接调用 deletingLastPathComponent 得到唯一读取目录；loadFileURL 只使用这对同源路径。导航策略允许 about 错误页，并实现 didFail/didFailProvisionalNavigation 可见诊断。",
+        "防回归：专项测试必须同时断言 index.html 被生成、主文件与 readAccessURL 由同一 fileURL 推导、allowingReadAccessTo 使用该目录、about 错误页可加载以及 provisional failure 有诊断处理。最终结论仍以新包真机日志不再出现 outside the sandbox 且首页可见为准。",
+    ],
+)
+
+append_section(
+    "AI开发项目_Bug修改规范.docx",
+    "新增强制规范｜WKWebView 本地资源与沙盒读取范围（2026-08-11 起）",
+    [
+        "WKWebView 加载安装包本地文件时，main file URL 与 allowingReadAccessTo 目录必须从同一个标准化文件 URL 推导；禁止分别通过不同 Bundle、字符串拼接或未经标准化的路径独立计算两者。读取范围只授予资源文件的必要父目录，不得扩大到用户目录或任意外部路径。",
+        "打包入口统一使用 ASCII 文件名 index.html。中文业务源文件仍是小手机.html，构建时复制生成入口，禁止人工维护两份网页源码。打包测试必须确认 index.html、脚本、样式、图片和 vendor 文件同时存在。",
+        "所有本地网页容器必须实现 didFail 和 didFailProvisionalNavigation，并显示不会删除数据的可见诊断页；导航白名单必须允许自身 file URL 与 about 错误页。任何白屏都必须先取得 Xcode/WebKit 原始日志，不能按网络问题盲改。",
+        "Windows 静态测试只能验证路径契约和打包内容。每次修改本地资源加载方式后必须在真实 iPhone 重新安装，检查控制台没有 outside the sandbox、首页立即可见、相对资源完整、原生管理入口可用，再开始备份导入。",
+    ],
+)
+
+append_section(
+    "AI开发项目_新聊天启动说明.docx",
+    "新聊天接手状态｜私人 App 已首装，白屏沙盒修复待二次真机确认（2026-08-11）",
+    [
+        "私人「小手机」已成功安装到真实 iPhone并覆盖同 Bundle ID 的旧伴生包。原生屏幕时间管理页、授权和既有伴生数据仍在；当前不是从头重做，也不允许把方向改回网页链接或公开 North 控制本人设备。",
+        "首装唯一阻塞是私人网页主界面白屏。真实日志已锁定 WKWebView 本地资源沙盒路径不匹配：url is not inside resource directory url / outside the sandbox。禁止把它归因于网络或要求用户重复授权。",
+        "源码已改为 PhoneWeb.bundle/index.html、同源标准化父目录读取权限及可见加载失败页。下一步先运行专项和全量测试、重新打包提交，再让用户在 Mac 用新包覆盖安装；确认网页首页显示后再导入备份。",
+        "用户有效备份 North备份_2026-08-10.json 约 4.5 MB、JSON 完整、55 个顶层数据块。不要在聊天中输出备份内容、密钥或私人消息；不要删除原文件；不要在白屏容器中提前导入。",
+        "二次真机验收顺序：新包覆盖安装；确认首页非白屏和 Xcode 无 outside the sandbox；打开原生管理页确认屏幕时间；导入备份并核对角色/聊天/设置数量；最后再测锁定、回执、前后台和同步稳定性。",
+    ],
+)
+
 print("Private Xcode import maintenance sections updated")

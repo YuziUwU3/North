@@ -61,6 +61,8 @@
 - 2026-08-11 已从用户提供的 `AppleProjects.zip` 取得真实 Mac 工程，确认五个 Target、Team、Bundle ID、App Group、entitlements 和现有 MapKit 实现。私人副本沿用已经签名可用的标识，只修改显示名称；审核工程本身保持不动。
 - 崩溃日志中的 MapKit/VectorKit 后台看门狗已命中真实 `ContentView.swift`：授权定位后，SwiftUI `Map` 在 scene 进入后台时仍常驻。私人副本在 `.inactive` 阶段即移除地图视图，定位采集继续独立运行；必须通过真机前后台回归后才算修复完成。
 - v881 的旧 8 秒竞速使用结构化 `withTaskGroup`，退出作用域仍会等待不响应取消的 DeviceActivity 子任务，不能真正解除“同步中”。私人副本改用不等待输家的 `AsyncStream` 竞速，并在晚到任务写状态前检查取消，禁止超时结果覆盖新快照。
+- 2026-08-11 第一次真机安装已成功覆盖同 Bundle ID 的旧伴生包，原生屏幕时间页面和既有本地数据仍在；私人主界面白屏的 Xcode 真实日志为 `url is not inside resource directory url`、`outside the sandbox`。根因是 WKWebView 主文件 URL 与授予读取权限的目录没有按同一标准化路径生成。修复后构建脚本从共享 `小手机.html` 额外生成只作入口的 `PhoneWeb.bundle/index.html`，原生端从该入口推导唯一父目录并传给 `allowingReadAccessTo`；加载失败必须显示诊断页，禁止再用无提示白屏掩盖资源错误。
+- 用户现有 `North备份_2026-08-10.json` 已只读验证：JSON 完整，约 4.5 MB、55 个顶层数据块。正式导入必须等私人主页面成功加载后再执行，导入前保留原文件并校验，不能拿空白新容器覆盖此备份。
 
 ## 6. 当前实施顺序
 

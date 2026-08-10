@@ -20,6 +20,11 @@ test('private app loads bundled phone resources instead of a remote shell', () =
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'
   );
   assert.match(webView, /Bundle\.main\.url/);
+  assert.match(webView, /appendingPathComponent\("index\.html"/);
+  assert.match(webView, /let readAccessURL = fileURL[\s\S]*deletingLastPathComponent/);
+  assert.match(webView, /allowingReadAccessTo: readAccessURL/);
+  assert.match(webView, /didFailProvisionalNavigation/);
+  assert.match(webView, /url\.scheme == "about"/);
   assert.match(webView, /loadFileURL/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
@@ -38,6 +43,7 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   assert.equal(manifest.entry, '小手机.html');
   assert.ok(manifest.files.includes('app.js'));
   assert.match(staging, /repoRoot/);
+  assert.match(staging, /path\.join\(outputRoot, 'index\.html'\)/);
   assert.doesNotMatch(staging, /writeFile/);
 });
 
@@ -69,6 +75,13 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
+
+  const scheme = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
+  );
+  assert.match(scheme, /BlueprintIdentifier = "E74615C33022636200B3739D"/);
+  assert.match(scheme, /BuildableName = "PhoneCompanionTest\.app"/);
+  assert.match(scheme, /<LaunchAction/);
 });
 
 test('private project removes the live map before background and has a real timeout race', () => {

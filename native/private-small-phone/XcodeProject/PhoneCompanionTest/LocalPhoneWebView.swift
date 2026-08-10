@@ -7,12 +7,31 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         let bridge = PhoneNativeBridge()
+        private var showingLoadFailure = false
 
         func webView(
             _ webView: WKWebView,
             didFinish navigation: WKNavigation!
         ) {
-            bridge.announceReady()
+            if !showingLoadFailure {
+                bridge.announceReady()
+            }
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            didFail navigation: WKNavigation!,
+            withError error: Error
+        ) {
+            showLoadFailure(in: webView, error: error)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            didFailProvisionalNavigation navigation: WKNavigation!,
+            withError error: Error
+        ) {
+            showLoadFailure(in: webView, error: error)
         }
 
         func webView(
@@ -24,12 +43,25 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
-            if url.isFileURL {
+            if url.isFileURL || url.scheme == "about" {
                 decisionHandler(.allow)
             } else {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
             }
+        }
+
+        private func showLoadFailure(
+            in webView: WKWebView,
+            error: Error
+        ) {
+            guard !showingLoadFailure else { return }
+            showingLoadFailure = true
+            print("[SmallPhoneWeb] load failed: \(error.localizedDescription)")
+            webView.loadHTMLString(
+                LocalPhoneWebView.loadFailureHTML,
+                baseURL: nil
+            )
         }
     }
 
@@ -83,23 +115,54 @@ struct LocalPhoneWebView: UIViewRepresentable {
         guard let bundleURL = Bundle.main.url(
             forResource: "PhoneWeb",
             withExtension: "bundle"
-        ),
-        let phoneBundle = Bundle(url: bundleURL),
-        let fileURL = phoneBundle.url(
-            forResource: "小手机",
-            withExtension: "html"
         ) else {
             webView.loadHTMLString(
-                "<meta charset='utf-8'><body style='background:#111;color:white;font-family:-apple-system;padding:24px'>安装包缺少小手机本地资源，请重新生成完整安装包。</body>",
+                Self.missingResourceHTML,
                 baseURL: nil
             )
             return
         }
+
+        let fileURL = bundleURL
+            .appendingPathComponent("index.html", isDirectory: false)
+            .standardizedFileURL
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            webView.loadHTMLString(
+                Self.missingResourceHTML,
+                baseURL: nil
+            )
+            return
+        }
+
+        // WebKit requires the main file URL to be lexically inside the exact
+        // directory granted here. Deriving both from one URL avoids the
+        // "outside the sandbox" rejection seen on the real iPhone.
+        let readAccessURL = fileURL
+            .deletingLastPathComponent()
+            .standardizedFileURL
         webView.loadFileURL(
             fileURL,
-            allowingReadAccessTo: bundleURL
+            allowingReadAccessTo: readAccessURL
         )
     }
+
+    private static let missingResourceHTML = """
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <body style="margin:0;background:#111;color:white;font-family:-apple-system;padding:28px">
+      <h2>小手机资源没有安装完整</h2>
+      <p>请使用重新生成的完整安装包。</p>
+    </body>
+    """
+
+    fileprivate static let loadFailureHTML = """
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <body style="margin:0;background:#111;color:white;font-family:-apple-system;padding:28px">
+      <h2>小手机本地页面没有加载成功</h2>
+      <p>原始数据没有被删除。请保留此页面并把 Xcode 日志发给开发者。</p>
+    </body>
+    """
 
     private static let bridgeBootstrap = """
     (() => {
