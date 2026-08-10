@@ -174,9 +174,10 @@ test('absence battery check is rate limited and cannot invent a shutdown', () =>
   assert.match(app, /runs\.absenceBatteryCount=\(\+runs\.absenceBatteryCount\|\|0\)\+1/);
 });
 
-test('manual unlock alert ignores recent panel commands and records a single delivery', () => {
-  assert.match(app, /old\.locked\|\|app\.locked/);
-  assert.match(app, /x\.action==='unlock'.*2\*60000/);
+test('snapshots cannot manufacture manual unlock authority and explicit events stay single-delivery', () => {
+  assert.doesNotMatch(functionSource('companionApplyServerPayloadV7'), /manual-unlock\|/);
+  assert.match(functionSource('companionApplyServerPayloadV7'), /kind!=='manualUnlock'/);
+  assert.match(app, /companionSetLockIntent\(st,app,false/);
   assert.match(app, /kind:'manualUnlock'/);
   assert.match(app, /这可能是.*手动解开，也可能是系统状态变化，不能直接断言/);
   assert.match(app, /event\.delivered=true/);

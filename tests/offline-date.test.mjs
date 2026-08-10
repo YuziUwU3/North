@@ -54,7 +54,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v879 · 共同生活上下文与苹果全局适配/);
+assert.match(source, /v880 · 持久锁定与当日同步/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -75,10 +75,10 @@ assert.match(source, /S\.settings&&S\.settings\.offHist/);
 assert.match(source, /function offlineCurrentTurnPrompt\(o,note\)/);
 assert.match(source, /function offlineHistoryMessages\(o,limit,opt\)/);
 assert.match(source, /function offlineSharedContext\(c,limit\)/);
-assert.match(source, /msgs\(c\.id\)\.map/);
+assert.match(source, /function offlineOnlineTimelineRows\(c,limit\).*msgs\(c\.id\)\.map/s);
 assert.match(source, /callToCN\(raw\)\|\|raw/);
-assert.match(source, /\.filter\(Boolean\)\.slice\(-limit\)/);
-assert.match(source, /offlineSharedContext\(c,offlineContextLimit\(\)\)/);
+assert.match(source, /\.filter\(Boolean\)\.slice\(-Math\.max\(1,\+limit\|\|1\)\)/);
+assert.match(source, /offlineUnifiedTimelinePrompt\(c,o,offlineContextLimit\(\)\)/);
 assert.match(source, /offlineHistoryMessages\(o,offlineContextLimit\(\),\{deferCurrent:true\}\)/);
 
 const helperStart = source.indexOf("function offlineContextLimit()");
@@ -644,6 +644,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=879/);
+assert.match(html, /app\.js\?v=880/);
 
 console.log("offline date tests passed");

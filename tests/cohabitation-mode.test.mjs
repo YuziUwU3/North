@@ -7,6 +7,13 @@ const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const preview=fs.readFileSync(new URL('../cohabitation-preview.html',import.meta.url),'utf8');
 
+function functionSource(name){
+  const start=source.indexOf('function '+name+'(');
+  assert.ok(start>=0,'missing '+name);
+  const next=source.indexOf('\nfunction ',start+10);
+  return source.slice(start,next<0?source.length:next).trim();
+}
+
 test('co-living stays separate from one-time dates and is opt-in',()=>{
   assert.match(source,/function cohabRoot\(\)/);
   assert.match(source,/S\.cohabitation/);
@@ -91,6 +98,32 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/content=cohabConsumeOnlineState\(content,c,id\)/);
   assert.match(source,/只有你确实已经抵达、说“我到家了\/进门了”时才能切到到家/);
   assert.match(source,/你可以自己选择挂什么简短状态/);
+});
+
+test('WeChat, calls and face-to-face scenes share a speaker-safe chronological anchor',()=>{
+  const sandbox={
+    S:{me:{name:'用户'}},
+    Date,Number,
+    msgs:()=>[
+      {id:'wx1',role:'user',type:'text',content:'你爱我吗？',time:200},
+      {id:'wx2',role:'assistant',type:'text',content:'废话。',time:210}
+    ],
+    msgToText:m=>m.content||'',
+    callToCN:x=>x
+  };
+  const code=['offlineIsUserMsg','offlineIsAssistantMsg','offlinePendingStart','offlineOnlineTimelineRows','offlineSceneTimelineRows','offlineUnifiedTimelineState'].map(functionSource).join('\n');
+  vm.runInNewContext(code+`;const c={id:'c1',name:'角色'},o={startedAt:10,msgs:[
+    {id:'c1',who:'me',text:'改到哪了。',time:100},
+    {id:'c2',who:'ta',text:'你还没回我呢。',time:110},
+    {id:'c3',who:'me',text:'我上一句话说的什么？',time:300}
+  ]};globalThis.timeline=offlineUnifiedTimelineState(c,o,20);`,sandbox);
+  assert.equal(sandbox.timeline.previousUser.text,'你爱我吗？');
+  assert.equal(sandbox.timeline.previousUser.who,'用户');
+  assert.equal(sandbox.timeline.previousRole.text,'废话。');
+  assert.equal(sandbox.timeline.previousRole.who,'角色');
+  assert.equal(sandbox.timeline.current.text,'我上一句话说的什么？');
+  assert.match(source,/若.*问“我上一句说了什么\/刚才微信说了什么”.*不能拿线下较旧输入、你的上一句或旁白代替/);
+  assert.match(source,/function cohabPushMessage\(d,m\).*m\.time=Date\.now\(\)/);
 });
 
 test('co-living memory list supports manual deletion without clearing source chat',()=>{

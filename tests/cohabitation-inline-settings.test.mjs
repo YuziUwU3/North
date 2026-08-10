@@ -73,7 +73,7 @@ test('context, reply route and summary route feed the real common-life model cha
   assert.match(functionSource('cohabSummarize'),/aux=cohabSummaryAux\(c,d\)/);
   assert.match(functionSource('cohabSummarize'),/routeIndex=cohabSummaryRouteIndex\(d\)/);
   assert.match(functionSource('cohabMemoryPrompt'),/cohabSummaryMemoryLimit\(d\)/);
-  assert.match(functionSource('cohabSystem'),/offlineSharedContext\(c,contextLimit\)/);
+  assert.match(functionSource('cohabSystem'),/offlineUnifiedTimelinePrompt\(c,o,contextLimit\)/);
 });
 
 test('common-life summaries stay in their own store and are only retrieved by both model paths',()=>{

@@ -59,4 +59,14 @@ test('Apple compatibility switch uses CSS viewport and safe-area insets only',()
   assert.match(html,/\.north-ios-home-safe \.spybanner\{[^}]*safe-area-inset-top/);
   assert.match(html,/\.north-ios-home-safe \.callscreen\.mini\{[^}]*safe-area-inset-top/);
   assert.match(html,/\.north-ios-home-safe \.cin-nav,html\.north-ios-home-safe \.cin-watch-nav,html\.north-ios-home-safe \.cin-reader-nav,html\.north-ios-home-safe \.dg-nav\{[^}]*safe-area-inset-top/);
+  assert.match(app,/class="nav shop-nav"/);
+  assert.match(app,/class="nav food-nav"/);
+  assert.match(html,/\.north-ios-home-safe \.shop-nav,html\.north-ios-home-safe \.food-nav\{[^}]*safe-area-inset-top/);
+  assert.match(app,/class="dynav dy-safe-nav"/);
+  assert.match(app,/class="dy-feed-back"/);
+  assert.match(html,/\.north-ios-home-safe \.dy-safe-nav\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.dy-feed-back\{[^}]*safe-area-inset-top/);
+  assert.match(app,/class="travel-app"/);
+  assert.match(app,/class="travel-head"/);
+  assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*safe-area-inset-top/);
 });

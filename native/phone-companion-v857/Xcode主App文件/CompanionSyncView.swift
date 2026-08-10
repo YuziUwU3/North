@@ -491,6 +491,7 @@ final class CompanionSyncService: ObservableObject {
     private let dailyLimitsKey = "limit.savedSettings"
     private let tokenKeyPrefix = "limit.token."
     private let lockedLimitTokensKey = "limit.lockedTokens"
+    private let persistentLockLedgerKey = "companion.lock.ledger.v1"
     private let savedTargetKey = "companion.sync.target.v1"
     private let savedDeviceIDKey = "companion.sync.device-id.v1"
     private let geocodeCacheKey = "companion.sync.geocode-cache.v1"
@@ -502,6 +503,9 @@ final class CompanionSyncService: ObservableObject {
 
     private let manualLockStore = ManagedSettingsStore()
     private let dailyLimitStore = ManagedSettingsStore(named: .dailyLimit)
+    private let persistentLockStore = ManagedSettingsStore(
+        named: .init("persistentLockLedger")
+    )
     private let activityCenter = DeviceActivityCenter()
 
     init() {
@@ -525,6 +529,23 @@ final class CompanionSyncService: ObservableObject {
            !savedLockedTokens.isEmpty {
             manualLockStore.shield.applications = savedLockedTokens
         }
+
+        let savedLimitTokens = loadLimitLockedTokens()
+        if dailyLimitStore.shield.applications == nil,
+           !savedLimitTokens.isEmpty {
+            dailyLimitStore.shield.applications = savedLimitTokens
+        }
+
+        var savedLedgerTokens = loadPersistentLockLedger()
+        if savedLedgerTokens.isEmpty, !savedLockedTokens.isEmpty {
+            savedLedgerTokens = savedLockedTokens
+            savePersistentLockLedger(savedLedgerTokens)
+        }
+        if persistentLockStore.shield.applications == nil,
+           !savedLedgerTokens.isEmpty {
+            persistentLockStore.shield.applications = savedLedgerTokens
+        }
+        _ = effectiveLockedTokens()
     }
 
     var lastSyncText: String {
@@ -1076,7 +1097,7 @@ final class CompanionSyncService: ObservableObject {
         controlOnly: Bool = false
     ) async -> [String: Any] {
         let selection = loadSelection()
-        let lockedTokens = manualLockStore.shield.applications ?? []
+        let lockedTokens = effectiveLockedTokens()
         let limitSettings = loadLimitSettings()
 
         let usageByID = Dictionary(
@@ -1185,12 +1206,18 @@ final class CompanionSyncService: ObservableObject {
                 0,
                 Date().timeIntervalSince(report.generatedAt)
             )
+            let usageRevision = Int64(
+                report.generatedAt.timeIntervalSince1970 * 1_000
+            )
             screenTime = [
                 "reportAvailable": true,
                 "reportFresh": reportAge < 180,
                 "schema": report.schema,
                 "requestID": report.requestID,
                 "requestedAt": iso8601(report.requestedAt),
+                "usageDay": usageDay(for: report.generatedAt),
+                "timeZone": TimeZone.current.identifier,
+                "usageRevision": usageRevision,
                 "totalSeconds": report.totalSeconds,
                 "generatedAt": iso8601(report.generatedAt),
                 "reportAppCount": report.apps.count,
@@ -1204,6 +1231,9 @@ final class CompanionSyncService: ObservableObject {
                 "schema": 4,
                 "requestID": "",
                 "requestedAt": "",
+                "usageDay": "",
+                "timeZone": TimeZone.current.identifier,
+                "usageRevision": 0,
                 "totalSeconds": 0,
                 "generatedAt": "",
                 "reportAppCount": 0,
@@ -1413,18 +1443,32 @@ final class CompanionSyncService: ObservableObject {
                 )
             }
             rememberShieldActor(command.actor)
-            let previousTokens = manualLockStore.shield.applications ?? []
-            var tokens = previousTokens
-            tokens.insert(token)
-            manualLockStore.shield.applications = tokens
+            let previousManualTokens =
+                manualLockStore.shield.applications ?? loadLockedTokens()
+            let previousLedgerTokens =
+                persistentLockStore.shield.applications
+                ?? loadPersistentLockLedger()
+            var manualTokens = previousManualTokens
+            var ledgerTokens = previousLedgerTokens
+            manualTokens.insert(token)
+            ledgerTokens.insert(token)
+            manualLockStore.shield.applications = manualTokens
+            persistentLockStore.shield.applications = ledgerTokens
+            saveLockedTokens(manualTokens)
+            savePersistentLockLedger(ledgerTokens)
             try await Task.sleep(nanoseconds: 120_000_000)
-            guard (manualLockStore.shield.applications ?? []).contains(token) else {
-                manualLockStore.shield.applications = previousTokens.isEmpty
+            guard effectiveLockedTokens().contains(token) else {
+                manualLockStore.shield.applications = previousManualTokens.isEmpty
                     ? nil
-                    : previousTokens
+                    : previousManualTokens
+                persistentLockStore.shield.applications =
+                    previousLedgerTokens.isEmpty
+                    ? nil
+                    : previousLedgerTokens
+                saveLockedTokens(previousManualTokens)
+                savePersistentLockLedger(previousLedgerTokens)
                 throw CompanionSyncError.message("系统未确认锁定，未发送成功回执")
             }
-            saveLockedTokens(tokens)
             return "真实 App 已锁定并由系统设置读回确认"
 
         case "unlock":
@@ -1433,17 +1477,48 @@ final class CompanionSyncService: ObservableObject {
                     "屏幕使用时间控制权限不可用，未执行解锁"
                 )
             }
-            let previousTokens = manualLockStore.shield.applications ?? []
-            var tokens = previousTokens
-            tokens.remove(token)
+            let previousManualTokens =
+                manualLockStore.shield.applications ?? loadLockedTokens()
+            let previousLimitTokens =
+                dailyLimitStore.shield.applications
+                ?? loadLimitLockedTokens()
+            let previousLedgerTokens =
+                persistentLockStore.shield.applications
+                ?? loadPersistentLockLedger()
+            var manualTokens = previousManualTokens
+            var limitTokens = previousLimitTokens
+            var ledgerTokens = previousLedgerTokens
+            manualTokens.remove(token)
+            limitTokens.remove(token)
+            ledgerTokens.remove(token)
             manualLockStore.shield.applications =
-                tokens.isEmpty ? nil : tokens
+                manualTokens.isEmpty ? nil : manualTokens
+            dailyLimitStore.shield.applications =
+                limitTokens.isEmpty ? nil : limitTokens
+            persistentLockStore.shield.applications =
+                ledgerTokens.isEmpty ? nil : ledgerTokens
+            saveLockedTokens(manualTokens)
+            saveLimitLockedTokens(limitTokens)
+            savePersistentLockLedger(ledgerTokens)
             try await Task.sleep(nanoseconds: 120_000_000)
-            guard !(manualLockStore.shield.applications ?? []).contains(token) else {
-                manualLockStore.shield.applications = previousTokens
+            guard !effectiveLockedTokens().contains(token) else {
+                manualLockStore.shield.applications =
+                    previousManualTokens.isEmpty
+                    ? nil
+                    : previousManualTokens
+                dailyLimitStore.shield.applications =
+                    previousLimitTokens.isEmpty
+                    ? nil
+                    : previousLimitTokens
+                persistentLockStore.shield.applications =
+                    previousLedgerTokens.isEmpty
+                    ? nil
+                    : previousLedgerTokens
+                saveLockedTokens(previousManualTokens)
+                saveLimitLockedTokens(previousLimitTokens)
+                savePersistentLockLedger(previousLedgerTokens)
                 throw CompanionSyncError.message("系统未确认解锁，未发送成功回执")
             }
-            saveLockedTokens(tokens)
             return "真实 App 已解锁并由系统设置读回确认"
 
         case "limit":
@@ -1510,9 +1585,12 @@ final class CompanionSyncService: ObservableObject {
     private func rebuildDailyLimitMonitoring(
         _ settings: [SavedDailyLimitMirror]
     ) throws {
+        let lockedLimitTokens = loadLimitLockedTokens()
         activityCenter.stopMonitoring([.dailyAppLimits])
-        dailyLimitStore.shield.applications = nil
-        sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
+        if !lockedLimitTokens.isEmpty {
+            dailyLimitStore.shield.applications = lockedLimitTokens
+        }
+        _ = effectiveLockedTokens()
 
         let enabled = settings.filter(\.isEnabled)
         guard !enabled.isEmpty else { return }
@@ -1555,6 +1633,9 @@ final class CompanionSyncService: ObservableObject {
             during: schedule,
             events: events
         )
+        if !lockedLimitTokens.isEmpty {
+            dailyLimitStore.shield.applications = lockedLimitTokens
+        }
     }
 
     private var sharedDefaults: UserDefaults? {
@@ -1593,6 +1674,73 @@ final class CompanionSyncService: ObservableObject {
         if let data = try? JSONEncoder().encode(tokens) {
             UserDefaults.standard.set(data, forKey: lockedAppsKey)
         }
+    }
+
+    private func loadLimitLockedTokens() -> Set<ApplicationToken> {
+        guard let data = sharedDefaults?.data(
+            forKey: lockedLimitTokensKey
+        ),
+        let tokens = try? JSONDecoder().decode(
+            Set<ApplicationToken>.self,
+            from: data
+        ) else {
+            return []
+        }
+        return tokens
+    }
+
+    private func saveLimitLockedTokens(
+        _ tokens: Set<ApplicationToken>
+    ) {
+        if let data = try? JSONEncoder().encode(tokens) {
+            sharedDefaults?.set(data, forKey: lockedLimitTokensKey)
+        }
+    }
+
+    private func loadPersistentLockLedger() -> Set<ApplicationToken> {
+        guard let data = sharedDefaults?.data(
+            forKey: persistentLockLedgerKey
+        ),
+        let tokens = try? JSONDecoder().decode(
+            Set<ApplicationToken>.self,
+            from: data
+        ) else {
+            return []
+        }
+        return tokens
+    }
+
+    private func savePersistentLockLedger(
+        _ tokens: Set<ApplicationToken>
+    ) {
+        if let data = try? JSONEncoder().encode(tokens) {
+            sharedDefaults?.set(data, forKey: persistentLockLedgerKey)
+        }
+    }
+
+    private func effectiveLockedTokens() -> Set<ApplicationToken> {
+        let manualTokens = (manualLockStore.shield.applications ?? [])
+            .union(loadLockedTokens())
+        let limitTokens = (dailyLimitStore.shield.applications ?? [])
+            .union(loadLimitLockedTokens())
+        let ledgerTokens =
+            (persistentLockStore.shield.applications ?? [])
+            .union(loadPersistentLockLedger())
+
+        if !manualTokens.isEmpty,
+           (manualLockStore.shield.applications ?? []) != manualTokens {
+            manualLockStore.shield.applications = manualTokens
+        }
+        if !limitTokens.isEmpty,
+           (dailyLimitStore.shield.applications ?? []) != limitTokens {
+            dailyLimitStore.shield.applications = limitTokens
+        }
+        if !ledgerTokens.isEmpty,
+           (persistentLockStore.shield.applications ?? []) != ledgerTokens {
+            persistentLockStore.shield.applications = ledgerTokens
+        }
+
+        return manualTokens.union(limitTokens).union(ledgerTokens)
     }
 
     private func loadLimitSettings() -> [SavedDailyLimitMirror] {
@@ -1835,6 +1983,15 @@ final class CompanionSyncService: ObservableObject {
 
     private func iso8601(_ date: Date) -> String {
         ISO8601DateFormatter().string(from: date)
+    }
+
+    private func usageDay(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 
     private func setError(_ message: String) {

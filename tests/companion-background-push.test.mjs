@@ -84,7 +84,8 @@ test('full sync processes commands before refreshing heavyweight usage data', ()
 });
 
 test('successful commands are verified and atomically completed with a monotonic snapshot', () => {
-  assert.match(nativeSync, /manualLockStore\.shield\.applications \?\? \[\]/);
+  assert.match(nativeSync, /effectiveLockedTokens\(\)\.contains\(token\)/);
+  assert.match(nativeSync, /persistentLockStore\.shield\.applications/);
   assert.match(nativeSync, /snapshotSequenceKey/);
   assert.match(nativeSync, /"snapshotSequence": nextSnapshotSequence\(\)/);
   assert.match(nativeSync, /try await applyRemoteCommand/);

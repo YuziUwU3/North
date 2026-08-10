@@ -124,7 +124,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v879 · 共同生活上下文与苹果全局适配'/);
+  assert.match(app, /const APP_VER='v880 · 持久锁定与当日同步'/);
 });
 
 test('manual sync sends a device request and schedules server refreshes', () => {
@@ -138,10 +138,10 @@ test('manual sync sends a device request and schedules server refreshes', () => 
 test('control-only wake snapshots preserve last-known dynamic data', () => {
   assert.match(app, /controlOnly=snapshot\.controlOnly===true/);
   assert.match(app, /app\.usedSec=Math\.max\(0,\+old\.usedSec\|\|0\)/);
-  assert.match(app, /st\.screenTimeSec=priorScreenTimeSec/);
-  assert.match(app, /st\.dynamicSync=priorDynamicSync/);
-  assert.match(app, /st\.location=priorLocation/);
-  assert.match(app, /st\.health=controlOnly&&!snapshot\.health\?priorHealth/);
+  assert.match(app, /st\.screenTimeSec=prior\.screenTimeSec/);
+  assert.match(app, /st\.dynamicSync=prior\.dynamicSync/);
+  assert.match(app, /st\.location=prior\.location/);
+  assert.match(app, /st\.health=controlOnly&&!snapshot\.health\?prior\.health/);
 });
 
 test('unbound external apps remain lockable but cannot receive an independent limit', () => {

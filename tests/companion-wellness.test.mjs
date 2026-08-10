@@ -28,7 +28,7 @@ function functionSource(name) {
 test('wellness permissions are privacy scoped and health is off by default', () => {
   const context = vm.createContext({});
   vm.runInContext(`${functionSource('companionDefaultState')}this.value=companionDefaultState();`, context);
-  assert.equal(context.value.schema, 6);
+  assert.equal(context.value.schema, 7);
   assert.equal(context.value.permissions.battery, true);
   assert.equal(context.value.permissions.health, false);
   assert.equal(context.value.battery, null);

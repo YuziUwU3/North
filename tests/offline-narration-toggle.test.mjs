@@ -42,7 +42,7 @@ test('the narration button toggles the existing composer without a modal',()=>{
 
 test('the same send button stores narration or normal dialogue according to the toggle',()=>{
   const send=functionSource('offSay');
-  assert.match(send,/offNarrationMode\(\)\?\{id:uid\(\),who:'旁白',source:'me',text:v\}:\{id:uid\(\),who:'me',text:v\}/);
+  assert.match(send,/offNarrationMode\(\)\?\{id:uid\(\),who:'旁白',source:'me',text:v,time:Date\.now\(\)\}:\{id:uid\(\),who:'me',text:v,time:Date\.now\(\)\}/);
   assert.match(send,/if\(_off\.mode==='cohab'\)cohabPushMessage\(o,item\);else o\.msgs\.push\(item\)/);
   assert.match(send,/!manualReplySceneOn\('offline'\)\)offAI\(\)/);
   assert.match(functionSource('offRender'),/offNarrationDecorate/);

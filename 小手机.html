@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='879';</script>
+<script>window.__NORTH_SHELL_BUILD__='880';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-879';
+  var key='north-sw-reloaded-880';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=879';
+  var url='sw.js?v=880';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -902,6 +902,7 @@ body{background:#000;padding:0;}
 .mt-top{background:#fff}.mt-location{min-width:0;line-height:1.1}.mt-location b{display:block;font-size:15px;max-width:155px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mt-location small{color:#999;font-size:9px}.mt-hero{margin:9px 0 0;padding:13px 13px 12px;border-radius:18px;background:linear-gradient(135deg,#ffd725,#ffbf17);box-shadow:0 8px 20px rgba(255,191,23,.2)}.mt-hello{display:flex;align-items:center;font-size:12px;color:#6d5400;margin-bottom:10px}.mt-hello b{font-size:17px;color:#2a2308;margin-right:6px}.mt-search{display:flex;align-items:center;background:#fff;border:2px solid #222;border-radius:15px;padding-left:10px;height:42px;box-sizing:border-box}.mt-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:13px;color:#222;padding:0 7px}.mt-search button{height:34px;margin-right:2px;border:0;border-radius:11px;background:#222;color:#ffd725;padding:0 15px;font-weight:800;cursor:pointer}.mt-cats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px 6px;background:#fff;border-radius:0 0 18px 18px;padding:17px 8px 14px;margin-bottom:9px}.mt-cat{border:0;background:transparent;color:#444;font-size:10px;cursor:pointer}.mt-cat b{width:43px;height:43px;border-radius:16px;margin:0 auto 5px;display:flex;align-items:center;justify-content:center;font-size:23px;background:linear-gradient(145deg,#fff9dd,#ffed93)}.mt-promise{display:flex;background:#fff;border-radius:13px;padding:9px 6px;margin-bottom:11px;justify-content:space-around;font-size:10px;color:#777}.mt-promise b{color:#ff9d00}.mt-list{display:flex;flex-direction:column;gap:9px}.mt-card{display:flex;background:#fff;border-radius:16px;padding:11px;gap:10px;box-shadow:0 4px 13px rgba(37,38,40,.05)}.mt-logo{width:83px;height:83px;flex:0 0 83px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:43px;position:relative;overflow:hidden}.mt-logo:after{content:"";position:absolute;inset:0;border:1px solid rgba(0,0,0,.04);border-radius:14px}.mt-body{flex:1;min-width:0}.mt-shopname{font-size:15px;font-weight:800;color:#242424;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mt-rating{font-size:10px;color:#777;margin:4px 0}.mt-rating .star{color:#ffad16;font-weight:800}.mt-delivery{float:right;color:#999}.mt-dish{font-size:12px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mt-discount{display:inline-block;margin-top:5px;border:1px solid #ffdfd6;color:#ff5b3a;border-radius:4px;font-size:9px;padding:1px 4px}.mt-bottom{display:flex;align-items:end;margin-top:6px}.mt-price{font-size:18px;font-weight:800;color:#ff5b32}.mt-price small{font-size:10px}.mt-actions{margin-left:auto;display:flex;gap:5px}.mt-actions button{border:0;border-radius:9px;padding:6px 8px;font-size:9px;background:#f1f2f4;color:#555;cursor:pointer}.mt-actions .order{background:#ffd21f;color:#292000;font-weight:800}.mt-extra{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.mt-extra button{border:0;background:#fff8dc;color:#936c00;border-radius:7px;padding:4px 6px;font-size:9px;cursor:pointer}
 /* 抖音 */
 .dynav{flex:0 0 48px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;background:#08090b;color:#fff;border-bottom:.5px solid #202126;}
+.dy-feed-back{position:absolute;top:8px;left:10px;z-index:7;color:#fff;font-size:22px;cursor:pointer;text-shadow:0 1px 4px rgba(0,0,0,.6)}
 .dy-shell{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative;background:#000}.dyfeed{flex:1;overflow-y:auto;scroll-snap-type:y mandatory;background:#000;scrollbar-width:none}.dyfeed::-webkit-scrollbar{display:none}
 .dyvideo{position:relative;height:100%;min-height:100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:flex-end;overflow:hidden;background:#060608;isolation:isolate;}
 .dybg{position:absolute;inset:-8%;background-size:260% 260%;animation:dyflow 10s ease infinite;filter:saturate(.8) brightness(.53);transform:scale(1.12);}
@@ -1187,6 +1188,13 @@ html.north-ios-home-safe .callscreen.video.active .cav{top:calc(54px + env(safe-
 html.north-ios-home-safe .lmhead{top:calc(14px + env(safe-area-inset-top,0px))}
 html.north-ios-home-safe .cin-overlay-top{padding-top:max(42px,env(safe-area-inset-top,0px))}
 html.north-ios-home-safe .cin-top-reveal{top:max(42px,env(safe-area-inset-top,0px))}
+/* v880：明确覆盖上轮遗漏的购物、外卖、抖音首页和云程，不再依赖通用选择器猜测命中。 */
+html.north-ios-home-safe .shop-nav,html.north-ios-home-safe .food-nav{height:calc(46px + env(safe-area-inset-top,0px));flex-basis:calc(46px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px)}
+html.north-ios-home-safe .dy-safe-nav{height:calc(48px + env(safe-area-inset-top,0px));flex-basis:calc(48px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px)}
+html.north-ios-home-safe .dy-feed-back{top:calc(8px + env(safe-area-inset-top,0px))}
+html.north-ios-home-safe .dy-safe-tabs{top:calc(8px + env(safe-area-inset-top,0px))}
+html.north-ios-home-safe .travel-head{padding-top:calc(14px + env(safe-area-inset-top,0px))!important}
+html.north-ios-home-safe .shop-scroll,html.north-ios-home-safe .food-scroll,html.north-ios-home-safe .travel-scroll{scroll-padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(max-height:760px){html.north-ios-home-safe .home-premium-head{height:calc(61px + env(safe-area-inset-top,0px));padding-top:calc(12px + env(safe-area-inset-top,0px))}}
 .cohab-meta{display:grid;grid-template-columns:1fr auto 1fr;justify-content:initial;gap:6px}.cohab-meta time{color:#8b8378;font:8px/1.2 "Songti SC","STSong","Noto Serif SC",serif;white-space:nowrap}.cohab-meta button{justify-self:end}
 .music-app.has-bg:before{z-index:0;background:rgba(0,0,0,.08)}
@@ -1194,7 +1202,7 @@ html.north-ios-home-safe .cin-top-reveal{top:max(42px,env(safe-area-inset-top,0p
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=879">
+<link rel="stylesheet" href="pet-game.css?v=880">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1244,12 +1252,12 @@ html.north-ios-home-safe .cin-top-reveal{top:max(42px,env(safe-area-inset-top,0p
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=879" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=879" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=879" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=879" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=879" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=879" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=879"></script>
+<script src="license-gate.js?v=880" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=880" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=880" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=880" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=880" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=880" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=880"></script>
 </body>
 </html>
