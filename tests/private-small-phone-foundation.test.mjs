@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.6 \(6\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.7 \(7\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -99,8 +99,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 6;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.6;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 7;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.7;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -149,7 +149,7 @@ test('private app keeps device management in Settings and clears stale app badge
   assert.match(notificationService, /content\.badge = nil/);
 });
 
-test('private app commits native speech and leaves keyboard avoidance to WKWebView', () => {
+test('private app continuously rotates native speech and leaves keyboard avoidance to WKWebView', () => {
   const bridge = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'
   );
@@ -174,6 +174,11 @@ test('private app commits native speech and leaves keyboard avoidance to WKWebVi
   assert.match(bridge, /schedulePartialCommit\(transcript\)/);
   assert.match(bridge, /Task\.sleep\(nanoseconds: 1_150_000_000\)/);
   assert.match(bridge, /transcript: self\.latestTranscript,[\s\S]{0,80}isFinal: true/);
+  assert.match(bridge, /rotateRecognition\(afterNanoseconds: 220_000_000\)/);
+  assert.match(bridge, /recognitionGeneration == generation/);
+  assert.match(bridge, /audioEngine\.reset\(\)/);
+  assert.match(bridge, /cleanupCurrentRecognition\(deactivateAudioSession: true\)/);
+  assert.doesNotMatch(bridge, /finishCurrentSession\(\)/);
   assert.match(app, /window\.SmallPhoneNativeSpeech&&window\.SmallPhoneNativeSpeech\.create/);
   assert.match(app, /if\(ev\.results\[i\]\.isFinal\)fin\+=text/);
   assert.match(app, /if\(t\)[\s\S]{0,500}hfHeard\(t\)/);
@@ -183,4 +188,7 @@ test('private app commits native speech and leaves keyboard avoidance to WKWebVi
   assert.doesNotMatch(webView, /window\.scrollTo\(0,0\)/);
   assert.doesNotMatch(html, /north-native-keyboard-open/);
   assert.doesNotMatch(html, /--north-native-keyboard-offset/);
+  assert.match(html, /html\.north-native-app \.callinput:focus-within\{bottom:12px\}/);
+  assert.match(html, /html\.north-native-app \.music-chat-dock:focus-within\{[^}]*position:fixed;[^}]*bottom:8px/);
+  assert.match(html, /\.callscreen\.mini\{[^}]*bottom:auto;[^}]*max-height:58px/);
 });

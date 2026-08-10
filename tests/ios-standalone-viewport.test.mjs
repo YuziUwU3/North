@@ -55,10 +55,10 @@ test('manual safe-area mode is available only to Apple home-screen web apps',()=
   assert.equal(compatOn(false,false),false,'the ordinary browser keeps its existing opt-in behavior');
 });
 
-test('Apple compatibility switch preserves the proven shell and guarantees nonzero safe areas',()=>{
+test('Apple compatibility switch preserves the proven shell and targets the final rendered app headers',()=>{
   assert.match(functionSource('renderSettings'),/苹果主屏幕适配/);
   assert.match(functionSource('renderSettings'),/Safari 浏览器和安卓始终不受影响/);
-  assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:max\(env\(safe-area-inset-bottom,0px\),34px\)\}/);
+  assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:env\(safe-area-inset-bottom,0px\)\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');
   assert.match(html,/\.north-ios-home-safe \.home-premium-head\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.inputbar\{[^}]*var\(--north-ios-home-safe-bottom\)/);
@@ -73,6 +73,10 @@ test('Apple compatibility switch preserves the proven shell and guarantees nonze
   assert.match(app,/class="nav shop-nav"/);
   assert.match(app,/class="nav food-nav"/);
   assert.match(html,/\.north-ios-home-safe \.shop-nav,html\.north-ios-home-safe \.food-nav\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.commerce-top\{[^}]*var\(--north-ios-home-safe-top\)/,'the runtime commerce override must receive the safe-area rule');
+  assert.match(html,/\.north-ios-home-safe \.music-app-head\{[^}]*var\(--north-ios-home-safe-top\)/,'the music home header is independent from music-topbar');
+  assert.match(html,/\.north-ios-home-safe \.dy-topbar\{[^}]*var\(--north-ios-home-safe-top\)/,'the runtime Douyin override must receive the safe-area rule');
+  assert.match(html,/\.north-ios-home-safe \.dynav\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(app,/class="dynav dy-safe-nav"/);
   assert.match(app,/class="dy-feed-back"/);
   assert.match(html,/\.north-ios-home-safe \.dy-safe-nav\{[^}]*var\(--north-ios-home-safe-top\)/);

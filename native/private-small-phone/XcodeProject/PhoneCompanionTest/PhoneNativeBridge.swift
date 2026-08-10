@@ -283,7 +283,12 @@ private final class NativeSpeechRecognitionController {
     private var startToken = UUID()
     private var tapInstalled = false
     private var partialCommitTask: Task<Void, Never>?
+    private var restartTask: Task<Void, Never>?
     private var latestTranscript = ""
+    private var language = "zh-CN"
+    private var recognitionGeneration = UUID()
+    private var isActive = false
+    private var restartFailures = 0
 
     func start(
         sessionID: String,
@@ -295,14 +300,16 @@ private final class NativeSpeechRecognitionController {
         let token = UUID()
         startToken = token
         self.sessionID = sessionID
+        self.language = language
         eventHandler = onEvent
+        isActive = true
 
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             Task { @MainActor in
                 guard let self, self.startToken == token else { return }
                 guard status == .authorized else {
                     completion("speech_permission_denied")
-                    self.reset()
+                    self.stop(notify: false)
                     return
                 }
                 AVAudioApplication.requestRecordPermission { [weak self] allowed in
@@ -310,7 +317,7 @@ private final class NativeSpeechRecognitionController {
                         guard let self, self.startToken == token else { return }
                         guard allowed else {
                             completion("microphone_permission_denied")
-                            self.reset()
+                            self.stop(notify: false)
                             return
                         }
                         do {
@@ -318,7 +325,7 @@ private final class NativeSpeechRecognitionController {
                             completion(nil)
                         } catch {
                             completion("native_speech_start_failed")
-                            self.reset()
+                            self.stop(notify: false)
                         }
                     }
                 }
@@ -328,28 +335,21 @@ private final class NativeSpeechRecognitionController {
 
     func stop(notify: Bool) {
         startToken = UUID()
+        isActive = false
+        recognitionGeneration = UUID()
         partialCommitTask?.cancel()
         partialCommitTask = nil
-        if audioEngine.isRunning {
-            audioEngine.stop()
-        }
-        if tapInstalled {
-            audioEngine.inputNode.removeTap(onBus: 0)
-            tapInstalled = false
-        }
-        request?.endAudio()
-        task?.cancel()
+        restartTask?.cancel()
+        restartTask = nil
+        cleanupCurrentRecognition(deactivateAudioSession: true)
         if notify, !sessionID.isEmpty {
             emit(type: "end")
         }
         reset()
-        try? AVAudioSession.sharedInstance().setActive(
-            false,
-            options: .notifyOthersOnDeactivation
-        )
     }
 
     private func beginRecognition(language: String) throws {
+        guard isActive, !sessionID.isEmpty else { return }
         guard let recognizer = SFSpeechRecognizer(
             locale: Locale(identifier: language)
         ), recognizer.isAvailable else {
@@ -384,10 +384,16 @@ private final class NativeSpeechRecognitionController {
         audioEngine.prepare()
         try audioEngine.start()
 
+        let generation = UUID()
+        recognitionGeneration = generation
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor in
-                guard let self, !self.sessionID.isEmpty else { return }
+                guard let self,
+                      self.isActive,
+                      !self.sessionID.isEmpty,
+                      self.recognitionGeneration == generation else { return }
                 if let result {
+                    self.restartFailures = 0
                     let transcript = result.bestTranscription.formattedString
                     self.latestTranscript = transcript
                     self.emit(
@@ -398,13 +404,12 @@ private final class NativeSpeechRecognitionController {
                     if result.isFinal {
                         self.partialCommitTask?.cancel()
                         self.partialCommitTask = nil
-                        self.finishCurrentSession()
+                        self.rotateRecognition(afterNanoseconds: 220_000_000)
                     } else {
                         self.schedulePartialCommit(transcript)
                     }
                 } else if error != nil {
-                    self.emit(type: "error", error: "recognition_failed")
-                    self.finishCurrentSession()
+                    self.rotateRecognition(afterNanoseconds: 420_000_000)
                 }
             }
         }
@@ -428,13 +433,39 @@ private final class NativeSpeechRecognitionController {
                 transcript: self.latestTranscript,
                 isFinal: true
             )
-            self.finishCurrentSession()
+            self.rotateRecognition(afterNanoseconds: 220_000_000)
         }
     }
 
-    private func finishCurrentSession() {
+    private func rotateRecognition(afterNanoseconds delay: UInt64) {
+        guard isActive, !sessionID.isEmpty else { return }
+        recognitionGeneration = UUID()
         partialCommitTask?.cancel()
         partialCommitTask = nil
+        restartTask?.cancel()
+        restartTask = nil
+        latestTranscript = ""
+        cleanupCurrentRecognition(deactivateAudioSession: true)
+
+        let session = sessionID
+        restartTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
+            guard !Task.isCancelled,
+                  let self,
+                  self.isActive,
+                  self.sessionID == session else { return }
+            do {
+                try self.beginRecognition(language: self.language)
+                self.restartFailures = 0
+            } catch {
+                self.restartFailures += 1
+                let retryDelay = UInt64(min(2_000, 300 + self.restartFailures * 250)) * 1_000_000
+                self.rotateRecognition(afterNanoseconds: retryDelay)
+            }
+        }
+    }
+
+    private func cleanupCurrentRecognition(deactivateAudioSession: Bool) {
         if audioEngine.isRunning {
             audioEngine.stop()
         }
@@ -444,8 +475,15 @@ private final class NativeSpeechRecognitionController {
         }
         request?.endAudio()
         task?.cancel()
-        emit(type: "end")
-        reset()
+        request = nil
+        task = nil
+        audioEngine.reset()
+        if deactivateAudioSession {
+            try? AVAudioSession.sharedInstance().setActive(
+                false,
+                options: .notifyOthersOnDeactivation
+            )
+        }
     }
 
     private func emit(
@@ -472,11 +510,15 @@ private final class NativeSpeechRecognitionController {
     private func reset() {
         partialCommitTask?.cancel()
         partialCommitTask = nil
+        restartTask?.cancel()
+        restartTask = nil
         request = nil
         task = nil
         sessionID = ""
         eventHandler = nil
         latestTranscript = ""
+        language = "zh-CN"
+        restartFailures = 0
     }
 
     private enum NativeSpeechError: Error {
