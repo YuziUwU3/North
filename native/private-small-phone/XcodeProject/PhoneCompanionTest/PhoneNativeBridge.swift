@@ -6,10 +6,11 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 3
+    static let contractVersion = 4
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
+    var callInputFocusChanged: ((Bool) -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
 
     func userContentController(
@@ -52,6 +53,19 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             } catch {
                 reply(requestID: requestID, error: "native_speech_resume_failed")
             }
+        case "speech.rebuild":
+            do {
+                try nativeSpeech.rebuild()
+                reply(requestID: requestID, result: ["rebuilt": true])
+            } catch {
+                reply(requestID: requestID, error: "native_speech_rebuild_failed")
+            }
+        case "ui.callInput.begin":
+            callInputFocusChanged?(true)
+            reply(requestID: requestID, result: ["focused": true])
+        case "ui.callInput.end":
+            callInputFocusChanged?(false)
+            reply(requestID: requestID, result: ["focused": false])
         case "speech.stop", "speech.abort":
             nativeSpeech.stop(notify: false)
             reply(requestID: requestID, result: ["stopped": true])
@@ -385,6 +399,26 @@ private final class NativeSpeechRecognitionController {
         }
     }
 
+    func rebuild() throws {
+        guard isActive, !sessionID.isEmpty else { return }
+        isPaused = true
+        recognitionGeneration = UUID()
+        partialCommitTask?.cancel()
+        partialCommitTask = nil
+        restartTask?.cancel()
+        restartTask = nil
+        latestTranscript = ""
+        cleanupCurrentRecognition(deactivateAudioSession: true)
+        isPaused = false
+        do {
+            try beginRecognition(language: language)
+            restartFailures = 0
+        } catch {
+            isPaused = true
+            throw error
+        }
+    }
+
     private func beginRecognition(language: String) throws {
         guard isActive, !isPaused, !sessionID.isEmpty else { return }
         guard let recognizer = SFSpeechRecognizer(
@@ -506,27 +540,20 @@ private final class NativeSpeechRecognitionController {
     }
 
     private func cleanupCurrentRecognition(deactivateAudioSession: Bool) {
-        guard let engine = audioEngine else {
-            if deactivateAudioSession {
-                try? AVAudioSession.sharedInstance().setActive(
-                    false,
-                    options: .notifyOthersOnDeactivation
-                )
+        if let engine = audioEngine {
+            if engine.isRunning {
+                engine.stop()
             }
-            return
-        }
-        if engine.isRunning {
-            engine.stop()
-        }
-        if tapInstalled {
-            engine.inputNode.removeTap(onBus: 0)
-            tapInstalled = false
+            if tapInstalled {
+                engine.inputNode.removeTap(onBus: 0)
+                tapInstalled = false
+            }
+            engine.reset()
         }
         request?.endAudio()
         task?.cancel()
         request = nil
         task = nil
-        engine.reset()
         audioEngine = nil
         if deactivateAudioSession {
             try? AVAudioSession.sharedInstance().setActive(

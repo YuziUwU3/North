@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='884';</script>
+<script>window.__NORTH_SHELL_BUILD__='885';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-884';
+  var key='north-sw-reloaded-885';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=884';
+  var url='sw.js?v=885';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1211,10 +1211,20 @@ html.north-ios-home-safe .dynav{flex-basis:calc(48px + var(--north-ios-home-safe
    fixed 外壳只填满 WKWebView 自己的可见边界，避免底部黑带；旧浏览器/PWA 不命中。 */
 html.north-native-app .phone{position:fixed;inset:0;width:100%;height:auto;min-height:0;max-height:none}
 html.north-native-app .screen{width:100%;height:100%;min-height:0;max-height:none}
-/* 原生键盘会缩小 WKWebView。输入条始终锚定同一个底边，不能在 focus 前后从
-   150px 突然跳到 12px；挂断区固定放到输入条上方。 */
-html.north-native-app .callscreen.active .callinput{bottom:12px}
-html.north-native-app .callscreen.active .callbtns{bottom:76px}
+/* 原生电话输入采用微信式两态结构：默认只显示“打字说”，点击后在同一个固定底座
+   内展开，发送/收起都不改变整页定位。WKWebView 外层滚动同时由原生桥锁在零点。 */
+html.north-native-app .callscreen.active .callinput-native{position:fixed;left:12px;right:12px;bottom:8px;height:48px;box-sizing:border-box;display:flex;align-items:center;gap:8px;z-index:470;transform:none;transition:none}
+html.north-native-app .callinput-native button{height:44px;box-sizing:border-box;border:0;color:#fff}
+html.north-native-app .callinput-native .call-mic{width:44px;min-width:44px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center}
+html.north-native-app .callinput-native .call-type-open{flex:1;padding:0 17px;border-radius:22px;background:rgba(255,255,255,.17);color:rgba(255,255,255,.72);font-size:15px;font-weight:400;text-align:left}
+html.north-native-app .callinput-native .call-composer{display:none;flex:1;min-width:0;height:44px;align-items:center;gap:7px}
+html.north-native-app .callinput-native.typing .call-mic,html.north-native-app .callinput-native.typing .call-type-open{display:none}
+html.north-native-app .callinput-native.typing .call-composer{display:flex}
+html.north-native-app .callinput-native .call-composer input{height:44px;min-width:0;box-sizing:border-box;border-radius:22px;padding:0 15px;background:rgba(255,255,255,.17);font-size:16px;line-height:44px}
+html.north-native-app .callinput-native .call-collapse{width:38px;min-width:38px;padding:0;border-radius:19px;background:#3a3a40;font-size:25px;line-height:36px}
+html.north-native-app .callinput-native .call-send{min-width:58px;padding:0 12px;border-radius:20px;background:#07c160;font-size:14px}
+html.north-native-app .callscreen.active .callbtns{bottom:70px;transition:none}
+html.north-native-app .callinput-native.typing+.callbtns{opacity:0;pointer-events:none}
 html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;right:18px;bottom:8px;z-index:90;padding:4px 0;background:rgba(17,18,21,.96);border-radius:20px}
 .cohab-meta{display:grid;grid-template-columns:1fr auto 1fr;justify-content:initial;gap:6px}.cohab-meta time{color:#8b8378;font:8px/1.2 "Songti SC","STSong","Noto Serif SC",serif;white-space:nowrap}.cohab-meta button{justify-self:end}
 .music-app.has-bg:before{z-index:0;background:rgba(0,0,0,.08)}
@@ -1222,7 +1232,7 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=884">
+<link rel="stylesheet" href="pet-game.css?v=885">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1272,12 +1282,12 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=884" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=884" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=884" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=884" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=884" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=884" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=884"></script>
+<script src="license-gate.js?v=885" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=885" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=885" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=885" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=885" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=885" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=885"></script>
 </body>
 </html>

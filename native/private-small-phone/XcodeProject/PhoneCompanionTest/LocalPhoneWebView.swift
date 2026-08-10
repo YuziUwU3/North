@@ -8,6 +8,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
         private var showingLoadFailure = false
+        private var callInputFocused = false
+        private var contentOffsetObservation: NSKeyValueObservation?
 
         override init() {
             super.init()
@@ -20,7 +22,45 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         deinit {
+            contentOffsetObservation?.invalidate()
             NotificationCenter.default.removeObserver(self)
+        }
+
+        func bindCallInputStabilizer(to webView: WKWebView) {
+            bridge.callInputFocusChanged = { [weak self, weak webView] focused in
+                guard let self, let webView else { return }
+                self.callInputFocused = focused
+                self.pinOuterWebView(in: webView)
+            }
+            contentOffsetObservation = webView.scrollView.observe(
+                \.contentOffset,
+                options: [.new]
+            ) { [weak self, weak webView] _, _ in
+                DispatchQueue.main.async {
+                    guard let self, self.callInputFocused, let webView else { return }
+                    self.pinOuterWebView(in: webView)
+                }
+            }
+        }
+
+        func unbindCallInputStabilizer() {
+            callInputFocused = false
+            contentOffsetObservation?.invalidate()
+            contentOffsetObservation = nil
+            bridge.callInputFocusChanged = nil
+        }
+
+        private func pinOuterWebView(in webView: WKWebView) {
+            let scrollView = webView.scrollView
+            let target = CGPoint(
+                x: -scrollView.adjustedContentInset.left,
+                y: -scrollView.adjustedContentInset.top
+            )
+            guard abs(scrollView.contentOffset.x - target.x) > 0.5 ||
+                    abs(scrollView.contentOffset.y - target.y) > 0.5 else { return }
+            UIView.performWithoutAnimation {
+                scrollView.setContentOffset(target, animated: false)
+            }
         }
 
         @objc private func deviceOrientationChanged() {
@@ -139,9 +179,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.bounces = false
+        webView.scrollView.alwaysBounceVertical = false
         context.coordinator.bridge.webView = webView
         context.coordinator.bridge.openDeviceManagement =
             onOpenDeviceManagement
+        context.coordinator.bindCallInputStabilizer(to: webView)
         loadBundledPhone(in: webView)
         return webView
     }
@@ -163,6 +206,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         )
         coordinator.bridge.webView = nil
         coordinator.bridge.openDeviceManagement = nil
+        coordinator.unbindCallInputStabilizer()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
     }
@@ -223,7 +267,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.8 (8)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.9 (9)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -322,6 +366,15 @@ struct LocalPhoneWebView: UIViewRepresentable {
             resume() {
               if (!client.__active || !client.__paused) return Promise.resolve();
               return window.SmallPhoneNative.request('speech.resume', {
+                sessionId: client.__sessionId
+              }).then(result => {
+                client.__paused = false;
+                return result;
+              });
+            },
+            rebuild() {
+              if (!client.__active) return Promise.resolve();
+              return window.SmallPhoneNative.request('speech.rebuild', {
                 sessionId: client.__sessionId
               }).then(result => {
                 client.__paused = false;
