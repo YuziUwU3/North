@@ -51,4 +51,12 @@ test('Apple compatibility switch uses CSS viewport and safe-area insets only',()
   assert.match(html,/html\.north-ios-home-safe[^}]*height:100dvh/);
   assert.match(html,/\.north-ios-home-safe \.home-premium-head\{[^}]*safe-area-inset-top/);
   assert.match(html,/\.north-ios-home-safe \.inputbar\{[^}]*safe-area-inset-bottom/);
+  assert.match(html,/\.north-ios-home-safe \.xnav\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.music-topbar\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.smshead\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.dytab\{[^}]*safe-area-inset-bottom/);
+  assert.match(html,/\.north-ios-home-safe \.msgbanner\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.spybanner\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.callscreen\.mini\{[^}]*safe-area-inset-top/);
+  assert.match(html,/\.north-ios-home-safe \.cin-nav,html\.north-ios-home-safe \.cin-watch-nav,html\.north-ios-home-safe \.cin-reader-nav,html\.north-ios-home-safe \.dg-nav\{[^}]*safe-area-inset-top/);
 });

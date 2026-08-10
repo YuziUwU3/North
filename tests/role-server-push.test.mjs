@@ -158,8 +158,11 @@ test('web client opt-in sends bounded memory and recent context', () => {
   assert.match(profile, /recentContext:roleServerPushRecentContext\(c\)/);
   assert.match(profile, /memoryContext:roleServerPushMemoryContext\(c\)/);
   assert.match(profile, /lastUserAt:roleServerPushLastUserAt\(c\)/);
+  assert.match(profile, /enabled:roleServerPushEffectiveEnabled\(c\)/);
   assert.match(profile, /messageMin:min,messageMax:max/);
   assert.match(functionSource('roleServerPushRecentContext'), /slice\(-8000\)/);
+  assert.match(functionSource('roleServerPushRecentContext'), /roleOnlineLiveStateText\(c\)/);
+  assert.match(functionSource('roleServerPushEffectiveEnabled'), /!roleOnlineProactiveBlocked\(c\.id\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /slice\(0,16000\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /memoryList\(c,scope\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /summaryList\(c,scope\)/);
@@ -192,6 +195,8 @@ test('returned role messages are deduplicated and appended to the matching chat'
   const pull = functionSource('roleServerPushPull');
   assert.match(pull, /phone_role_push_pull/);
   assert.match(pull, /getC\(row\.roleId\)/);
+  assert.match(pull, /roleOnlineProactiveBlocked\(c\.id\)/);
+  assert.match(pull, /roleServerPushSyncSoon\(c\.id\)/);
   assert.match(pull, /_rolePushId===row\.id/);
   assert.match(pull, /initiativeRecentlyRepeated\(c\.id,body,24\*3600000\)/);
   assert.match(pull, /roleServerPushParts\(c,body\)/);

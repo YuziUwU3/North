@@ -74,18 +74,32 @@ test('co-living state pauses without deleting and advances work to return home',
 
 test('online and face-to-face activity use a narrow shared status boundary',()=>{
   assert.match(source,/function cohabWechatPrompt\(c,d\)/);
+  assert.match(source,/共同生活\/同居状态/);
+  assert.match(source,/不能拿来否定同居/);
+  assert.match(source,/不许说“最近一次见面是某天”“还在异国恋\/分居”“等你落地\/改签机票”/);
+  assert.match(source,/roleOnlineLiveStateText\(c\)/);
   assert.match(source,/仅在“约会中同步到线上”开关开启时生效/);
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
   assert.match(source,/function offlineFocusActive\(\)\{if\(typeof cohabSceneActive==='function'&&cohabSceneActive\(\)\)return true/);
   assert.match(source,/function incomingCall\(id,kind,opt\)\{if\(offlineFocusActive\(\)\)return false;if\(cohabOnlineQuiet\(id\)\)return false/);
-  assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|offlineFocusActive\(\)\|\|cohabOnlineQuiet\(id\)/);
+  assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|roleOnlineProactiveBlocked\(id\)/);
+  assert.match(source,/function roleOnlineProactiveBlocked\(id\)\{return !!\(\(typeof offlineFocusActive==='function'&&offlineFocusActive\(\)\)\|\|\(typeof cohabOnlineQuiet==='function'&&cohabOnlineQuiet\(id\)\)\);\}/);
   assert.match(source,/去微信联系TA吧/);
   assert.match(source,/function cohabConsumeOnlineState\(text,c,id\)/);
   assert.match(source,/function cohabInferOnlineState\(text,id,d\)/);
   assert.match(source,/content=cohabConsumeOnlineState\(content,c,id\)/);
   assert.match(source,/只有你确实已经抵达、说“我到家了\/进门了”时才能切到到家/);
   assert.match(source,/你可以自己选择挂什么简短状态/);
+});
+
+test('co-living memory list supports manual deletion without clearing source chat',()=>{
+  assert.match(source,/function cohabMemoryOpen\(id\)/);
+  assert.match(source,/function cohabMemoryDelete\(id,key\)/);
+  assert.match(source,/只删除这条总结，不会删除共同生活原聊天/);
+  assert.match(source,/function cohabMemoryClear\(id\)/);
+  assert.match(source,/只清空共同生活总结，不会删除原聊天、微信或单次线下约会/);
+  assert.match(source,/onclick="cohabMemoryDelete\('\$\{id\}','\$\{key\}'\)"/);
 });
 
 test('co-living UI exposes persistent status, return notice and test controls',()=>{
