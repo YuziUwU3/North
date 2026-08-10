@@ -42,6 +42,16 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "speech.start":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performSpeechStart(requestID: requestID, arguments: arguments)
+        case "speech.pause":
+            nativeSpeech.pause()
+            reply(requestID: requestID, result: ["paused": true])
+        case "speech.resume":
+            do {
+                try nativeSpeech.resume()
+                reply(requestID: requestID, result: ["resumed": true])
+            } catch {
+                reply(requestID: requestID, error: "native_speech_resume_failed")
+            }
         case "speech.stop", "speech.abort":
             nativeSpeech.stop(notify: false)
             reply(requestID: requestID, result: ["stopped": true])
@@ -275,7 +285,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
 
 @MainActor
 private final class NativeSpeechRecognitionController {
-    private let audioEngine = AVAudioEngine()
+    private var audioEngine: AVAudioEngine?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var sessionID = ""
@@ -288,6 +298,7 @@ private final class NativeSpeechRecognitionController {
     private var language = "zh-CN"
     private var recognitionGeneration = UUID()
     private var isActive = false
+    private var isPaused = false
     private var restartFailures = 0
 
     func start(
@@ -303,6 +314,7 @@ private final class NativeSpeechRecognitionController {
         self.language = language
         eventHandler = onEvent
         isActive = true
+        isPaused = false
 
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             Task { @MainActor in
@@ -336,6 +348,7 @@ private final class NativeSpeechRecognitionController {
     func stop(notify: Bool) {
         startToken = UUID()
         isActive = false
+        isPaused = false
         recognitionGeneration = UUID()
         partialCommitTask?.cancel()
         partialCommitTask = nil
@@ -348,8 +361,32 @@ private final class NativeSpeechRecognitionController {
         reset()
     }
 
+    func pause() {
+        guard isActive, !isPaused else { return }
+        isPaused = true
+        recognitionGeneration = UUID()
+        partialCommitTask?.cancel()
+        partialCommitTask = nil
+        restartTask?.cancel()
+        restartTask = nil
+        latestTranscript = ""
+        cleanupCurrentRecognition(deactivateAudioSession: true)
+    }
+
+    func resume() throws {
+        guard isActive, isPaused, !sessionID.isEmpty else { return }
+        isPaused = false
+        do {
+            try beginRecognition(language: language)
+            restartFailures = 0
+        } catch {
+            isPaused = true
+            throw error
+        }
+    }
+
     private func beginRecognition(language: String) throws {
-        guard isActive, !sessionID.isEmpty else { return }
+        guard isActive, !isPaused, !sessionID.isEmpty else { return }
         guard let recognizer = SFSpeechRecognizer(
             locale: Locale(identifier: language)
         ), recognizer.isAvailable else {
@@ -368,7 +405,9 @@ private final class NativeSpeechRecognitionController {
         request.shouldReportPartialResults = true
         self.request = request
 
-        let input = audioEngine.inputNode
+        let engine = AVAudioEngine()
+        audioEngine = engine
+        let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw NativeSpeechError.noAudioInput
@@ -381,8 +420,8 @@ private final class NativeSpeechRecognitionController {
             request.append(buffer)
         }
         tapInstalled = true
-        audioEngine.prepare()
-        try audioEngine.start()
+        engine.prepare()
+        try engine.start()
 
         let generation = UUID()
         recognitionGeneration = generation
@@ -438,7 +477,7 @@ private final class NativeSpeechRecognitionController {
     }
 
     private func rotateRecognition(afterNanoseconds delay: UInt64) {
-        guard isActive, !sessionID.isEmpty else { return }
+        guard isActive, !isPaused, !sessionID.isEmpty else { return }
         recognitionGeneration = UUID()
         partialCommitTask?.cancel()
         partialCommitTask = nil
@@ -453,6 +492,7 @@ private final class NativeSpeechRecognitionController {
             guard !Task.isCancelled,
                   let self,
                   self.isActive,
+                  !self.isPaused,
                   self.sessionID == session else { return }
             do {
                 try self.beginRecognition(language: self.language)
@@ -466,18 +506,28 @@ private final class NativeSpeechRecognitionController {
     }
 
     private func cleanupCurrentRecognition(deactivateAudioSession: Bool) {
-        if audioEngine.isRunning {
-            audioEngine.stop()
+        guard let engine = audioEngine else {
+            if deactivateAudioSession {
+                try? AVAudioSession.sharedInstance().setActive(
+                    false,
+                    options: .notifyOthersOnDeactivation
+                )
+            }
+            return
+        }
+        if engine.isRunning {
+            engine.stop()
         }
         if tapInstalled {
-            audioEngine.inputNode.removeTap(onBus: 0)
+            engine.inputNode.removeTap(onBus: 0)
             tapInstalled = false
         }
         request?.endAudio()
         task?.cancel()
         request = nil
         task = nil
-        audioEngine.reset()
+        engine.reset()
+        audioEngine = nil
         if deactivateAudioSession {
             try? AVAudioSession.sharedInstance().setActive(
                 false,
@@ -519,6 +569,7 @@ private final class NativeSpeechRecognitionController {
         latestTranscript = ""
         language = "zh-CN"
         restartFailures = 0
+        isPaused = false
     }
 
     private enum NativeSpeechError: Error {

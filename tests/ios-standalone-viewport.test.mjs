@@ -69,6 +69,8 @@ test('Apple compatibility switch preserves the proven shell and targets the fina
   assert.match(html,/\.north-ios-home-safe \.msgbanner\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.spybanner\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.callscreen\.mini\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/\.north-ios-home-safe \.nav\.cohab-wx-nav\{[^}]*height:calc\(56px \+ var\(--north-ios-home-safe-top\)\)!important/,'the co-living WeChat header must not compress its safe area');
+  assert.match(html,/\.north-ios-home-safe \.callscreen\.mini \.cav\{margin:0!important\}/,'the mini-call avatar must override the full-screen call inset');
   assert.match(html,/\.north-ios-home-safe \.cin-nav,html\.north-ios-home-safe \.cin-watch-nav,html\.north-ios-home-safe \.cin-reader-nav,html\.north-ios-home-safe \.dg-nav\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(app,/class="nav shop-nav"/);
   assert.match(app,/class="nav food-nav"/);

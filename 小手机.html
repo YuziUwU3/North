@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='883';</script>
+<script>window.__NORTH_SHELL_BUILD__='884';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-883';
+  var key='north-sw-reloaded-884';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=883';
+  var url='sw.js?v=884';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1183,6 +1183,12 @@ html.north-ios-home-safe .msgbanner{top:calc(8px + var(--north-ios-home-safe-top
 html.north-ios-home-safe .spybanner{top:calc(42px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .callscreen.mini{top:calc(44px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .callscreen .cav{margin-top:calc(88px + var(--north-ios-home-safe-top))}
+/* 微信共同生活顶栏本身用 !important 固定为 56px；必须在同一优先级下把安全区
+   加回总高度，否则标题、状态胶囊和返回键会被压进系统状态栏。迷你通话头像也不能
+   继承全屏通话的安全区上边距。 */
+html.north-ios-home-safe .nav.cohab-wx-nav{height:calc(56px + var(--north-ios-home-safe-top))!important;flex-basis:calc(56px + var(--north-ios-home-safe-top))!important;padding-top:var(--north-ios-home-safe-top)}
+html.north-ios-home-safe .callscreen.mini{height:58px!important;max-height:58px!important;box-sizing:border-box}
+html.north-ios-home-safe .callscreen.mini .cav{margin:0!important}
 html.north-ios-home-safe .callscreen.video.active .cav{top:calc(54px + var(--north-ios-home-safe-top));margin-top:0}
 html.north-ios-home-safe .lmhead{top:calc(14px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .cin-overlay-top{padding-top:max(42px,var(--north-ios-home-safe-top))}
@@ -1194,7 +1200,7 @@ html.north-ios-home-safe .dy-feed-back{top:calc(8px + var(--north-ios-home-safe-
 html.north-ios-home-safe .dy-safe-tabs{top:calc(8px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .travel-head{padding-top:calc(14px + var(--north-ios-home-safe-top))!important}
 html.north-ios-home-safe .shop-scroll,html.north-ios-home-safe .food-scroll,html.north-ios-home-safe .travel-scroll{scroll-padding-bottom:var(--north-ios-home-safe-bottom)}
-/* v883：实际商城/外卖/抖音由 commerce-ui.js 在运行时替换，旧规则命中的是已被替换的占位顶栏。
+/* v884：实际商城/外卖/抖音由 commerce-ui.js 在运行时替换，旧规则命中的是已被替换的占位顶栏。
    这里直接覆盖最终渲染出的顶栏；音乐首页同样使用自己的 head，不再靠通用 nav 推断。 */
 html.north-ios-home-safe .commerce-top{flex-basis:calc(52px + var(--north-ios-home-safe-top));height:calc(52px + var(--north-ios-home-safe-top));padding-top:var(--north-ios-home-safe-top)}
 html.north-ios-home-safe .music-app-head{height:calc(62px + var(--north-ios-home-safe-top));padding-top:calc(8px + var(--north-ios-home-safe-top))}
@@ -1205,8 +1211,10 @@ html.north-ios-home-safe .dynav{flex-basis:calc(48px + var(--north-ios-home-safe
    fixed 外壳只填满 WKWebView 自己的可见边界，避免底部黑带；旧浏览器/PWA 不命中。 */
 html.north-native-app .phone{position:fixed;inset:0;width:100%;height:auto;min-height:0;max-height:none}
 html.north-native-app .screen{width:100%;height:100%;min-height:0;max-height:none}
-/* 原生键盘已经会缩小 WKWebView：聚焦时只贴住新的可见底边，禁止再叠加网页时代的 150px 偏移。 */
-html.north-native-app .callinput:focus-within{bottom:12px}
+/* 原生键盘会缩小 WKWebView。输入条始终锚定同一个底边，不能在 focus 前后从
+   150px 突然跳到 12px；挂断区固定放到输入条上方。 */
+html.north-native-app .callscreen.active .callinput{bottom:12px}
+html.north-native-app .callscreen.active .callbtns{bottom:76px}
 html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;right:18px;bottom:8px;z-index:90;padding:4px 0;background:rgba(17,18,21,.96);border-radius:20px}
 .cohab-meta{display:grid;grid-template-columns:1fr auto 1fr;justify-content:initial;gap:6px}.cohab-meta time{color:#8b8378;font:8px/1.2 "Songti SC","STSong","Noto Serif SC",serif;white-space:nowrap}.cohab-meta button{justify-self:end}
 .music-app.has-bg:before{z-index:0;background:rgba(0,0,0,.08)}
@@ -1214,7 +1222,7 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=883">
+<link rel="stylesheet" href="pet-game.css?v=884">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1264,12 +1272,12 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=883" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=883" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=883" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=883" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=883" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=883" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=883"></script>
+<script src="license-gate.js?v=884" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=884" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=884" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=884" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=884" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=884" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=884"></script>
 </body>
 </html>

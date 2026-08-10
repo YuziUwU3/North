@@ -223,7 +223,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.7 (7)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.8 (8)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -275,6 +275,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         if (payload.type === 'end' || payload.type === 'error') {
           speechClients.delete(payload.sessionId);
           client.__active = false;
+          client.__paused = false;
           if (typeof client.onend === 'function') client.onend();
         }
       };
@@ -288,10 +289,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
             onerror: null,
             onend: null,
             __active: false,
+            __paused: false,
             __sessionId: '',
             start() {
               if (client.__active) return;
               client.__active = true;
+              client.__paused = false;
               client.__sessionId = `speech-${Date.now()}-${++sequence}`;
               speechClients.set(client.__sessionId, client);
               window.SmallPhoneNative.request('speech.start', {
@@ -306,10 +309,30 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 if (typeof client.onend === 'function') client.onend();
               });
             },
+            pause() {
+              if (!client.__active || client.__paused) return Promise.resolve();
+              client.__paused = true;
+              return window.SmallPhoneNative.request('speech.pause', {
+                sessionId: client.__sessionId
+              }).catch(error => {
+                client.__paused = false;
+                throw error;
+              });
+            },
+            resume() {
+              if (!client.__active || !client.__paused) return Promise.resolve();
+              return window.SmallPhoneNative.request('speech.resume', {
+                sessionId: client.__sessionId
+              }).then(result => {
+                client.__paused = false;
+                return result;
+              });
+            },
             stop() {
               if (!client.__active) return;
               const sessionId = client.__sessionId;
               client.__active = false;
+              client.__paused = false;
               speechClients.delete(sessionId);
               window.SmallPhoneNative.request('speech.stop', { sessionId }).catch(() => {});
               if (typeof client.onend === 'function') client.onend();
@@ -318,6 +341,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
               if (!client.__active) return;
               const sessionId = client.__sessionId;
               client.__active = false;
+              client.__paused = false;
               speechClients.delete(sessionId);
               window.SmallPhoneNative.request('speech.abort', { sessionId }).catch(() => {});
               if (typeof client.onend === 'function') client.onend();

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='883'){
+if(window.__NORTH_SHELL_BUILD__!=='884'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v883 · 连续语音与双入口适配修复';
+const APP_VER='v884 · 原生语音会话与微信安全区修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1392,7 +1392,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=883';
+  const url='sw.js?v=884';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -10418,6 +10418,8 @@ function callHFStart(){audioMicRouteCancel();const sr=makeSR();if(!sr){toast('�
   sr.onend=()=>{if(_callHF)setTimeout(hfRestart,300);};/* 只有系统自己把识别结束了才重启(少数情况),正常一轮一轮不重启 */
   try{sr.start();_audioMicGranted=true;}catch(e){}}
 function hfRestart(){if(!_callHF||!_call)return;try{_callSR&&_callSR.start();}catch(e){}}
+async function callHFPauseForRoleAudio(){if(!_callHF||!_callSR||typeof _callSR.pause!=='function')return false;for(let i=0;i<2;i++){try{await _callSR.pause();return true;}catch(e){if(i===0)await sleep(160);}}return false;}
+async function callHFResumeAfterRoleAudio(sess){if(!_callHF||!_call||_call.session!==sess||!_callSR)return false;if(typeof _callSR.resume!=='function'){hfRestart();return false;}for(let i=0;i<3;i++){try{await _callSR.resume();return true;}catch(e){await sleep(220+i*180);}}if(_callHF&&_call&&_call.session===sess){callHFStop();callHFStart();return!!_callHF;}return false;}
 function callHFStop(){_callHF=false;_callHFBusy=false;_hfIgnoreUntil=0;_callHFLastFinal='';_callHFLastFinalAt=0;_callHFSawInterim=false;try{if(_callSR){_callSR.onend=null;_callSR.onresult=null;_callSR.onerror=null;if(typeof _callSR.abort==='function')_callSR.abort();else _callSR.stop();}}catch(e){}_callSR=null;audioMicRouteCancel();audioMarkWakeRequired();}
 async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他回复时不停识别、只忽略结果，所以不会有开关麦克风的声音 */
   const id=_call.id,um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};if(!wechatNaturalOn())suspicionOnUserMsg(id,um);msgs(id).push(um);save();
@@ -10621,7 +10623,7 @@ function callFailureText(e){const status=+(e&&e.status||0),source=String(e&&e.so
 async function callAI(sysNote,opts){if(!_call)return;
   if(_callBusy){_callPend={sysNote,opts};return;}/* 上一轮还在说话/生成→排队，等它说完再接着，绝不并行(否则两轮消息叠一起、特别快) */
   _callBusy=true;
-  const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;
+  const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;let hfAudioPaused=false;
   try{const hist=chatHistoryWithDateBoundaries(lastRounds(msgs(c.id),S.settings.hist||12),m=>({role:m.type==='sys'?'system':m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'system',content:sysNote});
     const _lang=ttsContentLang(c);const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
@@ -10711,11 +10713,11 @@ async function callAI(sysNote,opts){if(!_call)return;
       const spoken=_speechRows[_ui].spoken;
       const subText=u.orig+(u.trans?'\n'+u.trans:'');
       if(isAction){_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(1150,Array.from(u.orig).length*105),760));continue;}
-      if(_call.replyVoice&&!c.muted&&spoken){let shown=false;const show=()=>{if(shown)return;shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}};const off=phPhoneVoiceOffset();await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:_speechRows[_ui].interjection,prepared:_speechJobs[_ui],cacheMessage:video?callMsg:null,onAudioStart:()=>{if(off)setTimeout(show,off);else show();}});if(!shown&&_call&&_call.session===sess){show();await sleep(callPaceMs(620,420));}const hasNextSpoken=_speechRows.slice(_ui+1).some(x=>x&&x.spoken);if(hasNextSpoken&&voicePauseMs(c)>0)await sleep(voicePauseMs(c));}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(900,u.orig.length*72),620));}}
+      if(_call.replyVoice&&!c.muted&&spoken){if(!hfAudioPaused)hfAudioPaused=await callHFPauseForRoleAudio();let shown=false;const show=()=>{if(shown)return;shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}};const off=phPhoneVoiceOffset();await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:_speechRows[_ui].interjection,prepared:_speechJobs[_ui],cacheMessage:video?callMsg:null,onAudioStart:()=>{if(off)setTimeout(show,off);else show();}});if(!shown&&_call&&_call.session===sess){show();await sleep(callPaceMs(620,420));}const hasNextSpoken=_speechRows.slice(_ui+1).some(x=>x&&x.spoken);if(hasNextSpoken&&voicePauseMs(c)>0)await sleep(voicePauseMs(c));}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(900,u.orig.length*72),620));}}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if((wantHang||wantWxLogin||wantRemoteControl)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':wantRemoteControl?'remotecontrol':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);else if(wantRemoteControl)setTimeout(()=>{if(!(typeof _call!=='undefined'&&_call))remoteControlRequest(cid||c.id);},1400);},900);
   }catch(e){try{console.warn('callAI failed',e);}catch(_){}if(_call){_call.lastError={at:Date.now(),message:String(e&&e.message||e||'unknown').slice(0,160)};_call.sub={who:'them',text:callFailureText(e)};updateCallSub();}}
-  finally{_hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1500);_callBusy=false;
+  finally{_hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1500);if(hfAudioPaused)await callHFResumeAfterRoleAudio(sess);_callBusy=false;
     if(_callPend&&_call&&_call.state==='active'){const p=_callPend;_callPend=null;setTimeout(()=>{if(_call&&_call.state==='active')callAI(p.sysNote,p.opts);},700);}
     else _callPend=null;}}
 
