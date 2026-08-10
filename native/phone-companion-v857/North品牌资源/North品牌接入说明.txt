@@ -1,0 +1,32 @@
+North 伴生 App 品牌接入说明
+日期：2026-08-10
+
+本资源包只修改主 App 的显示名称和 App 图标，不修改以下内容：
+- Target 名称 PhoneCompanionTest
+- Bundle Identifier
+- App Groups
+- Family Controls、HealthKit、定位和推送 Entitlements
+- 锁定、解锁、限额、同步和后台唤醒逻辑
+
+一、设置软件显示名称
+1. 在 Xcode 左侧选择 PhoneCompanionTest 工程。
+2. 选择主 App Target（不要选择 Monitor、Report、Shield 等扩展 Target）。
+3. 打开 General → Identity，把 Display Name 改成 North。
+4. 如果当前 Xcode 没有 Display Name 输入框：打开主 App Target → Info，新增或修改 Bundle display name，值填写 North。
+5. 不要修改 Product Bundle Identifier，也不需要重命名 Target、Swift 文件或扩展。
+
+二、接入猫咪图标
+1. 打开主 App 的 Assets.xcassets。
+2. 如果现有 AppIcon 是空的，可以删除空的 AppIcon；不要删除其他颜色或图片资源。
+3. 把本目录的 NorthAppIcon.appiconset 拖入 Assets.xcassets。
+4. 选中主 App Target → General → App Icons and Launch Screen，把 App Icons Source 设为 NorthAppIcon。
+5. 不要给图片手工添加圆角；iOS 会在桌面自动裁切圆角。
+
+三、验证
+1. 把主 App 的 Build 号加 1，执行 Product → Clean Build Folder 后重新 Build。
+2. 直接覆盖安装到原 iPhone，确认桌面显示 North 和猫咪图标。
+3. 确认原配对状态、已选择 App、屏幕使用时间授权及锁定/解锁仍正常。
+4. 如果桌面暂时显示旧图标，先重启 iPhone 或再次覆盖安装新 Build；在确认配对凭据已备份前，不要为了刷新图标直接删除 App。
+
+四、TestFlight
+上传 TestFlight 时继续使用原 Bundle Identifier 和已获批的分发权限。App Store Connect 会从 NorthAppIcon 读取 1024×1024 图标；显示名称应与 Xcode 的 North 保持一致。
