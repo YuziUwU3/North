@@ -63,6 +63,7 @@
 - v881 的旧 8 秒竞速使用结构化 `withTaskGroup`，退出作用域仍会等待不响应取消的 DeviceActivity 子任务，不能真正解除“同步中”。私人副本改用不等待输家的 `AsyncStream` 竞速，并在晚到任务写状态前检查取消，禁止超时结果覆盖新快照。
 - 2026-08-11 第一次真机安装已成功覆盖同 Bundle ID 的旧伴生包，原生屏幕时间页面和既有本地数据仍在；私人主界面白屏的 Xcode 真实日志为 `url is not inside resource directory url`、`outside the sandbox`。根因是 WKWebView 主文件 URL 与授予读取权限的目录没有按同一标准化路径生成。修复后构建脚本从共享 `小手机.html` 额外生成只作入口的 `PhoneWeb.bundle/index.html`，原生端从该入口推导唯一父目录并传给 `allowingReadAccessTo`；加载失败必须显示诊断页，禁止再用无提示白屏掩盖资源错误。
 - 用户现有 `North备份_2026-08-10.json` 已只读验证：JSON 完整，约 4.5 MB、55 个顶层数据块。正式导入必须等私人主页面成功加载后再执行，导入前保留原文件并校验，不能拿空白新容器覆盖此备份。
+- 私人 1.0.5 (5) 候选把话筒转字幕接入 iOS Speech/AVAudioEngine 原生桥，按原生键盘 frame 与 visualViewport 的差值修复通话和音乐输入栏，清除共享推送造成的固定假角标，并把真实设备管理入口限制在设置页。公开 North 仍保持 v881；这些候选能力必须经过真机授权、转写、键盘和角标验收后才能称为完成。
 
 ## 6. 当前实施顺序
 

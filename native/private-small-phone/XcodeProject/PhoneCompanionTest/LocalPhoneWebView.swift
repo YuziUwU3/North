@@ -5,7 +5,7 @@ import WebKit
 struct LocalPhoneWebView: UIViewRepresentable {
     let onOpenDeviceManagement: () -> Void
 
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
         private var showingLoadFailure = false
 
@@ -15,6 +15,18 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 self,
                 selector: #selector(deviceOrientationChanged),
                 name: UIDevice.orientationDidChangeNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(keyboardFrameChanged(_:)),
+                name: UIResponder.keyboardWillChangeFrameNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(keyboardWillHide(_:)),
+                name: UIResponder.keyboardWillHideNotification,
                 object: nil
             )
         }
@@ -31,6 +43,33 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
         }
 
+        @objc private func keyboardFrameChanged(_ notification: Notification) {
+            guard let webView = bridge.webView,
+                  let screenFrame = notification.userInfo?[
+                      UIResponder.keyboardFrameEndUserInfoKey
+                  ] as? CGRect else {
+                return
+            }
+            let frame = webView.convert(screenFrame, from: nil)
+            let overlap = max(0, webView.bounds.maxY - frame.minY)
+            updateKeyboard(in: webView, height: overlap)
+        }
+
+        @objc private func keyboardWillHide(_ notification: Notification) {
+            guard let webView = bridge.webView else { return }
+            updateKeyboard(in: webView, height: 0)
+        }
+
+        private func updateKeyboard(in webView: WKWebView, height: CGFloat) {
+            let safeHeight = max(0, height)
+            let script = """
+            window.__smallPhoneNativeKeyboard && window.__smallPhoneNativeKeyboard({
+              height: \(safeHeight), visible: \(safeHeight > 0)
+            });
+            """
+            webView.evaluateJavaScript(script)
+        }
+
         func webView(
             _ webView: WKWebView,
             didFinish navigation: WKNavigation!
@@ -39,6 +78,19 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 updateSafeArea(in: webView)
                 bridge.announceReady()
             }
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+            initiatedByFrame frame: WKFrameInfo,
+            type: WKMediaCaptureType,
+            decisionHandler: @escaping (WKPermissionDecision) -> Void
+        ) {
+            let bundledPage = webView.url?.isFileURL == true
+            decisionHandler(
+                bundledPage && type == .microphone ? .grant : .deny
+            )
         }
 
         func updateSafeArea(in webView: WKWebView) {
@@ -124,6 +176,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         context.coordinator.bridge.webView = webView
         context.coordinator.bridge.openDeviceManagement =
@@ -150,6 +203,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         coordinator.bridge.webView = nil
         coordinator.bridge.openDeviceManagement = nil
         webView.navigationDelegate = nil
+        webView.uiDelegate = nil
     }
 
     private func loadBundledPhone(in webView: WKWebView) {
@@ -208,7 +262,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.4 (4)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.5 (5)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -222,8 +276,29 @@ struct LocalPhoneWebView: UIViewRepresentable {
         root.style.setProperty('--north-native-safe-left', safe(payload && payload.left, 'safe-area-inset-left'));
         root.style.setProperty('--north-native-safe-right', safe(payload && payload.right, 'safe-area-inset-right'));
       };
+      const nativeKeyboardBaselineHeight = Math.max(
+        window.innerHeight || 0,
+        document.documentElement && document.documentElement.clientHeight || 0
+      );
+      window.__smallPhoneNativeKeyboard = payload => {
+        const height = Math.max(0, Number(payload && payload.height) || 0);
+        const viewport = window.visualViewport;
+        const visibleHeight = viewport
+          ? Math.max(0, Number(viewport.height) || 0)
+          : Math.max(0, window.innerHeight || 0);
+        const visibleTop = viewport ? Math.max(0, Number(viewport.offsetTop) || 0) : 0;
+        const browserCovered = Math.max(
+          0,
+          nativeKeyboardBaselineHeight - visibleHeight - visibleTop
+        );
+        const missingOffset = Math.max(0, height - browserCovered);
+        root.style.setProperty('--north-native-keyboard-offset', `${missingOffset}px`);
+        root.classList.toggle('north-native-keyboard-open', height > 0);
+        if (height > 0) requestAnimationFrame(() => window.scrollTo(0, 0));
+      };
       let sequence = 0;
       const waiting = new Map();
+      const speechClients = new Map();
       window.__smallPhoneNativeReply = payload => {
         const item = waiting.get(payload.requestId);
         if (!item) return;
@@ -239,6 +314,75 @@ struct LocalPhoneWebView: UIViewRepresentable {
               requestId, action, payload
             });
           });
+        }
+      });
+      window.__smallPhoneNativeSpeechEvent = payload => {
+        const client = payload && speechClients.get(payload.sessionId);
+        if (!client) return;
+        if (payload.type === 'result') {
+          const alternative = { transcript: payload.transcript || '', confidence: 0 };
+          const result = [alternative];
+          result.isFinal = payload.isFinal === true;
+          if (typeof client.onresult === 'function') {
+            client.onresult({ resultIndex: 0, results: [result] });
+          }
+          return;
+        }
+        if (payload.type === 'error' && typeof client.onerror === 'function') {
+          client.onerror({ error: payload.error || 'native-speech-error' });
+        }
+        if (payload.type === 'end' || payload.type === 'error') {
+          speechClients.delete(payload.sessionId);
+          client.__active = false;
+          if (typeof client.onend === 'function') client.onend();
+        }
+      };
+      window.SmallPhoneNativeSpeech = Object.freeze({
+        create() {
+          const client = {
+            lang: 'zh-CN',
+            interimResults: true,
+            continuous: true,
+            onresult: null,
+            onerror: null,
+            onend: null,
+            __active: false,
+            __sessionId: '',
+            start() {
+              if (client.__active) return;
+              client.__active = true;
+              client.__sessionId = `speech-${Date.now()}-${++sequence}`;
+              speechClients.set(client.__sessionId, client);
+              window.SmallPhoneNative.request('speech.start', {
+                sessionId: client.__sessionId,
+                lang: client.lang || 'zh-CN'
+              }).catch(error => {
+                speechClients.delete(client.__sessionId);
+                client.__active = false;
+                if (typeof client.onerror === 'function') {
+                  client.onerror({ error: (error && error.message) || 'native-speech-error' });
+                }
+                if (typeof client.onend === 'function') client.onend();
+              });
+            },
+            stop() {
+              if (!client.__active) return;
+              const sessionId = client.__sessionId;
+              client.__active = false;
+              speechClients.delete(sessionId);
+              window.SmallPhoneNative.request('speech.stop', { sessionId }).catch(() => {});
+              if (typeof client.onend === 'function') client.onend();
+            },
+            abort() {
+              if (!client.__active) return;
+              const sessionId = client.__sessionId;
+              client.__active = false;
+              speechClients.delete(sessionId);
+              window.SmallPhoneNative.request('speech.abort', { sessionId }).catch(() => {});
+              if (typeof client.onend === 'function') client.onend();
+            }
+          };
+          return client;
         }
       });
     })();

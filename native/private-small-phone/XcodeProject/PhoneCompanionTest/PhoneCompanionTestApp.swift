@@ -179,10 +179,26 @@ final class CompanionPushAppDelegate: NSObject,
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
+            await clearAppBadge()
             await CompanionPushCoordinator.shared
                 .refreshAuthorizationStatus()
         }
         return true
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        Task { @MainActor in
+            await clearAppBadge()
+        }
+    }
+
+    @MainActor
+    private func clearAppBadge() async {
+        do {
+            try await UNUserNotificationCenter.current().setBadgeCount(0)
+        } catch {
+            UIApplication.shared.applicationIconBadgeNumber = 0
+        }
     }
 
     func application(
@@ -220,6 +236,7 @@ final class CompanionPushAppDelegate: NSObject,
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        []
+        await clearAppBadge()
+        return []
     }
 }

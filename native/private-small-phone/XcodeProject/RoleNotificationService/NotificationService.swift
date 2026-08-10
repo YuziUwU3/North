@@ -25,6 +25,11 @@ final class NotificationService: UNNotificationServiceExtension {
             return
         }
 
+        // The shared role-push service still sends the public North badge
+        // placeholder "1". The private app has no unread-count ledger yet,
+        // so carrying that value forward creates a permanent false badge.
+        content.badge = nil
+
         let roleName = (rolePush["roleName"] as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let displayName = roleName.flatMap { $0.isEmpty ? nil : $0 }

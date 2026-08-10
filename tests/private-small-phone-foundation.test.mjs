@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.4 \(4\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.5 \(5\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -45,7 +45,7 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   const staging = read(
     'native/private-small-phone/scripts/stage-private-phone-web.mjs'
   );
-  assert.match(bridge, /contractVersion = 2/);
+  assert.match(bridge, /contractVersion = 3/);
   assert.match(bridge, /case "license\.request"/);
   assert.match(bridge, /case "storage\.get", "storage\.put", "storage\.delete"/);
   assert.match(bridge, /SmallPhonePrivateStore/);
@@ -99,8 +99,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 4;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.4;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 5;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.5;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -121,4 +121,64 @@ test('private project removes the live map before background and has a real time
   assert.match(sync, /AsyncStream<UsageReadOutcome>\.makeStream/);
   assert.doesNotMatch(sync, /withTaskGroup\([\s\S]{0,300}UsageReadOutcome/);
   assert.match(sync, /guard !Task\.isCancelled else \{ return nil \}/);
+});
+
+test('private app keeps device management in Settings and clears stale app badges', () => {
+  const app = read('app.js');
+  const rootView = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift'
+  );
+  const delegate = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneCompanionTestApp.swift'
+  );
+  const notificationService = read(
+    'native/private-small-phone/XcodeProject/RoleNotificationService/NotificationService.swift'
+  );
+
+  assert.match(app, /function privateNativeSettingsAction\(\)/);
+  assert.match(app, /SmallPhoneNative\.request\('native\.management\.open'\)/);
+  assert.match(app, /<span class="r">\$\{privateNativeSettingsAction\(\)\}<\/span>/);
+  assert.doesNotMatch(rootView, /ZStack\(alignment: \.topTrailing\)/);
+  assert.doesNotMatch(rootView, /iphone\.and\.arrow\.forward/);
+  assert.match(rootView, /fullScreenCover\(isPresented: \$showsDeviceManagement\)/);
+
+  assert.match(delegate, /applicationDidBecomeActive/);
+  assert.match(delegate, /setBadgeCount\(0\)/);
+  assert.match(delegate, /applicationIconBadgeNumber = 0/);
+  assert.match(delegate, /willPresent notification:[\s\S]*?await clearAppBadge\(\)/);
+  assert.match(notificationService, /content\.badge = nil/);
+});
+
+test('private app supplies native microphone transcription and keyboard-safe call input', () => {
+  const bridge = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'
+  );
+  const webView = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'
+  );
+  const project = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'
+  );
+  const app = read('app.js');
+  const html = read('小手机.html');
+
+  assert.match(project, /INFOPLIST_KEY_NSMicrophoneUsageDescription/g);
+  assert.match(project, /INFOPLIST_KEY_NSSpeechRecognitionUsageDescription/g);
+  assert.match(webView, /WKNavigationDelegate, WKUIDelegate/);
+  assert.match(webView, /requestMediaCapturePermissionFor/);
+  assert.match(webView, /type == \.microphone \? \.grant : \.deny/);
+  assert.match(webView, /window\.SmallPhoneNativeSpeech = Object\.freeze/);
+  assert.match(bridge, /case "speech\.start"/);
+  assert.match(bridge, /SFSpeechAudioBufferRecognitionRequest/);
+  assert.match(bridge, /AVAudioApplication\.requestRecordPermission/);
+  assert.match(app, /window\.SmallPhoneNativeSpeech&&window\.SmallPhoneNativeSpeech\.create/);
+  assert.match(webView, /keyboardWillChangeFrameNotification/);
+  assert.match(webView, /keyboardFrameEndUserInfoKey/);
+  assert.match(webView, /__smallPhoneNativeKeyboard/);
+  assert.match(html, /north-native-keyboard-open \.callinput:focus-within/);
+  assert.match(html, /north-native-keyboard-open \.music-chat-dock:focus-within/);
+  assert.match(webView, /const browserCovered = Math\.max/);
+  assert.match(webView, /const missingOffset = Math\.max\(0, height - browserCovered\)/);
+  assert.match(html, /--north-native-keyboard-offset/);
+  assert.doesNotMatch(html, /bottom:calc\([^)]*--north-native-keyboard-height/);
 });

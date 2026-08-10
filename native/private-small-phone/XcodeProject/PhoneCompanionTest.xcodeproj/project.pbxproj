@@ -517,7 +517,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
@@ -528,7 +528,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -546,7 +546,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
@@ -557,7 +557,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -575,7 +575,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
@@ -586,7 +586,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -604,7 +604,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
@@ -615,7 +615,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -633,7 +633,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
@@ -644,7 +644,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -662,7 +662,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
@@ -673,7 +673,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -690,7 +690,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoleNotificationService/Info.plist;
@@ -701,7 +701,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -718,7 +718,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoleNotificationService/Info.plist;
@@ -729,7 +729,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -868,11 +868,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionTest/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用于通话免提、语音消息和语音转文字；仅在您主动点击话筒时使用。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "用于把您主动说出的内容转换成通话字幕和输入文字。";
 				INFOPLIST_KEY_CFBundleDisplayName = "小手机";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "用于在您授权后读取步数和睡眠时间，并同步到您主动配对的私人伴侣服务供您查看。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "小手机不会写入或修改健康数据，仅在您授权后读取步数和睡眠时间。";
@@ -887,7 +889,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -907,11 +909,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionTest/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用于通话免提、语音消息和语音转文字；仅在您主动点击话筒时使用。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "用于把您主动说出的内容转换成通话字幕和输入文字。";
 				INFOPLIST_KEY_CFBundleDisplayName = "小手机";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "用于在您授权后读取步数和睡眠时间，并同步到您主动配对的私人伴侣服务供您查看。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "小手机不会写入或修改健康数据，仅在您授权后读取步数和睡眠时间。";
@@ -926,7 +930,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

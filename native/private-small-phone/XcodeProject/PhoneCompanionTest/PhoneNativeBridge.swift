@@ -1,13 +1,16 @@
+import AVFoundation
 import Foundation
+import Speech
 import WebKit
 
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 2
+    static let contractVersion = 3
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
+    private let nativeSpeech = NativeSpeechRecognitionController()
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -36,6 +39,12 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)
+        case "speech.start":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performSpeechStart(requestID: requestID, arguments: arguments)
+        case "speech.stop", "speech.abort":
+            nativeSpeech.stop(notify: false)
+            reply(requestID: requestID, result: ["stopped": true])
         case "storage.get", "storage.put", "storage.delete":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performStorageAction(
@@ -46,6 +55,47 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         default:
             reply(requestID: requestID, error: "unsupported_action")
         }
+    }
+
+    private func performSpeechStart(
+        requestID: String,
+        arguments: [String: Any]
+    ) {
+        let sessionID = arguments["sessionId"] as? String ?? ""
+        let language = arguments["lang"] as? String ?? "zh-CN"
+        guard !sessionID.isEmpty, sessionID.count <= 100 else {
+            reply(requestID: requestID, error: "invalid_speech_session")
+            return
+        }
+        nativeSpeech.start(
+            sessionID: sessionID,
+            language: language,
+            onEvent: { [weak self] event in
+                self?.emitSpeechEvent(event)
+            },
+            completion: { [weak self] error in
+                guard let self else { return }
+                if let error {
+                    self.reply(requestID: requestID, error: error)
+                } else {
+                    self.reply(
+                        requestID: requestID,
+                        result: ["started": true, "sessionId": sessionID]
+                    )
+                }
+            }
+        )
+    }
+
+    private func emitSpeechEvent(_ event: [String: Any]) {
+        guard JSONSerialization.isValidJSONObject(event),
+              let data = try? JSONSerialization.data(withJSONObject: event),
+              let json = String(data: data, encoding: .utf8) else {
+            return
+        }
+        webView?.evaluateJavaScript(
+            "window.__smallPhoneNativeSpeechEvent && window.__smallPhoneNativeSpeechEvent(\(json));"
+        )
     }
 
     private func performStorageAction(
@@ -220,5 +270,180 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         webView?.evaluateJavaScript(
             "window.__smallPhoneNativeReply && window.__smallPhoneNativeReply(\(json));"
         )
+    }
+}
+
+@MainActor
+private final class NativeSpeechRecognitionController {
+    private let audioEngine = AVAudioEngine()
+    private var request: SFSpeechAudioBufferRecognitionRequest?
+    private var task: SFSpeechRecognitionTask?
+    private var sessionID = ""
+    private var eventHandler: (([String: Any]) -> Void)?
+    private var startToken = UUID()
+    private var tapInstalled = false
+
+    func start(
+        sessionID: String,
+        language: String,
+        onEvent: @escaping ([String: Any]) -> Void,
+        completion: @escaping (String?) -> Void
+    ) {
+        stop(notify: false)
+        let token = UUID()
+        startToken = token
+        self.sessionID = sessionID
+        eventHandler = onEvent
+
+        SFSpeechRecognizer.requestAuthorization { [weak self] status in
+            Task { @MainActor in
+                guard let self, self.startToken == token else { return }
+                guard status == .authorized else {
+                    completion("speech_permission_denied")
+                    self.reset()
+                    return
+                }
+                AVAudioApplication.requestRecordPermission { [weak self] allowed in
+                    Task { @MainActor in
+                        guard let self, self.startToken == token else { return }
+                        guard allowed else {
+                            completion("microphone_permission_denied")
+                            self.reset()
+                            return
+                        }
+                        do {
+                            try self.beginRecognition(language: language)
+                            completion(nil)
+                        } catch {
+                            completion("native_speech_start_failed")
+                            self.reset()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func stop(notify: Bool) {
+        startToken = UUID()
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        if tapInstalled {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
+        }
+        request?.endAudio()
+        task?.cancel()
+        if notify, !sessionID.isEmpty {
+            emit(type: "end")
+        }
+        reset()
+        try? AVAudioSession.sharedInstance().setActive(
+            false,
+            options: .notifyOthersOnDeactivation
+        )
+    }
+
+    private func beginRecognition(language: String) throws {
+        guard let recognizer = SFSpeechRecognizer(
+            locale: Locale(identifier: language)
+        ), recognizer.isAvailable else {
+            throw NativeSpeechError.unavailable
+        }
+
+        let audioSession = AVAudioSession.sharedInstance()
+        try audioSession.setCategory(
+            .playAndRecord,
+            mode: .voiceChat,
+            options: [.defaultToSpeaker, .allowBluetooth]
+        )
+        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        self.request = request
+
+        let input = audioEngine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            throw NativeSpeechError.noAudioInput
+        }
+        input.installTap(
+            onBus: 0,
+            bufferSize: 1_024,
+            format: format
+        ) { buffer, _ in
+            request.append(buffer)
+        }
+        tapInstalled = true
+        audioEngine.prepare()
+        try audioEngine.start()
+
+        task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor in
+                guard let self, !self.sessionID.isEmpty else { return }
+                if let result {
+                    self.emit(
+                        type: "result",
+                        transcript: result.bestTranscription.formattedString,
+                        isFinal: result.isFinal
+                    )
+                    if result.isFinal {
+                        self.finishCurrentSession()
+                    }
+                } else if error != nil {
+                    self.emit(type: "error", error: "recognition_failed")
+                    self.finishCurrentSession()
+                }
+            }
+        }
+    }
+
+    private func finishCurrentSession() {
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        if tapInstalled {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
+        }
+        request?.endAudio()
+        task?.cancel()
+        emit(type: "end")
+        reset()
+    }
+
+    private func emit(
+        type: String,
+        transcript: String = "",
+        isFinal: Bool = false,
+        error: String = ""
+    ) {
+        guard !sessionID.isEmpty else { return }
+        var event: [String: Any] = [
+            "sessionId": sessionID,
+            "type": type
+        ]
+        if !transcript.isEmpty {
+            event["transcript"] = transcript
+            event["isFinal"] = isFinal
+        }
+        if !error.isEmpty {
+            event["error"] = error
+        }
+        eventHandler?(event)
+    }
+
+    private func reset() {
+        request = nil
+        task = nil
+        sessionID = ""
+        eventHandler = nil
+    }
+
+    private enum NativeSpeechError: Error {
+        case unavailable
+        case noAudioInput
     }
 }
