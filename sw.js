@@ -1,5 +1,5 @@
-const BUILD='875';
-const SHELL_CACHE='north-shell-v875';
+const BUILD='876';
+const SHELL_CACHE='north-shell-v876';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -18,8 +18,8 @@ const OPTIONAL_FILES=[
   './commerce-ui.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './thought-card-effects.js?v='+BUILD,
-  './pet-game.js?v=875',
-  './pet-game.css?v=875',
+  './pet-game.js?v=876',
+  './pet-game.css?v=876',
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',
@@ -110,6 +110,10 @@ self.addEventListener('fetch',event=>{
   let url;
   try{url=new URL(request.url);}catch(_){return;}
   if(url.origin!==self.location.origin)return;
+
+  // App Store support/privacy URLs are ordinary public documents. They must
+  // never be replaced by the cached small-phone application shell.
+  if(request.mode==='navigate'&&/\/north-(?:support|privacy)\.html$/.test(url.pathname))return;
 
   if(request.mode==='navigate'){
     event.respondWith((async()=>{
