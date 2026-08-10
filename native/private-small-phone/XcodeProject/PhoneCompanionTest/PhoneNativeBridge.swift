@@ -7,6 +7,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let contractVersion = 1
 
     weak var webView: WKWebView?
+    var openDeviceManagement: (() -> Void)?
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -29,11 +30,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     "isBundledApp": true
                 ]
             )
+        case "native.management.open":
+            openDeviceManagement?()
+            reply(requestID: requestID, result: ["opened": true])
         default:
-            reply(
-                requestID: requestID,
-                error: "unsupported_action"
-            )
+            reply(requestID: requestID, error: "unsupported_action")
         }
     }
 

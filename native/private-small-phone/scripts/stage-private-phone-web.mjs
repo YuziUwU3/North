@@ -12,7 +12,7 @@ const manifestPath = path.join(
 );
 const outputRoot = process.argv[2]
   ? path.resolve(process.argv[2])
-  : path.join(privateRoot, 'Generated', 'PhoneWeb');
+  : path.join(privateRoot, 'Generated', 'PhoneWeb.bundle');
 
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const entries = [
@@ -40,6 +40,12 @@ for (const relative of entries) {
     force: true
   });
 }
+
+await cp(
+  path.join(privateRoot, 'Resources', 'PhoneWebBundleInfo.plist'),
+  path.join(outputRoot, 'Info.plist'),
+  { force: true }
+);
 
 process.stdout.write(
   `Staged ${entries.length} shared entries to ${outputRoot}\n`

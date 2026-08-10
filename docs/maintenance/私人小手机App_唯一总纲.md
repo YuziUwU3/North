@@ -58,14 +58,15 @@
 - 原生能力：Family Controls 授权与选择、Device Activity Monitor/Report、Managed Settings Shield、后台通知与命令执行。
 - 网页核心：现有聊天、共同生活、各内置 App 和设置；通过版本化原生桥请求真实设备能力。
 - 数据原则：本地锁定账本优先保证安全，云端是跨设备主数据；两者合并时只能保留或加强锁定，不能由旧云快照解除锁定。
-- Bundle ID、App Group、扩展 ID 和 Apple Team 必须从真实 Xcode 工程及开发者账号确认，禁止猜写。
-- 已确认的伴生 App 崩溃日志属于 MapKit/VectorKit 后台切换看门狗退出；未拿到真实 Mac Xcode 工程前，不对未知 MapKit 实现作猜测修改。
+- 2026-08-11 已从用户提供的 `AppleProjects.zip` 取得真实 Mac 工程，确认五个 Target、Team、Bundle ID、App Group、entitlements 和现有 MapKit 实现。私人副本沿用已经签名可用的标识，只修改显示名称；审核工程本身保持不动。
+- 崩溃日志中的 MapKit/VectorKit 后台看门狗已命中真实 `ContentView.swift`：授权定位后，SwiftUI `Map` 在 scene 进入后台时仍常驻。私人副本在 `.inactive` 阶段即移除地图视图，定位采集继续独立运行；必须通过真机前后台回归后才算修复完成。
+- v881 的旧 8 秒竞速使用结构化 `withTaskGroup`，退出作用域仍会等待不响应取消的 DeviceActivity 子任务，不能真正解除“同步中”。私人副本改用不等待输家的 `AsyncStream` 竞速，并在晚到任务写状态前检查取消，禁止超时结果覆盖新快照。
 
 ## 6. 当前实施顺序
 
 1. 固化本文和私人 App 源码骨架，建立本地资源打包与原生桥契约。
-2. 取得 Mac 上完整 Xcode 工程，核对 Target、扩展、签名、App Group 和现有 MapKit 实现。
-3. 从现有伴生能力迁移 Screen Time、锁定、限额、回执和后台同步到私人主 App。
+2. 已取得并导入 Mac 完整工程，已核对 Target、扩展、签名、App Group 和 MapKit 实现。
+3. 正在把现有伴生能力与本地网页核心合入私人主 App，并修复真实超时和后台地图问题。
 4. 增加服务端控制器租约，关闭公开 North 对本人设备的控制入口。
 5. 接入手机号稳定账号、Keychain、本地缓存、云端恢复与迁移。
 6. 完整回归共同生活、查岗、模型、旁白、时间轴和安全区。
