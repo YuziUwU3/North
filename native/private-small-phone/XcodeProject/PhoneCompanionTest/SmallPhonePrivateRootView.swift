@@ -8,7 +8,7 @@ struct SmallPhonePrivateRootView: View {
             LocalPhoneWebView {
                 showsDeviceManagement = true
             }
-            .ignoresSafeArea()
+            .ignoresSafeArea(.container, edges: .bottom)
 
             Button {
                 showsDeviceManagement = true

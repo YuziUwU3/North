@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const nativeRoot=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift',import.meta.url),'utf8');
 
 function functionSource(name){
   const start=app.indexOf('function '+name+'(');
@@ -16,6 +17,12 @@ function functionSource(name){
 function compatEnvironment(navigator,standaloneMedia=false,privateApp=false){
   const context=vm.createContext({navigator,matchMedia:()=>({matches:standaloneMedia}),window:{__SMALL_PHONE_PRIVATE__:privateApp}});
   vm.runInContext(functionSource('appleHomeCompatEnvironment')+';globalThis.result=appleHomeCompatEnvironment();',context);
+  return context.result;
+}
+
+function compatOn(setting=false,privateApp=false){
+  const context=vm.createContext({S:{settings:{appleHomeCompat:setting}},window:{__SMALL_PHONE_PRIVATE__:privateApp}});
+  vm.runInContext(functionSource('appleHomeCompatOn')+';globalThis.result=appleHomeCompatOn();',context);
   return context.result;
 }
 
@@ -43,7 +50,9 @@ test('manual safe-area mode is available only to Apple home-screen web apps',()=
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:false}),false,'ordinary iPhone Safari must keep its existing layout');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Linux; Android 15)',platform:'Linux armv8l',maxTouchPoints:5,standalone:false},true),false,'Android standalone must never receive the Apple workaround');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Macintosh)',platform:'MacIntel',maxTouchPoints:5,standalone:true}),true,'iPad desktop user agent is still supported');
-  assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),true,'the real private app must receive its native safe area');
+  assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),false,'the native app must not reuse the browser-only layout workaround');
+  assert.equal(compatOn(true,true),false,'the native app must ignore a restored browser setting');
+  assert.equal(compatOn(false,false),false,'the ordinary browser keeps its existing opt-in behavior');
 });
 
 test('Apple compatibility switch uses CSS viewport and safe-area insets only',()=>{
@@ -71,9 +80,7 @@ test('Apple compatibility switch uses CSS viewport and safe-area insets only',()
   assert.match(app,/class="travel-head"/);
   assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*safe-area-inset-top/);
   assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
-  assert.match(html,/\.north-native-app\.north-ios-home-safe \.home-premium-head\{[^}]*north-native-safe-top/);
-  assert.match(html,/\.north-native-app\.north-ios-home-safe \.nav\{[^}]*north-native-safe-top/);
-  assert.match(html,/\.north-native-app\.north-ios-home-safe \.inputbar\{[^}]*north-native-safe-bottom/);
-  assert.match(html,/\.north-native-app\.north-ios-home-safe \.shop-nav[^}]*north-native-safe-top/);
-  assert.match(html,/\.north-native-app\.north-ios-home-safe \.callscreen\.mini \.cav\{[^}]*margin:0/);
+  assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of per-app offsets');
+  assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container reserves the entire tappable top safe area');
+  assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\)/,'the web view must never extend under the iPhone status bar');
 });

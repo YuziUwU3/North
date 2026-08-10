@@ -208,14 +208,19 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.4 (4)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
+      root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
+      root.style.setProperty('--north-native-safe-bottom', 'env(safe-area-inset-bottom, 0px)');
+      root.style.setProperty('--north-native-safe-left', 'env(safe-area-inset-left, 0px)');
+      root.style.setProperty('--north-native-safe-right', 'env(safe-area-inset-right, 0px)');
       window.__smallPhoneNativeInsets = payload => {
-        const number = value => Math.max(0, Number(value) || 0) + 'px';
-        root.style.setProperty('--north-native-safe-top', number(payload && payload.top));
-        root.style.setProperty('--north-native-safe-bottom', number(payload && payload.bottom));
-        root.style.setProperty('--north-native-safe-left', number(payload && payload.left));
-        root.style.setProperty('--north-native-safe-right', number(payload && payload.right));
+        const safe = (value, name) => `max(env(${name}, 0px), ${Math.max(0, Number(value) || 0)}px)`;
+        root.style.setProperty('--north-native-safe-top', safe(payload && payload.top, 'safe-area-inset-top'));
+        root.style.setProperty('--north-native-safe-bottom', safe(payload && payload.bottom, 'safe-area-inset-bottom'));
+        root.style.setProperty('--north-native-safe-left', safe(payload && payload.left, 'safe-area-inset-left'));
+        root.style.setProperty('--north-native-safe-right', safe(payload && payload.right, 'safe-area-inset-right'));
       };
       let sequence = 0;
       const waiting = new Map();

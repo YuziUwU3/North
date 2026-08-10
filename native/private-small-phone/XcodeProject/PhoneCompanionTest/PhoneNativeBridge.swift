@@ -4,7 +4,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 1
+    static let contractVersion = 2
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
@@ -36,9 +36,96 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)
+        case "storage.get", "storage.put", "storage.delete":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performStorageAction(
+                requestID: requestID,
+                action: action,
+                arguments: arguments
+            )
         default:
             reply(requestID: requestID, error: "unsupported_action")
         }
+    }
+
+    private func performStorageAction(
+        requestID: String,
+        action: String,
+        arguments: [String: Any]
+    ) {
+        guard let key = arguments["key"] as? String,
+              let url = nativeStorageURL(for: key) else {
+            reply(requestID: requestID, error: "invalid_storage_key")
+            return
+        }
+
+        do {
+            switch action {
+            case "storage.get":
+                guard FileManager.default.fileExists(atPath: url.path) else {
+                    reply(
+                        requestID: requestID,
+                        result: ["found": false]
+                    )
+                    return
+                }
+                let data = try Data(contentsOf: url)
+                let value = try JSONSerialization.jsonObject(with: data)
+                reply(
+                    requestID: requestID,
+                    result: ["found": true, "value": value]
+                )
+            case "storage.put":
+                guard let value = arguments["value"],
+                      JSONSerialization.isValidJSONObject(value) else {
+                    reply(requestID: requestID, error: "invalid_storage_value")
+                    return
+                }
+                let data = try JSONSerialization.data(withJSONObject: value)
+                try data.write(to: url, options: .atomic)
+                reply(
+                    requestID: requestID,
+                    result: ["saved": true, "bytes": data.count]
+                )
+            case "storage.delete":
+                if FileManager.default.fileExists(atPath: url.path) {
+                    try FileManager.default.removeItem(at: url)
+                }
+                reply(requestID: requestID, result: ["deleted": true])
+            default:
+                reply(requestID: requestID, error: "unsupported_storage_action")
+            }
+        } catch {
+            reply(requestID: requestID, error: "native_storage_failed")
+        }
+    }
+
+    private func nativeStorageURL(for key: String) -> URL? {
+        let allowed = CharacterSet.alphanumerics.union(
+            CharacterSet(charactersIn: "._-")
+        )
+        guard !key.isEmpty,
+              key.count <= 80,
+              key.unicodeScalars.allSatisfy({ allowed.contains($0) }),
+              let support = FileManager.default.urls(
+                  for: .applicationSupportDirectory,
+                  in: .userDomainMask
+              ).first else {
+            return nil
+        }
+        let directory = support.appendingPathComponent(
+            "SmallPhonePrivateStore",
+            isDirectory: true
+        )
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+        } catch {
+            return nil
+        }
+        return directory.appendingPathComponent(key + ".json")
     }
 
     private func performLicenseRequest(

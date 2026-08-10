@@ -30,6 +30,8 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /window\.__smallPhoneNativeInsets/);
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
+  assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.4 \(4\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -43,8 +45,11 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   const staging = read(
     'native/private-small-phone/scripts/stage-private-phone-web.mjs'
   );
-  assert.match(bridge, /contractVersion = 1/);
+  assert.match(bridge, /contractVersion = 2/);
   assert.match(bridge, /case "license\.request"/);
+  assert.match(bridge, /case "storage\.get", "storage\.put", "storage\.delete"/);
+  assert.match(bridge, /SmallPhonePrivateStore/);
+  assert.match(bridge, /data\.write\(to: url, options: \.atomic\)/);
   assert.match(bridge, /URLSession\.shared\.data/);
   assert.match(bridge, /lkhlyfpssmrjkkzhuzag\.supabase\.co/);
   assert.equal(manifest.entry, '小手机.html');
@@ -52,6 +57,10 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   assert.match(staging, /repoRoot/);
   assert.match(staging, /path\.join\(outputRoot, 'index\.html'\)/);
   assert.doesNotMatch(staging, /writeFile/);
+  const app = read('app.js');
+  assert.match(app, /SmallPhoneNative\.request\('storage\.put'/);
+  assert.match(app, /SmallPhoneNative\.request\('storage\.get'/);
+  assert.match(app, /v==null\?imgGetIDB\(k\):v/,'an existing web archive remains readable before native migration');
 });
 
 test('bundled license requests use the restricted native network bridge', () => {
@@ -90,6 +99,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 4;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.4;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
