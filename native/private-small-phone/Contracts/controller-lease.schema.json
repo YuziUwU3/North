@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north.example/schemas/controller-lease-v1.json",
+  "title": "Single device controller lease",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "deviceId",
+    "controllerKind",
+    "controllerInstanceId",
+    "leaseVersion",
+    "updatedAt"
+  ],
+  "properties": {
+    "schema": { "const": 1 },
+    "deviceId": { "type": "string", "minLength": 1 },
+    "controllerKind": {
+      "enum": ["public-north", "private-small-phone"]
+    },
+    "controllerInstanceId": { "type": "string", "minLength": 1 },
+    "leaseVersion": { "type": "integer", "minimum": 1 },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "revokedAt": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

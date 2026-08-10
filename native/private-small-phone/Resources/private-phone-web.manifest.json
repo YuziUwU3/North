@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "entry": "小手机.html",
+  "files": [
+    "小手机.html",
+    "app.js",
+    "ai-account.js",
+    "license-gate.js",
+    "commerce-ui.js",
+    "pet-game.js",
+    "pet-game.css",
+    "gift-effects.js",
+    "thought-card-effects.js",
+    "icon.png"
+  ],
+  "directories": [
+    "assets",
+    "pay-assets",
+    "vendor",
+    "fonts"
+  ]
+}
