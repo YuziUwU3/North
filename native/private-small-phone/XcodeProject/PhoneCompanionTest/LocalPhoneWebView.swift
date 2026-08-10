@@ -166,6 +166,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
     private static let bridgeBootstrap = """
     (() => {
+      window.__SMALL_PHONE_PRIVATE__ = true;
       let sequence = 0;
       const waiting = new Map();
       window.__smallPhoneNativeReply = payload => {

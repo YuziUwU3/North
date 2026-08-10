@@ -152,17 +152,28 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs || 25000);
     let response;
+    let nativeResult = null;
     try {
-      response = await fetch(config.baseUrl.replace(/\/+$/, '') + '/functions/v1/phone-license', {
-        method: 'POST',
-        headers: {
-          apikey: config.apiKey,
-          Authorization: 'Bearer ' + config.apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(Object.assign({ action: action }, body || {})),
-        signal: controller.signal,
-      });
+      if (window.SmallPhoneNative && location.protocol === 'file:') {
+        nativeResult = await window.SmallPhoneNative.request('license.request', {
+          baseUrl: config.baseUrl,
+          apiKey: config.apiKey,
+          action: action,
+          body: body || {},
+          timeoutMs: timeoutMs || 25000,
+        });
+      } else {
+        response = await fetch(config.baseUrl.replace(/\/+$/, '') + '/functions/v1/phone-license', {
+          method: 'POST',
+          headers: {
+            apikey: config.apiKey,
+            Authorization: 'Bearer ' + config.apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(Object.assign({ action: action }, body || {})),
+          signal: controller.signal,
+        });
+      }
     } catch (error) {
       const out = new Error(error && error.name === 'AbortError' ? '授权服务器响应超时' : '连不上授权服务器，请检查网络');
       out.network = true;
@@ -170,11 +181,15 @@
     } finally {
       clearTimeout(timer);
     }
-    let payload = null;
-    try { payload = await response.json(); } catch (_) {}
-    if (!response.ok || !payload || payload.ok !== true) {
-      const out = new Error((payload && payload.error) || ('授权服务器异常(' + response.status + ')'));
-      out.status = response.status;
+    let payload = nativeResult && nativeResult.payload || null;
+    let status = nativeResult && Number(nativeResult.status) || 0;
+    if (!nativeResult) {
+      status = response.status;
+      try { payload = await response.json(); } catch (_) {}
+    }
+    if (status < 200 || status >= 300 || !payload || payload.ok !== true) {
+      const out = new Error((payload && payload.error) || ('授权服务器异常(' + status + ')'));
+      out.status = status;
       out.server = true;
       out.code = String(payload && payload.code || '');
       out.permanent = !!(payload && payload.permanent);

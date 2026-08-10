@@ -26,6 +26,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /didFailProvisionalNavigation/);
   assert.match(webView, /url\.scheme == "about"/);
   assert.match(webView, /loadFileURL/);
+  assert.match(webView, /window\.__SMALL_PHONE_PRIVATE__ = true/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -40,11 +41,22 @@ test('private app has a versioned native bridge and shared-resource staging', ()
     'native/private-small-phone/scripts/stage-private-phone-web.mjs'
   );
   assert.match(bridge, /contractVersion = 1/);
+  assert.match(bridge, /case "license\.request"/);
+  assert.match(bridge, /URLSession\.shared\.data/);
+  assert.match(bridge, /lkhlyfpssmrjkkzhuzag\.supabase\.co/);
   assert.equal(manifest.entry, '小手机.html');
   assert.ok(manifest.files.includes('app.js'));
   assert.match(staging, /repoRoot/);
   assert.match(staging, /path\.join\(outputRoot, 'index\.html'\)/);
   assert.doesNotMatch(staging, /writeFile/);
+});
+
+test('bundled license requests use the restricted native network bridge', () => {
+  const source = read('license-gate.js');
+  assert.match(source, /window\.SmallPhoneNative && location\.protocol === 'file:'/);
+  assert.match(source, /SmallPhoneNative\.request\('license\.request'/);
+  assert.match(source, /else \{\s*response = await fetch/);
+  assert.match(read('app.js'), /__SMALL_PHONE_PRIVATE__\?'小手机':'North'/);
 });
 
 test('controller lease contract permits exactly one named controller', () => {
