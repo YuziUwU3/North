@@ -39,6 +39,9 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   const bridge = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'
   );
+  assert.match(bridge, /import CoreLocation/);
+  assert.match(bridge, /\.allowBluetoothHFP/);
+  assert.doesNotMatch(bridge, /requestAuthorization \{ \[weak self\]/);
   const manifest = JSON.parse(read(
     'native/private-small-phone/Resources/private-phone-web.manifest.json'
   ));

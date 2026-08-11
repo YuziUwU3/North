@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreLocation
 import CryptoKit
 import Foundation
 import Security
@@ -968,16 +969,16 @@ private final class NativeSpeechRecognitionController {
         isActive = true
         isPaused = false
 
-        SFSpeechRecognizer.requestAuthorization { [weak self] status in
-            Task { @MainActor in
+        SFSpeechRecognizer.requestAuthorization { status in
+            Task { @MainActor [weak self] in
                 guard let self, self.startToken == token else { return }
                 guard status == .authorized else {
                     completion("speech_permission_denied")
                     self.stop(notify: false)
                     return
                 }
-                AVAudioApplication.requestRecordPermission { [weak self] allowed in
-                    Task { @MainActor in
+                AVAudioApplication.requestRecordPermission { allowed in
+                    Task { @MainActor [weak self] in
                         guard let self, self.startToken == token else { return }
                         guard allowed else {
                             completion("microphone_permission_denied")
@@ -1069,7 +1070,7 @@ private final class NativeSpeechRecognitionController {
         try audioSession.setCategory(
             .playAndRecord,
             mode: .voiceChat,
-            options: [.defaultToSpeaker, .allowBluetooth]
+            options: [.defaultToSpeaker, .allowBluetoothHFP]
         )
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
