@@ -63,12 +63,12 @@ test('automatic safety snapshot refuses to replace a richer backup with emptier 
   assert.equal(written,null);
 });
 
-test('v886 shell and service worker are aligned',()=>{
+test('v887 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v886 · 原生通话复用网页版整体键盘位移'/);
-  assert.match(html,/app\.js\?v=886/);
-  assert.match(sw,/BUILD='886'/);
+  assert.match(app,/APP_VER='v887 · 私人手机号账号与云恢复'/);
+  assert.match(html,/app\.js\?v=887/);
+  assert.match(sw,/BUILD='887'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

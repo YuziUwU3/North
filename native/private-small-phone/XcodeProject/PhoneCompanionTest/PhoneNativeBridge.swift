@@ -1,12 +1,14 @@
 import AVFoundation
+import CryptoKit
 import Foundation
+import Security
 import Speech
 import WebKit
 
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 4
+    static let contractVersion = 5
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
@@ -39,6 +41,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)
+        case "account.status", "account.otp.send", "account.otp.verify",
+             "account.signout", "account.backup.info",
+             "account.backup.upload", "account.backup.restore":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performPrivateAccountAction(
+                requestID: requestID,
+                action: action,
+                arguments: arguments
+            )
         case "speech.start":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performSpeechStart(requestID: requestID, arguments: arguments)
@@ -256,6 +267,390 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 self.reply(requestID: requestID, error: "license_network_unavailable")
             }
         }
+    }
+
+    private struct PrivateAccountSession: Codable {
+        let accessToken: String
+        let refreshToken: String
+        let expiresAt: TimeInterval
+        let userID: String
+        let phone: String
+    }
+
+    private static let privateAccountBaseURL =
+        "https://lkhlyfpssmrjkkzhuzag.supabase.co"
+    private static let privateAccountAPIKey =
+        "sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2"
+    private static let privateAccountKeychainService =
+        "com.qianyi.smallphone.private.account.v1"
+
+    private func performPrivateAccountAction(
+        requestID: String,
+        action: String,
+        arguments: [String: Any]
+    ) {
+        if action == "account.status" {
+            let session = loadPrivateAccountSession()
+            reply(
+                requestID: requestID,
+                result: privateAccountStatus(session)
+            )
+            return
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                switch action {
+                case "account.otp.send":
+                    let phone = self.normalizedPrivatePhone(
+                        arguments["phone"] as? String ?? ""
+                    )
+                    guard phone != nil else {
+                        self.reply(
+                            requestID: requestID,
+                            result: [
+                                "ok": false,
+                                "code": "invalid_phone",
+                                "message": "请输入正确的中国大陆手机号"
+                            ]
+                        )
+                        return
+                    }
+                    let response = try await self.privateAccountJSONRequest(
+                        path: "/auth/v1/otp",
+                        method: "POST",
+                        body: ["phone": phone!, "create_user": true]
+                    )
+                    self.reply(
+                        requestID: requestID,
+                        result: self.privateAccountPublicResult(response)
+                    )
+                case "account.otp.verify":
+                    let phone = self.normalizedPrivatePhone(
+                        arguments["phone"] as? String ?? ""
+                    )
+                    let token = (arguments["token"] as? String ?? "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard let phone, token.range(of: "^[0-9]{6}$", options: .regularExpression) != nil else {
+                        self.reply(
+                            requestID: requestID,
+                            result: [
+                                "ok": false,
+                                "code": "invalid_otp",
+                                "message": "请输入短信里的 6 位验证码"
+                            ]
+                        )
+                        return
+                    }
+                    let response = try await self.privateAccountJSONRequest(
+                        path: "/auth/v1/verify",
+                        method: "POST",
+                        body: ["phone": phone, "token": token, "type": "sms"]
+                    )
+                    guard response.status >= 200, response.status < 300,
+                          let session = self.privateAccountSession(from: response.body) else {
+                        self.reply(
+                            requestID: requestID,
+                            result: self.privateAccountPublicResult(response)
+                        )
+                        return
+                    }
+                    try self.savePrivateAccountSession(session)
+                    var result = self.privateAccountStatus(session)
+                    result["ok"] = true
+                    self.reply(requestID: requestID, result: result)
+                case "account.signout":
+                    if let session = self.loadPrivateAccountSession() {
+                        _ = try? await self.privateAccountJSONRequest(
+                            path: "/auth/v1/logout",
+                            method: "POST",
+                            bearer: session.accessToken
+                        )
+                    }
+                    self.deletePrivateAccountSession()
+                    self.reply(
+                        requestID: requestID,
+                        result: ["ok": true, "loggedIn": false]
+                    )
+                case "account.backup.info":
+                    let session = try await self.validPrivateAccountSession()
+                    let response = try await self.privateAccountJSONRequest(
+                        path: "/rest/v1/private_phone_backups" +
+                            "?select=revision,captured_at,uploaded_at,source_build,checksum,byte_count" +
+                            "&order=captured_at.desc&limit=1",
+                        method: "GET",
+                        bearer: session.accessToken
+                    )
+                    self.reply(
+                        requestID: requestID,
+                        result: self.privateBackupResult(response, includesPayload: false)
+                    )
+                case "account.backup.upload":
+                    let session = try await self.validPrivateAccountSession()
+                    guard let snapshot = arguments["snapshot"],
+                          JSONSerialization.isValidJSONObject(snapshot) else {
+                        self.reply(requestID: requestID, error: "invalid_backup_payload")
+                        return
+                    }
+                    let snapshotData = try JSONSerialization.data(withJSONObject: snapshot)
+                    let checksum = SHA256.hash(data: snapshotData)
+                        .map { String(format: "%02x", $0) }
+                        .joined()
+                    let capturedMilliseconds =
+                        (arguments["capturedAt"] as? NSNumber)?.doubleValue ??
+                        Date().timeIntervalSince1970 * 1_000
+                    let capturedDate = Date(
+                        timeIntervalSince1970: capturedMilliseconds / 1_000
+                    )
+                    let formatter = ISO8601DateFormatter()
+                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    let body: [String: Any] = [
+                        "p_payload": snapshot,
+                        "p_captured_at": formatter.string(from: capturedDate),
+                        "p_source_build": String(
+                            (arguments["sourceBuild"] as? String ?? "").prefix(80)
+                        ),
+                        "p_checksum": checksum,
+                        "p_byte_count": snapshotData.count
+                    ]
+                    let response = try await self.privateAccountJSONRequest(
+                        path: "/rest/v1/rpc/save_private_phone_backup",
+                        method: "POST",
+                        body: body,
+                        bearer: session.accessToken
+                    )
+                    var result = self.privateAccountPublicResult(response)
+                    if response.status >= 200, response.status < 300 {
+                        result["ok"] = true
+                        result["byteCount"] = snapshotData.count
+                        result["checksum"] = checksum
+                        if let rows = response.body as? [[String: Any]], let row = rows.first {
+                            result["backup"] = row
+                        }
+                    }
+                    self.reply(requestID: requestID, result: result)
+                case "account.backup.restore":
+                    let session = try await self.validPrivateAccountSession()
+                    let response = try await self.privateAccountJSONRequest(
+                        path: "/rest/v1/private_phone_backups" +
+                            "?select=revision,captured_at,uploaded_at,source_build,checksum,byte_count,payload" +
+                            "&order=captured_at.desc&limit=1",
+                        method: "GET",
+                        bearer: session.accessToken
+                    )
+                    self.reply(
+                        requestID: requestID,
+                        result: self.privateBackupResult(response, includesPayload: true)
+                    )
+                default:
+                    self.reply(requestID: requestID, error: "unsupported_account_action")
+                }
+            } catch {
+                self.reply(
+                    requestID: requestID,
+                    result: [
+                        "ok": false,
+                        "code": "account_request_failed",
+                        "message": "账号服务暂时不可用，请稍后重试"
+                    ]
+                )
+            }
+        }
+    }
+
+    private func normalizedPrivatePhone(_ raw: String) -> String? {
+        let digits = raw.filter { $0.isNumber }
+        let local: String
+        if digits.hasPrefix("86"), digits.count == 13 {
+            local = String(digits.dropFirst(2))
+        } else {
+            local = digits
+        }
+        guard local.range(of: "^1[3-9][0-9]{9}$", options: .regularExpression) != nil else {
+            return nil
+        }
+        return "+86" + local
+    }
+
+    private func privateAccountStatus(
+        _ session: PrivateAccountSession?
+    ) -> [String: Any] {
+        guard let session else {
+            return ["ok": true, "loggedIn": false]
+        }
+        let local = String(session.phone.suffix(11))
+        let prefix = String(local.prefix(3))
+        let suffix = String(local.suffix(4))
+        return [
+            "ok": true,
+            "loggedIn": true,
+            "maskedPhone": prefix + "****" + suffix,
+            "userId": session.userID
+        ]
+    }
+
+    private func privateAccountSession(from body: Any?) -> PrivateAccountSession? {
+        guard let json = body as? [String: Any],
+              let accessToken = json["access_token"] as? String,
+              let refreshToken = json["refresh_token"] as? String,
+              let user = json["user"] as? [String: Any],
+              let userID = user["id"] as? String else {
+            return nil
+        }
+        let absoluteExpiry = (json["expires_at"] as? NSNumber)?.doubleValue
+        let lifetime = (json["expires_in"] as? NSNumber)?.doubleValue ?? 3_600
+        let expiresAt = absoluteExpiry ?? (Date().timeIntervalSince1970 + lifetime)
+        let phone = (user["phone"] as? String) ?? ""
+        return PrivateAccountSession(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresAt: expiresAt,
+            userID: userID,
+            phone: phone
+        )
+    }
+
+    private func validPrivateAccountSession() async throws -> PrivateAccountSession {
+        guard let current = loadPrivateAccountSession() else {
+            throw NSError(domain: "PrivatePhoneAccount", code: 401)
+        }
+        if current.expiresAt > Date().timeIntervalSince1970 + 120 {
+            return current
+        }
+        let response = try await privateAccountJSONRequest(
+            path: "/auth/v1/token?grant_type=refresh_token",
+            method: "POST",
+            body: ["refresh_token": current.refreshToken]
+        )
+        guard response.status >= 200, response.status < 300,
+              let refreshed = privateAccountSession(from: response.body) else {
+            deletePrivateAccountSession()
+            throw NSError(domain: "PrivatePhoneAccount", code: 401)
+        }
+        try savePrivateAccountSession(refreshed)
+        return refreshed
+    }
+
+    private struct PrivateAccountHTTPResponse {
+        let status: Int
+        let body: Any?
+    }
+
+    private func privateAccountJSONRequest(
+        path: String,
+        method: String,
+        body: [String: Any]? = nil,
+        bearer: String? = nil
+    ) async throws -> PrivateAccountHTTPResponse {
+        guard let url = URL(string: Self.privateAccountBaseURL + path) else {
+            throw NSError(domain: "PrivatePhoneAccount", code: 400)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = 60
+        request.setValue(Self.privateAccountAPIKey, forHTTPHeaderField: "apikey")
+        request.setValue(
+            "Bearer " + (bearer ?? Self.privateAccountAPIKey),
+            forHTTPHeaderField: "Authorization"
+        )
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let body {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let object = data.isEmpty ? nil : try? JSONSerialization.jsonObject(with: data)
+        return PrivateAccountHTTPResponse(status: status, body: object)
+    }
+
+    private func privateAccountPublicResult(
+        _ response: PrivateAccountHTTPResponse
+    ) -> [String: Any] {
+        let ok = response.status >= 200 && response.status < 300
+        let json = response.body as? [String: Any]
+        let rawMessage = (json?["msg"] as? String) ??
+            (json?["message"] as? String) ??
+            (json?["error_description"] as? String) ?? ""
+        let message: String
+        if ok {
+            message = "操作成功"
+        } else if response.status == 429 {
+            message = "验证码请求太频繁，请稍后再试"
+        } else if rawMessage.localizedCaseInsensitiveContains("expired") {
+            message = "验证码已过期，请重新获取"
+        } else if rawMessage.localizedCaseInsensitiveContains("invalid") {
+            message = "验证码不正确，请重新输入"
+        } else if rawMessage.localizedCaseInsensitiveContains("provider") {
+            message = "手机号短信服务尚未开启"
+        } else {
+            message = rawMessage.isEmpty ? "账号服务请求失败" : rawMessage
+        }
+        return [
+            "ok": ok,
+            "status": response.status,
+            "code": (json?["error_code"] as? String) ?? "",
+            "message": message
+        ]
+    }
+
+    private func privateBackupResult(
+        _ response: PrivateAccountHTTPResponse,
+        includesPayload: Bool
+    ) -> [String: Any] {
+        guard response.status >= 200, response.status < 300 else {
+            return privateAccountPublicResult(response)
+        }
+        guard let rows = response.body as? [[String: Any]], let row = rows.first else {
+            return ["ok": true, "found": false]
+        }
+        var result: [String: Any] = ["ok": true, "found": true, "backup": row]
+        if includesPayload, row["payload"] == nil {
+            result = ["ok": false, "found": false, "message": "云备份内容不完整"]
+        }
+        return result
+    }
+
+    private func loadPrivateAccountSession() -> PrivateAccountSession? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.privateAccountKeychainService,
+            kSecAttrAccount as String: "primary",
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data else {
+            return nil
+        }
+        return try? JSONDecoder().decode(PrivateAccountSession.self, from: data)
+    }
+
+    private func savePrivateAccountSession(_ session: PrivateAccountSession) throws {
+        let data = try JSONEncoder().encode(session)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.privateAccountKeychainService,
+            kSecAttrAccount as String: "primary"
+        ]
+        SecItemDelete(query as CFDictionary)
+        var item = query
+        item[kSecValueData as String] = data
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        let status = SecItemAdd(item as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
+    }
+
+    private func deletePrivateAccountSession() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.privateAccountKeychainService,
+            kSecAttrAccount as String: "primary"
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 
     func announceReady() {

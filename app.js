@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='886'){
+if(window.__NORTH_SHELL_BUILD__!=='887'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v886 · 原生通话复用网页版整体键盘位移';
+const APP_VER='v887 · 私人手机号账号与云恢复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -424,8 +424,8 @@ function saveNow(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&
   if(_coreBootRef&&!_appBootFinished)return true;
   const savedAt=Date.now();let json;try{S._persistedAt=savedAt;json=JSON.stringify(S,_imgReplacer);}catch(e){storageSaveFailure(e,false);return false;}
   const bytes=storedTextBytes(json),overflow=_coreOverflowMode||bytes>CORE_INLINE_LIMIT;_coreLogicalBytes=bytes;_saveLast=savedAt;
-  if(overflow){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);return true;}
-  try{localStorage.setItem(KEY,json);queueRecoverySnapshot(json,savedAt);_saveOkLast=savedAt;return true;}catch(e){if(isQuotaError(e)){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);if(Date.now()-_coreFailureAt>60000){_coreFailureAt=Date.now();toast('核心存档偏大，正在自动迁入大容量存储');}return true;}storageSaveFailure(e,false);return false;}}
+  if(overflow){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);if(typeof privatePhoneCloudMarkDirty==='function')privatePhoneCloudMarkDirty(savedAt);return true;}
+  try{localStorage.setItem(KEY,json);queueRecoverySnapshot(json,savedAt);_saveOkLast=savedAt;if(typeof privatePhoneCloudMarkDirty==='function')privatePhoneCloudMarkDirty(savedAt);return true;}catch(e){if(isQuotaError(e)){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);if(typeof privatePhoneCloudMarkDirty==='function')privatePhoneCloudMarkDirty(savedAt);if(Date.now()-_coreFailureAt>60000){_coreFailureAt=Date.now();toast('核心存档偏大，正在自动迁入大容量存储');}return true;}storageSaveFailure(e,false);return false;}}
 function saveNowAsync(){const ok=saveNow();return _coreOverflowMode?_coreMirrorWrite.then(Boolean):Promise.resolve(ok);}
 function save(delay){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
@@ -1392,7 +1392,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=886';
+  const url='sw.js?v=887';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3217,6 +3217,35 @@ setInterval(scanAutoPost,240000);setTimeout(scanAutoPost,8000);
 
 /* ---------- 设置 ---------- */
 let _setTab=1;
+let _privatePhoneAccount={loaded:false,loading:false,loggedIn:false,maskedPhone:'',userId:'',backup:null,error:''};
+let _privatePhonePending='';
+let _privatePhoneCloudDirtyAt=0,_privatePhoneCloudTimer=null,_privatePhoneCloudBusy=false;
+function privatePhoneAccountAvailable(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true&&window.SmallPhoneNative&&typeof window.SmallPhoneNative.request==='function';}
+function privatePhoneAccountCall(action,payload){if(!privatePhoneAccountAvailable())return Promise.reject(new Error('手机号账号只在私人小手机 App 内使用'));return window.SmallPhoneNative.request(action,payload||{});}
+function privatePhoneAccountDate(v){if(!v)return'暂无';const d=new Date(v);return Number.isNaN(d.getTime())?'暂无':d.toLocaleString('zh-CN',{hour12:false});}
+function privatePhoneAccountBytes(n){n=+n||0;return n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(1)+' MB';}
+function privatePhoneAccountSection(){if(!privatePhoneAccountAvailable())return'';if(!_privatePhoneAccount.loaded&&!_privatePhoneAccount.loading)setTimeout(()=>privatePhoneAccountRefresh(),0);const a=_privatePhoneAccount,b=a.backup||{},title=a.loggedIn?(a.maskedPhone||'手机号已绑定'):'绑定手机号',status=a.loading?'正在读取账号…':a.error?esc(a.error):a.loggedIn?(b.found?'云备份：'+privatePhoneAccountDate(b.captured_at||b.capturedAt):'已登录，云端还没有备份'):'删除 App 后可用短信验证码恢复全部数据';return `<div class="section" id="set_private_account" style="border:1px solid rgba(91,192,222,.38);background:linear-gradient(135deg,rgba(55,120,158,.18),rgba(92,73,150,.16))">
+    <div class="it"><span><b style="color:#bfeaff">私人小手机账号</b><small style="display:block;color:#8f9eb3;margin-top:4px">${status}</small></span><span class="v">${esc(title)}</span></div>
+    ${a.loggedIn?`<div class="it"><span>最近云备份</span><span class="v">${b.found?privatePhoneAccountBytes(b.byte_count||b.byteCount):'尚未上传'}</span></div>
+    <div class="btns" style="padding:10px 14px 4px"><button class="btn p" onclick="privatePhoneCloudBackup(false)">立即备份本机</button><button class="btn g" onclick="privatePhoneCloudRestoreOpen()">从云端恢复</button></div>
+    <div class="btns" style="padding:4px 14px 12px"><button class="btn g" onclick="privatePhoneAccountRefresh(true)">刷新状态</button><button class="btn d" onclick="privatePhoneAccountSignOut()">退出手机号</button></div>`:`<div class="btns" style="padding:10px 14px 12px"><button class="btn p" onclick="privatePhoneAccountBindOpen()">绑定手机号</button><button class="btn g" onclick="privatePhoneAccountRefresh(true)">刷新</button></div>`}
+    <div class="hint" style="padding:0 14px 12px;color:#8f9eb3">登录凭证保存在 iPhone Keychain；云端为空时才会自动上传当前本机数据，绝不会用空账号覆盖已导入的备份。</div>
+  </div>`;}
+function privatePhoneAccountPaint(){const page=$('#setpage3');if(!page||_setTab!==3)return;page.innerHTML=settingsDataToolsSafeHTML();page.dataset.loaded='1';}
+async function privatePhoneAccountRefresh(showToast){if(!privatePhoneAccountAvailable()||_privatePhoneAccount.loading)return;_privatePhoneAccount.loading=true;_privatePhoneAccount.error='';privatePhoneAccountPaint();try{const s=await privatePhoneAccountCall('account.status');_privatePhoneAccount.loaded=true;_privatePhoneAccount.loggedIn=!!(s&&s.loggedIn);_privatePhoneAccount.maskedPhone=String(s&&s.maskedPhone||'');_privatePhoneAccount.userId=String(s&&s.userId||'');_privatePhoneAccount.backup=null;if(_privatePhoneAccount.loggedIn){const info=await privatePhoneAccountCall('account.backup.info');if(info&&info.ok===false)throw new Error(info.message||'云备份状态读取失败');const row=info&&info.backup||{};_privatePhoneAccount.backup=Object.assign({found:!!(info&&info.found)},row);}if(showToast)toast(_privatePhoneAccount.loggedIn?'手机号账号正常':'尚未绑定手机号');}catch(e){_privatePhoneAccount.loaded=true;_privatePhoneAccount.error=(e&&e.message)||'账号状态读取失败';}finally{_privatePhoneAccount.loading=false;privatePhoneAccountPaint();}}
+function privatePhoneAccountBindOpen(){openModal(`<h3>绑定手机号</h3><div class="hint">仅用于私人小手机登录和数据恢复。请输入中国大陆手机号。</div><div class="field"><input id="privatePhoneNumber" inputmode="tel" autocomplete="tel" maxlength="13" placeholder="请输入手机号"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="privatePhoneAccountSendOTP()">获取验证码</button></div>`);setTimeout(()=>{$('#privatePhoneNumber')&&$('#privatePhoneNumber').focus();},80);}
+async function privatePhoneAccountSendOTP(){const input=$('#privatePhoneNumber'),phone=String(input&&input.value||'').replace(/\s+/g,'');if(!/^(?:\+?86)?1[3-9]\d{9}$/.test(phone)){toast('请输入正确的 11 位手机号');return;}_privatePhonePending=phone;toast('正在发送验证码…');try{const r=await privatePhoneAccountCall('account.otp.send',{phone});if(!r||r.ok!==true)throw new Error(r&&r.message||'验证码发送失败');openModal(`<h3>输入短信验证码</h3><div class="hint">验证码已发送到 ${esc(phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2'))}</div><div class="field"><input id="privatePhoneOTP" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码"></div><div class="btns"><button class="btn g" onclick="privatePhoneAccountBindOpen()">返回</button><button class="btn p" onclick="privatePhoneAccountVerifyOTP()">确认绑定</button></div>`);setTimeout(()=>{$('#privatePhoneOTP')&&$('#privatePhoneOTP').focus();},80);}catch(e){toast((e&&e.message)||'验证码发送失败');}}
+async function privatePhoneAccountVerifyOTP(){const token=String($('#privatePhoneOTP')&&$('#privatePhoneOTP').value||'').trim();if(!/^\d{6}$/.test(token)){toast('请输入短信里的 6 位验证码');return;}toast('正在验证手机号…');try{const r=await privatePhoneAccountCall('account.otp.verify',{phone:_privatePhonePending,token});if(!r||r.ok!==true)throw new Error(r&&r.message||'验证码不正确');closeModal();_privatePhoneAccount.loaded=false;await privatePhoneAccountRefresh(false);await privatePhoneAccountAfterLogin();}catch(e){toast((e&&e.message)||'手机号验证失败');}}
+async function privatePhoneAccountAfterLogin(){try{const info=await privatePhoneAccountCall('account.backup.info');if(!info||info.ok===false)throw new Error(info&&info.message||'云备份尚未配置');if(!info.found){await privatePhoneCloudBackup(true);return;}const b=info.backup||{};openModal(`<h3>手机号绑定成功</h3><div class="hint" style="line-height:1.8">这个手机号云端已有一份备份：<br><b>${esc(privatePhoneAccountDate(b.captured_at))}</b> · ${esc(privatePhoneAccountBytes(b.byte_count))}<br><br>为防止覆盖错误，系统没有自动上传或下载。请选择要保留哪一份。</div><div class="btns"><button class="btn p" onclick="closeModal();privatePhoneCloudBackup(false)">保留本机并上传</button><button class="btn g" onclick="closeModal();privatePhoneCloudRestoreOpen()">查看云端并恢复</button></div>`);}catch(e){toast((e&&e.message)||'手机号已绑定，但云备份尚未启用');}}
+function privatePhoneCloudMarkDirty(savedAt){if(!privatePhoneAccountAvailable())return;_privatePhoneCloudDirtyAt=Math.max(_privatePhoneCloudDirtyAt,+savedAt||Date.now());if(_privatePhoneCloudTimer)clearTimeout(_privatePhoneCloudTimer);_privatePhoneCloudTimer=setTimeout(()=>privatePhoneCloudAutoBackup(),180000);}
+async function privatePhoneCloudAutoBackup(){if(!privatePhoneAccountAvailable()||_privatePhoneCloudBusy||!_privatePhoneCloudDirtyAt)return;try{if(!_privatePhoneAccount.loaded)await privatePhoneAccountRefresh(false);if(!_privatePhoneAccount.loggedIn)return;const info=await privatePhoneAccountCall('account.backup.info');if(!info||info.ok===false)return;const cloudAt=info.found?Date.parse(info.backup&&info.backup.captured_at||'')||0:0;if(cloudAt>=_privatePhoneCloudDirtyAt){_privatePhoneCloudDirtyAt=0;return;}await privatePhoneCloudBackup(false,true);}catch(_){}}
+function privatePhoneCloudWake(){if(!privatePhoneAccountAvailable())return;_privatePhoneCloudDirtyAt=Math.max(_privatePhoneCloudDirtyAt,+S._persistedAt||0);setTimeout(()=>privatePhoneCloudAutoBackup(),6000);}
+async function privatePhoneCloudBackup(firstBind,silent){if(!privatePhoneAccountAvailable()||_privatePhoneCloudBusy)return;_privatePhoneCloudBusy=true;if(!silent)toast(firstBind?'正在建立第一份云备份…':'正在备份到手机号账号…');try{if(!await saveNowAsync())throw new Error('本机数据尚未保存完成');const snapshot=await fullBackupState();snapshot._persistedAt=Math.max(+snapshot._persistedAt||0,Date.now());const r=await privatePhoneAccountCall('account.backup.upload',{snapshot,capturedAt:snapshot._persistedAt,sourceBuild:String(window.__SMALL_PHONE_PRIVATE_BUILD__||APP_VER)});if(!r||r.ok!==true)throw new Error(r&&r.message||'云备份上传失败');_privatePhoneCloudDirtyAt=0;if(!silent)toast(firstBind?'手机号已绑定，当前数据已安全备份':'云备份已更新');_privatePhoneAccount.loaded=false;await privatePhoneAccountRefresh(false);}catch(e){if(!silent)toast((e&&e.message)||'云备份失败，请稍后重试');}finally{_privatePhoneCloudBusy=false;}}
+async function privatePhoneCloudRestoreOpen(){toast('正在读取云备份…');try{const r=await privatePhoneAccountCall('account.backup.restore');if(!r||r.ok!==true)throw new Error(r&&r.message||'云备份读取失败');if(!r.found){toast('这个手机号还没有云备份');return;}const b=r.backup||{},d=b.payload;if(!d||!d.settings)throw new Error('云备份内容不完整');window._privatePhoneRestoreCandidate=d;openModal(`<h3>从手机号恢复</h3><div class="hint" style="line-height:1.8">云备份时间：<b>${esc(privatePhoneAccountDate(b.captured_at))}</b><br>大小：${esc(privatePhoneAccountBytes(b.byte_count))}<br><br>确认后会用云端完整备份覆盖当前小手机。当前本机不会在确认前发生任何变化。</div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="privatePhoneCloudRestoreConfirm()">确认恢复</button></div>`);}catch(e){toast((e&&e.message)||'云备份读取失败');}}
+async function privatePhoneCloudRestoreConfirm(){const d=window._privatePhoneRestoreCandidate;if(!d||!d.settings)return;closeModal();toast('正在恢复云备份…');try{S=mergeStateData(d);normalizeLoadedState();phoneFriendState();if(!await saveNowAsync())throw new Error('恢复后写入本机失败');window._privatePhoneRestoreCandidate=null;stack=[];home();setTimeout(()=>toast('手机号云备份已恢复'),120);}catch(e){toast((e&&e.message)||'恢复失败，原本机数据仍可重新导入');}}
+async function privatePhoneAccountSignOut(){if(!await uiConfirm('确定退出当前手机号吗？\n\n本机数据不会删除，云备份也会保留。'))return;try{await privatePhoneAccountCall('account.signout');_privatePhoneAccount={loaded:true,loading:false,loggedIn:false,maskedPhone:'',userId:'',backup:null,error:''};privatePhoneAccountPaint();toast('已退出手机号，本机数据仍然保留');}catch(e){toast((e&&e.message)||'退出失败');}}
+window.addEventListener('pageshow',privatePhoneCloudWake);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)privatePhoneCloudWake();});
 function settingsDataToolsSafeHTML(){try{return settingsDataToolsHTML();}catch(e){return `<div class="section" id="set_license"><div style="padding:14px;color:#ffb3c8;font-weight:600">授权与数据暂时读取失败</div><div class="hint" style="padding:0 14px 14px">设置页仍然停留在这里，数据没有被删除。请返回后重试；若持续出现，请刷新小手机。</div></div>`;}}
 function settingsTabTap(e,n){if(e){if(e.preventDefault)e.preventDefault();if(e.stopPropagation)e.stopPropagation();}setTab(n);return false;}
 function setTab(n){n=Math.max(1,Math.min(3,+n||1));_setTab=n;const pages=[1,2,3].map(i=>$('#setpage'+i)),tabs=[1,2,3].map(i=>$('#settab'+i));if(pages.some(x=>!x))return;
@@ -3227,7 +3256,8 @@ function jumpToSection(id){const el=document.getElementById(id);if(!el)return;tr
 function settingsJump(tab,id){setTab(tab);setTimeout(()=>jumpToSection(id),60);}
 function coupleJump(tab,id){if(+tab===3){companionEnter(id);return;}couTab(tab);setTimeout(()=>jumpToSection(id),60);}
 function quickJumpBar(items){return `<div class="section" style="margin:0 0 10px;border-radius:12px;overflow:hidden"><div style="padding:10px 12px"><div style="font-size:12px;color:#888;margin-bottom:7px">快捷入口</div><div style="display:flex;flex-wrap:wrap;gap:6px">${items.map(x=>`<button class="minibtn" style="background:#24242a;color:#ddd;border:1px solid rgba(255,255,255,.08)" onclick="${x[1]}">${x[0]}</button>`).join('')}</div></div></div>`;}
-function settingsDataToolsHTML(){return `${quickJumpBar([['手机授权',"settingsJump(3,'set_license')"],['桌面布局',"settingsJump(3,'set_layout')"],['AI记忆搬家',"settingsJump(3,'set_ai_memory_move')"],['备份',"settingsJump(3,'set_backup')"],['存储',"settingsJump(3,'set_storage')"]])}
+function settingsDataToolsHTML(){return `${quickJumpBar([['手机号账号',"settingsJump(3,'set_private_account')"],['手机授权',"settingsJump(3,'set_license')"],['桌面布局',"settingsJump(3,'set_layout')"],['AI记忆搬家',"settingsJump(3,'set_ai_memory_move')"],['备份',"settingsJump(3,'set_backup')"],['存储',"settingsJump(3,'set_storage')"]])}
+    ${privatePhoneAccountSection()}
     ${licenseStatusSection()}
     ${storageMeter()}
     <div class="btns" id="set_layout" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
