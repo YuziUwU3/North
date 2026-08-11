@@ -8,6 +8,8 @@
 
 当前私人安装版本为 1.0.20 (20)，内置共享网页核心为 v895。电量继续直接读 `UIDevice`，位置继续读 CoreLocation；HealthKit 在角色明确读取时会真正启用。屏幕总时长和逐 App 数据在中国等无法取得 `approvedWithDataAccess` 的地区，改由工程内既有 `DeviceActivityReport` 扩展按本次请求编号回传，不再只尝试欧盟限定的直接 API。读取全部会逐项列出电量、总屏幕、逐 App、步数、睡眠、心率、心电、HRV 和位置，未读到的项目必须说明真实原因。Supabase 迁移 003–006 与 `phone-role-push` 已部署，统一控制器同时兼容旧 `p_apns_env` 和新 `p_apns_environment` 参数。彻底清空会等待本地大聊天归档、共同生活上下文和服务端主动联系记忆全部清除。Windows 自动测试已通过；Mac 编译、签名和真机全链路验收仍未完成。
 
+当前私人安装版本为 1.0.21 (21)，内置共享网页核心为 v896。用户要求读取全部时，聊天或通话中的普通模型回复不能再把范围缩成位置或电量；原生端在各请求读取器结束后写入同一轮完成回执，网页收到并核对后才允许角色逐项报告九类结果。后台报 `controller_user_id does not exist` 的远端前置迁移 002 已实际应用，四个 controller 字段与新旧统一控制器 RPC 已核验存在，迁移 002–006 均在远端记录中。Windows 475 项自动测试通过；Mac 编译、签名和真机全链路验收仍未完成。
+
 手机号功能启用前，不需要打开 Phone Provider，也不需要 Twilio 或短信服务。只需执行 `supabase/migrations/202608110001_private_phone_accounts.sql`，再在 Supabase Authentication 中手动建立一名已确认的私人用户：内部邮箱格式为 `smallphone.86手机号@example.com`，例如手机号 `13812345678` 对应 `smallphone.8613812345678@example.com`。App 登录页仍输入原手机号和该用户的密码。
 
 ## 目录

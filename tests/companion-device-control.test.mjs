@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v895 · 彻底清空与大存档修复'/);
+  assert.match(app, /const APP_VER='v896 · 全量读取完成后再回复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -199,6 +199,51 @@ test('native all-data read crosses HealthKit authorization and uses the report e
   assert.match(sync, /readErrors\["battery"\]/);
   assert.match(rootView, /DeviceActivityReport\(reportContext, filter: todayFilter\)/);
   assert.match(rootView, /companionUsageReportRefreshRequested/);
+});
+
+test('all-data read cannot let the role speak before the same native session is complete', () => {
+  const nativeSnapshot = functionSource('companionNativeSnapshot');
+  const nativePull = functionSource('companionRolePullNativeSnapshot');
+  const latest = functionSource('companionRolePullLatest');
+  const intent = functionSource('maybeSpyIntent');
+  assert.match(nativeSnapshot, /companionRoleAllFocus\(focus\)[\s\S]*raw\.readComplete!==true/);
+  assert.match(nativePull, /raw\.readSessionId/);
+  assert.match(nativePull, /st\.readFinishedAt=companionTime\(raw\.readFinishedAt\)/);
+  assert.match(nativePull, /st\.readComplete=raw\.readComplete===true/);
+  assert.match(nativePull, /st\.readOutcomes=raw\.readOutcomes/);
+  assert.match(latest, /st\.readComplete!==true/);
+  assert.match(latest, /companionRoleAllFocus\(st\.requestedFocus\)/);
+  assert.match(latest, /now-st\.readFinishedAt>60000/);
+  assert.match(intent, /opt\.nativeOnly/);
+  assert.match(intent, /opt\.immediate\?120:6500/);
+
+  const chatQueue = app.indexOf('const _nativeInspectionQueued=maybeSpyIntent');
+  const chatGuard = app.indexOf('guardUnverifiedRolePhoneReply(content,note)', chatQueue);
+  assert.ok(chatQueue >= 0 && chatGuard > chatQueue);
+  assert.match(app.slice(chatQueue, chatGuard), /if\(_nativeInspectionQueued\)content=''/);
+
+  const callQueue = app.indexOf('const _nativeCallInspectionQueued=maybeSpyIntent');
+  const callGuard = app.indexOf("guardUnverifiedRolePhoneReply(content,'')", callQueue);
+  assert.ok(callQueue >= 0 && callGuard > callQueue);
+  assert.match(app.slice(callQueue, callGuard), /if\(_nativeCallInspectionQueued\)/);
+});
+
+test('native completion receipt is written only after every requested reader has settled', () => {
+  const sync = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'CompanionSyncView.swift'), 'utf8');
+  const errors = sync.indexOf('snapshot["readErrors"] = readErrors');
+  const outcomes = sync.indexOf('snapshot["readOutcomes"] = [', errors);
+  const finished = sync.indexOf('snapshot["readFinishedAt"] = iso8601(Date())', outcomes);
+  const complete = sync.indexOf('snapshot["readComplete"] = true', finished);
+  const returned = sync.indexOf('return snapshot', complete);
+  assert.ok(errors >= 0 && outcomes > errors && finished > outcomes && complete > finished && returned > complete);
+});
+
+test('background controller schema is installed before unified push claims it', () => {
+  const migration = readFileSync(join(root, 'supabase', 'migrations', '202608110002_private_phone_companion_controller.sql'), 'utf8');
+  for (const column of ['controller_user_id', 'controller_kind', 'controller_instance_id', 'controller_claimed_at']) {
+    assert.match(migration, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(migration, /claim_private_phone_companion_controller/);
 });
 
 test('role usage facts never expose a configured limit as actual use', () => {

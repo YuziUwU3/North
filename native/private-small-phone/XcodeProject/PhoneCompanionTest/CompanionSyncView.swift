@@ -979,6 +979,28 @@ final class CompanionSyncService: ObservableObject {
             readErrors["battery"] = "iOS 本次没有返回可用电量"
         }
         snapshot["readErrors"] = readErrors
+        let healthWasRead = snapshot["health"] != nil
+        let batteryWasRead = (
+            snapshot["deviceTelemetry"] as? [String: Any]
+        )?["batteryLevel"] != nil
+        snapshot["readOutcomes"] = [
+            "battery": batteryWasRead ? "success" : "unavailable",
+            "screenTime": wantsUsage
+                ? (report == nil ? "unavailable" : "success")
+                : "not-requested",
+            "health": wantsHealth
+                ? (healthWasRead ? "success" : "unavailable")
+                : "not-requested",
+            "location": wantsLocation
+                ? (locationManager.currentLocation == nil
+                    ? "unavailable" : "success")
+                : "not-requested"
+        ]
+        // Written only after every requested reader has returned a value or
+        // reached its explicit unavailable/timeout result. JavaScript must not
+        // let the role speak before this same-session receipt exists.
+        snapshot["readFinishedAt"] = iso8601(Date())
+        snapshot["readComplete"] = true
         return snapshot
     }
 
