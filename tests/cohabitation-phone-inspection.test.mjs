@@ -22,7 +22,7 @@ function functionSource(name){
 
 test('online and co-living inspections share one exclusive lane',()=>{
   const context=vm.createContext({uid:(()=>{let n=0;return()=>`t${++n}`;})(),wxLoginActive:()=>false,remoteControlActive:()=>false,String,Date});
-  vm.runInContext(`let _rolePhoneInspectionLane=null;${functionSource('rolePhoneInspectionLaneActive')}${functionSource('rolePhoneInspectionAcquire')}${functionSource('rolePhoneInspectionRelease')}this.acquire=rolePhoneInspectionAcquire;this.release=rolePhoneInspectionRelease;this.active=rolePhoneInspectionLaneActive;`,context);
+  vm.runInContext(`let _rolePhoneInspectionLane=null;let _rolePhoneInspectionEpoch=0;${functionSource('rolePhoneInspectionBump')}${functionSource('rolePhoneInspectionLaneActive')}${functionSource('rolePhoneInspectionAcquire')}${functionSource('rolePhoneInspectionRelease')}this.acquire=rolePhoneInspectionAcquire;this.release=rolePhoneInspectionRelease;this.active=rolePhoneInspectionLaneActive;`,context);
   const first=context.acquire('cohab','c1','抖音');
   assert.equal(first,'t1');
   assert.equal(context.active(),true);

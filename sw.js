@@ -1,5 +1,5 @@
-const BUILD='897';
-const SHELL_CACHE='north-shell-v897';
+const BUILD='898';
+const SHELL_CACHE='north-shell-v898';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -18,8 +18,8 @@ const OPTIONAL_FILES=[
   './commerce-ui.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './thought-card-effects.js?v='+BUILD,
-  './pet-game.js?v=897',
-  './pet-game.css?v=897',
+  './pet-game.js?v=898',
+  './pet-game.css?v=898',
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',

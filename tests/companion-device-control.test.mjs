@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v897 · 读取完成只自然回复一次'/);
+  assert.match(app, /const APP_VER='v898 · 全渠道读取完成后才回复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -219,9 +219,10 @@ test('all-data read cannot let the role speak before the same native session is 
   assert.match(latest, /companionRoleAllFocus\(st\.requestedFocus\)/);
   assert.match(latest, /now-st\.readFinishedAt>60000/);
   assert.match(intent, /opt\.nativeOnly/);
-  assert.match(intent, /opt\.immediate\?120:6500/);
-  assert.match(intent, /alreadySaid:opt\.suppressInitial\?'':reply/);
-  assert.match(intent, /_nativeInspectionPending\.add/);
+  assert.match(functionSource('queueNativeInspection'), /opt\.immediate\?120:6500/);
+  assert.match(intent, /queueNativeInspection/);
+  assert.match(functionSource('queueNativeInspection'), /_nativeInspectionPending\.add/);
+  assert.match(functionSource('queueNativeInspection'), /rolePhoneInspectionBump/);
 
   const chatEarlyGate = app.indexOf('const _nativeUserInspectionQueued=');
   const chatModel = app.indexOf('wechatPrimaryReply(', chatEarlyGate);
@@ -229,9 +230,11 @@ test('all-data read cannot let the role speak before the same native session is 
   const chatQueue = app.indexOf('const _nativeInspectionQueued=maybeSpyIntent');
   const chatGuard = app.indexOf('guardUnverifiedRolePhoneReply(content,note)', chatQueue);
   assert.ok(chatQueue >= 0 && chatGuard > chatQueue);
-  assert.match(app.slice(chatQueue, chatGuard), /if\(_nativeInspectionQueued\)content=''/);
+  assert.match(app.slice(chatQueue, chatGuard), /if\(_nativeInspectionQueued\).*return true/);
+  assert.match(functionSource('aiReply'), /rolePhoneInspectionGenerationStale\(id,_inspectionStartEpoch\)/);
+  assert.match(functionSource('aiReply'), /queueNativeInspection\(id,_lu,_phoneGuard\.focus/);
 
-  const callQueue = app.indexOf('const _nativeCallInspectionQueued=maybeSpyIntent');
+  const callQueue = app.indexOf('const _nativeCallInspectionQueued=!_inspectionCompletion&&maybeSpyIntent');
   const callGuard = app.indexOf("guardUnverifiedRolePhoneReply(content,'')", callQueue);
   assert.ok(callQueue >= 0 && callGuard > callQueue);
   assert.match(app.slice(callQueue, callGuard), /if\(_nativeCallInspectionQueued\)/);
@@ -239,6 +242,34 @@ test('all-data read cannot let the role speak before the same native session is 
   const callEarlyGate = app.indexOf('const _nativeCallUserInspectionQueued=');
   const callModel = app.indexOf('let content=await chatAPI', callEarlyGate);
   assert.ok(callEarlyGate >= 0 && callModel > callEarlyGate, 'direct user read intent must stop before ordinary call generation');
+  assert.match(functionSource('callAI'), /_inspectionCompletion/);
+  assert.match(functionSource('callAI'), /rolePhoneInspectionGenerationStale\(c\.id,_inspectionStartEpoch\)/);
+  assert.match(functionSource('doSpyViewCore'), /await callAI\(cn,\{inspectionCompletion:true\}\)/);
+  assert.match(functionSource('offAI'), /directInspection/);
+  assert.match(functionSource('offAI'), /rolePhoneInspectionGenerationStale/);
+});
+
+test('natural all-data wording enters the gate before any model reply', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    function rolePhoneTelemetryCategories(){return [];}
+    function rolePhoneFocusFromCategories(){return '';}
+    ${functionSource('companionInspectionFocusFromText')}
+    ${functionSource('companionInspectionRequestFromUser')}
+    this.focus=companionInspectionFocusFromText;
+    this.request=companionInspectionRequestFromUser;
+  `, context);
+  for (const phrase of [
+    '你再刷一次快点，我在测试查一次所有的',
+    '再刷一遍全部数据',
+    '重新检查所有项目',
+    '把完整的内容都读取一下',
+  ]) {
+    assert.equal(context.focus(phrase), 'iPhone全部数据', phrase);
+    assert.equal(context.request(phrase), 'iPhone全部数据', phrase);
+  }
+  assert.equal(context.request('先别查所有数据'), '');
+  assert.equal(context.request('我们刚才聊到所有数据'), '');
 });
 
 test('native completion receipt is written only after every requested reader has settled', () => {
@@ -351,9 +382,9 @@ test('role intent recognizer includes every native telemetry category', () => {
   }
   assert.match(parser, /companionInspectionFocusFromText/);
   assert.match(app, /guardUnverifiedRolePhoneReply\(content,note\)/);
-  assert.match(app, /setTimeout\(\(\)=>doSpyView\(id,true,\{intent:true,focus:_phoneGuard\.focus/);
+  assert.match(functionSource('aiReply'), /queueNativeInspection\(id,_lu,_phoneGuard\.focus/);
   assert.match(app, /guardUnverifiedRolePhoneReply\(content,''\)/);
-  assert.match(app, /doSpyView\(c\.id,true,\{intent:true,focus:_callPhoneGuard\.focus/);
+  assert.match(functionSource('callAI'), /queueNativeInspection\(c\.id,_luc,_callPhoneGuard\.focus/);
   assert.match(functionSource('doSpyViewCore'), /!opts\.bySheTold&&!opts\.forceResult/);
 });
 
