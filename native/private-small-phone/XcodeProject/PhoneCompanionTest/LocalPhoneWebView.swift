@@ -223,7 +223,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.14 (14)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.16 (16)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -257,6 +257,68 @@ struct LocalPhoneWebView: UIViewRepresentable {
           });
         }
       });
+      let nativeGeoWatch = 0;
+      const nativeGeoRead = (success, failure) => {
+        window.SmallPhoneNative.request('location.current').then(value => {
+          if (typeof success !== 'function') return;
+          success({
+            coords: {
+              latitude: Number(value.latitude),
+              longitude: Number(value.longitude),
+              accuracy: Number(value.accuracy) || 0,
+              altitude: Number(value.altitude) || 0,
+              altitudeAccuracy: null,
+              heading: null,
+              speed: null
+            },
+            timestamp: Number(value.timestamp) || Date.now()
+          });
+        }).catch(error => {
+          if (typeof failure === 'function') {
+            failure({ code: 2, message: (error && error.message) || 'native_location_unavailable' });
+          }
+        });
+      };
+      const nativeGeolocation = {
+        getCurrentPosition(success, failure) {
+          nativeGeoRead(success, failure);
+        },
+        watchPosition(success, failure) {
+          const id = ++nativeGeoWatch;
+          nativeGeoRead(success, failure);
+          return id;
+        },
+        clearWatch() {}
+      };
+      try {
+        Object.defineProperty(navigator, 'geolocation', {
+          configurable: true,
+          value: nativeGeolocation
+        });
+      } catch (_) {}
+      try {
+        Object.defineProperty(Navigator.prototype, 'geolocation', {
+          configurable: true,
+          get() { return nativeGeolocation; }
+        });
+      } catch (_) {}
+      try {
+        const originalPermissions = navigator.permissions;
+        Object.defineProperty(navigator, 'permissions', {
+          configurable: true,
+          value: {
+            query(descriptor) {
+              if (descriptor && descriptor.name === 'geolocation') {
+                return Promise.resolve({ state: 'granted', onchange: null });
+              }
+              return originalPermissions.query.call(
+                originalPermissions,
+                descriptor
+              );
+            }
+          }
+        });
+      } catch (_) {}
       window.__smallPhoneNativeSpeechEvent = payload => {
         const client = payload && speechClients.get(payload.sessionId);
         if (!client) return;

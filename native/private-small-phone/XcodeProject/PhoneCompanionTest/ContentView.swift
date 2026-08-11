@@ -35,7 +35,7 @@ struct ContentView: View {
     @State private var enabledDailyLimitTokens: Set<ApplicationToken>
     @State private var limitStatusText = "尚未设置每日使用时长"
 
-    @StateObject private var locationManager = LocationManager()
+    @StateObject private var locationManager = LocationManager.shared
 
     private let manualLockStore = ManagedSettingsStore()
     private let dailyLimitStore = ManagedSettingsStore(named: .dailyLimit)

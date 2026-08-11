@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.14 \(14\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.16 \(16\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -45,7 +45,10 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   const staging = read(
     'native/private-small-phone/scripts/stage-private-phone-web.mjs'
   );
-  assert.match(bridge, /contractVersion = 7/);
+  assert.match(bridge, /contractVersion = 9/);
+  assert.match(bridge, /"companion\.controller\.claim"/);
+  assert.match(bridge, /claim_private_phone_companion_controller/);
+  assert.match(bridge, /privateControllerInstanceID/);
   assert.match(bridge, /case "license\.request"/);
   assert.match(bridge, /case "storage\.get", "storage\.put", "storage\.delete"/);
   assert.match(bridge, /case "storage\.status"/);
@@ -112,8 +115,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 14;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.14;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 16;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.16;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -134,6 +137,39 @@ test('private project removes the live map before background and has a real time
   assert.match(sync, /AsyncStream<UsageReadOutcome>\.makeStream/);
   assert.doesNotMatch(sync, /withTaskGroup\([\s\S]{0,300}UsageReadOutcome/);
   assert.match(sync, /guard !Task\.isCancelled else \{ return nil \}/);
+});
+
+test('private app owns location permission and only asks Screen Time once', () => {
+  const webView = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'
+  );
+  const bridge = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'
+  );
+  const location = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocationManager.swift'
+  );
+  const sync = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift'
+  );
+  const plist = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist'
+  );
+
+  assert.match(webView, /location\.current/);
+  assert.match(webView, /Object\.defineProperty\(navigator, 'geolocation'/);
+  assert.match(webView, /Object\.defineProperty\(Navigator\.prototype, 'geolocation'/);
+  assert.match(webView, /descriptor\.name === 'geolocation'/);
+  assert.match(bridge, /case "location\.current"/);
+  assert.match(bridge, /LocationManager\.shared/);
+  assert.match(location, /static let shared = LocationManager\(\)/);
+  assert.match(location, /pausesLocationUpdatesAutomatically = false/);
+  assert.match(location, /allowsBackgroundLocationUpdates = enabled/);
+  assert.match(location, /requestAlwaysAuthorizationOnce/);
+  assert.match(sync, /authorizationStatus ==[\s\S]{0,80}\.notDetermined/);
+  assert.match(sync, /locationManager\.resumeTrackingIfAuthorized\(\)/);
+  assert.match(sync, /refreshUsage: true/);
+  assert.match(plist, /<string>location<\/string>/);
 });
 
 test('private app keeps device management in Settings and clears stale app badges', () => {

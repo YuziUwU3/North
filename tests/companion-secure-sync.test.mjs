@@ -35,6 +35,13 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
+function assignmentSource(name) {
+  const start = app.lastIndexOf(`${name}=function(`);
+  assert.notEqual(start, -1, `missing reassignment for ${name}`);
+  const end = app.indexOf('\n', start);
+  return app.slice(start, end === -1 ? app.length : end);
+}
+
 test('sync tables are not exposed through permissive RLS policies', () => {
   assert.match(sql, /revoke all on table public\.phone_companion_links from anon, authenticated/i);
   assert.match(sql, /revoke all on table public\.phone_companion_commands from anon, authenticated/i);
@@ -70,6 +77,34 @@ test('pairing and commands use dedicated companion RPCs', () => {
   assert.match(functionSource('renderCompanionPage'), /未关联（外置仍可单独锁定或解锁）/);
   assert.match(functionSource('renderCompanionPage'), /关联内置 App 后，才能设置内外统一限额/);
   assert.doesNotMatch(functionSource('companionPollSnapshot'), /phone_external_events/);
+});
+
+test('role inspections pull a fresh external snapshot instead of trusting the couple-space cache', () => {
+  assert.match(functionSource('companionRolePullLatest'), /companionRolePullServerSnapshot/);
+  assert.match(functionSource('companionRolePullLatest'), /companionRoleRefreshExternal/);
+  assert.doesNotMatch(functionSource('companionRolePullLatest'), /companionPollSnapshot/);
+  assert.match(functionSource('companionRoleRefreshExternal'), /phone_companion_enqueue_command/);
+  assert.match(functionSource('companionRoleRefreshExternal'), /companionNotifyNative/);
+  assert.match(functionSource('companionRoleRefreshExternal'), /companionRoleFocusRevision\(current,focus\)>before/);
+  assert.match(functionSource('companionRoleRefreshExternal'), /companionRoleSnapshotFresh/);
+  assert.match(functionSource('companionRoleDataState'), /_companionRoleExternalSnapshot/);
+  assert.match(assignmentSource('companionRolePrompt'), /不得读取或复述情侣空间里的伴生缓存/);
+  assert.match(assignmentSource('companionRolePrompt'), /companionRoleDataState/);
+  assert.match(functionSource('cohabRunPhoneInspection'), /companionRolePullLatest/);
+  assert.match(functionSource('doSpyView'), /companionRolePullLatest/);
+  assert.match(functionSource('companionRoleScreenTimeText'), /usageGeneratedAt/);
+  assert.match(functionSource('companionRoleScreenTimeText'), /lastSync/);
+  assert.match(functionSource('companionRoleHeartRateText'), /companionRoleDataState/);
+});
+
+test('roles can refresh and inspect all external iPhone facts in one pass', () => {
+  assert.match(functionSource('cohabPhoneTarget'), /iPhone全部数据/);
+  assert.match(functionSource('companionRoleAllDataText'), /companionRoleScreenTimeText/);
+  assert.match(functionSource('companionRoleAllDataText'), /companionRoleDailyHealthText/);
+  assert.match(functionSource('companionRoleAllDataText'), /companionRoleLocationText/);
+  assert.match(functionSource('spyFocusData'), /companionRoleAllFocus/);
+  assert.match(functionSource('cohabRunPhoneInspection'), /正在查看/);
+  assert.match(functionSource('doSpyViewCore'), /companionRoleAllFocus/);
 });
 
 test('a bound external action is enqueued only once', () => {

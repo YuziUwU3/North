@@ -29,7 +29,7 @@ struct CompanionRootView: View {
 struct CompanionSyncView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var service = CompanionSyncService()
-    @StateObject private var locationManager = LocationManager()
+    @StateObject private var locationManager = LocationManager.shared
     @StateObject private var wellnessService = CompanionWellnessService()
     @StateObject private var pushCoordinator =
         CompanionPushCoordinator.shared
@@ -334,9 +334,12 @@ struct CompanionSyncView: View {
                     return .noData
                 }
 
-                let didSynchronize = await service.synchronizeCommandsOnly(
+                await wellnessService.refresh()
+                let didSynchronize = await service.synchronize(
                     locationManager: locationManager,
-                    wellnessService: wellnessService
+                    wellnessService: wellnessService,
+                    quiet: true,
+                    refreshUsage: true
                 )
                 return didSynchronize ? .newData : .failed
             }
@@ -381,6 +384,7 @@ struct CompanionSyncView: View {
             }
 
             Task {
+                locationManager.resumeTrackingIfAuthorized()
                 await service.refreshDataAccessState()
                 await wellnessService.refresh()
                 await service.synchronize(
@@ -772,12 +776,15 @@ final class CompanionSyncService: ObservableObject {
             return
         }
 
-        do {
-            try await AuthorizationCenter.shared.requestAuthorization(
-                for: .individual
-            )
-        } catch {
-            // 原有 Family Controls 授权仍可继续用于选择、限额和锁定。
+        if AuthorizationCenter.shared.authorizationStatus ==
+                .notDetermined {
+            do {
+                try await AuthorizationCenter.shared.requestAuthorization(
+                    for: .individual
+                )
+            } catch {
+                // 原有 Family Controls 授权仍可继续用于选择、限额和锁定。
+            }
         }
 
         updateDataAccessMode()

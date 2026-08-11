@@ -8,7 +8,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 7
+    static let contractVersion = 9
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
@@ -38,12 +38,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "native.management.open":
             openDeviceManagement?()
             reply(requestID: requestID, result: ["opened": true])
+        case "location.current":
+            performNativeLocation(requestID: requestID)
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)
         case "account.status", "account.password.signin",
              "account.signout", "account.backup.info",
-             "account.backup.upload", "account.backup.restore":
+             "account.backup.upload", "account.backup.restore",
+             "companion.controller.claim":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performPrivateAccountAction(
                 requestID: requestID,
@@ -84,6 +87,36 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             )
         default:
             reply(requestID: requestID, error: "unsupported_action")
+        }
+    }
+
+    private func performNativeLocation(requestID: String) {
+        let manager = LocationManager.shared
+        manager.resumeTrackingIfAuthorized()
+        manager.refreshCurrentLocation()
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            guard let self else { return }
+            guard let location = manager.currentLocation else {
+                self.reply(
+                    requestID: requestID,
+                    error: "native_location_unavailable"
+                )
+                return
+            }
+            self.reply(
+                requestID: requestID,
+                result: [
+                    "latitude": location.coordinate.latitude,
+                    "longitude": location.coordinate.longitude,
+                    "accuracy": location.horizontalAccuracy,
+                    "altitude": location.altitude,
+                    "timestamp": location.timestamp
+                        .timeIntervalSince1970 * 1_000,
+                    "place": manager.currentPlaceName
+                ]
+            )
         }
     }
 
@@ -431,6 +464,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         "sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2"
     private static let privateAccountKeychainService =
         "com.qianyi.smallphone.private.account.v1"
+    private static let privateControllerKeychainService =
+        "com.qianyi.smallphone.private.controller.v1"
 
     private func performPrivateAccountAction(
         requestID: String,
@@ -583,6 +618,35 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         requestID: requestID,
                         result: self.privateBackupResult(response, includesPayload: true)
                     )
+                case "companion.controller.claim":
+                    let session = try await self.validPrivateAccountSession()
+                    let target = (arguments["target"] as? String ?? "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let ownerSecret = arguments["ownerSecret"] as? String ?? ""
+                    guard target.range(
+                        of: "^yb_[a-z0-9]{20,96}$",
+                        options: .regularExpression
+                    ) != nil, ownerSecret.count >= 24 else {
+                        self.reply(requestID: requestID, error: "invalid_controller_claim")
+                        return
+                    }
+                    let response = try await self.privateAccountJSONRequest(
+                        path: "/rest/v1/rpc/claim_private_phone_companion_controller",
+                        method: "POST",
+                        body: [
+                            "p_target": target,
+                            "p_new_owner_secret": ownerSecret,
+                            "p_controller_instance_id": try self.privateControllerInstanceID()
+                        ],
+                        bearer: session.accessToken
+                    )
+                    var result = self.privateAccountPublicResult(response)
+                    if response.status >= 200, response.status < 300,
+                       let claimed = response.body as? [String: Any] {
+                        result = claimed
+                        result["ok"] = true
+                    }
+                    self.reply(requestID: requestID, result: result)
                 default:
                     self.reply(requestID: requestID, error: "unsupported_account_action")
                 }
@@ -802,6 +866,41 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             kSecAttrAccount as String: "primary"
         ]
         SecItemDelete(query as CFDictionary)
+    }
+
+    private func privateControllerInstanceID() throws -> String {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.privateControllerKeychainService,
+            kSecAttrAccount as String: "instance",
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: CFTypeRef?
+        if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+           let data = result as? Data,
+           let saved = String(data: data, encoding: .utf8),
+           saved.count >= 16 {
+            return saved
+        }
+
+        let instanceID = "private-ios-" + UUID().uuidString.lowercased()
+        var insert = query
+        insert.removeValue(forKey: kSecReturnData as String)
+        insert.removeValue(forKey: kSecMatchLimit as String)
+        insert[kSecValueData as String] = Data(instanceID.utf8)
+        insert[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.privateControllerKeychainService,
+            kSecAttrAccount as String: "instance"
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        let status = SecItemAdd(insert as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
+        return instanceID
     }
 
     func announceReady() {

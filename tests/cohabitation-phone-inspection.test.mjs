@@ -149,4 +149,6 @@ test('real companion sleep, steps, battery and screen-time facts are available t
   assert.match(functionSource('spyFocusData'),/companionRoleHeartRateText/);
   assert.match(functionSource('spyFocusData'),/companionRoleScreenTimeText/);
   assert.match(functionSource('spyFocusData'),/companionRoleBatteryText/);
+  assert.match(functionSource('cohabPhoneTargets'),/iPhone全部数据/);
+  assert.match(functionSource('cohabRunPhoneInspection'),/companionRoleAllFocus/);
 });

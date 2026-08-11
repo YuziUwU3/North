@@ -11,6 +11,10 @@ const migration = fs.readFileSync(
   new URL('../supabase/migrations/202608110001_private_phone_accounts.sql', import.meta.url),
   'utf8'
 );
+const controllerMigration = fs.readFileSync(
+  new URL('../supabase/migrations/202608110002_private_phone_companion_controller.sql', import.meta.url),
+  'utf8'
+);
 
 test('phone account UI is private-app only and preserves local data before a choice', () => {
   assert.match(app, /window\.__SMALL_PHONE_PRIVATE__===true/);
@@ -58,4 +62,18 @@ test('cloud backup table is auth-owned and rejects stale snapshot overwrite', ()
   assert.match(migration, /where private_phone_backups\.captured_at <= excluded\.captured_at/i);
   assert.match(migration, /references auth\.users\(id\) on delete cascade/i);
   assert.doesNotMatch(migration, /^\s*phone(?:_number)?\s+/im);
+});
+
+test('private phone account can claim the sole companion controller without unpairing the device', () => {
+  assert.match(controllerMigration, /auth\.uid\(\)/i);
+  assert.match(controllerMigration, /payload\s*#>>\s*'\{settings,cloudId\}'/i);
+  assert.match(controllerMigration, /backup-target-mismatch/i);
+  assert.match(controllerMigration, /device_secret_hash is not null/i);
+  assert.match(controllerMigration, /owner_secret_hash = public\.phone_companion_hash\(p_new_owner_secret\)/i);
+  assert.match(controllerMigration, /controller_kind = 'private-small-phone'/i);
+  assert.doesNotMatch(controllerMigration, /device_secret_hash\s*=/i);
+  assert.match(controllerMigration, /grant execute[\s\S]+to authenticated/i);
+  assert.match(app, /privatePhoneClaimCompanionController/);
+  assert.match(app, /name!==['"]phone_companion_begin_pairing['"]/);
+  assert.match(bridge, /companion\.controller\.claim/);
 });

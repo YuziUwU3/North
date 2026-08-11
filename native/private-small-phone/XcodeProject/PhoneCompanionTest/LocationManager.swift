@@ -29,6 +29,8 @@ struct FootprintPoint: Identifiable, Codable, Equatable {
 final class LocationManager: NSObject, ObservableObject,
                              CLLocationManagerDelegate {
 
+    static let shared = LocationManager()
+
     @Published private(set) var authorizationStatus:
         CLAuthorizationStatus = .notDetermined
 
@@ -44,6 +46,8 @@ final class LocationManager: NSObject, ObservableObject,
     private let manager = CLLocationManager()
     private let geocoder = CLGeocoder()
     private let storageKey = "PhoneCompanionTodayFootprint"
+    private let alwaysAuthorizationRequestedKey =
+        "PhoneCompanionAlwaysLocationRequested.v1"
     private var shouldStartAfterAuthorization = false
     private var lastGeocodedLocation: CLLocation?
     private var lastGeocodedAt: Date?
@@ -55,7 +59,7 @@ final class LocationManager: NSObject, ObservableObject,
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 25
         manager.activityType = .other
-        manager.pausesLocationUpdatesAutomatically = true
+        manager.pausesLocationUpdatesAutomatically = false
 
         authorizationStatus = manager.authorizationStatus
         accuracyAuthorization = manager.accuracyAuthorization
@@ -133,11 +137,37 @@ final class LocationManager: NSObject, ObservableObject,
 
     func resumeTrackingIfAuthorized() {
         switch manager.authorizationStatus {
-        case .authorizedAlways, .authorizedWhenInUse:
+        case .authorizedAlways:
+            configureBackgroundTracking(enabled: true)
             startTracking()
+        case .authorizedWhenInUse:
+            startTracking()
+            requestAlwaysAuthorizationOnce()
+        case .notDetermined:
+            shouldStartAfterAuthorization = true
+            manager.requestWhenInUseAuthorization()
         default:
             break
         }
+    }
+
+    private func configureBackgroundTracking(enabled: Bool) {
+        manager.allowsBackgroundLocationUpdates = enabled
+        manager.showsBackgroundLocationIndicator = false
+    }
+
+    private func requestAlwaysAuthorizationOnce() {
+        guard manager.authorizationStatus == .authorizedWhenInUse,
+              !UserDefaults.standard.bool(
+                forKey: alwaysAuthorizationRequestedKey
+              ) else {
+            return
+        }
+        UserDefaults.standard.set(
+            true,
+            forKey: alwaysAuthorizationRequestedKey
+        )
+        manager.requestAlwaysAuthorization()
     }
 
     func startTracking() {
@@ -149,9 +179,14 @@ final class LocationManager: NSObject, ObservableObject,
         }
 
         switch manager.authorizationStatus {
-        case .authorizedAlways, .authorizedWhenInUse:
+        case .authorizedAlways:
+            configureBackgroundTracking(enabled: true)
             isTracking = true
             manager.startUpdatingLocation()
+        case .authorizedWhenInUse:
+            isTracking = true
+            manager.startUpdatingLocation()
+            requestAlwaysAuthorizationOnce()
         case .notDetermined:
             shouldStartAfterAuthorization = true
             manager.requestWhenInUseAuthorization()
@@ -173,10 +208,16 @@ final class LocationManager: NSObject, ObservableObject,
         }
 
         switch manager.authorizationStatus {
-        case .authorizedAlways, .authorizedWhenInUse:
+        case .authorizedAlways:
+            configureBackgroundTracking(enabled: true)
             isTracking = true
             manager.requestLocation()
             manager.startUpdatingLocation()
+        case .authorizedWhenInUse:
+            isTracking = true
+            manager.requestLocation()
+            manager.startUpdatingLocation()
+            requestAlwaysAuthorizationOnce()
         case .notDetermined:
             shouldStartAfterAuthorization = true
             manager.requestWhenInUseAuthorization()
@@ -209,10 +250,16 @@ final class LocationManager: NSObject, ObservableObject,
 
             if self.shouldStartAfterAuthorization {
                 switch manager.authorizationStatus {
-                case .authorizedAlways, .authorizedWhenInUse:
+                case .authorizedAlways:
+                    self.shouldStartAfterAuthorization = false
+                    self.configureBackgroundTracking(enabled: true)
+                    self.isTracking = true
+                    manager.startUpdatingLocation()
+                case .authorizedWhenInUse:
                     self.shouldStartAfterAuthorization = false
                     self.isTracking = true
                     manager.startUpdatingLocation()
+                    self.requestAlwaysAuthorizationOnce()
                 case .denied, .restricted:
                     self.shouldStartAfterAuthorization = false
                     self.isTracking = false
