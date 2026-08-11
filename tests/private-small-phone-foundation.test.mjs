@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.13 \(13\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.14 \(14\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -45,11 +45,20 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   const staging = read(
     'native/private-small-phone/scripts/stage-private-phone-web.mjs'
   );
-  assert.match(bridge, /contractVersion = 6/);
+  assert.match(bridge, /contractVersion = 7/);
   assert.match(bridge, /case "license\.request"/);
   assert.match(bridge, /case "storage\.get", "storage\.put", "storage\.delete"/);
+  assert.match(bridge, /case "storage\.status"/);
   assert.match(bridge, /SmallPhonePrivateStore/);
   assert.match(bridge, /data\.write\(to: url, options: \.atomic\)/);
+  assert.match(bridge, /nativeStorageBackupURL/);
+  assert.match(bridge, /skippedOlderWrite/);
+  assert.match(bridge, /nativeStorageDataWithRecovery/);
+  assert.match(bridge, /completeUntilFirstUserAuthentication/);
+  assert.match(bridge, /volumeAvailableCapacityForImportantUsageKey/);
+  assert.match(bridge, /nativeStorageSavedAt\(in: record\) > 0/);
+  assert.match(bridge, /removeItem\(at: backupURL\)/);
+  assert.doesNotMatch(bridge, /for: \.documentDirectory/);
   assert.match(bridge, /URLSession\.shared\.data/);
   assert.match(bridge, /lkhlyfpssmrjkkzhuzag\.supabase\.co/);
   assert.equal(manifest.entry, '小手机.html');
@@ -60,6 +69,10 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   const app = read('app.js');
   assert.match(app, /SmallPhoneNative\.request\('storage\.put'/);
   assert.match(app, /SmallPhoneNative\.request\('storage\.get'/);
+  assert.match(app, /SmallPhoneNative\.request\('storage\.status'/);
+  assert.match(app, /nativeCore\|\|_coreOverflowMode/);
+  assert.match(app, /原生主存档/);
+  assert.match(app, /原生保护副本/);
   assert.match(app, /v==null\?imgGetIDB\(k\):v/,'an existing web archive remains readable before native migration');
 });
 
@@ -99,8 +112,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 13;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.13;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 14;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.14;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'

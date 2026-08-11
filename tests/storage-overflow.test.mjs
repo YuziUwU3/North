@@ -67,6 +67,17 @@ test('storage meter distinguishes the compact core index from browser-wide capac
   assert.match(app, /navigator\.storage&&navigator\.storage\.persist/);
 });
 
+test('private app always moves core state to native storage and reports real device capacity', () => {
+  assert.match(app, /nativeCore=privateNativeCoreStorageKey\(CORE_IDB_KEY\)/);
+  assert.match(app, /overflow=nativeCore\|\|_coreOverflowMode\|\|bytes>CORE_INLINE_LIMIT/);
+  assert.match(app, /if\(privateNativeCoreStorageKey\(CORE_IDB_KEY\)&&!_coreOverflowMode\)save\(0\)/);
+  assert.match(app, /SmallPhoneNative\.request\('storage\.status'\)/);
+  assert.match(app, /nativeTotal=.*native\.totalBytes/);
+  assert.match(app, /手机当前可安全使用约/);
+  assert.match(app, /原生核心存档使用双副本与旧写入拦截/);
+  assert.match(app, /音乐、视频等大文件仍放在 App 私有 WebKit 数据库中/);
+});
+
 test('storage details separate core, chats, images, voice cache and music', () => {
   assert.match(app, /function scanIDBStoreBytes\(openDB,storeName,classify\)/);
   assert.match(app, /function appStorageBreakdown\(\)/);
@@ -125,6 +136,7 @@ test('real save flow keeps only the newest queued large snapshot and restores it
     let S={settings:{},me:{accounts:[]},marker:'first',payload:'x'.repeat(3.6*1024*1024)};
     function defState(){return {settings:{},me:{accounts:[]}}}
     function _imgReplacer(key,value){return value}
+    function privateNativeCoreStorageKey(){return false}
     function isQuotaError(){return false}
     function mergeStateData(data){return Object.assign(defState(),data||{})}
     function recoveryStateStats(data){return {contacts:(data.contacts||[]).length,accounts:1,messages:0,memories:0,moments:0,groups:0}}
