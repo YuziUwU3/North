@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='885'){
+if(window.__NORTH_SHELL_BUILD__!=='886'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v885 · 微信式电话输入与原生语音强制重建';
+const APP_VER='v886 · 原生通话复用网页版整体键盘位移';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1392,7 +1392,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=885';
+  const url='sw.js?v=886';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -10406,7 +10406,7 @@ function callBackgroundHold(){if(_call&&_call.state==='active'){_call._bgHold=tr
 function callResumeHold(){if(_call&&_call.state==='active'){if(_call._bgHold){_call._bgHold=false;_call.lastUserTs=Date.now();_call.silentStage=0;callPersist();renderCallTime();}return;}restoreActiveCall();}
 let _callBusy=false,_callPend=null;/* 通话回复串行锁：同一时间只跑一轮callAI，防止"边聊边查手机"两轮叠在一起、说得飞快 */
 /* ===== 免提模式：对着屏幕说话→自动识别→他语音回你→接着听，全程不用动手 ===== */
-let _callHF=false,_callSR=null,_callHFBusy=false,_hfIgnoreUntil=0,_callHFLastFinal='',_callHFLastFinalAt=0,_callHFSawInterim=false,_callTyping=false;
+let _callHF=false,_callSR=null,_callHFBusy=false,_hfIgnoreUntil=0,_callHFLastFinal='',_callHFLastFinalAt=0,_callHFSawInterim=false;
 function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();audioRouteReset(false);toast('已关闭免提，触屏即可恢复普通声音');}else{audioHardWake(true);callHFStart();}render();}
 function callHFStart(){audioMicRouteCancel();const sr=makeSR();if(!sr){toast('这台设备/浏览器不支持语音识别，先用打字或按住说话吧（安卓Chrome支持最好）');_callHF=false;return;}
   _callHF=true;_callSR=sr;_callHFLastFinal='';_callHFLastFinalAt=0;_callHFSawInterim=false;
@@ -10548,7 +10548,7 @@ function callOnUserSay(t){if(!_call)return false;_call.lastUserTs=Date.now();_ca
   if(callSleepIntent(t)){_call.lull=true;callAI('[系统：'+S.me.name+'困了、想在通话里睡着。你温柔放轻声音哄ta睡：柔声说几句晚安情话让ta安心闭眼，节奏放慢。接下来ta可能就不出声睡着了——你别催ta别吵ta，安静陪着就好，偶尔很轻地说一句"睡吧，有我呢"。]');return true;}
   if(callAfkIntent(t)){_call.afkUntil=Date.now()+12*60000;}// 暂离豁免12分钟
   return false;}
-function callMin(){if(_call){callTypingClose(true);_call.min=true;renderCall();callPersist();}}
+function callMin(){if(_call){_call.min=true;renderCall();callPersist();}}
 function callMax(){if(_call){_call.min=false;renderCall();callPersist();}}
 function makeMiniDraggable(){const L=$('#callLayer');if(!L||!L.classList.contains('mini'))return;
   if(_call&&_call._mpos){L.style.left=_call._mpos.x+'px';L.style.top=_call._mpos.y+'px';L.style.right='auto';L.style.bottom='auto';}
@@ -10583,16 +10583,13 @@ function renderCall(){const L=$('#callLayer');if(!L)return;const _clrPos=()=>{L.
   if(_call.state==='incoming')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">${svgIc('hangup',26,'#fff')}</div>拒绝</div><div class="cbtncol"><div class="cbtn green" onclick="answerCall()">${svgIc('phonecall',25,'#fff')}</div>接听</div>`;
   else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">${svgIc('hangup',26,'#fff')}</div>取消</div>`;
   else{_call.replyVoice=true;btns=`<div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">${svgIc('hangup',24,'#fff')}</div>挂断</div>`;}
-  const nativeComposer=!!window.__SMALL_PHONE_PRIVATE__,callInput=_call.state==='active'?(nativeComposer?`<div class="callinput callinput-native show" id="callInput"><button class="call-mic" data-call-mic="1" onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'}">${svgIc('mic',18,'#fff')}</button><button class="call-type-open" onclick="callTypingOpen()">${_callHF?'免提中 · 点此打字':'打字说…'}</button><div class="call-composer"><button class="call-collapse" onclick="callTypingClose()" aria-label="收起输入框">⌄</button><input id="callMsg" inputmode="text" enterkeyhint="send" placeholder="打字说…" onkeydown="if(event.key==='Enter'){event.preventDefault();callSend()}"><button class="call-send" onclick="callSend()">发送</button></div></div>`:`<div class="callinput show" id="callInput"><button data-call-mic="1" onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'};border:none;border-radius:50%;width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">${svgIc('mic',18,'#fff')}</button><input id="callMsg" placeholder="${_callHF?'免提中·直接对我说…':'打字说…'}" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>`):'';
+  const callInput=_call.state==='active'?`<div class="callinput show" id="callInput"><button data-call-mic="1" onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'};border:none;border-radius:50%;width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">${svgIc('mic',18,'#fff')}</button><input id="callMsg" inputmode="text" enterkeyhint="send" placeholder="${_callHF?'免提中·直接对我说…':'打字说…'}" onkeydown="if(event.key==='Enter'){event.preventDefault();callSend()}"><button onclick="callSend()">发</button></div>`:'';
   L.innerHTML=`${(_call.state==='active'||_call.state==='outgoing')?`<div onclick="callMin()" title="缩小，可以边通话边聊天/玩手机" style="position:absolute;left:16px;top:50px;font-size:24px;cursor:pointer;z-index:3">⤵︎</div>`:''}<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
     ${callInput}
     <div class="callbtns">${btns}</div>`;
   updateCallSub();}
-function callTypingNative(active){if(!window.__SMALL_PHONE_PRIVATE__||!window.SmallPhoneNative||typeof window.SmallPhoneNative.request!=='function')return;window.SmallPhoneNative.request(active?'ui.callInput.begin':'ui.callInput.end').catch(()=>{});}
-function callTypingOpen(){const box=$('#callInput'),inp=$('#callMsg');if(!box||!inp)return;_callTyping=true;box.classList.add('typing');callTypingNative(true);requestAnimationFrame(()=>{try{inp.focus({preventScroll:true});}catch(_){inp.focus();}});}
-function callTypingClose(silent){const box=$('#callInput'),inp=$('#callMsg');_callTyping=false;if(inp&&document.activeElement===inp)inp.blur();if(box)box.classList.remove('typing');if(!silent||window.__SMALL_PHONE_PRIVATE__)callTypingNative(false);}
 function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_call.sub;
   box.innerHTML=s?`<div class="csline ${s.who==='me'?'me':''}">${esc(s.text).replace(/\n/g,'<br>')}</div>`:'';}
 function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}
@@ -10612,7 +10609,7 @@ async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;cons
   let started=false;const start=durationMs=>{if(started)return;started=true;if(opt.onAudioStart)try{opt.onAudioStart(durationMs);}catch(_){}};
   if(ttsApiOn()){const ready=opt.prepared?await opt.prepared:await prepareCallSpeech(text,c,opt);if(ready&&ready.buf){if(opt.cacheMessage)await callReplayStoreAudio(opt.cacheMessage,ready.ab,ready.buf.duration);await playCallMediaWait(ready.ab,ready.buf,start);}return;}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);u.rate=1;if(v){u.rate=voiceRate(v);u.pitch=voicePitch(v);u.volume=1;applySystemVoice(u,v);}const expected=Math.max(900,Math.min(12000,t.length*185/Math.max(.5,u.rate||1)));u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);start(expected);setTimeout(res,expected+800);}catch(e){res();}});}
-function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';callTypingClose();
+function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   const um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);behaviorOnUserMsg(_call.id,um);lifeNoteOnUserMsg(_call.id,um);emotionOnUserMsg(_call.id,um);save();_call.sub={who:'me',text:t};updateCallSub();
   if(callOnUserSay(t))return;callAI();}
 function callFailureText(e){const status=+(e&&e.status||0),source=String(e&&e.source||''),detail=[e&&e.message,e&&e.raw,e&&e.data&&JSON.stringify(e.data)].filter(Boolean).join(' ').toLowerCase();

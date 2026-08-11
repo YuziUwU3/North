@@ -10,7 +10,6 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
-    var callInputFocusChanged: ((Bool) -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
 
     func userContentController(
@@ -60,12 +59,6 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             } catch {
                 reply(requestID: requestID, error: "native_speech_rebuild_failed")
             }
-        case "ui.callInput.begin":
-            callInputFocusChanged?(true)
-            reply(requestID: requestID, result: ["focused": true])
-        case "ui.callInput.end":
-            callInputFocusChanged?(false)
-            reply(requestID: requestID, result: ["focused": false])
         case "speech.stop", "speech.abort":
             nativeSpeech.stop(notify: false)
             reply(requestID: requestID, result: ["stopped": true])

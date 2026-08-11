@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.9 \(9\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.10 \(10\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -99,8 +99,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 9;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.9;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 10;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.10;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -149,7 +149,7 @@ test('private app keeps device management in Settings and clears stale app badge
   assert.match(notificationService, /content\.badge = nil/);
 });
 
-test('private app rebuilds speech after role audio and uses a WeChat-style pinned composer', () => {
+test('private app rebuilds speech after role audio and reuses the proven web keyboard flow', () => {
   const bridge = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'
   );
@@ -206,17 +206,17 @@ test('private app rebuilds speech after role audio and uses a WeChat-style pinne
   assert.doesNotMatch(webView, /window\.scrollTo\(0,0\)/);
   assert.doesNotMatch(html, /north-native-keyboard-open/);
   assert.doesNotMatch(html, /--north-native-keyboard-offset/);
-  assert.match(bridge, /case "ui\.callInput\.begin"/);
-  assert.match(bridge, /case "ui\.callInput\.end"/);
-  assert.match(webView, /bindCallInputStabilizer/);
-  assert.match(webView, /observe\([\s\S]*\\\.contentOffset/);
-  assert.match(webView, /setContentOffset\(target, animated: false\)/);
-  assert.match(app, /function callTypingOpen\(\)/);
-  assert.match(app, /function callTypingClose\(silent\)/);
-  assert.match(app, /callTypingClose\(\);[\s\S]{0,160}const um=/);
-  assert.match(html, /html\.north-native-app \.callscreen\.active \.callinput-native\{[^}]*position:fixed;[^}]*bottom:8px/);
-  assert.match(html, /html\.north-native-app \.callinput-native\.typing \.call-composer\{display:flex\}/);
-  assert.match(html, /html\.north-native-app \.callscreen\.active \.callbtns\{bottom:70px/);
+  assert.doesNotMatch(bridge, /ui\.callInput/);
+  assert.doesNotMatch(webView, /bindCallInputStabilizer/);
+  assert.doesNotMatch(webView, /observe\([\s\S]*\\\.contentOffset/);
+  assert.doesNotMatch(webView, /setContentOffset\(target, animated: false\)/);
+  assert.doesNotMatch(webView, /alwaysBounceVertical = false/);
+  assert.doesNotMatch(app, /callinput-native|callTypingOpen|callTypingClose/);
+  assert.match(app, /const callInput=_call\.state==='active'\?`<div class="callinput show"/);
+  assert.match(html, /\.callinput\{[^}]*bottom:150px/);
+  assert.match(html, /\.callbtns\{[^}]*bottom:40px/);
+  assert.doesNotMatch(html, /html\.north-native-app[^\n{}]*\.callinput\{/);
+  assert.doesNotMatch(html, /html\.north-native-app[^\n{}]*\.callbtns\{/);
   assert.match(html, /html\.north-native-app \.music-chat-dock:focus-within\{[^}]*position:fixed;[^}]*bottom:8px/);
   assert.match(html, /\.callscreen\.mini\{[^}]*bottom:auto;[^}]*max-height:58px/);
 });
