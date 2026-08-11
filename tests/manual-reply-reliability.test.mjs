@@ -33,6 +33,9 @@ assert.match(manual, /replyVisibleAssistantCount\(id,aid\)===before&&manualReply
 assert.match(manual, /刚才没有形成任何用户能看到的微信消息/);
 assert.equal((manual.match(/await aiReply\(/g) || []).length, 2, "manual reply should make at most one automatic retry");
 assert.match(manual, /这次模型没有返回可见消息，请再点一下/);
+assert.match(manual, /inspectionEpoch=rolePhoneInspectionEpoch\(\)/, "inspection must mark the run before ordinary generation");
+assert.match(manual, /rolePhoneInspectionEpoch\(\)!==inspectionEpoch\)return true/, "an inspection-blocked empty reply must not retry or show an empty-model hint");
+assert.match(manual, /rolePhoneInspectionEpoch\(\)===inspectionEpoch&&manualReplyRetryAllowed/, "the generic empty-model hint is allowed only when no inspection happened");
 assert.match(manual, /const running=\{id,aid,startedAt:Date\.now\(\),cancelled:false\}/, "each manual reply run needs its own ownership token");
 assert.match(manual, /replyGenerationStore\(\)\[key\]===running/, "a stale request must not clear a newer reply run");
 assert.match(touch, /running\.cancelled=true;delete replyGenerationStore\(\)\[k\]/, "a new user message must release a stale manual reply lock");

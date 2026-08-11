@@ -104,7 +104,8 @@ test('phone inspection reactions reuse the normal progressive reveal cadence',()
   assert.match(deliver,/offRevealTiming\(item\)/);
   assert.match(deliver,/_revealStep/);
   assert.match(deliver,/await new Promise/);
-  assert.match(deliver,/每句单独一行/);
+  assert.match(deliver,/回复形式、句数和是否分开发送由你自己决定/);
+  assert.match(deliver,/回复是一段还是多句由你自己决定/);
   assert.match(deliver,/cohabPhonePlaybackItems\(result\.items\)/);
   const playback=functionSource('cohabPhonePlaybackItems');
   assert.match(playback,/item\.who!=='ta'/);

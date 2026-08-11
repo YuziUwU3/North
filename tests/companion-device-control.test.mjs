@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v898 · 全渠道读取完成后才回复'/);
+  assert.match(app, /const APP_VER='v899 · 全渠道读取完成后才回复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -177,19 +177,24 @@ test('one-click role read names every real field and each actual app', () => {
   ]);
 });
 
-test('all-data replies keep missing diagnostics hidden and fall back to natural speech', () => {
-  const summary = functionSource('rolePhoneInspectionExactSummary');
+test('all-data replies hide diagnostics and remain entirely model generated', () => {
   const facts = functionSource('rolePhoneInspectionAllFactsText');
   for (const label of ['电量', '屏幕', '逐 App', '步数', '睡眠', '心率', '心电', 'HRV', '位置']) {
-    assert.match(summary, new RegExp(label));
     assert.match(facts, new RegExp(label));
   }
-  assert.doesNotMatch(summary, /逐项读取的结果|本次没有返回|· /);
   assert.doesNotMatch(facts, /readErrors|本次未读到|尚未同步/);
+  assert.doesNotMatch(app, /function rolePhoneInspectionExactSummary/);
   assert.match(functionSource('doSpyView'), /ownerRequested:!!\(opts&&opts\.bySheTold\)/);
-  assert.doesNotMatch(functionSource('doSpyViewCore'), /companionLocalNativeAvailable\(\)&&companionRoleAllFocus\(opts\.focus\)\)content=rolePhoneInspectionExactSummary/);
-  assert.match(functionSource('doSpyViewCore'), /rolePhoneInspectionReplyNatural\(content,fd,opts\.focus\)/);
-  assert.match(functionSource('cohabPhoneDeliverFact'), /rolePhoneInspectionReplyNatural/);
+  const online = functionSource('doSpyViewCore');
+  const cohab = functionSource('cohabPhoneDeliverFact');
+  assert.match(online, /rolePhoneInspectionReplyNatural\(content,fd,opts\.focus\)/);
+  assert.match(online, /仍由你本人重新组织查看后的自然反应/);
+  assert.match(online, /一条或多条由你决定/);
+  assert.match(online, /return false/);
+  assert.match(cohab, /rolePhoneInspectionReplyNatural/);
+  assert.match(cohab, /不能使用固定汇报模板/);
+  assert.match(cohab, /一段还是多句由你自己决定/);
+  assert.doesNotMatch(online + cohab, /rolePhoneInspectionExactSummary/);
 });
 
 test('native all-data read crosses HealthKit authorization and uses the report extension outside direct-data regions', () => {
