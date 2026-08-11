@@ -6,6 +6,8 @@
 
 当前私人安装版本为 1.0.19 (19)，内置共享网页核心为 v894。1.0.19 在同一 App 本机直连上保留独立 `readSessionId`、逐字段/逐 App 进度、原生与健康超时、心电概要、真实数值一致性守卫和明确手动解锁事件，并补齐角色主动提到电量、屏幕、App 用量、健康或位置时的真实读取触发；没有本次读取凭证时，“没刷新”等猜测会被拦截。普通网页查岗仍走微信、朋友圈、抖音等经典逐项横幅，不会被外置读取分支截走。统一 App 会在手机号账号认证后直接登记自己的设备身份和 APNs 令牌，角色资料页可核验 token、profile、cron 和下一次检查。本机命令仍必须收到 `stage = executed` 才能说成功。共同生活全天主动联系仍要求每次会话后随机安静 30–60 分钟；间隔 1 分钟只在该静默结束后生效。界面仍只显示手机号；密码不保存，令牌只存 Keychain。Mac 编译、迁移 003/004、Edge/APNs 部署及真机验收仍未完成。
 
+当前私人安装版本为 1.0.20 (20)，内置共享网页核心为 v895。电量继续直接读 `UIDevice`，位置继续读 CoreLocation；HealthKit 在角色明确读取时会真正启用。屏幕总时长和逐 App 数据在中国等无法取得 `approvedWithDataAccess` 的地区，改由工程内既有 `DeviceActivityReport` 扩展按本次请求编号回传，不再只尝试欧盟限定的直接 API。读取全部会逐项列出电量、总屏幕、逐 App、步数、睡眠、心率、心电、HRV 和位置，未读到的项目必须说明真实原因。Supabase 迁移 003–006 与 `phone-role-push` 已部署，统一控制器同时兼容旧 `p_apns_env` 和新 `p_apns_environment` 参数。彻底清空会等待本地大聊天归档、共同生活上下文和服务端主动联系记忆全部清除。Windows 自动测试已通过；Mac 编译、签名和真机全链路验收仍未完成。
+
 手机号功能启用前，不需要打开 Phone Provider，也不需要 Twilio 或短信服务。只需执行 `supabase/migrations/202608110001_private_phone_accounts.sql`，再在 Supabase Authentication 中手动建立一名已确认的私人用户：内部邮箱格式为 `smallphone.86手机号@example.com`，例如手机号 `13812345678` 对应 `smallphone.8613812345678@example.com`。App 登录页仍输入原手机号和该用户的密码。
 
 ## 目录

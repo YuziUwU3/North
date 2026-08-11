@@ -12,6 +12,8 @@ const contextMigration = readFileSync(join(root, 'supabase', 'migrations', '2026
 const naturalMigration = readFileSync(join(root, 'supabase', 'migrations', '202608090001_phone_role_push_natural_messages.sql'), 'utf8');
 const allDayMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110003_phone_role_push_all_day_random_idle.sql'), 'utf8');
 const unifiedPushMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110004_private_phone_unified_push.sql'), 'utf8');
+const legacyClaimMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110005_private_phone_unified_push_legacy_rpc.sql'), 'utf8');
+const resetMemoryMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110006_phone_role_push_reset_memory.sql'), 'utf8');
 const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
 const notificationService = readFileSync(join(root, 'docs', 'ios', 'v831角色头像通信通知', 'NotificationService.swift'), 'utf8');
 
@@ -190,6 +192,19 @@ test('unified private app registers itself and exposes end-to-end push diagnosti
   assert.match(functionSource('roleServerPushCheckStatus'), /pushRegistered/);
   assert.match(functionSource('roleServerPushStatusHTML'), /profileEnabled/);
   assert.match(functionSource('roleServerPushStatusHTML'), /cronActive/);
+  assert.match(legacyClaimMigration, /p_apns_env text/);
+  assert.match(legacyClaimMigration, /p_apns_environment => p_apns_env/);
+});
+
+test('a total memory wipe also clears server context and undelivered old pushes', () => {
+  assert.match(resetMemoryMigration, /phone_role_push_reset_memory/);
+  assert.match(resetMemoryMigration, /recent_context = ''/);
+  assert.match(resetMemoryMigration, /memory_context = ''/);
+  assert.match(resetMemoryMigration, /delete from public\.phone_role_push_outbox/);
+  assert.match(resetMemoryMigration, /consumed_at is null/);
+  assert.match(functionSource('roleServerPushResetMemory'), /p_reset_ms:resetAt/);
+  assert.match(functionSource('roleServerPushSync'), /_serverMemoryResetPending/);
+  assert.match(functionSource('roleServerPushPull'), /rowAt<=\+c\._memoryResetAt/);
 });
 
 test('every visible conversation message resets a random 30-60 minute server quiet period', () => {

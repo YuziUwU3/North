@@ -56,6 +56,10 @@ test('overflow saves are verified asynchronously and failures are rate limited',
   assert.match(app, /now-_storageFailureModalAt>300000/);
   assert.match(app, /大容量存档保存失败/);
   assert.match(app, /无痕\/隐私模式/);
+  assert.match(app, /const IMG_DB_VERSION=2/);
+  assert.match(functionSource('imgDB'), /objectStoreNames\.contains\('img'\)/);
+  assert.match(functionSource('imgPutIDBWithRetry'), /attempt<3/);
+  assert.match(functionSource('imgPut'), /imgPutIDBWithRetry\(k,v\)/);
   assert.doesNotMatch(app, /catch\(e\)\{toast\(isQuotaError\(e\)\?'核心存档写不进去了/);
 });
 

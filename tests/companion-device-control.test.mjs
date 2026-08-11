@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v894 · 真实查看触发与防假读取'/);
+  assert.match(app, /const APP_VER='v895 · 彻底清空与大存档修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -175,6 +175,30 @@ test('one-click role read names every real field and each actual app', () => {
     '正在读取心电与 HRV',
     '正在读取实时位置',
   ]);
+});
+
+test('all-data replies enumerate every native category even when only one succeeds', () => {
+  const summary = functionSource('rolePhoneInspectionExactSummary');
+  for (const label of ['电量：', '总屏幕使用：', '逐 App：', '步数：', '睡眠：', '心率：', '心电：', 'HRV：', '位置：']) {
+    assert.match(summary, new RegExp(label));
+  }
+  assert.match(summary, /本次没有返回可用电量/);
+  assert.match(summary, /本次没有返回可用屏幕使用记录/);
+  assert.match(functionSource('doSpyView'), /ownerRequested:!!\(opts&&opts\.bySheTold\)/);
+  assert.match(functionSource('doSpyViewCore'), /companionLocalNativeAvailable\(\)&&companionRoleAllFocus\(opts\.focus\)\)content=rolePhoneInspectionExactSummary/);
+});
+
+test('native all-data read crosses HealthKit authorization and uses the report extension outside direct-data regions', () => {
+  const sync = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'CompanionSyncView.swift'), 'utf8');
+  const rootView = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'SmallPhonePrivateRootView.swift'), 'utf8');
+  assert.match(sync, /wantsHealth, !wellnessService\.healthSyncEnabled/);
+  assert.match(sync, /await wellnessService\.setHealthSyncEnabled\(true\)/);
+  assert.match(sync, /authorizationStatus == \.approved[\s\S]{0,100}fetchTodayExtensionUsage/);
+  assert.match(sync, /report\.today\.request\.v3/);
+  assert.match(sync, /shared\.requestID == request\.requestID/);
+  assert.match(sync, /readErrors\["battery"\]/);
+  assert.match(rootView, /DeviceActivityReport\(reportContext, filter: todayFilter\)/);
+  assert.match(rootView, /companionUsageReportRefreshRequested/);
 });
 
 test('role usage facts never expose a configured limit as actual use', () => {

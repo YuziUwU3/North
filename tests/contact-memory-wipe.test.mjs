@@ -24,9 +24,13 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v894 · 真实查看触发与防假读取'/);
+assert.match(source, /APP_VER='v895 · 彻底清空与大存档修复'/);
 assert.match(source, /_lifeNotesClearedAt/);
-assert.match(source, /clearContactMemoryData\(c,id\);saveNow\(\)/);
+assert.match(source, /clearContactMemoryData\(c,id\);render\(\);toast\('正在清除本机大聊天库和后台旧上下文/);
+assert.match(source, /await persistWechatMessagesNow\(\)/);
+assert.match(source, /await roleServerPushResetMemory\(c,c\._memoryResetAt\)/);
+assert.match(source, /if\(S\.cohabitation&&S\.cohabitation\.homes\)delete S\.cohabitation\.homes\[id\]/);
+assert.match(source, /c\._serverMemoryResetPending=now/);
 
 const role = {
   id: "r1", name: "Role", avatar: "avatar", persona: "persona", relation: "lover",
@@ -60,6 +64,7 @@ const S = {
     r1: [{ id: "m1", audio: "idb-audio:m1" }], "r1#alt": [{ content: "alt chat" }], r2: [{ content: "keep" }],
   },
   offline: { r1: { memory: ["date"] }, r2: { memory: ["keep"] } },
+  cohabitation: { homes: { r1: { msgs: [{ text: "old home" }], summaries: [{ text: "old summary" }] }, r2: { msgs: [] } } },
   offlineFocus: { cid: "r1" }, music: { chat: [{ cid: "r1" }, { cid: "r2" }] },
   alter: { "r1@r2": [{}], "r2@r3": [{}] }, alterMeta: { "r1@r2": {}, "r2@r3": {} },
   roleplay: { r1: { memory: ["plot"] }, r2: { members: [{ id: "r1" }, { id: "r2" }], msgs: [{ cid: "r1" }, { cid: "r2" }], inviteMids: { r1: "x" } } },
@@ -112,6 +117,8 @@ assert.equal(S.messages["r1#alt"], undefined);
 assert.ok(S.messages.r2);
 assert.equal(S.offline.r1, undefined);
 assert.ok(S.offline.r2);
+assert.equal(S.cohabitation.homes.r1, undefined);
+assert.ok(S.cohabitation.homes.r2);
 assert.deepEqual(plain(S.music.chat), [{ cid: "r2" }]);
 assert.equal(S.alter["r1@r2"], undefined);
 assert.ok(S.alter["r2@r3"]);

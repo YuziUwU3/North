@@ -447,6 +447,27 @@ private struct DeviceReportSnapshot: Codable, Sendable {
     }
 }
 
+private struct SharedUsageReportRequest: Codable {
+    let schema: Int
+    let requestID: String
+    let requestedAt: Date
+}
+
+private struct SharedUsageReportSnapshot: Codable {
+    let schema: Int
+    let requestID: String
+    let requestedAt: Date
+    let totalSeconds: Double
+    let generatedAt: Date
+    let apps: [DeviceReportAppUsage]
+}
+
+extension Notification.Name {
+    static let companionUsageReportRefreshRequested = Notification.Name(
+        "companion.usage-report-refresh-requested"
+    )
+}
+
 private enum UsageReadOutcome: Sendable {
     case report(DeviceReportSnapshot)
     case unavailable
@@ -509,6 +530,8 @@ final class CompanionSyncService: ObservableObject {
         "sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2"
 
     private let appGroupID = "group.com.qianyi.PhoneCompanionTest"
+    private let reportRequestKey = "report.today.request.v3"
+    private let reportSnapshotKey = "report.today.snapshot.v3"
     private let selectionKey = "savedFamilyActivitySelection"
     private let lockedAppsKey = "savedLockedApplicationTokens"
     private let dailyLimitsKey = "limit.savedSettings"
@@ -892,6 +915,12 @@ final class CompanionSyncService: ObservableObject {
             locationManager.refreshCurrentLocation()
             try? await Task.sleep(nanoseconds: 1_200_000_000)
         }
+        if wantsHealth, !wellnessService.healthSyncEnabled {
+            // An explicit owner request for all/health data must cross the
+            // native HealthKit authorization boundary. The web permission is
+            // only a role-access preference and cannot enable HealthKit.
+            await wellnessService.setHealthSyncEnabled(true)
+        }
         let wellnessReadCompleted = await refreshWellnessWithTimeout(
             wellnessService: wellnessService,
             forceHealth: wantsHealth
@@ -944,6 +973,10 @@ final class CompanionSyncService: ObservableObject {
         snapshot["requestedFocus"] = focus
         if wantsHealth, !wellnessReadCompleted {
             snapshot.removeValue(forKey: "health")
+        }
+        if let telemetry = snapshot["deviceTelemetry"] as? [String: Any],
+           telemetry["batteryLevel"] == nil {
+            readErrors["battery"] = "iOS 本次没有返回可用电量"
         }
         snapshot["readErrors"] = readErrors
         return snapshot
@@ -1268,8 +1301,12 @@ final class CompanionSyncService: ObservableObject {
 
     @available(iOS 26.0, *)
     private func fetchTodayDirectUsage() async -> DeviceReportSnapshot? {
-        guard AuthorizationCenter.shared.authorizationStatus ==
-                .approvedWithDataAccess else {
+        let authorizationStatus =
+            AuthorizationCenter.shared.authorizationStatus
+        if authorizationStatus == .approved {
+            return await fetchTodayExtensionUsage()
+        }
+        guard authorizationStatus == .approvedWithDataAccess else {
             updateDataAccessMode()
             latestDirectUsageSnapshot = nil
             return nil
@@ -1957,6 +1994,76 @@ final class CompanionSyncService: ObservableObject {
         if !lockedLimitTokens.isEmpty {
             dailyLimitStore.shield.applications = lockedLimitTokens
         }
+    }
+
+    /// Outside the EU, ordinary installations cannot receive
+    /// approvedWithDataAccess. The globally available Screen Time report
+    /// extension can still calculate tokenized totals after individual
+    /// authorization. It writes only the owner's selected usage summary into
+    /// this app's private App Group; poll for the matching request rather than
+    /// returning the old report that happens to be on disk.
+    @available(iOS 26.0, *)
+    private func fetchTodayExtensionUsage() async
+        -> DeviceReportSnapshot? {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            return nil
+        }
+        let request = SharedUsageReportRequest(
+            schema: 3,
+            requestID: UUID().uuidString,
+            requestedAt: Date()
+        )
+        guard let requestData = try? JSONEncoder().encode(request) else {
+            return nil
+        }
+        defaults.set(requestData, forKey: reportRequestKey)
+        defaults.synchronize()
+        NotificationCenter.default.post(
+            name: .companionUsageReportRefreshRequested,
+            object: nil
+        )
+
+        for _ in 0..<28 {
+            guard !Task.isCancelled else { return nil }
+            defaults.synchronize()
+            if let data = defaults.data(forKey: reportSnapshotKey),
+               let shared = try? JSONDecoder().decode(
+                   SharedUsageReportSnapshot.self,
+                   from: data
+               ),
+               shared.requestID == request.requestID,
+               shared.generatedAt >= request.requestedAt {
+                let snapshot = DeviceReportSnapshot(
+                    schema: shared.schema,
+                    requestID: shared.requestID,
+                    requestedAt: shared.requestedAt,
+                    totalSeconds: max(0, shared.totalSeconds),
+                    generatedAt: shared.generatedAt,
+                    apps: shared.apps
+                )
+                latestDirectUsageSnapshot = snapshot
+                usageByExternalID = Dictionary(
+                    uniqueKeysWithValues: shared.apps.map {
+                        ($0.externalAppID, max(0, $0.usedSeconds))
+                    }
+                )
+                dataAccessModeText = "隐私报告模式"
+                reportGenerationText = DateFormatter.localizedString(
+                    from: shared.generatedAt,
+                    dateStyle: .none,
+                    timeStyle: .medium
+                )
+                reportStatusText = shared.apps.isEmpty
+                    ? "真实总时长已读取；逐 App 暂无记录"
+                    : "真实屏幕与逐 App 数据已读取"
+                return snapshot
+            }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        latestDirectUsageSnapshot = nil
+        reportGenerationText = "报告扩展未回传"
+        reportStatusText = "请确认屏幕使用时间授权和报告扩展签名"
+        return nil
     }
 
     private var sharedDefaults: UserDefaults? {
