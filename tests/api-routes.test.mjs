@@ -31,6 +31,7 @@ assert.match(source, /svgIc\('route',26,'#e6e6ee'\)/);
 assert.match(source, /每条路线同时保存主聊天的地址、Key、模型、随机度、回复长度，以及辅助模型的地址、Key、模型/);
 assert.equal((source.match(/onclick="chatRouteSaveCurrent\(\)"/g) || []).length, 2, "both model headers need a nearby save button");
 assert.match(source, /routes\[routeActive\]=chatRouteCopy\(Object\.assign\(\{\},S\.settings\.chat,\{aux:S\.settings\.aux\}\)\)/);
+assert.match(functionSource("chatAPI"), /chatModelAssertText\(guardModel,opt\.aux\?'辅助模型':'聊天模型'\)/, "every real chat request must reject a TTS-only model before calling the API");
 
 const fields = {
   s_cbase: { value: "https://one.example/v1" },
@@ -56,9 +57,15 @@ const context = vm.createContext({
   render: () => { context.rendered = (context.rendered || 0) + 1; },
   esc: (text) => String(text ?? ""),
 });
-for (const name of ["chatMainCopy", "chatAuxCopy", "chatRouteCopy", "chatRoutesInit", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteApply", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch", "chatRouteSaveCurrent", "chatRouteQuickOpen", "chatRouteQuickSwitch"]) {
+for (const name of ["chatModelIsTtsOnly", "chatModelTypeError", "chatMainCopy", "chatAuxCopy", "chatRouteCopy", "chatRoutesInit", "chatModelPairError", "chatModelFormReady", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteApply", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch", "chatRouteSaveCurrent", "chatRouteQuickOpen", "chatRouteQuickSwitch"]) {
   vm.runInContext(functionSource(name), context);
 }
+
+assert.equal(context.chatModelIsTtsOnly("speech-2.8-hd"), true);
+assert.equal(context.chatModelIsTtsOnly("speech-02-turbo"), true);
+assert.equal(context.chatModelIsTtsOnly("gpt-4o-mini-tts"), true);
+assert.equal(context.chatModelIsTtsOnly("gpt-4o-mini"), false);
+assert.equal(context.chatModelIsTtsOnly("claude-3-5-sonnet"), false);
 
 let routes = context.chatRoutesInit();
 assert.equal(routes.length, 4);
@@ -107,6 +114,19 @@ context.chatRouteSaveCurrent();
 assert.equal(context.S.settings.chatRoutes[0].aux.key, "sk-aux-one-saved-nearby", "the nearby save button must persist both model groups");
 assert.match(context.toastText, /主聊天＋辅助模型/);
 
+const savedBeforeTtsMistake = context.saved;
+fields.s_cmodel.value = "speech-2.8-hd";
+assert.equal(context.chatRouteSaveCurrent(), false, "a TTS-only main model must not be saved into a chat route");
+assert.equal(context.S.settings.chat.model, "model-one-edited", "rejecting the invalid form must preserve the last valid chat model");
+assert.equal(context.saved, savedBeforeTtsMistake, "rejecting a TTS-only model must not persist anything");
+assert.match(context.toastText, /只能填在「语音模型 \/ TTS」里/);
+fields.s_cmodel.value = "model-one-edited";
+
+fields.s_xmodel.value = "gpt-4o-mini-tts";
+assert.equal(context.chatRouteSwitch(1), false, "switching routes must not silently save a TTS-only auxiliary model");
+assert.equal(context.S.settings.chatRouteActive, 0);
+fields.s_xmodel.value = "aux-one-edited";
+
 context.S.settings.chatRoutes[2] = { base: "https://three.example/v1", key: "sk-three", model: "model-three", temp: 0.4, maxTokens: 700, aux: { base: "https://aux-three.example/v1", key: "sk-aux-three", model: "aux-three" } };
 context.chatRouteQuickOpen();
 assert.match(context.modalHtml, /API/);
@@ -119,6 +139,10 @@ assert.equal(context.rendered, 1);
 
 context.S.settings.chatRoutes[3] = { base: "", key: "", model: "" };
 assert.equal(context.chatRouteQuickSwitch(3), false, "blank quick routes must not replace a working route");
+assert.equal(context.S.settings.chatRouteActive, 2);
+
+context.S.settings.chatRoutes[3] = { base: "https://voice.example/v1", key: "voice", model: "speech-2.8-hd", aux: { base: "", key: "", model: "" } };
+assert.equal(context.chatRouteQuickSwitch(3), false, "an old saved route containing a TTS model must be blocked when activated");
 assert.equal(context.S.settings.chatRouteActive, 2);
 
 context.S.settings.chatRoutes = [

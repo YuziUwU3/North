@@ -80,7 +80,10 @@ test('chat api can use a fixed saved route without changing the active WeChat ro
     aiCoreOn:()=>false,fetchT:async(url,opt)=>{calls.push({url,body:JSON.parse(opt.body)});return{ok:true,json:async()=>({choices:[{message:{content:'ok'}}]})};},
     chatResultText:async(_m,_o,d)=>d.choices[0].message.content,apiErrorCN:()=>'',Object
   };
-  vm.runInNewContext(functionSource('chatAPI')+';globalThis.run=chatAPI;',sandbox);
+  vm.runInNewContext([
+    functionSource('chatModelIsTtsOnly'),functionSource('chatModelTypeError'),functionSource('chatModelAssertText'),
+    functionSource('chatAPI'),'globalThis.run=chatAPI;'
+  ].join('\n'),sandbox);
   await sandbox.run([],{routeIndex:1});
   await sandbox.run([],{routeIndex:1,aux:true});
   assert.equal(calls[0].body.model,'route-two-main');

@@ -63,6 +63,9 @@ const context=vm.createContext({
 vm.runInContext(sessionPages,context);
 vm.runInContext(gamePages,context);
 vm.runInContext(functionSource('gameModelUseAux'),context);
+vm.runInContext(functionSource('chatModelIsTtsOnly'),context);
+vm.runInContext(functionSource('chatModelTypeError'),context);
+vm.runInContext(functionSource('chatModelAssertText'),context);
 vm.runInContext(functionSource('chatAPI'),context);
 await context.chatAPI([],{aux:true});
 assert.equal(calls[0].url,'https://primary.example/v1/chat/completions');

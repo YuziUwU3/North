@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='899'){
+if(window.__NORTH_SHELL_BUILD__!=='900'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v899 · 全渠道读取完成后才回复';
+const APP_VER='v900 · 语音模型防误配';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -887,7 +887,11 @@ async function chatResultText(messages,opt,data){const ch=data&&data.choices&&da
 function chatRouteSessionPage(){try{return ['off','rp','gs','mgroom','uc','wg','dread','tale'].includes(cur().p);}catch(_){return false;}}
 function gameModelSessionPage(){try{return ['gameshub','gs','drawguess','mgroom','uc','wg'].includes(cur().p);}catch(_){return false;}}
 function gameModelUseAux(){return !!(S.settings&&S.settings.gameUseAux);}
+function chatModelIsTtsOnly(model){const m=String(model||'').trim().toLowerCase();return !!(m&&/(?:^|[\s._\-/:])(speech|tts)(?:$|[\s._\-/:])/.test(m));}
+function chatModelTypeError(model,label){model=String(model||'').trim();return chatModelIsTtsOnly(model)?(label||'聊天模型')+'“'+model+'”是语音合成模型，只能填在「语音模型 / TTS」里，不能用于文字聊天。':'';}
+function chatModelAssertText(model,label){const msg=chatModelTypeError(model,label);if(!msg)return;const e=new Error(msg);e.code='chat-model-is-tts';throw e;}
 async function chatAPI(messages,opt){opt=opt||{};if(gameModelSessionPage())opt.aux=gameModelUseAux();else if(chatRouteSessionPage()&&!opt.allowSessionModel)opt.aux=false;const fixedRoute=chatRequestRoute(opt.routeIndex);let a=fixedRoute?chatMainCopy(fixedRoute):S.settings.chat;
+  const pendingAux=opt.aux?(fixedRoute?fixedRoute.aux:S.settings.aux):null,guardModel=opt.model||((pendingAux&&pendingAux.model)||a.model);chatModelAssertText(guardModel,opt.aux?'辅助模型':'聊天模型');
   if(aiCoreOn()&&!opt.noRelay){const d=await aiRelay('chat',{messages,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,model:opt.model||''});return chatResultText(messages,opt,d.data);}
   if(opt.aux){const x=fixedRoute?fixedRoute.aux:S.settings.aux;if(x&&x.model)a={base:x.base||a.base,key:x.key||a.key,model:x.model,temp:a.temp,maxTokens:a.maxTokens};}
   if(!a.base||!a.key)throw new Error('还没设置聊天 API（去 设置→API）');
@@ -1395,7 +1399,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=899';
+  const url='sw.js?v=900';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3304,16 +3308,18 @@ function chatRouteCopy(x,legacyAux){x=x||{};const ownAux=Object.prototype.hasOwn
 function chatRoutesInit(){S.settings=S.settings||{};const legacyAux=chatAuxCopy(S.settings.aux||{});let raw=S.settings.chatRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[chatRouteCopy(S.settings.chat||{},legacyAux)]:raw.slice(0,CHAT_ROUTE_NAMES.length).map(r=>chatRouteCopy(r,legacyAux));
   while(rs.length<CHAT_ROUTE_NAMES.length)rs.push(chatRouteCopy({aux:{}}));S.settings.chatRoutes=rs;S.settings.chatRouteActive=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.chatRouteActive,10)||0));return rs;}
 function chatRequestRoute(index){if(index===undefined||index===null||index==='')return null;const i=parseInt(index,10);if(!Number.isInteger(i)||i<0||i>=CHAT_ROUTE_NAMES.length)return null;return chatRouteCopy(chatRoutesInit()[i]);}
+function chatModelPairError(main,aux){return chatModelTypeError(main,'主聊天模型')||chatModelTypeError(aux,'辅助模型');}
+function chatModelFormReady(){const main=$('#s_cmodel'),aux=$('#s_xmodel'),msg=chatModelPairError(main&&main.value,aux&&aux.value);if(!msg)return true;toast(msg,4200);const bad=chatModelIsTtsOnly(main&&main.value)?main:aux;if(bad){try{bad.focus();bad.select();}catch(_){}}return false;}
 function chatRouteSummary(r){r=chatRouteCopy(r);const main=r.model||(r.base?'已保存地址':'未填写'),aux=r.aux.model||'同主模型';return main+' · 辅：'+aux;}
 function chatRouteCaptureForm(){const rs=chatRoutesInit(),i=S.settings.chatRouteActive,val=id=>{const el=$('#'+id);return el?String(el.value||'').trim():'';};if(!$('#s_cbase'))return rs[i];
   const c={base:val('s_cbase'),key:val('s_ckey'),model:val('s_cmodel'),temp:val('s_ctemp')||0.8,maxTokens:val('s_cmax')||900},aux=$('#s_xmodel')?{base:val('s_xbase'),key:val('s_xkey'),model:val('s_xmodel')}:rs[i].aux;rs[i]=chatRouteCopy(Object.assign({},c,{aux}));S.settings.chat=chatMainCopy(c);S.settings.aux=chatAuxCopy(aux);return rs[i];}
 function chatRouteApply(r){r=chatRouteCopy(r);S.settings.chat=chatMainCopy(r);S.settings.aux=chatAuxCopy(r.aux);return r;}
 function chatRouteFillForm(r){r=chatRouteCopy(r);[['s_cbase','base'],['s_ckey','key'],['s_cmodel','model'],['s_ctemp','temp'],['s_cmax','maxTokens']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r[x[1]];});[['s_xbase','base'],['s_xkey','key'],['s_xmodel','model']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r.aux[x[1]];});const out=$('#testC'),auxOut=$('#testX');if(out)out.textContent='';if(auxOut)auxOut.textContent='';}
 function chatRouteRefreshUI(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;try{document.querySelectorAll('[data-chat-route]').forEach((btn,i)=>{const on=i===active;btn.style.background=on?'#07c160':'#24242a';btn.style.borderColor=on?'#07c160':'rgba(255,255,255,.1)';btn.style.color=on?'#fff':'#ddd';const sm=btn.querySelector('small');if(sm)sm.textContent=chatRouteSummary(rs[i]);});}catch(_){}}
-function chatRouteSwitch(i){chatRoutesInit();chatRouteCaptureForm();const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));S.settings.chatRouteActive=i;const r=chatRouteApply(rs[i]);chatRouteFillForm(r);save();chatRouteRefreshUI();toast('已切换到'+CHAT_ROUTE_NAMES[i]+'（主聊天＋辅助模型）');}
-function chatRouteSaveCurrent(){const r=chatRouteCaptureForm(),i=S.settings.chatRouteActive;save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[i]+' 的主聊天＋辅助模型 ✅');return r;}
+function chatRouteSwitch(i){chatRoutesInit();if(!chatModelFormReady())return false;chatRouteCaptureForm();const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));const routeErr=chatModelPairError(rs[i].model,rs[i].aux&&rs[i].aux.model);if(routeErr){toast(CHAT_ROUTE_NAMES[i]+'不能启用：'+routeErr,4200);return false;}S.settings.chatRouteActive=i;const r=chatRouteApply(rs[i]);chatRouteFillForm(r);save();chatRouteRefreshUI();toast('已切换到'+CHAT_ROUTE_NAMES[i]+'（主聊天＋辅助模型）');return true;}
+function chatRouteSaveCurrent(){if(!chatModelFormReady())return false;const r=chatRouteCaptureForm(),i=S.settings.chatRouteActive;save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[i]+' 的主聊天＋辅助模型 ✅');return r;}
 function chatRouteQuickOpen(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;openModal(`<h3>API 路线</h3><div class="hint">可在聊天或游戏进行中随时切换。已发出的请求不会中断，新路线从下一次回复开始生效；这里只切换已有路线，不会修改地址、Key 或模型。</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px">${rs.map((r,i)=>{const ready=!!(r.base&&r.key&&r.model),on=i===active;return `<button type="button" onclick="chatRouteQuickSwitch(${i})" style="min-width:0;border:1px solid ${on?'#74d8ef':ready?'rgba(255,255,255,.12)':'rgba(255,255,255,.06)'};border-radius:12px;padding:11px 10px;background:${on?'linear-gradient(145deg,rgba(38,115,139,.72),rgba(24,67,84,.72))':'#222328'};color:${ready?'#edf9fc':'#74777d'};text-align:left;cursor:pointer"><span style="display:flex;align-items:center;justify-content:space-between;gap:6px"><b style="font-size:13px">${CHAT_ROUTE_NAMES[i]}</b>${on?`<span style="font-size:10px;color:#bdeffa">使用中</span>`:''}</span><small style="display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`;}).join('')}</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
-function chatRouteQuickSwitch(i){const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));const r=rs[i];if(!(r&&r.base&&r.key&&r.model)){toast('这条路线还没配置，请先去设置填写');return false;}S.settings.chatRouteActive=i;chatRouteApply(r);save();closeModal();render();toast('已切换到'+CHAT_ROUTE_NAMES[i]+'（主聊天＋辅助模型）');return true;}
+function chatRouteQuickSwitch(i){const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));const r=rs[i];if(!(r&&r.base&&r.key&&r.model)){toast('这条路线还没配置，请先去设置填写');return false;}const routeErr=chatModelPairError(r.model,r.aux&&r.aux.model);if(routeErr){toast(CHAT_ROUTE_NAMES[i]+'不能启用：'+routeErr,4200);return false;}S.settings.chatRouteActive=i;chatRouteApply(r);save();closeModal();render();toast('已切换到'+CHAT_ROUTE_NAMES[i]+'（主聊天＋辅助模型）');return true;}
 function chatRouteQuickButton(color){chatRoutesInit();const i=S.settings.chatRouteActive||0,c=color||'#c7d7e3';return `<button type="button" data-chat-route-quick="1" onclick="event.stopPropagation();chatRouteQuickOpen()" title="切换API路线" aria-label="切换API路线，当前${CHAT_ROUTE_NAMES[i]}" style="width:30px;height:26px;padding:0;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.055);color:${c};display:inline-flex;align-items:center;justify-content:center;gap:1px;cursor:pointer;flex:0 0 auto">${svgIc('route',14,c)}<small style="font-size:9px;line-height:1;color:inherit">${i+1}</small></button>`;}
 function ttsRouteCopy(x){x=x||{};return{provider:String(x.provider||''),base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),voice:String(x.voice||''),group:String(x.group||'')};}
 function ttsRoutesInit(){S.settings=S.settings||{};let raw=S.settings.ttsRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[ttsRouteCopy(S.settings.tts||{})]:raw.slice(0,TTS_ROUTE_NAMES.length).map(ttsRouteCopy);while(rs.length<TTS_ROUTE_NAMES.length)rs.push(ttsRouteCopy());S.settings.ttsRoutes=rs;S.settings.ttsRouteActive=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.ttsRouteActive,10)||0));return rs;}
@@ -3459,7 +3465,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     <div id="setpage3" data-loaded="${_setTab===3?'1':''}" style="display:${_setTab===3?'block':'none'}">${_setTab===3?settingsDataToolsSafeHTML():''}</div>
   </div>`;
 }
-function saveSettings(){const g=id=>$('#'+id).value.trim();
+function saveSettings(){if(!chatModelFormReady())return false;const g=id=>$('#'+id).value.trim();
   const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive;
   S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};
   S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel')};
@@ -3474,7 +3480,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
 const oldInitiativeMin=Math.max(0,Number(S.settings.proactiveIdleMin)||0);
 S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.proactiveIdleMin=Math.max(0,Math.min(1440,parseInt(($('#s_pidle')&&$('#s_pidle').value)||'0',10)||0));S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));
-  if(oldInitiativeMin!==S.settings.proactiveIdleMin)initiativeArmAll();save();chatRouteRefreshUI();ttsRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' 和 '+TTS_ROUTE_NAMES[S.settings.ttsRouteActive]+' ✅');}
+  if(oldInitiativeMin!==S.settings.proactiveIdleMin)initiativeArmAll();save();chatRouteRefreshUI();ttsRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' 和 '+TTS_ROUTE_NAMES[S.settings.ttsRouteActive]+' ✅');return true;}
 function clearPhoneFriendChatsKeepPeople(p,now){p=p||{};now=+now||Date.now();p.messages={};p.groupMessages={};p.friendRead={};p.groupRead={};p.clearBefore=p.clearBefore||{};p.groupClearBefore=p.groupClearBefore||{};
   (p.friends||[]).forEach(f=>{const id=(''+(f&&((f.phone_id||f.id))||'')).toUpperCase();if(id)p.clearBefore[id]=now;});
   (p.groups||[]).forEach(g=>{const id=g&&(g.group_id||g.id);if(id)p.groupClearBefore[id]=now;});
@@ -3517,6 +3523,7 @@ async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)retu
   const base=($('#'+bId).value.trim()||'').replace(/\/+$/,'');const key=$('#'+kId).value.trim();const model=$('#'+mId).value.trim()||defM;
   const fb=($('#s_cbase').value.trim()||'').replace(/\/+$/,''),fk=$('#s_ckey').value.trim();
   const ub=base||fb,uk=key||fk;
+  const typeErr=chatModelTypeError(model,mId==='s_xmodel'?'辅助模型':'主聊天模型');if(typeErr){o.style.color='#e85';o.textContent='❌ '+typeErr;try{$('#'+mId).focus();$('#'+mId).select();}catch(_){}return;}
   if(!ub||!uk){o.style.color='#e85';o.textContent='先填地址和Key';return;}
   if(!model){o.style.color='#e85';o.textContent='先填模型名';return;}
   try{const r=await fetchT(ub+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+uk},body:JSON.stringify({model,max_tokens:5,messages:[{role:'user',content:'说"在"'}]})});

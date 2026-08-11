@@ -27,7 +27,10 @@ test('co-living may use the role-selected auxiliary model without changing old s
     fetchT:async(url,opt)=>{calls.push({url,body:JSON.parse(opt.body)});return{ok:true,json:async()=>({choices:[{message:{content:'ok'}}]})};},
     chatResultText:async(_m,_o,d)=>d.choices[0].message.content,apiErrorCN:()=>'',Object
   };
-  vm.runInNewContext(functionSource('chatAPI')+';globalThis.run=chatAPI;',sandbox);
+  vm.runInNewContext([
+    functionSource('chatModelIsTtsOnly'),functionSource('chatModelTypeError'),functionSource('chatModelAssertText'),
+    functionSource('chatAPI'),'globalThis.run=chatAPI;'
+  ].join('\n'),sandbox);
   await sandbox.run([],{aux:true,allowSessionModel:true});
   await sandbox.run([],{aux:true});
   assert.equal(calls[0].body.model,'aux-model');
