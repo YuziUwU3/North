@@ -94,6 +94,16 @@
 - 首次绑定时：云端为空才自动上传当前本机；云端已有数据则必须由用户明确选择保留本机或恢复云端，绝不静默覆盖已经导入的数据。
 - 当前上线前置条件：Supabase 后台启用 Phone Provider 并配置短信服务，然后执行 `supabase/migrations/202608110001_private_phone_accounts.sql`。未完成前，App 必须明确显示账号服务不可用，不能伪装成绑定成功。
 
+### 2026-08-11 v888／私人 1.0.13 中国大陆手机号密码登录
+
+- 用户确认最终目标不变：私人 App 仍以手机号作为可见账号，删除或重装后输入手机号和密码恢复云端数据；底层实现不要求必须发送短信验证码。
+- v887 的 Phone OTP 方案不再作为当前实施方向。Supabase 托管 Phone Auth 必须另配短信供应商，而中国大陆私人号码没有现成供应商凭据，继续依赖 Twilio 会让登录入口在真实环境不可用。不得为了保持“验证码”形式而让用户购买或配置未经真机验证的境外短信链路。
+- v888 改为 Supabase Email/Password 登录，但 App 界面不暴露邮箱：原生桥先把中国大陆号码规范化为 `+86`，再确定性映射为 `smallphone.86手机号@example.com`。该内部邮箱只作 Auth 标识，公开 North 与网页版均不得显示或使用这套私人登录态。
+- 密码只随当前登录请求发给 Supabase Auth，不写入网页状态、本地文件、日志、UserDefaults 或 Keychain；Keychain 只保存访问令牌、刷新令牌、到期时间、用户 ID 和用于遮罩显示的手机号。
+- Phone Provider、Twilio 和短信服务保持关闭。首次启用只需执行 `supabase/migrations/202608110001_private_phone_accounts.sql`，并由本人在 Authentication 中手动创建一名已确认的内部邮箱用户；禁止开放公共自助注册。
+- 云备份表、`auth.uid()` RLS、采集时间优先、旧备份不得覆盖新备份、首次登录必须明确选择保留本机或恢复云端等安全规则全部不变。
+- 回归测试必须明确拒绝旧 `/auth/v1/otp`、`account.otp.send` 和 `account.otp.verify` 契约，并验证密码 grant、内部邮箱映射、Keychain 不含密码以及公开 North／网页版不出现私人账号入口。
+
 1. 固化本文和私人 App 源码骨架，建立本地资源打包与原生桥契约。
 2. 已取得并导入 Mac 完整工程，已核对 Target、扩展、签名、App Group 和 MapKit 实现。
 3. 正在把现有伴生能力与本地网页核心合入私人主 App，并修复真实超时和后台地图问题。

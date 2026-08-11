@@ -29,16 +29,22 @@ test('private app stores auth tokens in Keychain and never returns them to JavaS
   assert.doesNotMatch(bridge, /"refreshToken": session\.refreshToken/);
 });
 
-test('phone OTP, refresh, backup, and restore all use the native bridge', () => {
+test('phone and password login, refresh, backup, and restore all use the native bridge', () => {
   for (const action of [
-    'account.otp.send',
-    'account.otp.verify',
+    'account.password.signin',
     'account.backup.info',
     'account.backup.upload',
     'account.backup.restore',
   ]) {
     assert.match(bridge, new RegExp(action.replaceAll('.', '\\.') ));
   }
+  assert.match(bridge, /\/auth\/v1\/token\?grant_type=password/);
+  assert.match(bridge, /smallphone\." \+ digits \+ "@example\.com/);
+  assert.doesNotMatch(bridge, /\/auth\/v1\/otp/);
+  assert.doesNotMatch(bridge, /account\.otp\.(?:send|verify)/);
+  assert.match(app, /autocomplete="current-password"/);
+  assert.match(app, /account\.password\.signin/);
+  assert.doesNotMatch(app, /privatePhoneAccountSendOTP|privatePhoneAccountVerifyOTP/);
   assert.match(bridge, /\/auth\/v1\/token\?grant_type=refresh_token/);
   assert.match(bridge, /SHA256\.hash\(data: snapshotData\)/);
   assert.match(app, /privatePhoneCloudMarkDirty\(savedAt\)/);

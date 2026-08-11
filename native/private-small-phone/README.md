@@ -4,9 +4,9 @@
 
 私人副本沿用真实工程已经签名可用的 Bundle ID、App Group、Apple Team 和扩展 ID，仅把显示名称改为「小手机」。它会替换本人设备上同 Bundle ID 的 North/伴生开发包，因此两者无法同时安装和控制；公开审核包的工程与提交不在这里修改。
 
-当前私人安装版本为 1.0.12 (12)，内置共享网页核心为 v887。1.0.11 已通过固定 WKWebView 外框解决键盘跳动；1.0.12 新增私人手机号验证码登录、Keychain 登录态和按账号隔离的云备份／恢复。首次绑定绝不自动覆盖已经导入的本机数据。电话页和连续原生语音修复继续保留。
+当前私人安装版本为 1.0.13 (13)，内置共享网页核心为 v888。1.0.11 已通过固定 WKWebView 外框解决键盘跳动；1.0.13 在 1.0.12 的账号与云恢复基础上，将不适合中国大陆私人号码的短信验证码改为“手机号 + 密码”。界面仍只显示手机号，原生桥会把规范化号码映射为仅供 Supabase Auth 使用的内部邮箱；密码不保存，访问令牌与刷新令牌只存 iPhone Keychain。首次登录绝不自动覆盖已经导入的本机数据。电话页和连续原生语音修复继续保留。
 
-手机号功能启用前，需在 Supabase 打开 Phone Provider、配置短信服务，并执行 `supabase/migrations/202608110001_private_phone_accounts.sql`。当前项目检查结果为 Phone Provider 尚未开启，因此未配置前验证码不会发送。
+手机号功能启用前，不需要打开 Phone Provider，也不需要 Twilio 或短信服务。只需执行 `supabase/migrations/202608110001_private_phone_accounts.sql`，再在 Supabase Authentication 中手动建立一名已确认的私人用户：内部邮箱格式为 `smallphone.86手机号@example.com`，例如手机号 `13812345678` 对应 `smallphone.8613812345678@example.com`。App 登录页仍输入原手机号和该用户的密码。
 
 ## 目录
 

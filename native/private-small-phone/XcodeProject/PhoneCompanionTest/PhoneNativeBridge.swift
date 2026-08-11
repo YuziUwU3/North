@@ -8,7 +8,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 5
+    static let contractVersion = 6
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
@@ -41,7 +41,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)
-        case "account.status", "account.otp.send", "account.otp.verify",
+        case "account.status", "account.password.signin",
              "account.signout", "account.backup.info",
              "account.backup.upload", "account.backup.restore":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
@@ -302,11 +302,12 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             guard let self else { return }
             do {
                 switch action {
-                case "account.otp.send":
+                case "account.password.signin":
                     let phone = self.normalizedPrivatePhone(
                         arguments["phone"] as? String ?? ""
                     )
-                    guard phone != nil else {
+                    let password = arguments["password"] as? String ?? ""
+                    guard let phone else {
                         self.reply(
                             requestID: requestID,
                             result: [
@@ -317,39 +318,30 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         )
                         return
                     }
-                    let response = try await self.privateAccountJSONRequest(
-                        path: "/auth/v1/otp",
-                        method: "POST",
-                        body: ["phone": phone!, "create_user": true]
-                    )
-                    self.reply(
-                        requestID: requestID,
-                        result: self.privateAccountPublicResult(response)
-                    )
-                case "account.otp.verify":
-                    let phone = self.normalizedPrivatePhone(
-                        arguments["phone"] as? String ?? ""
-                    )
-                    let token = (arguments["token"] as? String ?? "")
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard let phone, token.range(of: "^[0-9]{6}$", options: .regularExpression) != nil else {
+                    guard password.count >= 8, password.count <= 72 else {
                         self.reply(
                             requestID: requestID,
                             result: [
                                 "ok": false,
-                                "code": "invalid_otp",
-                                "message": "请输入短信里的 6 位验证码"
+                                "code": "invalid_password",
+                                "message": "密码需要 8 至 72 位"
                             ]
                         )
                         return
                     }
                     let response = try await self.privateAccountJSONRequest(
-                        path: "/auth/v1/verify",
+                        path: "/auth/v1/token?grant_type=password",
                         method: "POST",
-                        body: ["phone": phone, "token": token, "type": "sms"]
+                        body: [
+                            "email": self.privateAccountLoginEmail(phone),
+                            "password": password
+                        ]
                     )
                     guard response.status >= 200, response.status < 300,
-                          let session = self.privateAccountSession(from: response.body) else {
+                          let session = self.privateAccountSession(
+                            from: response.body,
+                            fallbackPhone: phone
+                          ) else {
                         self.reply(
                             requestID: requestID,
                             result: self.privateAccountPublicResult(response)
@@ -473,6 +465,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         return "+86" + local
     }
 
+    private func privateAccountLoginEmail(_ phone: String) -> String {
+        let digits = phone.filter { $0.isNumber }
+        return "smallphone." + digits + "@example.com"
+    }
+
     private func privateAccountStatus(
         _ session: PrivateAccountSession?
     ) -> [String: Any] {
@@ -490,7 +487,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         ]
     }
 
-    private func privateAccountSession(from body: Any?) -> PrivateAccountSession? {
+    private func privateAccountSession(
+        from body: Any?,
+        fallbackPhone: String? = nil
+    ) -> PrivateAccountSession? {
         guard let json = body as? [String: Any],
               let accessToken = json["access_token"] as? String,
               let refreshToken = json["refresh_token"] as? String,
@@ -501,7 +501,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         let absoluteExpiry = (json["expires_at"] as? NSNumber)?.doubleValue
         let lifetime = (json["expires_in"] as? NSNumber)?.doubleValue ?? 3_600
         let expiresAt = absoluteExpiry ?? (Date().timeIntervalSince1970 + lifetime)
-        let phone = (user["phone"] as? String) ?? ""
+        let phone = (user["phone"] as? String).flatMap { $0.isEmpty ? nil : $0 } ??
+            fallbackPhone ?? ""
         return PrivateAccountSession(
             accessToken: accessToken,
             refreshToken: refreshToken,
@@ -524,7 +525,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             body: ["refresh_token": current.refreshToken]
         )
         guard response.status >= 200, response.status < 300,
-              let refreshed = privateAccountSession(from: response.body) else {
+              let refreshed = privateAccountSession(
+                from: response.body,
+                fallbackPhone: current.phone
+              ) else {
             deletePrivateAccountSession()
             throw NSError(domain: "PrivatePhoneAccount", code: 401)
         }
@@ -576,13 +580,12 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         if ok {
             message = "操作成功"
         } else if response.status == 429 {
-            message = "验证码请求太频繁，请稍后再试"
-        } else if rawMessage.localizedCaseInsensitiveContains("expired") {
-            message = "验证码已过期，请重新获取"
-        } else if rawMessage.localizedCaseInsensitiveContains("invalid") {
-            message = "验证码不正确，请重新输入"
-        } else if rawMessage.localizedCaseInsensitiveContains("provider") {
-            message = "手机号短信服务尚未开启"
+            message = "登录尝试太频繁，请稍后再试"
+        } else if rawMessage.localizedCaseInsensitiveContains("invalid login") ||
+                    rawMessage.localizedCaseInsensitiveContains("invalid credentials") {
+            message = "手机号或密码不正确"
+        } else if rawMessage.localizedCaseInsensitiveContains("email not confirmed") {
+            message = "私人账号尚未确认，请检查 Supabase 用户状态"
         } else {
             message = rawMessage.isEmpty ? "账号服务请求失败" : rawMessage
         }
