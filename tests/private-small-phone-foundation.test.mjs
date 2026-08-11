@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.10 \(10\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.11 \(11\)'/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -99,8 +99,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 10;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.10;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 11;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.11;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -155,6 +155,9 @@ test('private app rebuilds speech after role audio and reuses the proven web key
   );
   const webView = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'
+  );
+  const privateRoot = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift'
   );
   const project = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'
@@ -211,6 +214,7 @@ test('private app rebuilds speech after role audio and reuses the proven web key
   assert.doesNotMatch(webView, /observe\([\s\S]*\\\.contentOffset/);
   assert.doesNotMatch(webView, /setContentOffset\(target, animated: false\)/);
   assert.doesNotMatch(webView, /alwaysBounceVertical = false/);
+  assert.match(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/);
   assert.doesNotMatch(app, /callinput-native|callTypingOpen|callTypingClose/);
   assert.match(app, /const callInput=_call\.state==='active'\?`<div class="callinput show"/);
   assert.match(html, /\.callinput\{[^}]*bottom:150px/);
