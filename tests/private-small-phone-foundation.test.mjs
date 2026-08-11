@@ -67,6 +67,7 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   assert.equal(manifest.entry, '小手机.html');
   assert.ok(manifest.files.includes('app.js'));
   assert.match(staging, /repoRoot/);
+  assert.match(staging, /'Generated', 'PhoneWeb\.bundle'/);
   assert.match(staging, /path\.join\(outputRoot, 'index\.html'\)/);
   assert.doesNotMatch(staging, /writeFile/);
   const app = read('app.js');
