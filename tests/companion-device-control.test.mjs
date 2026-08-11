@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v896 · 全量读取完成后再回复'/);
+  assert.match(app, /const APP_VER='v897 · 读取完成只自然回复一次'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -177,15 +177,19 @@ test('one-click role read names every real field and each actual app', () => {
   ]);
 });
 
-test('all-data replies enumerate every native category even when only one succeeds', () => {
+test('all-data replies keep missing diagnostics hidden and fall back to natural speech', () => {
   const summary = functionSource('rolePhoneInspectionExactSummary');
-  for (const label of ['电量：', '总屏幕使用：', '逐 App：', '步数：', '睡眠：', '心率：', '心电：', 'HRV：', '位置：']) {
+  const facts = functionSource('rolePhoneInspectionAllFactsText');
+  for (const label of ['电量', '屏幕', '逐 App', '步数', '睡眠', '心率', '心电', 'HRV', '位置']) {
     assert.match(summary, new RegExp(label));
+    assert.match(facts, new RegExp(label));
   }
-  assert.match(summary, /本次没有返回可用电量/);
-  assert.match(summary, /本次没有返回可用屏幕使用记录/);
+  assert.doesNotMatch(summary, /逐项读取的结果|本次没有返回|· /);
+  assert.doesNotMatch(facts, /readErrors|本次未读到|尚未同步/);
   assert.match(functionSource('doSpyView'), /ownerRequested:!!\(opts&&opts\.bySheTold\)/);
-  assert.match(functionSource('doSpyViewCore'), /companionLocalNativeAvailable\(\)&&companionRoleAllFocus\(opts\.focus\)\)content=rolePhoneInspectionExactSummary/);
+  assert.doesNotMatch(functionSource('doSpyViewCore'), /companionLocalNativeAvailable\(\)&&companionRoleAllFocus\(opts\.focus\)\)content=rolePhoneInspectionExactSummary/);
+  assert.match(functionSource('doSpyViewCore'), /rolePhoneInspectionReplyNatural\(content,fd,opts\.focus\)/);
+  assert.match(functionSource('cohabPhoneDeliverFact'), /rolePhoneInspectionReplyNatural/);
 });
 
 test('native all-data read crosses HealthKit authorization and uses the report extension outside direct-data regions', () => {
@@ -216,7 +220,12 @@ test('all-data read cannot let the role speak before the same native session is 
   assert.match(latest, /now-st\.readFinishedAt>60000/);
   assert.match(intent, /opt\.nativeOnly/);
   assert.match(intent, /opt\.immediate\?120:6500/);
+  assert.match(intent, /alreadySaid:opt\.suppressInitial\?'':reply/);
+  assert.match(intent, /_nativeInspectionPending\.add/);
 
+  const chatEarlyGate = app.indexOf('const _nativeUserInspectionQueued=');
+  const chatModel = app.indexOf('wechatPrimaryReply(', chatEarlyGate);
+  assert.ok(chatEarlyGate >= 0 && chatModel > chatEarlyGate, 'direct user read intent must stop before ordinary chat generation');
   const chatQueue = app.indexOf('const _nativeInspectionQueued=maybeSpyIntent');
   const chatGuard = app.indexOf('guardUnverifiedRolePhoneReply(content,note)', chatQueue);
   assert.ok(chatQueue >= 0 && chatGuard > chatQueue);
@@ -226,6 +235,10 @@ test('all-data read cannot let the role speak before the same native session is 
   const callGuard = app.indexOf("guardUnverifiedRolePhoneReply(content,'')", callQueue);
   assert.ok(callQueue >= 0 && callGuard > callQueue);
   assert.match(app.slice(callQueue, callGuard), /if\(_nativeCallInspectionQueued\)/);
+
+  const callEarlyGate = app.indexOf('const _nativeCallUserInspectionQueued=');
+  const callModel = app.indexOf('let content=await chatAPI', callEarlyGate);
+  assert.ok(callEarlyGate >= 0 && callModel > callEarlyGate, 'direct user read intent must stop before ordinary call generation');
 });
 
 test('native completion receipt is written only after every requested reader has settled', () => {
