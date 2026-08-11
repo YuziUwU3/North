@@ -578,6 +578,9 @@ struct ContentView: View {
         }
 
         switch authorizationStatus {
+        case .approvedWithDataAccess:
+            isScreenTimeAuthorized = true
+            statusText = "屏幕使用时间权限：已授权（真实数据）"
         case .approved:
             isScreenTimeAuthorized = true
             statusText = "屏幕使用时间权限：已授权"
@@ -668,6 +671,7 @@ struct ContentView: View {
 
     private func toggleManualLock(for token: ApplicationToken) {
         if lockedAppTokens.contains(token) {
+            CompanionSyncService.shared.recordExplicitManualUnlock([token])
             lockedAppTokens.remove(token)
             lockStatusText = "已单独解除 1 个 App 的锁定"
         } else {
@@ -691,6 +695,9 @@ struct ContentView: View {
     }
 
     private func unlockAllManuallyLockedApps() {
+        CompanionSyncService.shared.recordExplicitManualUnlock(
+            lockedAppTokens
+        )
         lockedAppTokens.removeAll()
         lockStatusText = "已经解除全部手动锁定"
         applyManualLocks()

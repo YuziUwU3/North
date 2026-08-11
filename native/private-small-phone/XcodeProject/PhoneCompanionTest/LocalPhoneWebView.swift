@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import UIKit
 import WebKit
@@ -8,6 +9,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
         private var showingLoadFailure = false
+        private var didLoadPhone = false
 
         override init() {
             super.init()
@@ -15,6 +17,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 self,
                 selector: #selector(deviceOrientationChanged),
                 name: UIDevice.orientationDidChangeNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(rolePushTapped),
+                name: Notification.Name("SmallPhoneRolePushTapped"),
                 object: nil
             )
         }
@@ -31,13 +39,37 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
         }
 
+        @objc private func rolePushTapped() {
+            openPendingRolePushIfReady()
+        }
+
+        private func openPendingRolePushIfReady() {
+            guard didLoadPhone, let webView = bridge.webView,
+                  let route = UserDefaults.standard.dictionary(
+                    forKey: "smallPhone.pendingRolePushRoute.v1"
+                  ) as? [String: String],
+                  JSONSerialization.isValidJSONObject(route),
+                  let data = try? JSONSerialization.data(withJSONObject: route),
+                  let json = String(data: data, encoding: .utf8) else { return }
+            let script = "window.__smallPhoneOpenRolePush && window.__smallPhoneOpenRolePush(\(json));"
+            webView.evaluateJavaScript(script) { _, error in
+                if error == nil {
+                    UserDefaults.standard.removeObject(
+                        forKey: "smallPhone.pendingRolePushRoute.v1"
+                    )
+                }
+            }
+        }
+
         func webView(
             _ webView: WKWebView,
             didFinish navigation: WKNavigation!
         ) {
             if !showingLoadFailure {
+                didLoadPhone = true
                 updateSafeArea(in: webView)
                 bridge.announceReady()
+                openPendingRolePushIfReady()
             }
         }
 
@@ -223,7 +255,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.16 (16)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.19 (19)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -244,13 +276,22 @@ struct LocalPhoneWebView: UIViewRepresentable {
         const item = waiting.get(payload.requestId);
         if (!item) return;
         waiting.delete(payload.requestId);
+        clearTimeout(item.timer);
         payload.error ? item.reject(new Error(payload.error)) : item.resolve(payload.result);
       };
       window.SmallPhoneNative = Object.freeze({
         request(action, payload = {}) {
           return new Promise((resolve, reject) => {
             const requestId = `native-${Date.now()}-${++sequence}`;
-            waiting.set(requestId, { resolve, reject });
+            const timeoutMs = action === 'device.snapshot' ? 25000 : 60000;
+            const timer = setTimeout(() => {
+              if (!waiting.has(requestId)) return;
+              waiting.delete(requestId);
+              reject(new Error(action === 'device.snapshot'
+                ? '真实手机读取超过25秒，已结束本次读取'
+                : `原生请求超时：${action}`));
+            }, timeoutMs);
+            waiting.set(requestId, { resolve, reject, timer });
             window.webkit.messageHandlers.smallPhoneNative.postMessage({
               requestId, action, payload
             });

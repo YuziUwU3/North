@@ -2,6 +2,12 @@
 
 此目录来自 2026-08-11 用户提供的真实 `AppleProjects/PhoneCompanionTest` 工程副本。它保留主 App、Device Activity Report、Monitor、Shield 和通知服务五个 Target，并把主 App 显示名称改为「小手机」。
 
+## v894／1.0.19：请从全新目录打开
+
+- 本工程应位于压缩包的 `SmallPhone_v894_RealReadFix` 全新目录中。不要把该目录覆盖或拖进旧 `XcodeProject`，否则 Xcode 可能继续编译旧网页核心或旧 Swift 文件。
+- `registerPushTokenIfAvailable` 已是同 Target 内可访问；`ContentView` 已补齐 `approvedWithDataAccess`；通知扩展已显式链接 `Intents` 和 `UserNotifications`。
+- 首次打开后执行 `Product → Clean Build Folder`，再选择 `PhoneCompanionTest` Scheme 和真机运行。如果仍有 `Command Ld failed`，必须展开并保留下一层具体链接器正文。
+
 ## 重要边界
 
 - 当前审核中的公开 North 工程和已提交版本没有被修改。
@@ -12,14 +18,14 @@
 ## 本轮已合入
 
 - 完整小手机网页作为本地资源运行，不以远程网页作为首页。
-- 私人版本为 1.0.16 (16)；共享网页核心为 v891。当前审核中的公开 North App 工程仍未改动。
+- 私人版本为 1.0.19 (19)；共享网页核心为 v894。当前审核中的公开 North App 工程仍未改动。
 - 私人 App 已增加“手机号 + 密码”登录、Keychain 登录态以及按账号隔离的云备份／恢复；首次登录不会静默覆盖本机数据。中国大陆私人号码不再依赖短信验证码：不要启用 Phone Provider，也不需要配置 Twilio。编译前只需执行 `supabase/migrations/202608110001_private_phone_accounts.sql`，并在 Authentication 中手动建立已确认用户；邮箱按 `smallphone.86手机号@example.com` 生成，App 界面仍输入原手机号和密码。
 - 原生设备管理只在「设置」页右上角打开，不再覆盖所有内置页面。
 - 话筒转字幕走 iOS Speech/AVAudioEngine 原生桥；连续识别停顿 1.15 秒后会提交为最终用户发言，写入通话记录并触发角色回复。首次使用必须允许麦克风和语音识别权限。
 - 通话与音乐聊天输入栏使用 WKWebView/iOS 自己的键盘避让；已移除原生键盘 frame、visualViewport 和网页固定偏移的重复补偿。
 - 网页端苹果主屏幕适配保留稳定的 100% 外壳，并为可能返回 0 的安全区提供顶部 47px、底部 34px 兜底；不会套用到私人原生 App。
 - 私人通知扩展会移除共享推送的固定假角标，App 启动和回前台也会清理旧红点。
-- v881 已建立永久锁定账本、当日快照字段、前台授权复检和真实状态措辞；v891 继续保留这些逻辑。私人 1.0.11 禁止 SwiftUI 根据键盘安全区缩小 WKWebView 外框，只保留 WebKit 自己的一次聚焦处理，消除开合键盘时先下拉再上弹的双重动画；1.0.13 在账号和云恢复基线上改用手机号密码登录；1.0.14 强制核心数据进入 Application Support 原生存档，增加原子双副本、旧写入拦截、损坏回退和真实手机容量读取；1.0.15 由手机号账号认领私人唯一控制器；1.0.16 要求角色查看前直接唤醒外置 iPhone 并等待新快照，新增逐项进度的“一键查看全部数据”，原生桥接接管定位，屏幕使用时间权限只在未决定时申请。情侣空间内只保留展示缓存，不作为第二数据源。角色播音结束后的延迟强制重建原生录音会话继续保留。
+- v881 已建立永久锁定账本、当日快照字段、前台授权复检和真实状态措辞；v894 继续保留这些逻辑。1.0.17 建立本机 `device.snapshot` 与 `device.command` 直连；1.0.18 新增 `readSessionId`、逐项真实读取、读取超时、ECG 摘要、明确手动解锁事件和统一 App 的 APNs 自登记；1.0.19 补齐角色对屏幕、App、步数、睡眠、心率、心电、HRV、电量和位置的查看触发，并在没有本次读取编号时拦截“没刷新/手表没戴”等假读取。手动一键读取也显示同一套逐项进度。Mac 编译前必须应用迁移 003/004并部署 phone-role-push；共同生活仍在会话停止后随机静默 30–60 分钟，间隔 1 分钟不能覆盖该硬静默。
 - 真实 8 秒使用量读取超时；超时后不等待卡住的读取，并禁止晚到结果覆盖新快照。
 - scene 进入 inactive 时卸载 SwiftUI Map，避免后台切换时 VectorKit 主线程看门狗；定位记录不随地图卸载而停止。
 

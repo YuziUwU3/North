@@ -70,9 +70,28 @@ function localClock(timezone: string) {
   };
 }
 
+function randomDueMinutes(profile: Record<string, unknown>) {
+  const daily = Math.max(1, Math.min(24, Number(profile.daily_limit || 1)));
+  const maxMinutes = Math.max(45, Math.min(360, Math.round(720 / daily)));
+  return Math.round(15 + Math.random() * (maxMinutes - 15));
+}
+
 function nextDue(profile: Record<string, unknown>, waitMinutes?: number) {
-  const minutes = Math.max(15, Number(waitMinutes || profile.idle_minutes || 120));
+  const fixed = Math.max(0, Math.min(1440, Number(profile.idle_minutes || 0)));
+  const minutes = waitMinutes == null
+    ? (fixed > 0 ? fixed : randomDueMinutes(profile))
+    : Math.max(1, Number(waitMinutes) || 1);
   return new Date(Date.now() + minutes * 60_000).toISOString();
+}
+
+function activityQuietForThirtyMinutes(profile: Record<string, unknown>) {
+  const activity = Date.parse(String(profile.last_user_at || ""));
+  return Number.isFinite(activity) && Date.now() - activity >= 30 * 60_000;
+}
+
+function profileQuietPeriodEnded(profile: Record<string, unknown>) {
+  const until = Date.parse(String(profile.quiet_until_at || ""));
+  return !Number.isFinite(until) || until <= Date.now();
 }
 
 function supabaseAdmin() {
@@ -165,7 +184,7 @@ function roleMessageParts(value: string, maxParts = 4) {
   for (const raw of String(value || "").split(/\r?\n+/)) {
     const line = raw.trim();
     if (!line || out.length >= limit) continue;
-    if (/^[\[【](?:图片|位置)[|｜]/.test(line)) {
+    if (/^[\[【](?:图片|位置|来电)[|｜]/.test(line)) {
       out.push(line);
       continue;
     }
@@ -189,7 +208,7 @@ function roleRecentAssistantMessages(profile) {
 }
 
 function roleVisibleMessageText(value: string) {
-  return roleMessageParts(value, 10).filter((part) => !/^[\[【](?:图片|位置)[|｜]/.test(part)).join(" ");
+  return roleMessageParts(value, 10).filter((part) => !/^[\[【](?:图片|位置|来电)[|｜]/.test(part)).join(" ");
 }
 
 function roleMessageRepeated(current: string, previous: string) {
@@ -225,6 +244,8 @@ function roleUserFactUnsupported(value: string, context: string) {
 }
 
 function roleNotificationPreview(value: string) {
+  const call = String(value || "").match(/^[\[【]来电[|｜](语音|视频)[\]】]$/);
+  if (call) return `${call[1]}通话邀请`;
   const visible = roleVisibleMessageText(value).replace(/\s+/g, " ").trim();
   return Array.from(visible || "发来了一条消息").slice(0, 160).join("");
 }
@@ -232,7 +253,7 @@ function roleNotificationPreview(value: string) {
 function roleMessageStyleInvalid(value: string, maxParts = 4) {
   const text = String(value || "").trim(), parts = roleMessageParts(text, maxParts);
   return !parts.length || /[—–―]/.test(text) || /-{2,}/.test(text) || parts.length > maxParts
-    || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:图片|位置)[|｜][^\]】]+[\]】]$/.test(part));
+    || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频))[\]】]$/.test(part));
 }
 
 async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
@@ -271,7 +292,7 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
   ].join("\n");
   const baseMessages = [
     { role: "system", content: "这是一次与上一轮分开的主动联系新事件。最近聊天只是已经结束的事实背景，不是等待你继续回答的当前回合；绝不能隔一段时间后补答、复述或改写上一条回复。" },
-    { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。图片和位置也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
+    { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。极少数确实更想听用户声音、且符合本人性格的时刻，可以只输出 [来电|语音] 或 [来电|视频]，不能和普通消息、图片或位置同时发送。图片、位置和来电也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: prompt },
   ];
   try {
@@ -345,30 +366,45 @@ async function sendAPNs(
   if (!keyId || !teamId || !privateKey || !bundleId) return { status: "apns-not-configured", error: "" };
   const jwt = await apnsJWT(teamId, keyId, privateKey);
   const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
-  const response = await fetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
-    method: "POST",
-    headers: {
-      authorization: `bearer ${jwt}`,
-      "apns-topic": bundleId,
-      "apns-push-type": "alert",
-      "apns-priority": "10",
-      "apns-expiration": String(Math.floor(Date.now() / 1000) + 3600),
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      aps: {
-        alert: { title: roleName || "小手机", body: roleNotificationPreview(body) },
-        sound: "default",
-        badge: 1,
-        "content-available": 1,
-        "mutable-content": 1,
-        "thread-id": `role-${roleId}`,
+  const parts = roleMessageParts(body, 10);
+  if (!parts.length) return { status: "failed-empty", error: "empty-notification" };
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    const call = part.match(/^[\[【]来电[|｜](语音|视频)[\]】]$/);
+    const kind = call ? "call" : "message";
+    const response = await fetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
+      method: "POST",
+      headers: {
+        authorization: `bearer ${jwt}`,
+        "apns-topic": bundleId,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "apns-expiration": String(Math.floor(Date.now() / 1000) + 3600),
+        "content-type": "application/json",
       },
-      rolePush: { outboxId, roleId, roleName, avatarURL: roleAvatarURL },
-    }),
-  });
-  if (response.ok) return { status: "sent", error: "" };
-  return { status: `failed-${response.status}`, error: (await response.text()).slice(0, 400) };
+      body: JSON.stringify({
+        aps: {
+          alert: {
+            title: call ? `${roleName || "角色"}${call[1]}来电` : (roleName || "小手机"),
+            body: roleNotificationPreview(part),
+          },
+          sound: "default",
+          badge: 1,
+          "content-available": 1,
+          "mutable-content": 1,
+          "thread-id": `role-${roleId}`,
+        },
+        rolePush: {
+          outboxId, roleId, roleName, avatarURL: roleAvatarURL,
+          kind, callKind: call?.[1] || "", messageIndex: index, messageCount: parts.length,
+        },
+      }),
+    });
+    if (!response.ok) {
+      return { status: `failed-${response.status}`, error: (await response.text()).slice(0, 400) };
+    }
+  }
+  return { status: "sent", error: "" };
 }
 
 Deno.serve(async (request) => {
@@ -386,7 +422,7 @@ Deno.serve(async (request) => {
     for (const profile of profiles) {
       const { data: freshProfile } = await client.from("phone_role_push_profiles")
         .select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
-      if (!freshProfile?.enabled || !freshProfile.last_user_at || Date.parse(String(freshProfile.next_due_at || "")) > Date.now()) {
+      if (!freshProfile?.enabled || !activityQuietForThirtyMinutes(freshProfile) || !profileQuietPeriodEnded(freshProfile) || Date.parse(String(freshProfile.next_due_at || "")) > Date.now()) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
@@ -395,7 +431,7 @@ Deno.serve(async (request) => {
       const clock = localClock(profile.timezone);
       const count = profile.daily_day === clock.day ? Number(profile.daily_count || 0) : 0;
       const start = Number(profile.start_hour ?? 9), end = Number(profile.end_hour ?? 23);
-      const inside = start <= end ? clock.hour >= start && clock.hour < end : clock.hour >= start || clock.hour < end;
+      const inside = start === end ? true : start < end ? clock.hour >= start && clock.hour < end : clock.hour >= start || clock.hour < end;
       if (!inside || count >= Number(profile.daily_limit || 2)) {
         await client.from("phone_role_push_profiles").update({
           claimed_until: null,
@@ -414,9 +450,9 @@ Deno.serve(async (request) => {
         .map((row) => String(row?.body || "").trim()).filter(Boolean);
       const decision = await roleMessage(profile, recentBodies);
       const { data: latestProfile } = await client.from("phone_role_push_profiles")
-        .select("enabled,next_due_at,last_user_at,recent_context,memory_context")
+        .select("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context")
         .eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
-      if (!latestProfile?.enabled || !latestProfile.last_user_at || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
+      if (!latestProfile?.enabled || !activityQuietForThirtyMinutes(latestProfile) || !profileQuietPeriodEnded(latestProfile) || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;

@@ -42,6 +42,17 @@ test('phone viewing banner uses a red recording indicator without emoji', () => 
   assert.match(html, /@keyframes spyScan/);
 });
 
+test('ordinary web inspection keeps the classic progressive banner instead of entering native telemetry', () => {
+  const wrapper = app.match(/async function doSpyView\(id,force,opts\)[\s\S]*?(?=\nasync function doSpyViewCore)/)?.[0] || '';
+  const core = app.match(/async function doSpyViewCore\(id,force,opts\)[\s\S]*?if\(!S\._spySeen\)/)?.[0] || '';
+  assert.match(wrapper, /if\(opts&&opts\.intent&&companionRoleExternalFocus\(focus\)\)/);
+  assert.match(wrapper, /return await doSpyViewCore\(id,force,opts\)/);
+  for (const step of ['正在查看 微信聊天', '正在查看 朋友圈', '正在查看 抖音', '正在查看 浏览器记录']) {
+    assert.ok(core.includes(step), `missing classic banner step: ${step}`);
+  }
+  assert.match(html, /<div class="spybanner" id="spyBanner"><\/div>/);
+});
+
 test('wechat login and logout omit redundant visible notices', () => {
   const login = app.match(/function wxDoLogin\(cid\)[\s\S]*?(?=\nfunction wxLogout\(\))/)?.[0] || '';
   const logout = app.match(/function wxLogout\(\)[\s\S]*?(?=\nasync function wxLoginSession)/)?.[0] || '';

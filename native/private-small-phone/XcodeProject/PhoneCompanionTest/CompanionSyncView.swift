@@ -28,9 +28,9 @@ struct CompanionRootView: View {
 
 struct CompanionSyncView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var service = CompanionSyncService()
+    @StateObject private var service = CompanionSyncService.shared
     @StateObject private var locationManager = LocationManager.shared
-    @StateObject private var wellnessService = CompanionWellnessService()
+    @StateObject private var wellnessService = CompanionWellnessService.shared
     @StateObject private var pushCoordinator =
         CompanionPushCoordinator.shared
     @State private var smallPhoneID = ""
@@ -130,7 +130,7 @@ struct CompanionSyncView: View {
                         value: service.pushStatusText
                     )
 
-                    Button("开启后台通知") {
+                    Button("开启消息与来电通知") {
                         Task {
                             await pushCoordinator.requestAuthorization()
                             await service.registerPushTokenIfAvailable(
@@ -266,7 +266,7 @@ struct CompanionSyncView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
-                    Text("Apple Watch 的步数、活动能量、心率、HRV 和睡眠会先同步到 iPhone 健康 App，再由本页读取摘要。心境只读取你主动记录的内容，不会根据心率猜测情绪。")
+                    Text("Apple Watch 的步数、活动能量、心率、HRV、心电图摘要和睡眠会先同步到 iPhone 健康 App，再由本页读取摘要。心境只读取你主动记录的内容，不会根据心率猜测情绪。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -474,7 +474,10 @@ private struct RemoteCommand: Decodable {
 
 @MainActor
 final class CompanionSyncService: ObservableObject {
+    static let shared = CompanionSyncService()
+
     private let usageReadTimeoutNanoseconds: UInt64 = 8_000_000_000
+    private let wellnessReadTimeoutNanoseconds: UInt64 = 12_000_000_000
     @Published private(set) var isPaired = false
     @Published private(set) var pairedTarget = ""
     @Published private(set) var statusText = "等待连接小手机"
@@ -520,6 +523,8 @@ final class CompanionSyncService: ObservableObject {
     private let footprintStorageKey = "PhoneCompanionTodayFootprint"
     private let shieldActorKey = "companion.shield.actor.v1"
     private let snapshotSequenceKey = "companion.snapshot.sequence.v1"
+    private let manualUnlockEventsKey =
+        "companion.manual-unlock-events.v1"
 
     private let manualLockStore = ManagedSettingsStore()
     private let dailyLimitStore = ManagedSettingsStore(named: .dailyLimit)
@@ -707,7 +712,7 @@ final class CompanionSyncService: ObservableObject {
         }
     }
 
-    fileprivate func registerPushTokenIfAvailable(
+    func registerPushTokenIfAvailable(
         token: String,
         environment: String,
         quiet: Bool = false
@@ -790,6 +795,63 @@ final class CompanionSyncService: ObservableObject {
         updateDataAccessMode()
     }
 
+    func recordExplicitManualUnlock(_ tokens: Set<ApplicationToken>) {
+        guard !tokens.isEmpty else { return }
+        let now = Date().timeIntervalSince1970 * 1_000
+        var events = loadExplicitManualUnlockEvents()
+        for token in tokens {
+            guard let externalID = stableExternalID(for: token) else {
+                continue
+            }
+            rememberToken(token, forExternalID: externalID)
+            let fallback = "App " + String(externalID.suffix(3))
+            events.append([
+                "id": UUID().uuidString,
+                "kind": "manualUnlock",
+                "externalAppId": externalID,
+                "appName": appAliases[externalID] ?? fallback,
+                "ts": now,
+                "explicit": true,
+                "source": "native-management",
+                "delivered": false
+            ])
+        }
+        let cutoff = now - 24 * 60 * 60 * 1_000
+        events = events.filter {
+            (($0["ts"] as? NSNumber)?.doubleValue
+                ?? ($0["ts"] as? Double)
+                ?? 0) >= cutoff
+        }
+        UserDefaults.standard.set(
+            Array(events.suffix(40)),
+            forKey: manualUnlockEventsKey
+        )
+    }
+
+    func adoptPrivateController(
+        target: String,
+        deviceSecret: String
+    ) throws {
+        try CompanionSecretStore.save(deviceSecret, account: target)
+        UserDefaults.standard.set(target, forKey: savedTargetKey)
+        pairedTarget = target
+        isPaired = true
+        statusText = "统一 App 已连接后台通知服务"
+        lastPushRegistrationSignature = ""
+    }
+
+    func privateControllerDeviceIdentity() -> [String: String] {
+        [
+            "deviceId": deviceID(),
+            "deviceName": UIDevice.current.name
+        ]
+    }
+
+    private func loadExplicitManualUnlockEvents() -> [[String: Any]] {
+        UserDefaults.standard.array(forKey: manualUnlockEventsKey)
+            as? [[String: Any]] ?? []
+    }
+
     fileprivate func refreshDataAccessState() async {
         guard #available(iOS 26.0, *) else {
             dataAccessModeText = "分享兼容模式"
@@ -799,6 +861,164 @@ final class CompanionSyncService: ObservableObject {
         }
 
         updateDataAccessMode()
+    }
+
+    /// The bundled small-phone web UI and the real iPhone controls live in the
+    /// same process. This path deliberately bypasses pairing, Supabase and APNs:
+    /// a foreground read must come from this iPhone, not from an older cloud
+    /// snapshot that happens to belong to the same account.
+    func localSnapshot(
+        focus: String,
+        locationManager: LocationManager,
+        wellnessService: CompanionWellnessService
+    ) async -> [String: Any] {
+        let normalized = focus.lowercased()
+        let wantsAll = ["全部", "所有", "完整", "一键"].contains {
+            normalized.contains($0)
+        }
+        let wantsUsage = wantsAll || normalized.isEmpty || [
+            "查岗", "手机", "概览", "屏幕", "使用", "app"
+        ].contains { normalized.contains($0) }
+        let wantsLocation = wantsAll || ["定位", "位置"].contains {
+            normalized.contains($0)
+        }
+        let wantsHealth = wantsAll || [
+            "睡眠", "步数", "心率", "心跳", "心电", "ecg", "hrv", "健康"
+        ].contains { normalized.contains($0) }
+
+        await refreshDataAccessState()
+        if wantsLocation {
+            locationManager.resumeTrackingIfAuthorized()
+            locationManager.refreshCurrentLocation()
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+        }
+        let wellnessReadCompleted = await refreshWellnessWithTimeout(
+            wellnessService: wellnessService,
+            forceHealth: wantsHealth
+        )
+
+        var report = latestDirectUsageSnapshot
+        var readErrors: [String: String] = [:]
+        if wantsUsage {
+            lastUsageRefreshDate = Date()
+            if #available(iOS 26.0, *) {
+                switch await fetchTodayDirectUsageWithTimeout() {
+                case .report(let snapshot):
+                    report = snapshot
+                case .unavailable:
+                    report = nil
+                    readErrors["screenTime"] = "真实屏幕使用数据未授权或暂不可用"
+                case .timedOut:
+                    report = nil
+                    latestDirectUsageSnapshot = nil
+                    readErrors["screenTime"] = "真实屏幕使用数据读取超过 8 秒"
+                }
+            } else {
+                report = nil
+                readErrors["screenTime"] = "当前 iOS 版本不支持主 App 直读逐 App 时长"
+            }
+        }
+
+        if wantsLocation, locationManager.currentLocation == nil {
+            readErrors["location"] = "本次没有取得可用定位"
+        }
+        if wantsHealth {
+            if !wellnessReadCompleted {
+                readErrors["health"] = "真实健康数据读取超过 12 秒"
+            } else if wellnessService.healthSnapshot == nil {
+                readErrors["health"] = wellnessService.healthSyncEnabled
+                    ? "本次没有取得可用健康摘要"
+                    : "健康摘要尚未开启"
+            }
+        }
+
+        var snapshot = await makeSnapshot(
+            locationManager: locationManager,
+            report: report,
+            wellnessService: wellnessService,
+            resolvePlaceNames: false
+        )
+        snapshot["transport"] = "local-native"
+        snapshot["capturedAt"] = iso8601(Date())
+        snapshot["readSessionId"] = UUID().uuidString
+        snapshot["requestedFocus"] = focus
+        if wantsHealth, !wellnessReadCompleted {
+            snapshot.removeValue(forKey: "health")
+        }
+        snapshot["readErrors"] = readErrors
+        return snapshot
+    }
+
+    private func refreshWellnessWithTimeout(
+        wellnessService: CompanionWellnessService,
+        forceHealth: Bool
+    ) async -> Bool {
+        let (stream, continuation) = AsyncStream<Bool>.makeStream(
+            bufferingPolicy: .bufferingNewest(1)
+        )
+        let refreshTask = Task { @MainActor in
+            await wellnessService.refresh(forceHealth: forceHealth)
+            guard !Task.isCancelled else { return }
+            continuation.yield(true)
+        }
+        let timeout = wellnessReadTimeoutNanoseconds
+        let timeoutTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: timeout)
+            } catch {
+                return
+            }
+            continuation.yield(false)
+        }
+
+        var iterator = stream.makeAsyncIterator()
+        let completed = await iterator.next() ?? false
+        continuation.finish()
+        refreshTask.cancel()
+        timeoutTask.cancel()
+        return completed
+    }
+
+    func performLocalCommand(
+        action: String,
+        externalAppID: String?,
+        minutes: Int?,
+        scope: String?,
+        actor: String?,
+        locationManager: LocationManager,
+        wellnessService: CompanionWellnessService
+    ) async throws -> [String: Any] {
+        let command = RemoteCommand(
+            action: action,
+            externalAppId: externalAppID,
+            minutes: minutes,
+            scope: scope,
+            actor: actor
+        )
+        let message = try await applyRemoteCommand(
+            command,
+            locationManager: locationManager
+        )
+        if action == "location" {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+        }
+        await wellnessService.refresh()
+        var snapshot = await makeSnapshot(
+            locationManager: locationManager,
+            report: latestDirectUsageSnapshot,
+            wellnessService: wellnessService,
+            resolvePlaceNames: action == "location",
+            controlOnly: action != "location"
+        )
+        snapshot["transport"] = "local-native"
+        snapshot["capturedAt"] = iso8601(Date())
+        return [
+            "ok": true,
+            "stage": "executed",
+            "message": message,
+            "transport": "local-native",
+            "snapshot": snapshot
+        ]
     }
 
     @available(iOS 26.0, *)
@@ -1339,6 +1559,19 @@ final class CompanionSyncService: ObservableObject {
             "footprints": footprintRows,
             "deviceTelemetry": wellnessService.deviceSnapshot()
         ]
+
+        let manualUnlockEvents = loadExplicitManualUnlockEvents()
+            .filter {
+                let ts = ($0["ts"] as? NSNumber)?.doubleValue
+                    ?? ($0["ts"] as? Double)
+                    ?? 0
+                return ts > 0 &&
+                    Date().timeIntervalSince1970 * 1_000 - ts <
+                    24 * 60 * 60 * 1_000
+            }
+        if !manualUnlockEvents.isEmpty {
+            snapshot["automationEvents"] = manualUnlockEvents
+        }
 
         if wellnessService.healthSyncEnabled,
            let healthSnapshot = wellnessService.healthSnapshot {
@@ -2088,7 +2321,7 @@ final class CompanionSyncService: ObservableObject {
     }
 }
 
-private enum CompanionSecretStore {
+enum CompanionSecretStore {
     private static let service =
         "com.qianyi.PhoneCompanionTest.secure-sync"
 

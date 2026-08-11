@@ -68,8 +68,14 @@ assert.equal(captionContext.ok(photoNote, '刚看到窗外的晚霞特别好看�
 assert.equal(captionContext.ok(photoNote, '醒了吗。\n[图片|桌面上的咖啡]'), false, 'an unrelated wake-up check must not carry a random photo');
 
 const delayContext = vm.createContext({S: {settings: {proactiveIdleMin: 1}}});
-vm.runInContext(functionSource('initiativeDelayMs') + ';globalThis.delay=initiativeDelayMs();', delayContext);
+vm.runInContext(functionSource('initiativeConfiguredIntervalMs') + ';' + functionSource('initiativeDelayMs') + ';globalThis.delay=initiativeDelayMs();', delayContext);
 assert.equal(delayContext.delay, 60000, 'one minute in settings must mean one real minute');
+
+const quietContext = vm.createContext({activityHash:()=>0});
+vm.runInContext(functionSource('initiativeSilenceMs') + ';globalThis.quiet=initiativeSilenceMs;', quietContext);
+assert.equal(quietContext.quiet({id:'r1'},1000),30*60000,'the earliest post-chat proactive contact is 30 minutes');
+quietContext.activityHash=()=>30;
+assert.equal(quietContext.quiet({id:'r1'},1000),60*60000,'the randomized post-chat quiet period may extend to 60 minutes');
 
 let conflictEmotion={type:'neutral',intensity:0,cause:'',threads:[]},conflictMessages=[];
 const conflictContext=vm.createContext({
@@ -94,6 +100,7 @@ let queuedUserTime=1000,queuedConflict=false;
 const freshnessContext=vm.createContext({
   lastUserTs:()=>queuedUserTime,
   initiativeConflictState:()=>({active:queuedConflict,cause:''}),
+  initiativeAwayPrompt:()=>'',
 });
 vm.runInContext(functionSource('initiativeNoteActive')+';'+functionSource('initiativeQueueNote')+';'+functionSource('initiativeReplyFresh')+';globalThis.queue=initiativeQueueNote;globalThis.fresh=initiativeReplyFresh;',freshnessContext);
 const queuedRole={id:'queued'};
@@ -139,6 +146,25 @@ assert.equal(repeatContext.repeated('r1','那你想听什么？'),false,'user te
 assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/独立的新事件/,'local proactive contact must be framed as a new event');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/不是等待你继续回答的当前回合/,'recent chat must be background rather than an unanswered turn');
+
+let awayMessages=[];
+const awayContext=vm.createContext({
+  S:{me:{sleep:{active:null}}},
+  msgs:()=>awayMessages,
+  msgToText:m=>m.content||'',
+  msgClearTime:m=>m.time||0,
+  Date,
+});
+vm.runInContext(functionSource('initiativeExpectedWakeAt')+';'+functionSource('initiativeUserAwayContext')+';'+functionSource('initiativeAwayPrompt')+';globalThis.away=initiativeUserAwayContext;globalThis.awayPrompt=initiativeAwayPrompt;',awayContext);
+awayMessages=[{role:'user',type:'text',content:'我先去忙工作了，晚点回来',time:Date.now()-40*60000}];
+assert.equal(awayContext.away({id:'r1'}).kind,'busy');
+assert.match(awayContext.awayPrompt({id:'r1'}),/问事情忙得怎么样/,'a stated busy reason should be followed up naturally rather than treated as neglect');
+awayMessages=[{role:'user',type:'text',content:'我睡两个小时，晚安',time:Date.now()-40*60000}];
+assert.equal(awayContext.away({id:'r1'}).kind,'sleep');
+assert.match(awayContext.awayPrompt({id:'r1'}),/必须保持安静/,'a user who is expected to be asleep must not receive a nagging message or call');
+awayMessages=[{role:'user',type:'text',content:'我睡不着，你睡了吗',time:Date.now()-40*60000}];
+assert.equal(awayContext.away({id:'r1'}).kind,'','asking the role about sleep must not mark the user as sleeping');
+assert.match(functionSource('answerCall'),/与旧聊天分开的主动来电新事件/,'proactive calls must not answer or replay the previous chat turn');
 
 const groundingContext=vm.createContext({
   msgs:()=>[{role:'user',type:'text',content:'我先去洗澡，晚点回来',time:Date.now()}],
@@ -253,8 +279,12 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true, deliv
     replyStateKey: (id) => id,
     initiativeWindow: () => true,
     initiativeState: () => state,
+    initiativeUserAwayContext: () => ({kind:'',until:0}),
+    initiativeSilenceMs: () => 30*60000,
+    initiativeConfiguredIntervalMs: () => 60000,
+    initiativeRandomDelayMs: () => 60000,
     initiativeDelayMs: () => 60000,
-    lastMsg: () => ({role: lastRole, time: now - 120000}),
+    lastMsg: () => ({role: lastRole, time: now - 2*3600000}),
     lastUserTs: () => 0,
     wechatNaturalOn: () => false,
     extremeLoveOn: () => false,

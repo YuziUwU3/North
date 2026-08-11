@@ -93,7 +93,7 @@ test('role inspections pull a fresh external snapshot instead of trusting the co
   assert.match(functionSource('cohabRunPhoneInspection'), /companionRolePullLatest/);
   assert.match(functionSource('doSpyView'), /companionRolePullLatest/);
   assert.match(functionSource('companionRoleScreenTimeText'), /usageGeneratedAt/);
-  assert.match(functionSource('companionRoleScreenTimeText'), /lastSync/);
+  assert.match(functionSource('companionRoleScreenTimeText'), /readSessionId/);
   assert.match(functionSource('companionRoleHeartRateText'), /companionRoleDataState/);
 });
 
@@ -103,7 +103,7 @@ test('roles can refresh and inspect all external iPhone facts in one pass', () =
   assert.match(functionSource('companionRoleAllDataText'), /companionRoleDailyHealthText/);
   assert.match(functionSource('companionRoleAllDataText'), /companionRoleLocationText/);
   assert.match(functionSource('spyFocusData'), /companionRoleAllFocus/);
-  assert.match(functionSource('cohabRunPhoneInspection'), /正在查看/);
+  assert.match(functionSource('cohabRunPhoneInspection'), /companionRoleProgressSteps/);
   assert.match(functionSource('doSpyViewCore'), /companionRoleAllFocus/);
 });
 

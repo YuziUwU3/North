@@ -5,6 +5,8 @@ import UIKit
 
 @MainActor
 final class CompanionWellnessService: ObservableObject {
+    static let shared = CompanionWellnessService()
+
     @Published private(set) var batteryLevelPercent: Int?
     @Published private(set) var batteryStateText = "未知"
     @Published private(set) var lowPowerModeEnabled = false
@@ -93,10 +95,10 @@ final class CompanionWellnessService: ObservableObject {
         }
     }
 
-    func refresh() async {
+    func refresh(forceHealth: Bool = false) async {
         refreshBattery()
         if healthSyncEnabled {
-            await refreshHealth(force: false)
+            await refreshHealth(force: forceHealth)
         }
     }
 
@@ -150,6 +152,9 @@ final class CompanionWellnessService: ObservableObject {
         if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
             types.insert(sleep)
         }
+        if #available(iOS 14.0, *) {
+            types.insert(HKObjectType.electrocardiogramType())
+        }
         if #available(iOS 18.0, *) {
             types.insert(HKObjectType.stateOfMindType())
         }
@@ -199,12 +204,14 @@ final class CompanionWellnessService: ObservableObject {
             unit: .secondUnit(with: .milli)
         )
         async let sleep = recentSleep(start: sleepStart, end: now)
+        async let electrocardiogram = latestElectrocardiogram()
 
         let stepValue = await steps
         let energyValue = await energy
         let heartRateValue = await heartRate
         let hrvValue = await hrv
         let sleepValue = await sleep
+        let electrocardiogramValue = await electrocardiogram
 
         var payload: [String: Any] = [
             "schema": 1,
@@ -227,6 +234,21 @@ final class CompanionWellnessService: ObservableObject {
             payload["hrvAt"] = Self.iso8601(hrvValue.date)
             payload["hrvSource"] = hrvValue.source
         }
+        if let electrocardiogramValue {
+            payload["electrocardiogramAt"] = Self.iso8601(
+                electrocardiogramValue.date
+            )
+            payload["electrocardiogramClassification"] =
+                electrocardiogramValue.classification
+            payload["electrocardiogramAverageHeartRateBpm"] =
+                electrocardiogramValue.averageHeartRateBpm
+            payload["electrocardiogramSymptomsStatus"] =
+                electrocardiogramValue.symptomsStatus
+            payload["electrocardiogramMeasurements"] =
+                electrocardiogramValue.measurementCount
+            payload["electrocardiogramSource"] =
+                electrocardiogramValue.source
+        }
         if #available(iOS 18.0, *),
            let mind = await latestStateOfMind() {
             payload["stateOfMind"] = mind
@@ -238,6 +260,7 @@ final class CompanionWellnessService: ObservableObject {
             (energyValue ?? 0) > 0,
             heartRateValue != nil,
             hrvValue != nil,
+            electrocardiogramValue != nil,
             sleepValue.seconds > 0
         ].filter { $0 }.count
         healthStatusText = populated > 0
@@ -277,6 +300,53 @@ final class CompanionWellnessService: ObservableObject {
         let value: Double
         let date: Date
         let source: String
+    }
+
+    private struct LatestElectrocardiogramResult {
+        let date: Date
+        let classification: String
+        let averageHeartRateBpm: Double
+        let symptomsStatus: String
+        let measurementCount: Int
+        let source: String
+    }
+
+    private func latestElectrocardiogram() async
+        -> LatestElectrocardiogramResult? {
+        guard #available(iOS 14.0, *) else { return nil }
+        let type = HKObjectType.electrocardiogramType()
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [
+                    NSSortDescriptor(
+                        key: HKSampleSortIdentifierEndDate,
+                        ascending: false
+                    )
+                ]
+            ) { _, samples, _ in
+                guard let sample = samples?.first as? HKElectrocardiogram else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let bpm = sample.averageHeartRate?.doubleValue(
+                    for: HKUnit.count().unitDivided(by: .minute())
+                ) ?? 0
+                continuation.resume(
+                    returning: LatestElectrocardiogramResult(
+                        date: sample.endDate,
+                        classification: String(describing: sample.classification),
+                        averageHeartRateBpm: max(0, bpm),
+                        symptomsStatus: String(describing: sample.symptomsStatus),
+                        measurementCount: max(0, sample.numberOfVoltageMeasurements),
+                        source: sample.sourceRevision.source.name
+                    )
+                )
+            }
+            healthStore.execute(query)
+        }
     }
 
     private func latestQuantity(

@@ -46,8 +46,8 @@ final class CompanionPushCoordinator: ObservableObject {
     }
 
     func refreshAuthorizationStatus() async {
-        // Silent background pushes do not require alert authorization. Register
-        // for the APNs token even when visible notifications are disabled.
+        // Keep APNs registration current, but report visible alert permission
+        // honestly because proactive messages and calls require sound + banner.
         UIApplication.shared.registerForRemoteNotifications()
         let settings = await UNUserNotificationCenter.current()
             .notificationSettings()
@@ -58,21 +58,27 @@ final class CompanionPushCoordinator: ObservableObject {
                 : "后台通知已开启"
             UIApplication.shared.registerForRemoteNotifications()
         case .denied:
-            statusText = deviceToken.isEmpty
-                ? "正在登记静默后台唤醒"
-                : "静默后台唤醒已开启"
+            statusText = "通知被关闭，请到系统设置中允许声音与横幅"
         case .notDetermined:
-            statusText = deviceToken.isEmpty
-                ? "正在登记静默后台唤醒"
-                : "静默后台唤醒已开启"
+            statusText = "尚未开启消息与来电通知"
         @unknown default:
             statusText = "通知状态未知"
         }
     }
 
     func requestAuthorization() async {
-        statusText = "正在登记静默后台唤醒"
+        statusText = "正在请求消息与来电通知权限"
+        do {
+            let granted = try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
+            statusText = granted
+                ? "通知已允许，正在登记设备"
+                : "通知未允许，请到系统设置中开启"
+        } catch {
+            statusText = "通知授权失败：\(error.localizedDescription)"
+        }
         UIApplication.shared.registerForRemoteNotifications()
+        await refreshAuthorizationStatus()
     }
 
     func updateDeviceToken(_ data: Data) {
@@ -197,7 +203,8 @@ final class CompanionPushAppDelegate: NSObject,
         do {
             try await UNUserNotificationCenter.current().setBadgeCount(0)
         } catch {
-            UIApplication.shared.applicationIconBadgeNumber = 0
+            // setBadgeCount is the supported iOS 17+ API. A failure is
+            // nonfatal and must not fall back to the deprecated property.
         }
     }
 
@@ -237,6 +244,32 @@ final class CompanionPushAppDelegate: NSObject,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         await clearAppBadge()
-        return []
+        return [.banner, .list, .sound]
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        await clearAppBadge()
+        guard let rolePush = response.notification.request.content
+            .userInfo["rolePush"] as? [String: Any],
+              let roleID = rolePush["roleId"] as? String,
+              !roleID.isEmpty else { return }
+        let route: [String: String] = [
+            "roleId": roleID,
+            "kind": rolePush["kind"] as? String ?? "message",
+            "callKind": rolePush["callKind"] as? String ?? ""
+        ]
+        await MainActor.run {
+            UserDefaults.standard.set(
+                route,
+                forKey: "smallPhone.pendingRolePushRoute.v1"
+            )
+            NotificationCenter.default.post(
+                name: Notification.Name("SmallPhoneRolePushTapped"),
+                object: nil
+            )
+        }
     }
 }

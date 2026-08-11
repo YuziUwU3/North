@@ -1,6 +1,7 @@
 import Combine
 import CoreLocation
 import Foundation
+import MapKit
 
 struct FootprintPoint: Identifiable, Codable, Equatable {
     let id: UUID
@@ -44,7 +45,7 @@ final class LocationManager: NSObject, ObservableObject,
     @Published private(set) var lastError: String?
 
     private let manager = CLLocationManager()
-    private let geocoder = CLGeocoder()
+    private var reverseGeocodingRequest: MKReverseGeocodingRequest?
     private let storageKey = "PhoneCompanionTodayFootprint"
     private let alwaysAuthorizationRequestedKey =
         "PhoneCompanionAlwaysLocationRequested.v1"
@@ -365,27 +366,29 @@ final class LocationManager: NSObject, ObservableObject,
             return
         }
 
-        guard !geocoder.isGeocoding else {
+        guard reverseGeocodingRequest?.isLoading != true else {
             return
         }
 
-        geocoder.reverseGeocodeLocation(
-            location,
-            preferredLocale: Locale(identifier: "zh_CN")
-        ) { [weak self] placemarks, error in
-            guard let self else { return }
+        guard let request = MKReverseGeocodingRequest(location: location)
+        else {
+            lastError = "地点解析请求创建失败"
+            return
+        }
+        request.preferredLocale = Locale(identifier: "zh_CN")
+        reverseGeocodingRequest = request
 
-            DispatchQueue.main.async {
-                if let error {
-                    self.lastError = "地点解析失败：\(error.localizedDescription)"
+        Task { [weak self] in
+            do {
+                let mapItems = try await request.mapItems
+                guard let self,
+                      self.reverseGeocodingRequest === request else {
                     return
                 }
+                self.reverseGeocodingRequest = nil
+                guard let mapItem = mapItems.first else { return }
 
-                guard let placemark = placemarks?.first else {
-                    return
-                }
-
-                let placeName = self.formattedPlaceName(placemark)
+                let placeName = self.formattedPlaceName(mapItem)
                 self.currentPlaceName = placeName
                 self.lastGeocodedLocation = location
                 self.lastGeocodedAt = Date()
@@ -393,32 +396,36 @@ final class LocationManager: NSObject, ObservableObject,
                     id: footprintID,
                     placeName: placeName
                 )
+            } catch {
+                guard let self,
+                      self.reverseGeocodingRequest === request else {
+                    return
+                }
+                self.reverseGeocodingRequest = nil
+                self.lastError = "地点解析失败：\(error.localizedDescription)"
             }
         }
     }
 
     private func formattedPlaceName(
-        _ placemark: CLPlacemark
+        _ mapItem: MKMapItem
     ) -> String {
-        let rawParts = [
-            placemark.administrativeArea,
-            placemark.locality,
-            placemark.subLocality,
-            placemark.thoroughfare,
-            placemark.subThoroughfare,
-            placemark.name
+        let candidates = [
+            mapItem.addressRepresentations?.fullAddress(
+                includingRegion: true,
+                singleLine: true
+            ),
+            mapItem.name
         ]
-
-        var result = ""
-        for value in rawParts.compactMap({ $0 }) {
-            let part = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !part.isEmpty, !result.contains(part) else {
-                continue
+        for value in candidates.compactMap({ $0 }) {
+            let clean = value.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            if !clean.isEmpty {
+                return clean
             }
-            result += part
         }
-
-        return result.isEmpty ? "已获取位置，暂未解析地址" : result
+        return "已获取位置，暂未解析地址"
     }
 
     private func updateFootprintName(

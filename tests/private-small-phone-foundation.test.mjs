@@ -31,7 +31,9 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.16 \(16\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.19 \(19\)'/);
+  assert.match(webView, /SmallPhoneRolePushTapped/);
+  assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
@@ -48,9 +50,12 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   const staging = read(
     'native/private-small-phone/scripts/stage-private-phone-web.mjs'
   );
-  assert.match(bridge, /contractVersion = 9/);
+  assert.match(bridge, /contractVersion = 11/);
+  assert.match(bridge, /case "device\.snapshot"/);
+  assert.match(bridge, /case "device\.command"/);
   assert.match(bridge, /"companion\.controller\.claim"/);
-  assert.match(bridge, /claim_private_phone_companion_controller/);
+  assert.match(bridge, /claim_private_phone_unified_controller/);
+  assert.match(bridge, /p_apns_token/);
   assert.match(bridge, /privateControllerInstanceID/);
   assert.match(bridge, /case "license\.request"/);
   assert.match(bridge, /case "storage\.get", "storage\.put", "storage\.delete"/);
@@ -119,8 +124,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 16;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.16;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 19;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.19;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -153,6 +158,9 @@ test('private app owns location permission and only asks Screen Time once', () =
   const location = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocationManager.swift'
   );
+  const content = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/ContentView.swift'
+  );
   const sync = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift'
   );
@@ -165,11 +173,23 @@ test('private app owns location permission and only asks Screen Time once', () =
   assert.match(webView, /Object\.defineProperty\(Navigator\.prototype, 'geolocation'/);
   assert.match(webView, /descriptor\.name === 'geolocation'/);
   assert.match(bridge, /case "location\.current"/);
+  assert.match(bridge, /static let contractVersion = 11/);
+  assert.match(bridge, /case "device\.snapshot"/);
+  assert.match(bridge, /case "device\.command"/);
+  assert.match(sync, /func localSnapshot\(/);
+  assert.match(sync, /func performLocalCommand\(/);
+  assert.match(sync, /func registerPushTokenIfAvailable\(/);
+  assert.doesNotMatch(sync, /fileprivate func registerPushTokenIfAvailable\(/);
+  assert.match(bridge, /registerPushTokenIfAvailable\(/);
   assert.match(bridge, /LocationManager\.shared/);
   assert.match(location, /static let shared = LocationManager\(\)/);
   assert.match(location, /pausesLocationUpdatesAutomatically = false/);
   assert.match(location, /allowsBackgroundLocationUpdates = enabled/);
   assert.match(location, /requestAlwaysAuthorizationOnce/);
+  assert.match(location, /MKReverseGeocodingRequest\(location: location\)/);
+  assert.match(location, /addressRepresentations\?\.fullAddress/);
+  assert.doesNotMatch(location, /CLGeocoder|reverseGeocodeLocation/);
+  assert.match(content, /case \.approvedWithDataAccess:/);
   assert.match(sync, /authorizationStatus ==[\s\S]{0,80}\.notDetermined/);
   assert.match(sync, /locationManager\.resumeTrackingIfAuthorized\(\)/);
   assert.match(sync, /refreshUsage: true/);
@@ -187,6 +207,9 @@ test('private app keeps device management in Settings and clears stale app badge
   const notificationService = read(
     'native/private-small-phone/XcodeProject/RoleNotificationService/NotificationService.swift'
   );
+  const project = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'
+  );
 
   assert.match(app, /function privateNativeSettingsAction\(\)/);
   assert.match(app, /SmallPhoneNative\.request\('native\.management\.open'\)/);
@@ -197,9 +220,15 @@ test('private app keeps device management in Settings and clears stale app badge
 
   assert.match(delegate, /applicationDidBecomeActive/);
   assert.match(delegate, /setBadgeCount\(0\)/);
-  assert.match(delegate, /applicationIconBadgeNumber = 0/);
+  assert.doesNotMatch(delegate, /applicationIconBadgeNumber/);
   assert.match(delegate, /willPresent notification:[\s\S]*?await clearAppBadge\(\)/);
+  assert.match(delegate, /requestAuthorization\(options: \[\.alert, \.sound, \.badge\]\)/);
+  assert.match(delegate, /return \[\.banner, \.list, \.sound\]/);
+  assert.match(delegate, /didReceive response: UNNotificationResponse/);
+  assert.match(delegate, /smallPhone\.pendingRolePushRoute\.v1/);
   assert.match(notificationService, /content\.badge = nil/);
+  assert.match(project, /Intents\.framework in Frameworks/);
+  assert.match(project, /UserNotifications\.framework in Frameworks/);
 });
 
 test('private app rebuilds speech after role audio and reuses the proven web keyboard flow', () => {

@@ -39,11 +39,11 @@ test('recovery scoring counts accounts, roles, chats and memories',()=>{
 });
 
 test('recovery button scans residual core, snapshot and long-chat storage before replacing data',()=>{
-  assert.match(app,/const CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state'/);
+  assert.match(app,/const CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state',RECOVERY_HISTORY_IDB_KEY='__recovery_history_state'/);
   assert.match(app,/恢复所有数据（扫描本机存档）/);
-  assert.match(functionSource('recoveryCollectCandidates'),/\[RECOVERY_IDB_KEY,'本机安全快照'\],\[CORE_IDB_KEY,'大容量核心存档'\]/);
+  assert.match(functionSource('recoveryCollectCandidates'),/\[RECOVERY_IDB_KEY,'本机安全快照'\],\[CORE_IDB_KEY,'大容量核心存档'\],\[RECOVERY_HISTORY_IDB_KEY,'历史完整快照'\]/);
   assert.match(functionSource('recoveryCollectCandidates'),/imgGet\('__messages'\)/);
-  assert.match(functionSource('recoveryCollectCandidates'),/out\.sort\(\(a,b\)=>\(b\.stats\.score-a\.stats\.score\)/);
+  assert.match(functionSource('recoveryCollectCandidates'),/out\.sort\(\(a,b\)=>\(b\.savedAt-a\.savedAt\)\|\|\(b\.stats\.score-a\.stats\.score\)/);
   assert.match(functionSource('emergencyRestoreAll'),/账号：/);
   assert.match(functionSource('emergencyRestoreAll'),/聊天：/);
   assert.match(functionSource('emergencyRestoreConfirm'),/await uiConfirm/);
@@ -52,23 +52,37 @@ test('recovery button scans residual core, snapshot and long-chat storage before
   assert.match(functionSource('emergencyRestoreConfirm'),/原始残留副本没有被删除/);
 });
 
-test('automatic safety snapshot refuses to replace a richer backup with emptier state',async()=>{
-  let written=null;
+test('automatic safety snapshot rolls forward to current time and archives an older richer copy',async()=>{
+  const writes=new Map();
   const old={json:'{}',savedAt:1,stats:{accounts:3,contacts:5,messages:120,memories:8,moments:10,groups:2,score:1200}};
-  const context=vm.createContext({JSON,Date,Promise,imgGet:async()=>old,imgPut:async(_key,value)=>{written=value;}});
-  vm.runInContext('let _recoverySnapshotAt=0,_recoverySnapshotWrite=Promise.resolve(true);const RECOVERY_IDB_KEY="__recovery_state";',context);
+  const context=vm.createContext({JSON,Date,Promise,imgGet:async key=>key==='__recovery_state'?old:null,imgPut:async(key,value)=>{writes.set(key,value);}});
+  vm.runInContext('let _recoverySnapshotAt=0,_recoverySnapshotWrite=Promise.resolve(true);const RECOVERY_IDB_KEY="__recovery_state",RECOVERY_HISTORY_IDB_KEY="__recovery_history_state";',context);
   for(const name of ['recoveryStateStats','recoveryStateMeaningful','queueRecoverySnapshot'])vm.runInContext(functionSource(name),context);
   const sparse={settings:{},me:{accounts:[{id:'main'},{id:'alt'}]},contacts:[],messages:{}};
-  await vm.runInContext(`queueRecoverySnapshot(${JSON.stringify(JSON.stringify(sparse))},Date.now())`,context);
-  assert.equal(written,null);
+  const now=Date.now();
+  await vm.runInContext(`queueRecoverySnapshot(${JSON.stringify(JSON.stringify(sparse))},${now})`,context);
+  assert.equal(writes.get('__recovery_history_state'),old);
+  assert.equal(writes.get('__recovery_state').savedAt,now);
+  assert.equal(writes.get('__recovery_state').stats.accounts,2);
 });
 
-test('v891 shell and service worker are aligned',()=>{
+test('automatic safety snapshot rejects an out-of-order older write',async()=>{
+  let written=false;
+  const current={json:'{}',savedAt:5000,stats:{accounts:2,contacts:1,messages:1,memories:0,moments:0,groups:0,score:223}};
+  const context=vm.createContext({JSON,Date,Promise,imgGet:async()=>current,imgPut:async()=>{written=true;}});
+  vm.runInContext('let _recoverySnapshotAt=0,_recoverySnapshotWrite=Promise.resolve(true);const RECOVERY_IDB_KEY="__recovery_state",RECOVERY_HISTORY_IDB_KEY="__recovery_history_state";',context);
+  for(const name of ['recoveryStateStats','recoveryStateMeaningful','queueRecoverySnapshot'])vm.runInContext(functionSource(name),context);
+  const older={settings:{},me:{accounts:[{id:'main'}]},contacts:[{id:'a'}],messages:{a:[{}]}};
+  await vm.runInContext(`queueRecoverySnapshot(${JSON.stringify(JSON.stringify(older))},4000)`,context);
+  assert.equal(written,false);
+});
+
+test('v894 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v891 · 外置实时权限与一键全查'/);
-  assert.match(html,/app\.js\?v=891/);
-  assert.match(sw,/BUILD='891'/);
+  assert.match(app,/APP_VER='v894 · 真实查看触发与防假读取'/);
+  assert.match(html,/app\.js\?v=894/);
+  assert.match(sw,/BUILD='894'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

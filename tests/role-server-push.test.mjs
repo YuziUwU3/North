@@ -10,6 +10,8 @@ const migration = readFileSync(join(root, 'supabase', 'migrations', '20260806000
 const avatarMigration = readFileSync(join(root, 'supabase', 'migrations', '202608070001_phone_role_avatar_notifications.sql'), 'utf8');
 const contextMigration = readFileSync(join(root, 'supabase', 'migrations', '202608080001_phone_role_push_context_reset.sql'), 'utf8');
 const naturalMigration = readFileSync(join(root, 'supabase', 'migrations', '202608090001_phone_role_push_natural_messages.sql'), 'utf8');
+const allDayMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110003_phone_role_push_all_day_random_idle.sql'), 'utf8');
+const unifiedPushMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110004_private_phone_unified_push.sql'), 'utf8');
 const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
 const notificationService = readFileSync(join(root, 'docs', 'ios', 'v831角色头像通信通知', 'NotificationService.swift'), 'utf8');
 
@@ -61,7 +63,7 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /eq\("dedupe_key", dedupe\)/);
   assert.match(edge, /outboxRow\?\.push_status !== "sent"/);
   assert.match(edge, /apns-push-type": "alert"/);
-  assert.match(edge, /rolePush: \{ outboxId/);
+  assert.match(edge, /rolePush: \{[\s\S]{0,120}outboxId, roleId, roleName, avatarURL/);
   assert.match(edge, /OPENAI_API_KEY/);
   assert.match(edge, /DASHSCOPE_API_KEY/);
   assert.match(edge, /https:\/\/dashscope\.aliyuncs\.com\/compatible-mode\/v1/);
@@ -90,13 +92,15 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /真实恋人的日常聊天/);
   assert.match(edge, /严禁使用破折号或横杠字符/);
   assert.match(edge, /roleMessageStyleInvalid\(body, messageMax\)/);
-  assert.match(edge, /select\("enabled,next_due_at,last_user_at,recent_context,memory_context"\)/);
-  assert.match(edge, /!freshProfile\.last_user_at/);
-  assert.match(edge, /!latestProfile\.last_user_at/);
+  assert.match(edge, /select\("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context"\)/);
+  assert.match(edge, /!profileQuietPeriodEnded\(freshProfile\)/);
+  assert.match(edge, /!profileQuietPeriodEnded\(latestProfile\)/);
+  assert.match(edge, /!activityQuietForThirtyMinutes\(freshProfile\)/);
+  assert.match(edge, /!activityQuietForThirtyMinutes\(latestProfile\)/);
   assert.match(edge, /Date\.parse\(String\(latestProfile\.next_due_at/);
   assert.match(edge, /roleUserFactUnsupported\(body/);
   assert.match(edge, /roleMessageParts\(text\.slice\(0, 1200\), messageMax\)/);
-  assert.match(edge, /roleNotificationPreview\(body\)/);
+  assert.match(edge, /roleNotificationPreview\(part\)/);
 });
 
 test('short proactive messages reject one-word rewrites without blocking different topics', () => {
@@ -172,23 +176,46 @@ test('web client opt-in sends bounded memory and recent context', () => {
   assert.match(app, /关闭小手机后仍可主动联系/);
   assert.match(app, /会同步该角色的长期记忆、对话总结和最近聊天上下文/);
   assert.match(functionSource('roleServerPushToggle'), /phone_role_push_upsert_profile|roleServerPushSync/);
-  assert.match(functionSource('roleServerPushSyncEnabled'), /21600000/);
+  assert.match(functionSource('roleServerPushSyncEnabled'), /600000/);
+  assert.match(app, /phone_role_push_status/);
+  assert.match(app, /后台链路已接通/);
 });
 
-test('every visible user message resets the server idle timer with synced context', () => {
+test('unified private app registers itself and exposes end-to-end push diagnostics', () => {
+  assert.match(unifiedPushMigration, /claim_private_phone_unified_controller/);
+  assert.match(unifiedPushMigration, /apns_device_token/);
+  assert.match(unifiedPushMigration, /phone_role_push_status/);
+  assert.match(unifiedPushMigration, /phone-role-push-every-minute/);
+  assert.match(unifiedPushMigration, /'cronActive'/);
+  assert.match(functionSource('roleServerPushCheckStatus'), /pushRegistered/);
+  assert.match(functionSource('roleServerPushStatusHTML'), /profileEnabled/);
+  assert.match(functionSource('roleServerPushStatusHTML'), /cronActive/);
+});
+
+test('every visible conversation message resets a random 30-60 minute server quiet period', () => {
   assert.match(contextMigration, /recent_context text not null default ''/);
   assert.match(contextMigration, /memory_context text not null default ''/);
   assert.match(contextMigration, /last_user_at timestamptz/);
   assert.match(contextMigration, /phone_role_push_touch_activity/);
-  assert.match(contextMigration, /next_due_at = case when enabled then v_activity \+ make_interval\(mins => idle_minutes\)/);
-  assert.match(contextMigration, /claimed_until = null/);
-  assert.match(contextMigration, /grant execute on function public\.phone_role_push_touch_activity/);
+  assert.match(allDayMigration, /check \(idle_minutes between 0 and 1440\)/);
+  assert.match(allDayMigration, /add column if not exists quiet_until_at timestamptz/);
+  assert.match(allDayMigration, /v_activity \+ make_interval\(mins => 30 \+ floor\(random\(\) \* 31\)::integer\)/);
+  assert.match(allDayMigration, /claimed_until = null/);
+  assert.match(allDayMigration, /grant execute on function public\.phone_role_push_touch_activity/);
   const touch = functionSource('roleServerPushTouchActivity');
   assert.match(touch, /p_recent_context:roleServerPushRecentContext\(c\)/);
   assert.match(touch, /p_memory_context:roleServerPushMemoryContext\(c\)/);
   assert.match(touch, /p_activity_ms:\+activityAt\|\|Date\.now\(\)/);
+  assert.match(touch, /p_quiet_until_ms:roleServerPushQuietUntil\(c\)/);
   const push = functionSource('pushMsg');
   assert.match(push, /msgs\(id\)\.push\(m\);save\(\);if\(m\.role==='user'&&m\.type!=='sys'\)roleServerPushTouchActivity\(id,m\.time,true\)/);
+});
+
+test('zero interval uses random daily scheduling while a nonzero interval is exact', () => {
+  assert.match(edge, /fixed > 0 \? fixed : randomDueMinutes\(profile\)/);
+  assert.match(edge, /const daily = Math\.max\(1, Math\.min\(24, Number\(profile\.daily_limit \|\| 1\)\)\)/);
+  assert.match(functionSource('roleServerPushProfile'), /configured=Math\.max\(0,Math\.min\(1440,Number\(S\.settings\.proactiveIdleMin\)\|\|0\)\)/);
+  assert.match(functionSource('roleServerPushProfile'), /idleMinutes:configured/);
 });
 
 test('returned role messages are deduplicated and appended to the matching chat', () => {
@@ -200,6 +227,9 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.match(pull, /_rolePushId===row\.id/);
   assert.match(pull, /initiativeRecentlyRepeated\(c\.id,body,24\*3600000\)/);
   assert.match(pull, /roleServerPushParts\(c,body\)/);
+  assert.match(pull, /roleServerPushCallKind\(rawBody\)/);
+  assert.match(pull, /incomingCall\(c\.id,callKind,\{serverPush:true\}\)/);
+  assert.match(app, /window\.__smallPhoneOpenRolePush=async payload/);
   assert.match(pull, /msg\._serverProactive=true/);
   assert.match(pull, /phone_role_push_ack/);
   assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);

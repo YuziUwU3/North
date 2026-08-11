@@ -53,7 +53,7 @@ test('each completed role turn is journaled and durably flushed before reply com
   const ai=functionSource('aiReply');
   assert.match(ai,/msgs\(id\)\.push\(vm\);wechatTailJournalWrite\(id,replyAccount\)/);
   assert.match(ai,/msgs\(id\)\.push\(msg\);wechatTailJournalWrite\(id,replyAccount\)/);
-  assert.match(ai,/if\(delivered\)\{wechatTailJournalWrite\(id,replyAccount\);try\{await persistWechatMessagesNow\(\);\}catch\(_\)\{saveNow\(\);\}\}/);
+  assert.match(ai,/if\(delivered\)\{roleServerPushTouchActivity\(id,Date\.now\(\),true\);wechatTailJournalWrite\(id,replyAccount\);try\{await persistWechatMessagesNow\(\);\}catch\(_\)\{saveNow\(\);\}\}/);
   assert.match(functionSource('bootImages'),/wechatTailJournalMerge\(\)/);
   assert.match(source,/pagehide'[\s\S]{0,500}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);
   assert.match(source,/visibilitychange'[\s\S]{0,900}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);

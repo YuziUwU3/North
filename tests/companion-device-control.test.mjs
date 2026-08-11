@@ -56,7 +56,7 @@ test('companion device entry requires the fixed password only once per browser',
   assert.match(functionSource('companionSubmitEntry'), /localStorage\.setItem\(COMPANION_ENTRY_GATE_KEY,'1'\)/);
 });
 
-test('control defaults to both while role reads default to external only', () => {
+test('legacy state stays compatible while the visible control is one real phone', () => {
   const context = vm.createContext({});
   vm.runInContext(`${functionSource('companionDefaultState')}\nthis.value=companionDefaultState();`, context);
   assert.equal(context.value.defaultScope, 'both');
@@ -65,7 +65,9 @@ test('control defaults to both while role reads default to external only', () =>
   assert.equal(context.value.screenTimeAvailable, false);
   assert.equal(context.value.dynamicSync, 0);
   assert.equal(context.value.roleAccess, false);
-  assert.match(app, /内外同时/);
+  assert.match(functionSource('renderCompanionPage'), /这里只有一台“真实手机”/);
+  assert.doesNotMatch(functionSource('renderCompanionPage'), /仅内置/);
+  assert.doesNotMatch(functionSource('renderCompanionPage'), /仅外置/);
   assert.match(app, /读取来源铁律/);
   assert.match(app, /绝对不要与小手机内置计时或剧情位置合并/);
 });
@@ -115,7 +117,7 @@ test('internal and external usage stay independent and per-app external time is 
   assert.match(ui, /companionDuration\(app\.usedSec\)/);
   assert.match(ui, /screenTimeAvailable/);
   assert.match(payload, /reportAvailable/);
-  assert.match(ui, /两边仍各自计时/);
+  assert.match(ui, /不会形成第二套设备或第二份限额/);
   assert.match(ui, /待 iPhone 端接入/);
   assert.match(functionSource('companionRolePrompt'), /当前只有总时长/);
   assert.match(functionSource('companionRolePrompt'), /不得自行拆分或猜测/);
@@ -124,15 +126,163 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v891 · 外置实时权限与一键全查'/);
+  assert.match(app, /const APP_VER='v894 · 真实查看触发与防假读取'/);
 });
 
-test('manual sync sends a device request and schedules server refreshes', () => {
+test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
   const source = functionSource('companionRequestSync');
+  assert.match(source, /companionLocalNativeAvailable\(\)/);
+  assert.match(source, /companionNativeSnapshot\('iPhone全部数据',st\)/);
+  assert.match(source, /companionRoleProgressSteps\('iPhone全部数据',st\)/);
+  assert.match(source, /本次真实数据读取结束/);
   assert.match(source, /companionApplyAction\(st,'view'/);
   assert.match(source, /scope:'external'/);
   assert.match(source, /setTimeout\(\(\)=>companionPollSnapshot\(true\),15000\)/);
-  assert.match(source, /可以离开此页/);
+  assert.match(source, /远程 iPhone 后台同步/);
+});
+
+test('bundled private app reads and executes through the native device bridge', () => {
+  const nativeRead = functionSource('companionNativeSnapshot');
+  const send = functionSource('companionSendCommand');
+  assert.match(nativeRead, /device\.snapshot/);
+  assert.match(send, /device\.command/);
+  assert.match(send, /stage!==\x27executed\x27/);
+  assert.match(send, /transport=\x27local-native\x27/);
+  assert.match(functionSource('companionRolePullLatest'), /companionRolePullNativeSnapshot/);
+  assert.match(functionSource('companionRolePullLatest'), /companionRoleSnapshotFresh/);
+});
+
+test('one-click role read names every real field and each actual app', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    ${functionSource('companionRoleUsageTarget')}
+    ${functionSource('companionRoleAllFocus')}
+    ${functionSource('companionRoleProgressSteps')}
+    this.steps=companionRoleProgressSteps;
+  `, context);
+  const state = { apps: [
+    { id: 'ios.douyin', name: '抖音', usedSec: 900 },
+    { id: 'ios.weixin', name: '微信', usedSec: 120 },
+  ] };
+  assert.deepEqual(Array.from(context.steps('一键读取全部', state)), [
+    '正在读取 iPhone 电量',
+    '正在读取屏幕使用时间',
+    '正在读取抖音软件使用时间',
+    '正在读取微信软件使用时间',
+    '正在读取今日步数',
+    '正在读取睡眠',
+    '正在读取最新心率',
+    '正在读取心电与 HRV',
+    '正在读取实时位置',
+  ]);
+});
+
+test('role usage facts never expose a configured limit as actual use', () => {
+  const context = vm.createContext({
+    state: {
+      screenTimeAvailable: true,
+      screenTimeMode: 'per_app',
+      screenTimeSec: 11 * 3600 + 52 * 60,
+      usageDay: '2026-08-11',
+      usageGeneratedAt: 1,
+      readSessionId: 'read-session-1',
+      apps: [{ name: '抖音', usedSec: 5 * 60, limitMin: 120 }],
+    },
+  });
+  vm.runInContext(`
+    function companionRoleReadsExternal(){return true;}
+    function companionRoleDataState(){return state;}
+    function companionDuration(sec){sec=Math.floor(sec);const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60);return h?h+'小时'+m+'分钟':m+'分钟';}
+    function fmtDT(){return '采集时间';}
+    ${functionSource('companionRoleScreenTimeText')}
+    this.read=companionRoleScreenTimeText;
+  `, context);
+  const text = context.read({});
+  assert.match(text, /总屏幕使用 11小时52分钟/);
+  assert.match(text, /抖音：实际使用 5分钟/);
+  assert.doesNotMatch(text, /120|限额/);
+  assert.doesNotMatch(functionSource('companionRoleLocationText'), /curLoc/);
+});
+
+test('inspection consistency guard rejects invented 78-step and 120-minute numbers', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    ${functionSource('rolePhoneInspectionNumbers')}
+    ${functionSource('rolePhoneInspectionReplySafe')}
+    this.safe=rolePhoneInspectionReplySafe;
+  `, context);
+  const fact = { data: '步数 497 步；最近睡眠 9小时46分钟；抖音实际使用 5分钟' };
+  assert.equal(context.safe('步数497步，睡眠9小时46分钟，抖音5分钟。', fact), true);
+  assert.equal(context.safe('步数78步，睡眠0分钟，抖音卡着120分钟。', fact), false);
+});
+
+test('telemetry wording starts a real read instead of claiming a failed refresh', () => {
+  const context = vm.createContext({ String, Set });
+  vm.runInContext(`
+    let lane=false;
+    function rolePhoneInspectionLaneActive(){return lane;}
+    ${functionSource('rolePhoneTelemetryCategories')}
+    ${functionSource('rolePhoneTelemetryClaim')}
+    ${functionSource('rolePhoneAutomationScopes')}
+    ${functionSource('rolePhoneFocusFromCategories')}
+    ${functionSource('guardUnverifiedRolePhoneReply')}
+    ${functionSource('companionInspectionFocusFromText')}
+    this.guard=guardUnverifiedRolePhoneReply;
+    this.focus=companionInspectionFocusFromText;
+  `, context);
+  const falseResult = context.guard('步数和屏幕时间，这次没刷出来，你手表又没戴吧。', '');
+  assert.equal(falseResult.content, '我先实际看一眼。');
+  assert.equal(falseResult.focus, 'iPhone全部数据');
+  assert.equal(context.focus('我看看步数和屏幕使用时间。'), 'iPhone全部数据');
+  assert.equal(context.focus('我看看最新心率。'), 'iPhone最新心率');
+});
+
+test('critical-battery automation cannot invent screen, steps or watch state', () => {
+  const context = vm.createContext({ String, Set });
+  vm.runInContext(`
+    function rolePhoneInspectionLaneActive(){return false;}
+    ${functionSource('rolePhoneTelemetryCategories')}
+    ${functionSource('rolePhoneTelemetryClaim')}
+    ${functionSource('rolePhoneAutomationScopes')}
+    ${functionSource('rolePhoneFocusFromCategories')}
+    ${functionSource('guardUnverifiedRolePhoneReply')}
+    this.guard=guardUnverifiedRolePhoneReply;
+  `, context);
+  const note = '【主动排队基线|0|companion-criticalBattery】';
+  const result = context.guard('电量5%，快没了，充电线插上。\n步数和屏幕时间没刷出来，你手表没戴吧。', note);
+  assert.equal(result.content, '电量5%，快没了，充电线插上。');
+  assert.equal(result.focus, '');
+});
+
+test('ordinary phone activity does not leak cached real-device telemetry', () => {
+  const activity = functionSource('myActivity');
+  assert.doesNotMatch(activity, /companionRoleLocationText|companionRoleScreenTimeText/);
+  assert.match(activity, /!privatePhoneAccountAvailable\(\)&&S\.me\.battery/);
+  assert.match(app, /没有本次读取编号，也没有执行新的设备采集/);
+  assert.match(app, /不得说“没刷新、没刷出来、没同步、没戴手表、读取不到”/);
+});
+
+test('role intent recognizer includes every native telemetry category', () => {
+  const parser = functionSource('maybeSpyIntent');
+  for (const word of ['屏幕使用时间', '睡眠', '步数', '心率', '心电', 'HRV', '电量']) {
+    assert.match(parser, new RegExp(word));
+  }
+  assert.match(parser, /companionInspectionFocusFromText/);
+  assert.match(app, /guardUnverifiedRolePhoneReply\(content,note\)/);
+  assert.match(app, /setTimeout\(\(\)=>doSpyView\(id,true,\{intent:true,focus:_phoneGuard\.focus/);
+  assert.match(app, /guardUnverifiedRolePhoneReply\(content,''\)/);
+  assert.match(app, /doSpyView\(c\.id,true,\{intent:true,focus:_callPhoneGuard\.focus/);
+  assert.match(functionSource('doSpyViewCore'), /!opts\.bySheTold&&!opts\.forceResult/);
+});
+
+test('native management records explicit unlock events for the web role', () => {
+  const content = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'ContentView.swift'), 'utf8');
+  const sync = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'CompanionSyncView.swift'), 'utf8');
+  assert.match(content, /recordExplicitManualUnlock\(\[token\]\)/);
+  assert.match(content, /recordExplicitManualUnlock\([\s\S]{0,80}lockedAppTokens/);
+  assert.match(sync, /"kind": "manualUnlock"/);
+  assert.match(sync, /"explicit": true/);
+  assert.match(sync, /snapshot\["automationEvents"\]/);
 });
 
 test('control-only wake snapshots preserve last-known dynamic data', () => {

@@ -9,7 +9,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 9
+    static let contractVersion = 11
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
@@ -41,6 +41,18 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             reply(requestID: requestID, result: ["opened": true])
         case "location.current":
             performNativeLocation(requestID: requestID)
+        case "device.snapshot":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performLocalDeviceSnapshot(
+                requestID: requestID,
+                arguments: arguments
+            )
+        case "device.command":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performLocalDeviceCommand(
+                requestID: requestID,
+                arguments: arguments
+            )
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)
@@ -118,6 +130,60 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     "place": manager.currentPlaceName
                 ]
             )
+        }
+    }
+
+    private func performLocalDeviceSnapshot(
+        requestID: String,
+        arguments: [String: Any]
+    ) {
+        let focus = (arguments["focus"] as? String) ?? "手机概览"
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let snapshot = await CompanionSyncService.shared.localSnapshot(
+                focus: focus,
+                locationManager: LocationManager.shared,
+                wellnessService: CompanionWellnessService.shared
+            )
+            self.reply(requestID: requestID, result: snapshot)
+        }
+    }
+
+    private func performLocalDeviceCommand(
+        requestID: String,
+        arguments: [String: Any]
+    ) {
+        guard let action = arguments["action"] as? String,
+              !action.isEmpty else {
+            reply(requestID: requestID, error: "native_device_action_missing")
+            return
+        }
+        let rawID = (arguments["externalAppId"] as? String) ?? ""
+        let externalAppID = rawID.isEmpty ? nil : rawID
+        let minutes = arguments["minutes"] as? Int
+        let scope = arguments["scope"] as? String
+        let actor = arguments["actor"] as? String
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await CompanionSyncService.shared
+                    .performLocalCommand(
+                        action: action,
+                        externalAppID: externalAppID,
+                        minutes: minutes,
+                        scope: scope,
+                        actor: actor,
+                        locationManager: LocationManager.shared,
+                        wellnessService: CompanionWellnessService.shared
+                    )
+                self.reply(requestID: requestID, result: result)
+            } catch {
+                self.reply(
+                    requestID: requestID,
+                    error: error.localizedDescription
+                )
+            }
         }
     }
 
@@ -631,19 +697,48 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         self.reply(requestID: requestID, error: "invalid_controller_claim")
                         return
                     }
+                    let instanceID = try self.privateControllerInstanceID()
+                    let identity = CompanionSyncService.shared
+                        .privateControllerDeviceIdentity()
+                    let seed = Data((instanceID + ":" + target).utf8)
+                    let generatedDeviceSecret = Data(
+                        SHA256.hash(data: seed)
+                    ).base64EncodedString()
+                        .replacingOccurrences(of: "+", with: "-")
+                        .replacingOccurrences(of: "/", with: "_")
+                        .replacingOccurrences(of: "=", with: "")
+                    let deviceSecret = CompanionSecretStore.load(
+                        account: target
+                    ) ?? generatedDeviceSecret
+                    let push = CompanionPushCoordinator.shared
                     let response = try await self.privateAccountJSONRequest(
-                        path: "/rest/v1/rpc/claim_private_phone_companion_controller",
+                        path: "/rest/v1/rpc/claim_private_phone_unified_controller",
                         method: "POST",
                         body: [
                             "p_target": target,
                             "p_new_owner_secret": ownerSecret,
-                            "p_controller_instance_id": try self.privateControllerInstanceID()
+                            "p_controller_instance_id": instanceID,
+                            "p_device_secret": deviceSecret,
+                            "p_device_id": identity["deviceId"] ?? "",
+                            "p_device_name": identity["deviceName"] ?? "iPhone",
+                            "p_apns_token": push.deviceToken,
+                            "p_apns_environment": push.environment
                         ],
                         bearer: session.accessToken
                     )
                     var result = self.privateAccountPublicResult(response)
                     if response.status >= 200, response.status < 300,
                        let claimed = response.body as? [String: Any] {
+                        try CompanionSyncService.shared.adoptPrivateController(
+                            target: target,
+                            deviceSecret: deviceSecret
+                        )
+                        await CompanionSyncService.shared
+                            .registerPushTokenIfAvailable(
+                                token: push.deviceToken,
+                                environment: push.environment,
+                                quiet: true
+                            )
                         result = claimed
                         result["ok"] = true
                     }

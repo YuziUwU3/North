@@ -68,8 +68,8 @@ function baseState(now) {
   };
 }
 
-test('daily sleep, steps and usage checks are mandatory while the other proactive checks remain opt-in', () => {
-  assert.match(app, /eveningScreen:true,morningSleep:true,absenceBattery:false,criticalBattery:false,emotionCare:false,manualUnlockAlert:false/);
+test('daily sleep, steps, usage and explicit manual unlock checks are mandatory while the other proactive checks remain opt-in', () => {
+  assert.match(app, /eveningScreen:true,morningSleep:true,absenceBattery:false,criticalBattery:false,emotionCare:false,manualUnlockAlert:true/);
   assert.match(app, /id="cou_companion_automations"/);
   assert.match(app, /每日总时长与全部 App 记录必查/);
   assert.match(app, /每日睡眠与步数必查/);
@@ -166,6 +166,8 @@ test('emotion care never treats heart rate as proof of lying or crying', () => {
   assert.equal(context.pick.kind, 'emotionCare');
   assert.match(context.pick.note, /心率不能证明ta撒谎、哭泣/);
   assert.match(app, /心率升高或降低不能证明撒谎、哭泣、背叛或任何具体情绪/);
+  assert.match(functionSource('sendText'), /companionEmotionCareSchedule\(c,t\)/);
+  assert.match(functionSource('companionEmotionCareSchedule'), /直接接住ta这条消息/);
 });
 
 test('absence battery check is rate limited and cannot invent a shutdown', () => {
@@ -176,10 +178,14 @@ test('absence battery check is rate limited and cannot invent a shutdown', () =>
 
 test('snapshots cannot manufacture manual unlock authority and explicit events stay single-delivery', () => {
   assert.doesNotMatch(functionSource('companionApplyServerPayloadV7'), /manual-unlock\|/);
-  assert.match(functionSource('companionApplyServerPayloadV7'), /kind!=='manualUnlock'/);
+  assert.match(functionSource('companionApplyServerPayloadV7'), /companionMergeAutomationEvents/);
+  assert.match(functionSource('companionMergeAutomationEvents'), /x\.explicit===true/);
   assert.match(app, /companionSetLockIntent\(st,app,false/);
-  assert.match(app, /kind:'manualUnlock'/);
-  assert.match(app, /这可能是.*手动解开，也可能是系统状态变化，不能直接断言/);
+  assert.match(functionSource('companionRecordExplicitManualUnlock'), /explicit:true/);
+  assert.match(app, /真实 iPhone 的明确执行记录/);
+  assert.doesNotMatch(functionSource('companionAutomationMaybeSend'), /c\.proactive/);
+  assert.match(app, /now-\(\+x\.ts\|\|0\)<24\*3600000/);
+  assert.match(functionSource('companionAutomationMaybeSend'), /if\(!manual&&/);
   assert.match(app, /event\.delivered=true/);
 });
 
