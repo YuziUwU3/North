@@ -9,9 +9,14 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 12
+    static let contractVersion = 13
 
-    weak var webView: WKWebView?
+    weak var webView: WKWebView? {
+        didSet {
+            ScreenShareCoordinator.shared.attach(to: webView)
+            CallPictureInPictureController.shared.attach(to: webView)
+        }
+    }
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
 
@@ -91,6 +96,58 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             }
         case "speech.stop", "speech.abort":
             nativeSpeech.stop(notify: false)
+            reply(requestID: requestID, result: ["stopped": true])
+        case "screenShare.start", "screenShare.stopPrompt":
+            let opened = ScreenShareCoordinator.shared.presentSystemPicker()
+            reply(requestID: requestID, result: ["pickerPresented": opened])
+        case "screenShare.stop":
+            ScreenShareCoordinator.shared.requestStop()
+            reply(requestID: requestID, result: ["stopRequested": true])
+        case "screenShare.status":
+            reply(requestID: requestID, result: ScreenShareCoordinator.shared.status())
+        case "screenShare.frame":
+            guard let dataURL = ScreenShareCoordinator.shared.latestFrameDataURL() else {
+                reply(requestID: requestID, error: "screen_share_frame_unavailable")
+                return
+            }
+            reply(requestID: requestID, result: ["dataURL": dataURL])
+        case "call.pip.start", "call.pip.update":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let name = arguments["name"] as? String ?? "角色"
+            let kind = arguments["kind"] as? String ?? "video"
+            let subtitle = arguments["subtitle"] as? String ?? ""
+            let sharing = arguments["screenSharing"] as? Bool ?? false
+            let supported = CallPictureInPictureController.shared.start(
+                name: name,
+                kind: kind,
+                subtitle: subtitle
+            )
+            CallPictureInPictureController.shared.update(
+                name: name,
+                kind: kind,
+                subtitle: subtitle,
+                screenSharing: sharing
+            )
+            reply(requestID: requestID, result: ["supported": supported])
+        case "call.pip.end":
+            CallPictureInPictureController.shared.end()
+            reply(requestID: requestID, result: ["ended": true])
+        case "call.audio.play":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            guard let base64 = arguments["base64"] as? String,
+                  let data = Data(base64Encoded: base64) else {
+                reply(requestID: requestID, error: "invalid_call_audio")
+                return
+            }
+            let volume = Float(arguments["volume"] as? Double ?? 1)
+            CallPictureInPictureController.shared.playAudio(
+                data: data,
+                volume: volume
+            ) { [weak self] success in
+                self?.reply(requestID: requestID, result: ["played": success])
+            }
+        case "call.audio.stop":
+            CallPictureInPictureController.shared.stopAudio()
             reply(requestID: requestID, result: ["stopped": true])
         case "storage.status":
             performStorageStatus(requestID: requestID)

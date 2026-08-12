@@ -172,8 +172,8 @@ test('Maine Coon, three hamsters and three white rabbit breeds use persistent li
 });
 
 test('preview and app load the complete visual module',()=>{
-assert.match(html,/pet-game\.css\?v=909/);
-assert.match(html,/pet-game\.js\?v=909/);
+assert.match(html,/pet-game\.css\?v=910/);
+assert.match(html,/pet-game\.js\?v=910/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);

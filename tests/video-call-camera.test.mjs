@@ -25,7 +25,7 @@ test('video call exposes a small real camera control and front/back switching',(
   assert.match(functionSource('callVideoCameraStart'),/facingMode/);
   assert.match(functionSource('callVideoCameraFlip'),/environment/);
   assert.match(html,/\.call-camera-tools\{position:absolute;right:max\(12px,env\(safe-area-inset-right\)\);bottom:max\(14px,env\(safe-area-inset-bottom\)\)/);
-  assert.match(html,/\.call-camera-tools button\{width:32px;height:32px/,'the camera button remains intentionally small');
+  assert.match(html,/\.call-camera-tools button,\.call-screen-tools button\{width:32px;height:32px/,'the camera button remains intentionally small');
   assert.match(html,/\.call-camera-vision\.working\{display:flex;border:2px/);
   assert.match(html,/@keyframes callVisionSpin/);
   assert.match(html,/\.call-camera-vision\.failed/);
@@ -36,12 +36,12 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(analyze,/visionAPI\(data/);
   assert.match(analyze,/callAI\(note,\{videoVision:true,videoVisionScene:desc/);
   assert.match(analyze,/videoVisionMaxPerCall\(\)/);
-  assert.match(functionSource('callVideoCameraArm'),/videoVisionIntervalMin\(\)/);
-  assert.match(functionSource('callVideoCameraArm'),/if\(!videoVisionIntervalMin\(\)/,'a timer that was armed before saving 0 must stop on its next tick');
-  assert.match(functionSource('callVideoCameraArm'),/min\*60000/);
+  assert.match(functionSource('callVideoVisionArm'),/videoVisionIntervalMin\(\)/);
+  assert.match(functionSource('callVideoVisionArm'),/if\(!videoVisionIntervalMin\(\)/,'a timer that was armed before saving 0 must stop on its next tick');
+  assert.match(functionSource('callVideoVisionArm'),/min\*60000/);
   assert.match(analyze,/if\(!manual&&!videoVisionIntervalMin\(\)\)return false/,'0 must also block stale automatic callbacks at the analysis boundary');
   assert.match(functionSource('callOnUserSay'),/callVideoVisionAsked\(t\)&&callVideoVisionCanAnalyze\('voice'\)/);
-  assert.match(functionSource('callVideoVisionCanAnalyze'),/callVideoCameraOn\(\)/);
+  assert.match(functionSource('callVideoVisionCanAnalyze'),/callVideoSourceOn\(\)/);
   assert.match(functionSource('callVideoVisionCanAnalyze'),/manual\|\|/,'spoken requests bypass the automatic limit');
   assert.match(functionSource('callVideoVisionAsked'),/你\\s\*\(\?:看\|瞧\)/);
   assert.match(functionSource('callVideoCameraStop'),/getTracks\(\)\.forEach\(t=>t\.stop\(\)\)/);
@@ -66,7 +66,7 @@ test('preferences expose minute interval and an automatic-only per-call limit',(
   const settings=functionSource('renderSettings');
   const save=functionSource('saveSettings');
   assert.match(settings,/s_vvision_interval/);
-  assert.match(settings,/自动识图间隔（分钟）/);
+  assert.match(settings,/自动识别间隔（分钟）/);
   assert.doesNotMatch(settings,/自动识图间隔（秒）/);
   assert.match(settings,/s_vvision_max/);
   assert.match(settings,/只限制定时自动识别/);
@@ -82,6 +82,6 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 33/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.33/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 34/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.34/);
 });

@@ -293,6 +293,8 @@ async function roleMessage(
   const recentContextRaw = String(profile.recent_context || "").slice(-8000).trim();
   const recentContext = timeAware ? recentContextRaw : recentContextRaw.replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?\s*/gm, "");
   const memoryContext = String(profile.memory_context || "").slice(-16000).trim();
+  const lastUserAt = snapshotTime(profile.last_user_at);
+  const silenceMinutes = timeAware && lastUserAt ? Math.max(0, Math.floor((Date.now() - lastUserAt) / 60_000)) : 0;
   const repeatCandidates = [...recentBodies, ...roleRecentAssistantMessages(profile)];
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
   const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
@@ -305,6 +307,7 @@ async function roleMessage(
     memoryContext ? `同步的长期记忆、对话总结与世界设定：\n${memoryContext}` : "没有可用的长期记忆。",
     recentContext ? `你与用户最近的真实聊天（按时间顺序）：\n${recentContext}` : "最近没有可用的聊天上下文。",
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
+    timeAware && lastUserAt ? `用户距离最近一次真实回复约 ${silenceMinutes} 分钟。` : "不提供用户沉默时长。",
   ];
   if (!timeAware) {
     prompt[4] = "时间感知已关闭：不知道当前日期、时间、星期、时段或间隔，不得推测。";
@@ -319,7 +322,7 @@ async function roleMessage(
   }
   const promptText = prompt.filter(Boolean).join("\n");
   const baseMessages = [
-    { role: "system", content: "这是一次与上一轮分开的主动联系新事件。最近聊天只是已经结束的事实背景，不是等待你继续回答的当前回合；绝不能隔一段时间后补答、复述或改写上一条回复。" },
+    { role: "system", content: "最近真实聊天是本次主动联系的第一优先上下文。先判断其中是否有可自然延续的话题、用户留下的情绪、真实交代或长时间未回复的停顿；能自然延续就优先延续，并按角色性格对沉默作出真实反应。不要机械补答已经回答完的问题，也不要复读旧回答。只有确实没有自然承接点时，才开启新的日常话题。" },
     { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。极少数确实更想听用户声音、且符合本人性格的时刻，可以只输出 [来电|语音] 或 [来电|视频]，不能和普通消息、图片或位置同时发送。图片、位置和来电也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: promptText },
   ];
@@ -689,20 +692,27 @@ function snapshotApps(snapshot: Record<string, unknown>) {
 }
 
 function appUsageMap(snapshot: Record<string, unknown>) {
-  const out: Record<string, number> = {};
+  const out: Record<string, { used: number; name: string }> = {};
   for (const app of snapshotApps(snapshot)) {
     const id = String(app.id || "");
-    if (id) out[id] = Math.max(0, Number(app.usedSeconds || app.usedSec || 0));
+    if (id) out[id] = {
+      used: Math.max(0, Number(app.usedSeconds || app.usedSec || 0)),
+      name: String(app.name || "").trim(),
+    };
   }
   return out;
 }
 
 function appWatchDetected(snapshot: Record<string, unknown>, baseline: Record<string, unknown>) {
-  const rows = snapshotApps(snapshot).map((app) => ({
-    id: String(app.id || ""), name: String(app.name || "").trim(),
-    used: Math.max(0, Number(app.usedSeconds || app.usedSec || 0)),
-    before: Math.max(0, Number(baseline[String(app.id || "")] || 0)),
-  })).filter((app) => app.id && app.name && app.used > app.before);
+  const rows = snapshotApps(snapshot).map((app) => {
+    const id = String(app.id || ""), old = baseline[id];
+    const prior = old && typeof old === "object" ? old as Record<string, unknown> : {};
+    return {
+      id, name: String(app.name || prior.name || "").trim(),
+      used: Math.max(0, Number(app.usedSeconds || app.usedSec || 0)),
+      before: Math.max(0, Number(prior.used ?? old ?? 0)),
+    };
+  }).filter((app) => app.id && app.name && app.used > app.before);
   rows.sort((a, b) => (b.used - b.before) - (a.used - a.before));
   return rows[0] || null;
 }
@@ -758,17 +768,26 @@ Deno.serve(async (request) => {
       if (task.kind === "app_watch_test") {
         const link = (await client.from("phone_companion_links").select("snapshot").eq("target", task.target).maybeSingle()).data;
         const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
-        if (String(payload.stage || "") !== "awaiting") {
+        const stage = String(payload.stage || "start");
+        if (stage === "start") {
           const startedAt = new Date().toISOString();
+          await client.from("phone_role_background_tasks").update({
+            status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null,
+            payload: { stage: "request_snapshot", startedAt, baseline: appUsageMap(snapshot), test: true, diagnostic: { state: "waiting_for_real_usage" } },
+          }).eq("id", task.id);
+          continue;
+        }
+        if (stage === "request_snapshot") {
+          const requestedAt = new Date().toISOString();
           const commandId = await enqueueCompanionCommand(client, String(task.target), {
             schema: 1, action: "view", externalAppId: "", externalAppName: "", scope: "external",
             actor: String(profile.role_name || "角色"), requestedFocus: "立即测试当前正在使用的软件",
-            createdAt: startedAt,
+            createdAt: requestedAt,
           });
           if (commandId) {
             await client.from("phone_role_background_tasks").update({
-              status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null,
-              payload: { stage: "awaiting", startedAt, baseline: appUsageMap(snapshot), commandId, test: true },
+              status: "pending", due_at: new Date(Date.now() + 20_000).toISOString(), claimed_until: null,
+              payload: { ...payload, stage: "awaiting", requestedAt, commandId, test: true, diagnostic: { state: "fresh_snapshot_requested", commandId } },
             }).eq("id", task.id);
           } else {
             await client.from("phone_role_background_tasks").update({
@@ -778,13 +797,14 @@ Deno.serve(async (request) => {
           }
           continue;
         }
-        const started = snapshotTime(payload.startedAt);
+        const started = snapshotTime(payload.startedAt), requested = snapshotTime(payload.requestedAt);
         const captured = snapshotScreenTime(snapshot);
-        appTestDetected = captured >= started && Date.now() - captured <= 5 * 60_000
+        appTestDetected = captured >= requested && Date.now() - captured <= 5 * 60_000
           ? appWatchDetected(snapshot, (payload.baseline || {}) as Record<string, unknown>) : null;
         if (!appTestDetected && Date.now() - started < 3 * 60_000) {
           await client.from("phone_role_background_tasks").update({
-            status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null,
+            status: "pending", due_at: new Date(Date.now() + 40_000).toISOString(), claimed_until: null,
+            payload: { ...payload, stage: "request_snapshot", diagnostic: { state: captured >= requested ? "fresh_snapshot_no_usage_delta" : "waiting_for_fresh_snapshot", requestedAt: payload.requestedAt, capturedAt: captured || null } },
           }).eq("id", task.id);
           continue;
         }
@@ -793,7 +813,7 @@ Deno.serve(async (request) => {
           context = `本次真实识别的软件：${appTestDetected.name}\n本次观察窗口新增使用：${Math.max(1, Math.round((appTestDetected.used - appTestDetected.before) / 60))}分钟`;
         } else {
           instruction = "这是用户明确点击的查看当前软件真实测试，但本次三分钟内没有取得可确认的新软件使用变化。以角色本人口吻如实告诉用户这次没看清，不得猜测软件名，不得引用旧快照。";
-          context = "本次真实测试没有识别到新的已授权软件使用变化。";
+          context = `本次真实测试没有识别到新的已授权软件使用变化。最后快照时间：${captured || "无"}；最后请求时间：${requested || "无"}。`;
         }
       }
       if (task.kind === "one_minute_test") {
@@ -810,7 +830,9 @@ Deno.serve(async (request) => {
           ? `查看目标：${String(payload.focus || "已授权设备数据")}\n本次新鲜快照：${JSON.stringify(snapshot).slice(0, 12000)}`
           : `查看目标：${String(payload.focus || "已授权设备数据")}\n本次没有取得5分钟内的新鲜快照。`;
       } else if (task.kind === "app_followup") {
-        instruction = "这是查看软件后没有得到用户回复的最后一步。根据人设只选一个行动：再发一次自然询问并结束，或明确说你决定暂时锁定了事件中的App；不要双管齐下，不要重复。如果决定锁定，正文必须明确出现“锁定”二字。";
+        instruction = String(payload.followupChoice || "message") === "lock"
+          ? "这是查看软件后没有得到用户回复的最后一步。你本轮已经决定暂时锁定事件中的App；正文必须明确自然地告诉用户你锁定了它，不要再询问第二次。"
+          : "这是查看软件后没有得到用户回复的最后一步。你本轮已经决定不锁定，只再发一次自然询问并结束；正文不得声称锁定。";
         context = `软件：${String(payload.appName || "已授权App")}\n软件稳定ID：${String(payload.appId || "")}\n${context}`;
       }
       const recentRows = (await client.from("phone_role_push_outbox").select("body").eq("target", task.target).eq("role_id", task.role_id).order("created_at", { ascending: false }).limit(6)).data || [];
@@ -823,9 +845,7 @@ Deno.serve(async (request) => {
       );
       const currentTask = (await client.from("phone_role_background_tasks").select("status").eq("id", task.id).maybeSingle()).data;
       if (currentTask?.status === "canceled") continue;
-      const choseLock = task.kind === "app_followup" && decision.kind === "message" &&
-        !/不锁定|不打算锁|不会锁|先不锁/.test(decision.body) &&
-        /(决定|已经|现在|先|暂时|给你|把).{0,12}锁定/.test(decision.body);
+      const choseLock = task.kind === "app_followup" && decision.kind === "message" && String(payload.followupChoice || "message") === "lock";
       if (choseLock) {
         const appId = String(payload.appId || ""), appName = String(payload.appName || "");
         if (appId && appName) {
@@ -843,7 +863,7 @@ Deno.serve(async (request) => {
       if (backgroundDelivered && task.kind === "app_watch_test" && appTestDetected) {
         await client.from("phone_role_background_tasks").insert({
           target: profile.target, role_id: profile.role_id, kind: "app_followup",
-          payload: { appId: appTestDetected.id, appName: appTestDetected.name, context, test: true },
+          payload: { appId: appTestDetected.id, appName: appTestDetected.name, context, test: true, followupChoice: Math.random() < 0.5 ? "lock" : "message" },
           baseline_user_at: profile.last_user_at, due_at: new Date(Date.now() + 5 * 60_000).toISOString(),
         });
       }
@@ -953,8 +973,8 @@ Deno.serve(async (request) => {
         const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
         const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
         const captured = snapshotScreenTime(snapshot);
-        const started = snapshotTime(inspect.startedAt);
-        const detected = captured >= started && Date.now() - captured <= 5 * 60_000
+        const started = snapshotTime(inspect.startedAt), requested = snapshotTime(inspect.requestedAt || inspect.startedAt);
+        const detected = captured >= requested && Date.now() - captured <= 5 * 60_000
           ? appWatchDetected(snapshot, (inspect.baseline || {}) as Record<string, unknown>) : null;
         if (detected) {
           const instruction = "你刚按自己的意愿查看了用户此刻正在使用的一个已授权App。只依据真实软件名和本次新增使用量自然发消息，不提监控、系统或技术；可以关心、吃醋、询问或分享感受，但不能编造App里的具体内容。";
@@ -964,7 +984,7 @@ Deno.serve(async (request) => {
             sent += await persistAndPush(client, url, profile, decision.body, "app-watch", `app-watch:${profile.target}:${profile.role_id}:${Date.now()}`) ? 1 : 0;
             await client.from("phone_role_background_tasks").insert({
               target: profile.target, role_id: profile.role_id, kind: "app_followup",
-              payload: { appId: detected.id, appName: detected.name, context }, baseline_user_at: profile.last_user_at,
+              payload: { appId: detected.id, appName: detected.name, context, followupChoice: Math.random() < 0.5 ? "lock" : "message" }, baseline_user_at: profile.last_user_at,
               due_at: new Date(Date.now() + 5 * 60_000).toISOString(),
             });
           }
@@ -975,21 +995,30 @@ Deno.serve(async (request) => {
           continue;
         }
         if (Date.now() - started < 2 * 60_000) {
-          await client.from("phone_role_push_profiles").update({ claimed_until: null, next_due_at: nextDue(profile, 1) }).eq("target", profile.target).eq("role_id", profile.role_id);
+          const requestedAt = new Date().toISOString();
+          const commandId = await enqueueCompanionCommand(client, String(profile.target), {
+            schema: 1, action: "view", externalAppId: "", externalAppName: "", scope: "external",
+            actor: String(profile.role_name || "角色"), requestedFocus: "刷新当前正在使用的软件", createdAt: requestedAt,
+          });
+          await client.from("phone_role_push_profiles").update({
+            claimed_until: null, next_due_at: nextDue(profile, 1),
+            automation_state: { ...appState, appInspect: { ...inspect, requestedAt, commandId, diagnostic: captured >= requested ? "fresh_snapshot_no_usage_delta" : "waiting_for_fresh_snapshot" } },
+          }).eq("target", profile.target).eq("role_id", profile.role_id);
           continue;
         }
         await client.from("phone_role_push_profiles").update({ automation_state: { ...appState, appInspect: null } }).eq("target", profile.target).eq("role_id", profile.role_id);
       } else if (profile.app_watch_enabled === true && appLimit > 0 && appDayCount < appLimit && Math.random() < 0.5) {
         const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
         const baselineSnapshot = (link?.snapshot || {}) as Record<string, unknown>;
+        const requestedAt = new Date().toISOString();
         const commandId = await enqueueCompanionCommand(client, String(profile.target), {
           schema: 1, action: "view", externalAppId: "", externalAppName: "",
           scope: "external", actor: String(profile.role_name || "角色"), requestedFocus: "当前正在使用的软件",
-          createdAt: new Date().toISOString(),
+          createdAt: requestedAt,
         });
         if (commandId) {
           await client.from("phone_role_push_profiles").update({
-            claimed_until: null, automation_state: { ...appState, appInspect: { stage: "awaiting", startedAt: new Date().toISOString(), baseline: appUsageMap(baselineSnapshot) } },
+            claimed_until: null, automation_state: { ...appState, appInspect: { stage: "awaiting", startedAt: requestedAt, requestedAt, commandId, baseline: appUsageMap(baselineSnapshot), diagnostic: "fresh_snapshot_requested" } },
             next_due_at: nextDue(profile, 1), updated_at: new Date().toISOString(),
           }).eq("target", profile.target).eq("role_id", profile.role_id);
           continue;

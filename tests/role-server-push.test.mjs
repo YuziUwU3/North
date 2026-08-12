@@ -128,8 +128,8 @@ test('server proactive contact compares ordinary role replies and starts a new e
   };
   assert.deepEqual(recent(profile), ['嗯，去吧宝宝。']);
   assert.match(edge, /repeatCandidates\.some\(\(old\) => roleMessageRepeated\(body, old\)\)/);
-  assert.match(edge, /这是一次与上一轮分开的主动联系新事件/);
-  assert.match(edge, /不是等待你继续回答的当前回合/);
+  assert.match(edge, /最近真实聊天是本次主动联系的第一优先上下文/);
+  assert.match(edge, /按角色性格对沉默作出真实反应/);
 });
 
 test('role notification avatars use bounded thumbnails and unguessable fetch URLs', () => {

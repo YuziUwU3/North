@@ -31,7 +31,7 @@ v903 授权补充：保留第一次正常邀请码与扫脸／指纹恢复；删
 
 ## 目录
 
-- `XcodeProject/`：可在 Mac Xcode 打开的真实五 Target 工程。
+- `XcodeProject/`：可在 Mac Xcode 打开的真实六 Target 工程（含 ReplayKit 屏幕共享扩展）。
 - `XcodeProject/PhoneCompanionTest/`：私人入口、本地 WKWebView、原生桥和伴生能力。
 - `Contracts/`：服务端“单设备单控制器”租约契约；接入前不得让两套 App 同时下发命令。
 - `Resources/private-phone-web.manifest.json`：从仓库共享核心打包的文件清单。
@@ -56,4 +56,4 @@ node native/private-small-phone/scripts/stage-private-phone-web.mjs native/priva
 - MapKit 看门狗日志命中真实 `ContentView.swift` 的常驻 `Map`；私人副本在 scene 进入 inactive 时移除地图，保留独立的定位记录。
 - Windows 无法执行 Xcode/Swift 编译，最终仍须在 Mac 编译全部 Target 并真机回归。
 
-当前私人安装版本为 1.0.33 (33)，内置共享网页核心为 v909。App 查看测试改为读取 Screen Time 子快照的真实采集时间；服务器消息必须先持久化进角色聊天，再向服务器确认，避免只见通知不见聊天。iOS 26 私人版新增 AlarmKit 系统闹钟同步，退到后台后仍由系统持续提醒；网页和安卓保留原前台闹钟逻辑。宠物睡眠锚点按背景实图下移到左侧粉色窝垫内部。phone-role-push 需部署 v909，Mac 五 Target 编译和真实 iPhone AlarmKit 授权、后台响铃仍需验收。
+当前私人安装版本为 1.0.34 (34)，内置共享网页核心为 v910，原生桥契约为 13。视频通话新增 ReplayKit 屏幕共享、角色请求共享的双重同意弹框、PiP 双语字幕与后台通话音频；共享帧只在 App Group 原子覆盖保存最新一张，结束即删除。摄像头与共享屏幕共用分钟间隔和每通自动次数，口头查看仍不限次数。App 查看只接受请求后的新鲜 Screen Time 子快照，主动消息优先延续普通真实聊天并感知沉默。phone-role-push 需部署 v910；Mac 六 Target 编译、签名、真实 iPhone 系统共享、PiP、麦克风与后台音频仍需验收。

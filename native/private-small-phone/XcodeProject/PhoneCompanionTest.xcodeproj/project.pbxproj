@@ -16,6 +16,7 @@
 		E73280F43024F9F5006DC874 /* RoleNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E73280ED3024F9F5006DC874 /* RoleNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E73280F93024F9F5006DC874 /* Intents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E73280FB3024F9F5006DC874 /* Intents.framework */; };
 		E73280FA3024F9F5006DC874 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E73280FC3024F9F5006DC874 /* UserNotifications.framework */; };
+		F10000000000000000000001 /* PhoneScreenBroadcast.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* PhoneScreenBroadcast.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,13 @@
 			remoteGlobalIDString = E73280EC3024F9F5006DC874;
 			remoteInfo = RoleNotificationService;
 		};
+		F10000000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E74615BC3022636200B3739D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F10000000000000000000010;
+			remoteInfo = PhoneScreenBroadcast;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -70,6 +78,7 @@
 				E73280C83022B538006DC874 /* PhoneCompanionMonitor.appex in Embed Foundation Extensions */,
 				E73280F43024F9F5006DC874 /* RoleNotificationService.appex in Embed Foundation Extensions */,
 				E73280E030239BEF006DC874 /* PhoneCompanionShield.appex in Embed Foundation Extensions */,
+				F10000000000000000000001 /* PhoneScreenBroadcast.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -87,6 +96,7 @@
 		E73280FB3024F9F5006DC874 /* Intents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Intents.framework; path = System/Library/Frameworks/Intents.framework; sourceTree = SDKROOT; };
 		E73280FC3024F9F5006DC874 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		E74615C43022636300B3739D /* PhoneCompanionTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhoneCompanionTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000000000000000000002 /* PhoneScreenBroadcast.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PhoneScreenBroadcast.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -124,6 +134,13 @@
 				Info.plist,
 			);
 			target = E73280EC3024F9F5006DC874 /* RoleNotificationService */;
+		};
+		F10000000000000000000004 /* Exceptions for "PhoneScreenBroadcast" folder in "PhoneScreenBroadcast" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F10000000000000000000010 /* PhoneScreenBroadcast */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -166,6 +183,14 @@
 				E73280E8302498F2006DC874 /* Exceptions for "PhoneCompanionTest" folder in "PhoneCompanionTest" target */,
 			);
 			path = PhoneCompanionTest;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000005 /* PhoneScreenBroadcast */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F10000000000000000000004 /* Exceptions for "PhoneScreenBroadcast" folder in "PhoneScreenBroadcast" target */,
+			);
+			path = PhoneScreenBroadcast;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -211,6 +236,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F10000000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -234,6 +266,7 @@
 				E73280C13022B538006DC874 /* PhoneCompanionMonitor */,
 				E73280D930239BEF006DC874 /* PhoneCompanionShield */,
 				E73280EE3024F9F5006DC874 /* RoleNotificationService */,
+				F10000000000000000000005 /* PhoneScreenBroadcast */,
 				E73280BE3022B538006DC874 /* Frameworks */,
 				E74615C53022636300B3739D /* Products */,
 			);
@@ -247,6 +280,7 @@
 				E73280BD3022B538006DC874 /* PhoneCompanionMonitor.appex */,
 				E73280D430239BEE006DC874 /* PhoneCompanionShield.appex */,
 				E73280ED3024F9F5006DC874 /* RoleNotificationService.appex */,
+				F10000000000000000000002 /* PhoneScreenBroadcast.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -359,6 +393,7 @@
 				E73280C73022B538006DC874 /* PBXTargetDependency */,
 				E73280DF30239BEF006DC874 /* PBXTargetDependency */,
 				E73280F33024F9F5006DC874 /* PBXTargetDependency */,
+				F10000000000000000000011 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E74615C63022636300B3739D /* PhoneCompanionTest */,
@@ -369,6 +404,28 @@
 			productName = PhoneCompanionTest;
 			productReference = E74615C43022636300B3739D /* PhoneCompanionTest.app */;
 			productType = "com.apple.product-type.application";
+		};
+		F10000000000000000000010 /* PhoneScreenBroadcast */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000000014 /* Build configuration list for PBXNativeTarget "PhoneScreenBroadcast" */;
+			buildPhases = (
+				F10000000000000000000007 /* Sources */,
+				F10000000000000000000006 /* Frameworks */,
+				F10000000000000000000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F10000000000000000000005 /* PhoneScreenBroadcast */,
+			);
+			name = PhoneScreenBroadcast;
+			packageProductDependencies = (
+			);
+			productName = PhoneScreenBroadcast;
+			productReference = F10000000000000000000002 /* PhoneScreenBroadcast.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -390,6 +447,9 @@
 						CreatedOnToolsVersion = 26.6;
 					};
 					E73280EC3024F9F5006DC874 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					F10000000000000000000010 = {
 						CreatedOnToolsVersion = 26.6;
 					};
 					E74615C33022636200B3739D = {
@@ -416,6 +476,7 @@
 				E73280BC3022B538006DC874 /* PhoneCompanionMonitor */,
 				E73280D330239BEE006DC874 /* PhoneCompanionShield */,
 				E73280EC3024F9F5006DC874 /* RoleNotificationService */,
+				F10000000000000000000010 /* PhoneScreenBroadcast */,
 			);
 		};
 /* End PBXProject section */
@@ -450,6 +511,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E74615C23022636200B3739D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F10000000000000000000008 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -494,6 +562,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F10000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -517,6 +592,11 @@
 			target = E73280EC3024F9F5006DC874 /* RoleNotificationService */;
 			targetProxy = E73280F23024F9F5006DC874 /* PBXContainerItemProxy */;
 		};
+		F10000000000000000000011 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F10000000000000000000010 /* PhoneScreenBroadcast */;
+			targetProxy = F10000000000000000000003 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -525,7 +605,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
@@ -536,7 +616,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -554,7 +634,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
@@ -565,7 +645,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -583,7 +663,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
@@ -594,7 +674,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -612,7 +692,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
@@ -623,7 +703,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -641,7 +721,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
@@ -652,7 +732,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -670,7 +750,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
@@ -681,7 +761,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -698,7 +778,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoleNotificationService/Info.plist;
@@ -709,7 +789,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -726,7 +806,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoleNotificationService/Info.plist;
@@ -737,7 +817,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -876,7 +956,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -898,7 +978,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -918,7 +998,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -940,7 +1020,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.33;
+				MARKETING_VERSION = 1.0.34;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -948,6 +1028,54 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F10000000000000000000012 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneScreenBroadcast/PhoneScreenBroadcast.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 34;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneScreenBroadcast/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "小手机屏幕共享";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.34;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.ScreenBroadcast;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F10000000000000000000013 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneScreenBroadcast/PhoneScreenBroadcast.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 34;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneScreenBroadcast/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "小手机屏幕共享";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.34;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.ScreenBroadcast;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1006,6 +1134,15 @@
 			buildConfigurations = (
 				E74615D03022636400B3739D /* Debug */,
 				E74615D13022636400B3739D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000000014 /* Build configuration list for PBXNativeTarget "PhoneScreenBroadcast" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F10000000000000000000012 /* Debug */,
+				F10000000000000000000013 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

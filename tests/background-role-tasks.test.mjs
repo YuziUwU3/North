@@ -29,7 +29,7 @@ test('app awareness is gated, limited, mutually exclusive and cooled down', () =
   assert.match(edge, /Math\.random\(\) < 0\.5/);
   assert.match(edge, /nextDue\(profile, 90\)/);
   assert.match(edge, /due_at: new Date\(Date\.now\(\) \+ 5 \* 60_000\)/);
-  assert.match(edge, /!\/\u4e0d锁定\|不打算锁\|不会锁\|先不锁\//);
+  assert.match(edge, /String\(payload\.followupChoice \|\| "message"\) === "lock"/);
 });
 
 test('background automations require fresh device facts and only record delivered events', () => {
