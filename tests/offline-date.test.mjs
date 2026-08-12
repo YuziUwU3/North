@@ -18,7 +18,7 @@ assert.match(source, /offlineWechatLive:true/);
 assert.match(source, /约会中同步到线上/);
 assert.match(source, /关闭：线上与线下按平行独立世界处理/);
 assert.match(source, /const _offlineLive=offlineWechatLiveState\(c\)/);
-assert.match(source, /if\(!_liveScene\)\{const _gn=conversationGapNote\(c\)/);
+assert.match(source, /if\(S\.settings\.timeAware&& !_liveScene\)\{const _gn=conversationGapNote\(c\)/);
 assert.match(source, /if\(!_natural&&!_liveScene&&lu\)/);
 const liveStart = source.indexOf("function offlineWechatLiveOn()");
 const liveEnd = source.indexOf("function conversationGapNote", liveStart);
@@ -54,7 +54,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v904 · 识图关闭与后台通知修复/);
+assert.match(source, /v905 · 后台接管与角色App感知/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -644,6 +644,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=904/);
+assert.match(html, /app\.js\?v=905/);
 
 console.log("offline date tests passed");

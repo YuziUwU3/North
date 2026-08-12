@@ -69,7 +69,7 @@ test('role leave and schedule tags persist real dated exceptions and stay hidden
 test('time awareness pins today, yesterday and tomorrow to the real calendar',()=>{
   const fixed=new Date(2026,7,10,3,5,0).getTime();
   class FakeDate extends Date{constructor(...args){super(...(args.length?args:[fixed]));}static now(){return fixed;}}
-  const sandbox={Date:FakeDate,String};
+  const sandbox={Date:FakeDate,String,S:{settings:{timeAware:true}}};
   vm.runInNewContext([
     functionSource('hm'),functionSource('weekdayCN'),functionSource('ymdFull'),
     functionSource('dayPartNow'),functionSource('timeAwarenessPrompt'),

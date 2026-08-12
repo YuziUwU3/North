@@ -46,7 +46,7 @@ test('ordinary web inspection keeps the classic progressive banner instead of en
   const wrapper = app.match(/async function doSpyView\(id,force,opts\)[\s\S]*?(?=\nasync function doSpyViewCore)/)?.[0] || '';
   const core = app.match(/async function doSpyViewCore\(id,force,opts\)[\s\S]*?if\(!S\._spySeen\)/)?.[0] || '';
   assert.match(wrapper, /if\(opts&&opts\.intent&&companionRoleExternalFocus\(focus\)\)/);
-  assert.match(wrapper, /return await doSpyViewCore\(id,force,opts\)/);
+  assert.match(wrapper, /completed=await doSpyViewCore\(id,force,opts\);return completed/);
   for (const step of ['正在查看 微信聊天', '正在查看 朋友圈', '正在查看 抖音', '正在查看 浏览器记录']) {
     assert.ok(core.includes(step), `missing classic banner step: ${step}`);
   }

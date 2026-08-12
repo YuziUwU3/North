@@ -80,7 +80,7 @@ test('together outing stays face-to-face while a solo outing does not',()=>{
 test('prompts and UI preserve the together-outing boundary',()=>{
   assert.match(source,/\[共同生活位置\|准确地点\]/);
   assert.match(source,/\[共同生活状态\|一起外出\|准确地点\]/);
-  assert.match(source,/双方一起外出仍留在面对面共同生活/);
+  assert.match(source,/“在家”和“一起外出”都代表两个人仍在同一个面对面共同生活现场/);
   assert.match(functionSource('offSay'),/!cohabTogetherScene\(o\)/);
   assert.match(functionSource('offAI'),/!cohabTogetherScene\(o\)/);
   assert.match(functionSource('renderCohab'),/away=!cohabTogetherScene\(o\)/);

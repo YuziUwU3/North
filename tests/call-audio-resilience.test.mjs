@@ -164,7 +164,7 @@ assert.match(functionSource('playCallMediaWait'),/playCallFallbackWait\(buf,onSt
 assert.match(functionSource('playCallFallbackWait'),/stopBufSource\('call-fallback-timeout'\)/,'a suspended fallback cannot hold the call reply queue indefinitely');
 assert.match(functionSource('playCallMediaWait'),/2500/,'a blocked iOS media start must fall back quickly instead of freezing the reply queue');
 assert.match(functionSource('endCallTimers'),/stopCallMediaAudio/,'hanging up must stop any prepared call media');
-assert.match(source,/pagehide',\(\)=>\{audioMarkWakeRequired\(\);if\(_callHF\)\{callHFStop\(\);audioRouteReset\(false\);\}/);
+assert.match(source,/pagehide',\(\)=>\{roleBackgroundFlush\(\);audioMarkWakeRequired\(\);if\(_callHF\)\{callHFStop\(\);audioRouteReset\(false\);\}/);
 
 const failureContext=vm.createContext({String,Number});
 vm.runInContext(functionSource('callFailureText'),failureContext);

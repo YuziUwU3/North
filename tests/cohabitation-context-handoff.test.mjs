@@ -122,6 +122,7 @@ test('the existing online-offline sync switch also gates common-life context',()
 
 test('common-life supplies exact current time and elapsed state durations',()=>{
   const now=Date.UTC(2026,7,10,4,0,0),sandbox={
+    S:{settings:{timeAware:true}},
     Date:{now:()=>now},Math,
     fmtDT:ts=>new globalThis.Date(ts).toISOString(),fmtDur:ms=>`${Math.round(ms/60000)}m`,cohabClockText:()=>`2026年8月10日 周一 12:00`,
     cohabStatusLabel:d=>d.phase
@@ -132,5 +133,5 @@ test('common-life supplies exact current time and elapsed state durations',()=>{
   assert.match(out,/已经持续约180m/);
   assert.match(out,/已经约35m/);
   assert.match(source,/以前重要及相关的线下见面记忆/);
-  assert.match(source,/不能把几小时前或前一天的事说成刚刚/);
+  assert.match(source,/不能把旧事说成刚刚/);
 });

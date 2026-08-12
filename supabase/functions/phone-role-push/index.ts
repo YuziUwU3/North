@@ -256,7 +256,12 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
     || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频))[\]】]$/.test(part));
 }
 
-async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
+async function roleMessage(
+  profile: Record<string, unknown>,
+  recentBodies: string[],
+  eventInstruction = "",
+  eventContext = "",
+) {
   const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
   const providerFailures: string[] = [];
   const key = Deno.env.get("OPENAI_API_KEY") || "";
@@ -282,8 +287,10 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
   });
   if (!providers.length) return { kind: "unavailable", body: "", reason: "no-provider" };
   const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+  const timeAware = profile.time_aware !== false;
   const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
-  const recentContext = String(profile.recent_context || "").slice(-8000).trim();
+  const recentContextRaw = String(profile.recent_context || "").slice(-8000).trim();
+  const recentContext = timeAware ? recentContextRaw : recentContextRaw.replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?\s*/gm, "");
   const memoryContext = String(profile.memory_context || "").slice(-16000).trim();
   const repeatCandidates = [...recentBodies, ...roleRecentAssistantMessages(profile)];
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
@@ -297,12 +304,25 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
     memoryContext ? `同步的长期记忆、对话总结与世界设定：\n${memoryContext}` : "没有可用的长期记忆。",
     recentContext ? `你与用户最近的真实聊天（按时间顺序）：\n${recentContext}` : "最近没有可用的聊天上下文。",
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
-  ].join("\n");
+  ];
+  if (!timeAware) {
+    prompt[4] = "时间感知已关闭：不知道当前日期、时间、星期、时段或间隔，不得推测。";
+  }
+  if (eventContext) {
+    const safeEventContext = timeAware ? eventContext : eventContext
+      .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/g, "（时间隐藏）")
+      .replace(/\d{4}[/-]\d{1,2}[/-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/g, "（时间隐藏）")
+      .replace(/(?:快照|数据|更新|记录|位置)时间[^，；\n]*/g, "时间已隐藏")
+      .replace(/(?:新增使用|使用时长)\s*\d+\s*分钟/g, "正在使用");
+    prompt.push(`本次事件的真实数据：\n${safeEventContext.slice(0, 12000)}`);
+  }
+  const promptText = prompt.filter(Boolean).join("\n");
   const baseMessages = [
     { role: "system", content: "这是一次与上一轮分开的主动联系新事件。最近聊天只是已经结束的事实背景，不是等待你继续回答的当前回合；绝不能隔一段时间后补答、复述或改写上一条回复。" },
     { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。极少数确实更想听用户声音、且符合本人性格的时刻，可以只输出 [来电|语音] 或 [来电|视频]，不能和普通消息、图片或位置同时发送。图片、位置和来电也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
-    { role: "user", content: prompt },
+    { role: "user", content: promptText },
   ];
+  if (eventInstruction) baseMessages[0].content = eventInstruction;
   try {
     let sawGeneratedCandidate = false;
     for (const provider of providers) {
@@ -427,6 +447,197 @@ async function sendAPNs(
   return { status: "sent", error: "" };
 }
 
+async function sendCompanionWake(deviceToken: string, environment: string, commandId: string) {
+  const keyId = Deno.env.get("APNS_KEY_ID") || "";
+  const teamId = Deno.env.get("APNS_TEAM_ID") || "";
+  const privateKey = Deno.env.get("APNS_PRIVATE_KEY") || "";
+  const bundleId = Deno.env.get("APNS_BUNDLE_ID") || "";
+  if (!deviceToken || !keyId || !teamId || !privateKey || !bundleId) return false;
+  const jwt = await apnsJWT(teamId, keyId, privateKey);
+  const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
+  const response = await fetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${jwt}`,
+      "apns-topic": bundleId,
+      "apns-push-type": "background",
+      "apns-priority": "5",
+      "apns-collapse-id": "phone-companion-commands",
+      "apns-expiration": String(Math.floor(Date.now() / 1000) + 900),
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ aps: { "content-available": 1 }, companion: { commandId } }),
+  });
+  return response.ok;
+}
+
+async function enqueueCompanionCommand(
+  client: ReturnType<typeof createClient>, target: string, command: Record<string, unknown>,
+) {
+  const { data, error } = await client.from("phone_companion_commands").insert({ target, command }).select("id").single();
+  if (error || !data?.id) return "";
+  const link = (await client.from("phone_companion_links").select("apns_device_token,apns_environment").eq("target", target).maybeSingle()).data;
+  await sendCompanionWake(String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"), String(data.id));
+  return String(data.id);
+}
+
+function snapshotTime(value: unknown) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 1_000_000_000) return numeric < 10_000_000_000 ? numeric * 1000 : numeric;
+  const n = Date.parse(String(value || ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string) {
+  const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
+  const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
+  const battery = snapshot.battery && typeof snapshot.battery === "object"
+    ? snapshot.battery as Record<string, unknown>
+    : { level: telemetry.batteryLevel, state: telemetry.batteryState, ts: telemetry.updatedAt };
+  const footprints = Array.isArray(snapshot.footprints) ? snapshot.footprints as Array<Record<string, unknown>> : [];
+  const rawLocation = snapshot.location && typeof snapshot.location === "object"
+    ? snapshot.location as Record<string, unknown>
+    : (footprints.at(-1) || {});
+  const locationAt = snapshotTime(rawLocation.ts || rawLocation.generatedAt);
+  const location = locationAt && Date.now() - locationAt <= 30 * 60_000 ? rawLocation : {};
+  const screen = (snapshot.screenTime && typeof snapshot.screenTime === "object" ? snapshot.screenTime : snapshot) as Record<string, unknown>;
+  const apps = Array.isArray(screen.apps) ? screen.apps as Array<Record<string, unknown>> : [];
+  if (kind === "morningSleep") {
+    if (!(Number(health.sleepSeconds) > 0)) return "";
+    return `HealthKit最近睡眠时长${Math.round(Number(health.sleepSeconds) / 60)}分钟，今日步数${Math.max(0, Math.round(Number(health.steps) || 0))}步，数据时间${String(health.generatedAt || health.ts || "")}`;
+  }
+  if (kind === "eveningScreen") {
+    if (!apps.length) return "";
+    const rows = apps.slice().sort((a, b) => Number(b.usedSeconds || b.usedSec || 0) - Number(a.usedSeconds || a.usedSec || 0))
+      .map((app) => `${String(app.name || "App")} ${Math.round(Number(app.usedSeconds || app.usedSec || 0) / 60)}分钟`).join("；");
+    return `iPhone今日总屏幕使用${Math.round(Number(screen.totalSeconds || 0) / 60)}分钟，全部已授权App：${rows}，快照时间${String(snapshot.capturedAt || snapshot.generatedAt || "")}`;
+  }
+  if (kind === "absenceBattery" || kind === "criticalBattery") {
+    if (!Number.isFinite(Number(battery.level))) return "";
+    const level = Number(battery.level) <= 1 ? Math.round(Number(battery.level) * 100) : Math.round(Number(battery.level));
+    return `iPhone电量${level}%，充电状态${String(battery.state || "未知")}，更新${String(battery.generatedAt || battery.ts || "")}；最近授权位置${String(location.place || "无可用新鲜位置")}，位置时间${String(location.ts || "")}`;
+  }
+  if (kind === "emotionCare") {
+    if (!(Number(health.heartRateBpm) > 0)) return "";
+    return `HealthKit最新心率${Math.round(Number(health.heartRateBpm))}次/分，记录时间${String(health.heartRateAt || health.generatedAt || health.ts || "")}`;
+  }
+  if (kind === "manualUnlock") {
+    const events = Array.isArray(snapshot.automationEvents) ? snapshot.automationEvents as Array<Record<string, unknown>> : [];
+    const event = [...events].reverse().find((row) => row.kind === "manualUnlock" && row.explicit === true);
+    return event ? `用户亲自手动解锁了${String(event.appName || "某个App")}，成功记录${String(event.ts || "")}` : "";
+  }
+  return "";
+}
+
+function automationCandidate(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
+  const config = (profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config : {}) as Record<string, unknown>;
+  if (config.suspended === true) return null;
+  const state = (profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state : {}) as Record<string, unknown>;
+  const localRuns = (config.localRuns && typeof config.localRuns === "object" ? config.localRuns : {}) as Record<string, unknown>;
+  const flags = (config.flags && typeof config.flags === "object" ? config.flags : {}) as Record<string, unknown>;
+  const windows = (config.windows && typeof config.windows === "object" ? config.windows : {}) as Record<string, unknown>;
+  const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+  const minute = clock.hour * 60 + clock.minute;
+  const parse = (value: unknown, fallback: number) => {
+    const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+    return match ? Math.min(1439, Number(match[1]) * 60 + Number(match[2])) : fallback;
+  };
+  const inside = (start: number, end: number) => start <= end ? minute >= start && minute <= end : minute >= start || minute <= end;
+  const lastUser = snapshotTime(profile.last_user_at);
+  const snapAt = snapshotTime(snapshot.capturedAt || snapshot.generatedAt || snapshot.ts);
+  if (snapAt && Date.now() - snapAt > 36 * 3600_000) return null;
+  const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
+  const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
+  const screen = (snapshot.screenTime && typeof snapshot.screenTime === "object" ? snapshot.screenTime : {}) as Record<string, unknown>;
+  const freshWithin = (value: unknown, milliseconds: number) => {
+    const at = snapshotTime(value);
+    return at > 0 && Date.now() - at >= 0 && Date.now() - at <= milliseconds;
+  };
+  const checks: Array<[string, boolean]> = [
+    ["manualUnlock", flags.manualUnlockAlert === true],
+    ["criticalBattery", flags.criticalBattery === true],
+    ["emotionCare", flags.emotionCare === true && Date.now() - lastUser <= 30 * 60_000 && /难过|伤心|委屈|想哭|哭了|崩溃|心慌|害怕|焦虑|不舒服|喘不过气|胸闷|心跳|心率/.test(String((config.lastUser as Record<string, unknown> | undefined)?.text || ""))],
+    ["morningSleep", flags.morningSleep === true && inside(parse(windows.sleepStart, 420), parse(windows.sleepEnd, 720))],
+    ["eveningScreen", flags.eveningScreen === true && inside(parse(windows.usageStart, 1290), parse(windows.usageEnd, 1439))],
+    ["absenceBattery", flags.absenceBattery === true && Date.now() - lastUser >= 3 * 3600_000],
+  ];
+  for (const [kind, allowed] of checks) {
+    if (!allowed) continue;
+    if ((kind === "criticalBattery" || kind === "absenceBattery") && !freshWithin(telemetry.generatedAt, 10 * 60_000)) continue;
+    if (kind === "emotionCare" && !freshWithin(health.heartRateAt || health.generatedAt, 20 * 60_000)) continue;
+    if (kind === "morningSleep" && !freshWithin(health.generatedAt, 20 * 60_000)) continue;
+    if (kind === "eveningScreen" && (!freshWithin(screen.generatedAt, 20 * 60_000) || screen.reportFresh !== true)) continue;
+    const facts = snapshotAutomationFacts(snapshot, kind);
+    if (!facts) continue;
+    let key = `${kind}:${clock.day}`;
+    if (kind === "manualUnlock") {
+      const events = Array.isArray(snapshot.automationEvents) ? snapshot.automationEvents as Array<Record<string, unknown>> : [];
+      const event = [...events].reverse().find((row) => row.kind === "manualUnlock" && row.explicit === true);
+      key = `manualUnlock:${String(event?.id || event?.ts || clock.day)}`;
+    }
+    const runs = state.runs && typeof state.runs === "object" ? state.runs as Record<string, unknown> : {};
+    if (runs[key]) continue;
+    if (kind === "morningSleep" && String(localRuns.morningSleep || "") === clock.day) continue;
+    if (kind === "eveningScreen" && String(localRuns.eveningScreen || "") === clock.day) continue;
+    if (kind === "criticalBattery" && localRuns.criticalBatteryLow === true) continue;
+    if (kind === "emotionCare" && String(localRuns.emotionCareUser || "") === String((config.lastUser as Record<string, unknown> | undefined)?.id || "")) continue;
+    if (kind === "manualUnlock" && String(localRuns.manualUnlock || "") === key.slice("manualUnlock:".length)) continue;
+    if (kind === "criticalBattery" && !/电量[0-5]%/.test(facts)) continue;
+    if (kind === "criticalBattery" && /充电中|已充满/.test(String(telemetry.batteryState || ""))) continue;
+    if (kind === "absenceBattery") {
+      const last = Math.max(snapshotTime(state.absenceBatteryAt), Number(localRuns.absenceBatteryAt || 0));
+      const serverCount = String(state.absenceBatteryDay || "") === clock.day ? Number(state.absenceBatteryCount || 0) : 0;
+      const localCount = String(localRuns.absenceBatteryDay || "") === clock.day ? Number(localRuns.absenceBatteryCount || 0) : 0;
+      const count = Math.max(serverCount, localCount);
+      if (Date.now() - last < 6 * 3600_000 || count >= 2) continue;
+    }
+    return { kind, facts, key };
+  }
+  return null;
+}
+
+function snapshotApps(snapshot: Record<string, unknown>) {
+  const screen = snapshot.screenTime && typeof snapshot.screenTime === "object" ? snapshot.screenTime as Record<string, unknown> : snapshot;
+  return Array.isArray(screen.apps) ? screen.apps as Array<Record<string, unknown>> : [];
+}
+
+function appUsageMap(snapshot: Record<string, unknown>) {
+  const out: Record<string, number> = {};
+  for (const app of snapshotApps(snapshot)) {
+    const id = String(app.id || "");
+    if (id) out[id] = Math.max(0, Number(app.usedSeconds || app.usedSec || 0));
+  }
+  return out;
+}
+
+function appWatchDetected(snapshot: Record<string, unknown>, baseline: Record<string, unknown>) {
+  const rows = snapshotApps(snapshot).map((app) => ({
+    id: String(app.id || ""), name: String(app.name || "").trim(),
+    used: Math.max(0, Number(app.usedSeconds || app.usedSec || 0)),
+    before: Math.max(0, Number(baseline[String(app.id || "")] || 0)),
+  })).filter((app) => app.id && app.name && app.used > app.before);
+  rows.sort((a, b) => (b.used - b.before) - (a.used - a.before));
+  return rows[0] || null;
+}
+
+async function persistAndPush(
+  client: ReturnType<typeof createClient>, url: string, profile: Record<string, unknown>,
+  body: string, triggerKind: string, dedupe: string,
+) {
+  const { data: outbox, error } = await client.from("phone_role_push_outbox").upsert({
+    target: profile.target, role_id: profile.role_id, role_name: profile.role_name || "Role",
+    body, trigger_kind: triggerKind, dedupe_key: dedupe,
+  }, { onConflict: "dedupe_key", ignoreDuplicates: true }).select("id,push_status,avatar_token").maybeSingle();
+  if (error) throw error;
+  let row = outbox;
+  if (!row?.id) row = (await client.from("phone_role_push_outbox").select("id,push_status,avatar_token").eq("dedupe_key", dedupe).maybeSingle()).data;
+  if (!row?.id || row.push_status === "sent") return false;
+  const link = (await client.from("phone_companion_links").select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle()).data;
+  const push = await sendAPNs(String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"), String(profile.role_id || ""), String(profile.role_name || "Role"), body, String(row.id), avatarURL(url, String(row.id), String(row.avatar_token || "")));
+  await client.from("phone_role_push_outbox").update({ push_status: push.status, push_error: push.error || null }).eq("id", row.id);
+  return push.status === "sent";
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (request.method === "GET") return serveAvatar(request);
@@ -435,6 +646,125 @@ Deno.serve(async (request) => {
     const input = await request.json().catch(() => ({}));
     if (input?.action !== "dispatch_due") return reply({ error: "invalid-action" }, 400);
     const { url, client } = supabaseAdmin();
+    let backgroundSent = 0, automationSent = 0;
+
+    const { data: taskRows, error: taskError } = await client.rpc("phone_role_background_claim_due", { p_limit: 20 });
+    if (taskError && !/Could not find|schema cache/i.test(String(taskError.message || ""))) throw taskError;
+    for (const task of Array.isArray(taskRows) ? taskRows : []) {
+      const profile = (await client.from("phone_role_push_profiles").select("*").eq("target", task.target).eq("role_id", task.role_id).maybeSingle()).data;
+      const baseline = snapshotTime(task.baseline_user_at);
+      const latestUser = snapshotTime(profile?.last_user_at);
+      if (!profile?.enabled || (baseline && latestUser > baseline + 1000)) {
+        await client.from("phone_role_background_tasks").update({ status: "canceled", completed_at: new Date().toISOString() }).eq("id", task.id);
+        continue;
+      }
+      const payload = (task.payload && typeof task.payload === "object" ? task.payload : {}) as Record<string, unknown>;
+      let instruction = "", context = String(payload.context || payload.facts || "");
+      if (task.kind === "one_minute_test") {
+        instruction = "这是用户明确点击的一分钟后台通知真实测试：必须以角色本人的口吻发一到两句新话，表明你的消息已经真正到达；不要回答上一句，不提系统或技术词。";
+      } else if (task.kind === "reply_handoff") {
+        instruction = "用户在你正在回复时退到了后台。这是同一轮回复的服务器接管，必须直接回应payload里的最新用户消息，不得复述旧回答，不提后台或任务。";
+        context = `最新用户消息：${String(payload.userText || "")}\n${context}`;
+      } else if (task.kind === "device_handoff") {
+        instruction = "这是一次已经开始的真实iPhone数据查看的后台接管，只能使用事件数据里的事实，以角色本人语气自然说出看到了什么；没有新鲜事实就如实说这次没有取得新数据，不使用旧快照冒充。";
+        const link = (await client.from("phone_companion_links").select("snapshot").eq("target", task.target).maybeSingle()).data;
+        const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
+        const captured = snapshotTime(snapshot.capturedAt || snapshot.generatedAt);
+        context = captured && Date.now() - captured <= 5 * 60_000
+          ? `查看目标：${String(payload.focus || "已授权设备数据")}\n本次新鲜快照：${JSON.stringify(snapshot).slice(0, 12000)}`
+          : `查看目标：${String(payload.focus || "已授权设备数据")}\n本次没有取得5分钟内的新鲜快照。`;
+      } else {
+        instruction = "这是查看软件后没有得到用户回复的最后一步。根据人设只选一个行动：再发一次自然询问并结束，或明确说你决定暂时锁定了事件中的App；不要双管齐下，不要重复。如果决定锁定，正文必须明确出现“锁定”二字。";
+        context = `软件：${String(payload.appName || "已授权App")}\n软件稳定ID：${String(payload.appId || "")}\n${context}`;
+      }
+      const recentRows = (await client.from("phone_role_push_outbox").select("body").eq("target", task.target).eq("role_id", task.role_id).order("created_at", { ascending: false }).limit(6)).data || [];
+      const decision = await roleMessage(profile, recentRows.map((row) => String(row.body || "")), instruction, context);
+      const currentTask = (await client.from("phone_role_background_tasks").select("status").eq("id", task.id).maybeSingle()).data;
+      if (currentTask?.status === "canceled") continue;
+      const choseLock = task.kind === "app_followup" && decision.kind === "message" &&
+        !/不锁定|不打算锁|不会锁|先不锁/.test(decision.body) &&
+        /(决定|已经|现在|先|暂时|给你|把).{0,12}锁定/.test(decision.body);
+      if (choseLock) {
+        const appId = String(payload.appId || ""), appName = String(payload.appName || "");
+        if (appId && appName) {
+          await enqueueCompanionCommand(client, String(task.target), {
+            schema: 1, action: "lock", externalAppId: appId, externalAppName: appName,
+            scope: "external", actor: String(profile.role_name || "角色"), by: "role-app-watch",
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+      const backgroundDelivered = decision.kind === "message"
+        ? await persistAndPush(client, url, profile, decision.body, task.kind, `task:${task.id}`)
+        : false;
+      if (backgroundDelivered) backgroundSent += 1;
+      const shouldRetry = (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < 5;
+      const taskUpdate = shouldRetry
+        ? { status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null }
+        : decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered
+        ? { status: "failed", completed_at: new Date().toISOString(), claimed_until: null }
+        : { status: decision.kind === "message" ? "completed" : "canceled", completed_at: new Date().toISOString(), claimed_until: null };
+      await client.from("phone_role_background_tasks").update(taskUpdate).eq("id", task.id);
+    }
+
+    const { data: automationRows, error: automationError } = await client.rpc("phone_role_automation_claim", { p_limit: 20 });
+    if (automationError && !/Could not find|schema cache/i.test(String(automationError.message || ""))) throw automationError;
+    for (const profile of Array.isArray(automationRows) ? automationRows : []) {
+      const autoState = profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state as Record<string, unknown> : {};
+      const automationConfig = profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config as Record<string, unknown> : {};
+      if (automationConfig.suspended === true) {
+        await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      const lastRefresh = snapshotTime(autoState.backgroundRefreshAt);
+      if (Date.now() - lastRefresh >= 15 * 60_000) {
+        const commandId = await enqueueCompanionCommand(client, String(profile.target), {
+          schema: 1, action: "view", externalAppId: "", externalAppName: "", scope: "external",
+          actor: String(profile.role_name || "角色"), requestedFocus: "后台自动规则所需的已授权数据",
+          createdAt: new Date().toISOString(),
+        });
+        await client.from("phone_role_push_profiles").update({
+          automation_state: { ...autoState, backgroundRefreshAt: new Date().toISOString(), backgroundRefreshCommand: commandId },
+          claimed_until: null,
+        }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
+      const candidate = automationCandidate(profile, (link?.snapshot || {}) as Record<string, unknown>);
+      if (!candidate) {
+        await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      const instructions: Record<string, string> = {
+        morningSleep: "你按用户开启的每日必查规则看到了睡眠和步数。只使用提供的真实数据自然关心，不做医疗判断，不提系统。",
+        eveningScreen: "你按每日必查规则看到了今日总时长和所有已授权App记录。按人设自然反应，数字原样使用，不把各App相加成新的总时长。",
+        absenceBattery: "用户失联后你查看了已授权的电量和最近位置。必须发消息或发起来电的自然文字，但不把最近位置说成持续跟踪。",
+        criticalBattery: "你发现已授权iPhone电量为5%或更低。按人设立即提醒充电，不提系统通知或持续监控。",
+        emotionCare: "用户刚才表达难过，你只把最新心率作为关心线索，不得据此证明撒谎、哭泣、疾病或作医疗诊断。",
+        manualUnlock: "你收到了用户亲自成功解锁App的真实记录。按人设立即自然反应，不得凭空认定欺骗、背叛或做坏事。",
+      };
+      const decision = await roleMessage(profile, [], instructions[candidate.kind] || "", candidate.facts);
+      const automationDelivered = decision.kind === "message"
+        ? await persistAndPush(client, url, profile, decision.body, `automation:${candidate.kind}`, `automation:${profile.target}:${profile.role_id}:${candidate.key}`)
+        : false;
+      if (!automationDelivered) {
+        await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      automationSent += 1;
+      const oldState = profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state as Record<string, unknown> : {};
+      const runs = oldState.runs && typeof oldState.runs === "object" ? { ...(oldState.runs as Record<string, unknown>) } : {};
+      runs[candidate.key] = new Date().toISOString();
+      const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+      const nextState: Record<string, unknown> = { ...oldState, runs, lastKind: candidate.kind, lastAt: new Date().toISOString() };
+      if (candidate.kind === "absenceBattery") {
+        nextState.absenceBatteryAt = new Date().toISOString();
+        nextState.absenceBatteryDay = clock.day;
+        nextState.absenceBatteryCount = String(oldState.absenceBatteryDay || "") === clock.day ? Number(oldState.absenceBatteryCount || 0) + 1 : 1;
+      }
+      await client.from("phone_role_push_profiles").update({ automation_state: nextState, claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+    }
+
     const { data: due, error } = await client.rpc("phone_role_push_claim_due", { p_limit: 20 });
     if (error) throw error;
     const profiles = Array.isArray(due) ? due : [];
@@ -462,6 +792,59 @@ Deno.serve(async (request) => {
           updated_at: new Date().toISOString(),
         }).eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
+      }
+
+      const appDayCount = String(profile.app_watch_day || "") === clock.day ? Number(profile.app_watch_count || 0) : 0;
+      const appLimit = Math.max(0, Math.min(5, Number(profile.app_watch_daily_limit || 0)));
+      const appState = profile.automation_state && typeof profile.automation_state === "object"
+        ? profile.automation_state as Record<string, unknown> : {};
+      const inspect = appState.appInspect && typeof appState.appInspect === "object"
+        ? appState.appInspect as Record<string, unknown> : null;
+      if (inspect?.stage === "awaiting") {
+        const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
+        const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
+        const captured = snapshotTime(snapshot.capturedAt || snapshot.generatedAt);
+        const started = snapshotTime(inspect.startedAt);
+        const detected = captured >= started && Date.now() - captured <= 5 * 60_000
+          ? appWatchDetected(snapshot, (inspect.baseline || {}) as Record<string, unknown>) : null;
+        if (detected) {
+          const instruction = "你刚按自己的意愿查看了用户此刻正在使用的一个已授权App。只依据真实软件名和本次新增使用量自然发消息，不提监控、系统或技术；可以关心、吃醋、询问或分享感受，但不能编造App里的具体内容。";
+          const context = `用户当前在使用：${detected.name}\n本次观察窗口新增使用：${Math.max(1, Math.round((detected.used - detected.before) / 60))}分钟`;
+          const decision = await roleMessage(profile, [], instruction, context);
+          if (decision.kind === "message") {
+            sent += await persistAndPush(client, url, profile, decision.body, "app-watch", `app-watch:${profile.target}:${profile.role_id}:${Date.now()}`) ? 1 : 0;
+            await client.from("phone_role_background_tasks").insert({
+              target: profile.target, role_id: profile.role_id, kind: "app_followup",
+              payload: { appId: detected.id, appName: detected.name, context }, baseline_user_at: profile.last_user_at,
+              due_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+            });
+          }
+          await client.from("phone_role_push_profiles").update({
+            claimed_until: null, app_watch_day: clock.day, app_watch_count: appDayCount + 1,
+            automation_state: { ...appState, appInspect: null }, next_due_at: nextDue(profile, 90), updated_at: new Date().toISOString(),
+          }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
+        if (Date.now() - started < 2 * 60_000) {
+          await client.from("phone_role_push_profiles").update({ claimed_until: null, next_due_at: nextDue(profile, 1) }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
+        await client.from("phone_role_push_profiles").update({ automation_state: { ...appState, appInspect: null } }).eq("target", profile.target).eq("role_id", profile.role_id);
+      } else if (profile.app_watch_enabled === true && appLimit > 0 && appDayCount < appLimit && Math.random() < 0.5) {
+        const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
+        const baselineSnapshot = (link?.snapshot || {}) as Record<string, unknown>;
+        const commandId = await enqueueCompanionCommand(client, String(profile.target), {
+          schema: 1, action: "view", externalAppId: "", externalAppName: "",
+          scope: "external", actor: String(profile.role_name || "角色"), requestedFocus: "当前正在使用的软件",
+          createdAt: new Date().toISOString(),
+        });
+        if (commandId) {
+          await client.from("phone_role_push_profiles").update({
+            claimed_until: null, automation_state: { ...appState, appInspect: { stage: "awaiting", startedAt: new Date().toISOString(), baseline: appUsageMap(baselineSnapshot) } },
+            next_due_at: nextDue(profile, 1), updated_at: new Date().toISOString(),
+          }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
       }
 
       const { data: recentRows } = await client.from("phone_role_push_outbox")
@@ -532,7 +915,7 @@ Deno.serve(async (request) => {
         updated_at: new Date().toISOString(),
       }).eq("target", profile.target).eq("role_id", profile.role_id);
     }
-    return reply({ ok: true, claimed: profiles.length, sent, silent, unavailable, unavailableReasons });
+    return reply({ ok: true, claimed: profiles.length, sent, backgroundSent, automationSent, silent, unavailable, unavailableReasons });
   } catch (error) {
     return reply({ error: String(error?.message || error) }, 500);
   }
