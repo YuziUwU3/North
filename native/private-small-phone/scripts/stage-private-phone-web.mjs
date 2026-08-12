@@ -12,7 +12,12 @@ const manifestPath = path.join(
 );
 const outputRoot = process.argv[2]
   ? path.resolve(process.argv[2])
-  : path.join(privateRoot, 'Generated', 'PhoneWeb.bundle');
+  : path.join(
+      privateRoot,
+      'XcodeProject',
+      'PhoneCompanionTest',
+      'PhoneWeb.bundle'
+    );
 
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const entries = [
