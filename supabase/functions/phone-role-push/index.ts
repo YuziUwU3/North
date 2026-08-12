@@ -540,6 +540,41 @@ function snapshotTime(value: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function snapshotScreenTime(snapshot: Record<string, unknown>) {
+  const screen = (snapshot.screenTime && typeof snapshot.screenTime === "object"
+    ? snapshot.screenTime
+    : {}) as Record<string, unknown>;
+  return Math.max(
+    snapshotTime(screen.generatedAt),
+    snapshotTime(screen.capturedAt),
+    snapshotTime(screen.requestedAt),
+    snapshotTime(screen.updatedAt),
+    snapshotTime(screen.usageRevision),
+    snapshotTime(snapshot.capturedAt),
+    snapshotTime(snapshot.generatedAt),
+  );
+}
+
+function snapshotLatestTime(snapshot: Record<string, unknown>) {
+  const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
+  const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
+  const location = (snapshot.location && typeof snapshot.location === "object" ? snapshot.location : {}) as Record<string, unknown>;
+  return Math.max(
+    snapshotScreenTime(snapshot),
+    snapshotTime(snapshot.ts),
+    snapshotTime(snapshot.readFinishedAt),
+    snapshotTime(health.generatedAt),
+    snapshotTime(health.capturedAt),
+    snapshotTime(health.ts),
+    snapshotTime(telemetry.generatedAt),
+    snapshotTime(telemetry.capturedAt),
+    snapshotTime(telemetry.updatedAt),
+    snapshotTime(location.generatedAt),
+    snapshotTime(location.capturedAt),
+    snapshotTime(location.ts),
+  );
+}
+
 function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string) {
   const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
   const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
@@ -562,7 +597,7 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
     if (!apps.length) return "";
     const rows = apps.slice().sort((a, b) => Number(b.usedSeconds || b.usedSec || 0) - Number(a.usedSeconds || a.usedSec || 0))
       .map((app) => `${String(app.name || "App")} ${Math.round(Number(app.usedSeconds || app.usedSec || 0) / 60)}分钟`).join("；");
-    return `iPhone今日总屏幕使用${Math.round(Number(screen.totalSeconds || 0) / 60)}分钟，全部已授权App：${rows}，快照时间${String(snapshot.capturedAt || snapshot.generatedAt || "")}`;
+    return `iPhone今日总屏幕使用${Math.round(Number(screen.totalSeconds || 0) / 60)}分钟，全部已授权App：${rows}，快照时间${String(screen.generatedAt || screen.capturedAt || snapshot.capturedAt || snapshot.generatedAt || "")}`;
   }
   if (kind === "absenceBattery" || kind === "criticalBattery") {
     if (!Number.isFinite(Number(battery.level))) return "";
@@ -596,7 +631,7 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
   };
   const inside = (start: number, end: number) => start <= end ? minute >= start && minute <= end : minute >= start || minute <= end;
   const lastUser = snapshotTime(profile.last_user_at);
-  const snapAt = snapshotTime(snapshot.capturedAt || snapshot.generatedAt || snapshot.ts);
+  const snapAt = snapshotLatestTime(snapshot);
   if (snapAt && Date.now() - snapAt > 36 * 3600_000) return null;
   const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
   const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
@@ -744,7 +779,7 @@ Deno.serve(async (request) => {
           continue;
         }
         const started = snapshotTime(payload.startedAt);
-        const captured = snapshotTime(snapshot.capturedAt || snapshot.generatedAt);
+        const captured = snapshotScreenTime(snapshot);
         appTestDetected = captured >= started && Date.now() - captured <= 5 * 60_000
           ? appWatchDetected(snapshot, (payload.baseline || {}) as Record<string, unknown>) : null;
         if (!appTestDetected && Date.now() - started < 3 * 60_000) {
@@ -770,7 +805,7 @@ Deno.serve(async (request) => {
         instruction = "这是一次已经开始的真实iPhone数据查看的后台接管，只能使用事件数据里的事实，以角色本人语气自然说出看到了什么；没有新鲜事实就如实说这次没有取得新数据，不使用旧快照冒充。";
         const link = (await client.from("phone_companion_links").select("snapshot").eq("target", task.target).maybeSingle()).data;
         const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
-        const captured = snapshotTime(snapshot.capturedAt || snapshot.generatedAt);
+        const captured = snapshotLatestTime(snapshot);
         context = captured && Date.now() - captured <= 5 * 60_000
           ? `查看目标：${String(payload.focus || "已授权设备数据")}\n本次新鲜快照：${JSON.stringify(snapshot).slice(0, 12000)}`
           : `查看目标：${String(payload.focus || "已授权设备数据")}\n本次没有取得5分钟内的新鲜快照。`;
@@ -917,7 +952,7 @@ Deno.serve(async (request) => {
       if (inspect?.stage === "awaiting") {
         const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
         const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
-        const captured = snapshotTime(snapshot.capturedAt || snapshot.generatedAt);
+        const captured = snapshotScreenTime(snapshot);
         const started = snapshotTime(inspect.startedAt);
         const detected = captured >= started && Date.now() - captured <= 5 * 60_000
           ? appWatchDetected(snapshot, (inspect.baseline || {}) as Record<string, unknown>) : null;

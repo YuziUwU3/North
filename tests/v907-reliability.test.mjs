@@ -42,7 +42,7 @@ test('pet growth, regression and nest sleeping rules are present',()=>{
   assert.match(pet,/function petRegress\(\)/);
   assert.match(pet,/function petRestoreGrowth\(\)/);
   assert.match(pet,/const PET_SLEEP_LAYOUTS=/);
-  assert.match(pet,/1:\[\{x:21\.5,y:46\.2\}\]/);
+  assert.match(pet,/1:\[\{x:21\.5,y:55\.2\}\]/);
   assert.match(pet,/function petSleepWidth\(species,total\)/);
   assert.match(pet,/closeModal\(\);petReaction\(p,reaction,bubble,1600\)/);
 });

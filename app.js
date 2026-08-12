@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='908'){
+if(window.__NORTH_SHELL_BUILD__!=='909'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v908 · 后台必达与宠物回窝';
+const APP_VER='v909 · 后台消息入聊与系统闹钟';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1402,7 +1402,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=908';
+  const url='sw.js?v=909';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8827,9 +8827,12 @@ async function roleServerPushSyncEnabled(){const now=Date.now();if(now-_roleServ
 function roleServerPushCallKind(body){const m=String(body||'').match(/[\[【]来电[|｜](语音|视频)[\]】]/);return m?m[1]==='视频'?'video':'voice':'';}
 function roleServerPushVisibleBody(body){return String(body||'').replace(/[\[【]来电[|｜](?:语音|视频)[\]】]/g,'').trim();}
 function roleServerPushParts(c,body){const max=Math.max(1,Math.min(10,+c.msgMax||4)),out=[];for(const line of splitChatBubbles(String(body||''),max)){for(const msg of lineToMsgs(line,c)){if(out.length>=max)break;if(msg&&['text','image','location'].includes(msg.type))out.push(msg);}if(out.length>=max)break;}return out;}
-async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||!S.couple||!isMain()||!force&&document.hidden)return false;const now=Date.now();if(!force&&now-_roleServerPushPullAt<45000)return false;_roleServerPushPullAt=now;_roleServerPushPullBusy=true;try{await roleServerPushSyncEnabled();const rows=await companionRpc('phone_role_push_pull',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_limit:20});if(!Array.isArray(rows)||!rows.length)return true;const ack=[];let changed=false;for(const row of rows){if(!row||!row.id)continue;ack.push(row.id);const c=getC(row.roleId);if(!c||c.deleted)continue;const rowAt=companionTime(row.createdAt)||0;if(c._memoryResetAt&&rowAt&&rowAt<=+c._memoryResetAt)continue;if(roleOnlineProactiveBlocked(c.id)){roleServerPushSyncSoon(c.id);continue;}const list=msgs(c.id);if(list.some(m=>m&&m._rolePushId===row.id))continue;const rawBody=String(row.body||'').slice(0,1200).trim(),callKind=roleServerPushCallKind(rawBody),body=roleServerPushVisibleBody(rawBody);if(!rawBody||body&&initiativeRecentlyRepeated(c.id,body,24*3600000))continue;const parts=roleServerPushParts(c,body),base=rowAt||Date.now();if(!parts.length&&!callKind)continue;parts.forEach((msg,i)=>{msg.time=base+i*900;msg.id=msg.id||uid();msg._rolePushId=row.id;msg._rolePushPart=i;msg._serverProactive=true;list.push(msg);});if(parts.length){changed=true;const notice=parts.find(m=>m.type==='text')||parts[0];if(row.pushStatus!=='sent')notifyIncoming(c,notice);else if(cur().p!=='chat'||cur().id!==c.id){if(!_call)showMsgBanner(c,notice);playDing();}}if(callKind){const fresh=Date.now()-base<=10*60000;if(fresh&&!_call&&!offlineFocusActive()&&!cinemaRoleOccupied(c.id)){setTimeout(()=>{if(incomingCall(c.id,callKind,{serverPush:true})&&_call){_call._pro=true;_call._proReason='隔了一段时间没有联系，想主动听听ta的声音';}},350);}else if(!fresh){list.push({id:uid(),role:'user',type:'sys',content:'未接来电 · '+(callKind==='video'?'视频通话':'语音通话'),time:base,_rolePushId:row.id,_serverProactive:true});changed=true;}}}
-    if(changed){save();if(cur().p==='chat')refreshChatMessages(cur().id);else if(cur().p==='home')render();}
-    if(ack.length)await companionRpc('phone_role_push_ack',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_ids:ack});return true;
+async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||!S.couple||!isMain()||!force&&document.hidden)return false;const now=Date.now();if(!force&&now-_roleServerPushPullAt<45000)return false;_roleServerPushPullAt=now;_roleServerPushPullBusy=true;try{await roleServerPushSyncEnabled();const rows=await companionRpc('phone_role_push_pull',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_limit:20});if(!Array.isArray(rows)||!rows.length)return true;const ack=[],pendingCalls=[];let changed=false,needsPersist=false;for(const row of rows){if(!row||!row.id)continue;const c=getC(row.roleId);if(!c)continue;if(c.deleted){ack.push(row.id);continue;}const rowAt=companionTime(row.createdAt)||0;if(c._memoryResetAt&&rowAt&&rowAt<=+c._memoryResetAt){ack.push(row.id);continue;}if(roleOnlineProactiveBlocked(c.id)){roleServerPushSyncSoon(c.id);continue;}const list=msgs(c.id);if(list.some(m=>m&&m._rolePushId===row.id)){ack.push(row.id);needsPersist=true;continue;}const rawBody=String(row.body||'').slice(0,1200).trim(),callKind=roleServerPushCallKind(rawBody),body=roleServerPushVisibleBody(rawBody);if(!rawBody){ack.push(row.id);continue;}const parts=roleServerPushParts(c,body),base=rowAt||Date.now();if(!parts.length&&!callKind){ack.push(row.id);continue;}parts.forEach((msg,i)=>{msg.time=base+i*900;msg.id=msg.id||uid();msg._rolePushId=row.id;msg._rolePushPart=i;msg._serverProactive=true;list.push(msg);});if(parts.length){changed=true;needsPersist=true;const notice=parts.find(m=>m.type==='text')||parts[0];if(row.pushStatus!=='sent')notifyIncoming(c,notice);else if(cur().p!=='chat'||cur().id!==c.id){if(!_call)showMsgBanner(c,notice);playDing();}}if(callKind){const fresh=Date.now()-base<=10*60000;if(fresh&&!_call&&!offlineFocusActive()&&!cinemaRoleOccupied(c.id)){pendingCalls.push({c,callKind});}else if(!fresh){list.push({id:uid(),role:'user',type:'sys',content:'未接来电 · '+(callKind==='video'?'视频通话':'语音通话'),time:base,_rolePushId:row.id,_serverProactive:true});changed=true;needsPersist=true;}}ack.push(row.id);}
+    if(changed)save();
+    if(needsPersist&&!(await persistWechatMessagesNow()))return false;
+    if(changed){if(cur().p==='chat')refreshChatMessages(cur().id);else if(cur().p==='home')render();}
+    if(ack.length)await companionRpc('phone_role_push_ack',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_ids:ack});
+    pendingCalls.forEach(({c,callKind})=>setTimeout(()=>{if(incomingCall(c.id,callKind,{serverPush:true})&&_call){_call._pro=true;_call._proReason='隔了一段时间没有联系，想主动听听ta的声音';}},350));return true;
   }catch(_){return false;}finally{_roleServerPushPullBusy=false;}}
 window.__smallPhoneOpenRolePush=async payload=>{payload=payload||{};await roleServerPushPull(true);const c=getC(String(payload.roleId||''));if(!c)return;if(String(payload.kind||'')==='call'){if(_call&&_call.id===c.id)openIncoming();else openChat(c.id);}else openChat(c.id);};
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;if(c.proactive.enabled)initiativeArm(c);save();render();if(c.proactive.serverPush)roleServerPushSync(c,true);}
@@ -10946,20 +10949,29 @@ function viewWeblink(mid){let m;for(const k in S.messages){const x=S.messages[k]
   openModal(`<h3 style="color:#7db3ff">${esc(m.title)}</h3><div style="max-height:55vh;overflow:auto;color:#ddd;line-height:1.8;white-space:pre-wrap;font-size:14px">${esc(m.snippet||'')}</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
 
 /* =================== 闹钟 =================== */
-function addAlarm(contactId,time,label,repeat){S.alarms.push({id:uid(),time,label:label||'起床',contactId,enabled:true,repeat:repeat||'once'});save();toast('已定闹钟 '+time+' '+(label||''));}
+let _nativeAlarmAuthorized=false,_nativeAlarmSyncBusy=false,_nativeAlarmSyncAgain=false;
+function nativeAlarmRows(){return(S.alarms||[]).map(a=>{const c=getC(a.contactId);return{id:String(a.id||''),time:String(a.time||''),label:String(a.label||'闹钟'),contactId:String(a.contactId||''),roleName:c?String(c.remark||c.name||'角色'):'角色',enabled:a.enabled!==false,repeat:a.repeat==='daily'?'daily':'once'};});}
+async function nativeAlarmSync(showError){if(!window.__SMALL_PHONE_PRIVATE__||!window.SmallPhoneNative||typeof window.SmallPhoneNative.request!=='function')return false;if(_nativeAlarmSyncBusy){_nativeAlarmSyncAgain=true;return false;}_nativeAlarmSyncBusy=true;try{const result=await window.SmallPhoneNative.request('alarm.sync',{alarms:nativeAlarmRows()});_nativeAlarmAuthorized=!!(result&&result.supported&&result.authorized);const fired=new Set(result&&Array.isArray(result.firedIds)?result.firedIds:[]);if(fired.size){S.alarms=(S.alarms||[]).filter(a=>!fired.has(a.id));save();if(document.querySelector('.modal'))alarmManager();}if(showError&&result&&result.supported&&!result.authorized)toast('请允许小手机使用系统闹钟');return _nativeAlarmAuthorized;}catch(e){_nativeAlarmAuthorized=false;if(showError)toast('系统闹钟同步失败，请重新添加或检查权限');return false;}finally{_nativeAlarmSyncBusy=false;if(_nativeAlarmSyncAgain){_nativeAlarmSyncAgain=false;setTimeout(()=>nativeAlarmSync(false),100);}}}
+function addAlarm(contactId,time,label,repeat){S.alarms.push({id:uid(),time,label:label||'起床',contactId,enabled:true,repeat:repeat||'once'});save();nativeAlarmSync(true);toast('已定闹钟 '+time+' '+(label||''));}
+function alarmToggle(id){const alarm=S.alarms.find(a=>a.id===id);if(!alarm)return;alarm.enabled=!alarm.enabled;save();nativeAlarmSync(alarm.enabled);alarmManager();}
+function alarmDelete(id){S.alarms=S.alarms.filter(a=>a.id!==id);save();nativeAlarmSync(false);alarmManager();}
 function alarmManager(){openModal(`<h3>闹钟</h3>
-  <div class="hint">到点由角色给你来电叫醒；也能在聊天里口头让 ta 定。「仅一次」响完自动删除。</div>
+  <div class="hint">私人版会同步为 iPhone 系统闹钟，即使小手机退到后台也能持续响；网页版保留原来的前台角色来电。也能在聊天里口头让 ta 定。</div>
   <div class="two"><div class="field"><label>时间</label><input id="al_t" type="time"></div>
   <div class="field"><label>谁来叫你</label><select id="al_c">${S.contacts.filter(c=>!c.deleted).map(c=>`<option value="${c.id}">${esc(c.remark||c.name)}</option>`).join('')}</select></div></div>
   <div class="two"><div class="field"><label>备注</label><input id="al_l" placeholder="起床啦"></div>
   <div class="field"><label>重复</label><select id="al_r"><option value="once">仅一次</option><option value="daily">每天</option></select></div></div>
   <button class="btn p" style="margin-bottom:12px" onclick="(function(){var t=$('#al_t').value;if(!t){toast('选个时间');return;}addAlarm($('#al_c').value,t,$('#al_l').value.trim(),$('#al_r').value);alarmManager();})()">添加</button>
-  ${S.alarms.length?S.alarms.map(a=>{const c=getC(a.contactId);return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div><b style="font-size:18px">${a.time}</b> ${esc(a.label)} <span class="tag">${a.repeat==='daily'?'每天':'仅一次'}</span><small>${c?esc(c.remark||c.name):'?'} 来电</small></div><div><span class="sw ${a.enabled?'on':''}" onclick="(function(){var x=S.alarms.find(z=>z.id==='${a.id}');x.enabled=!x.enabled;save();alarmManager();})()"></span> <span onclick="S.alarms=S.alarms.filter(z=>z.id!=='${a.id}');save();alarmManager()" style="color:#fa5151;cursor:pointer;margin-left:10px">✕</span></div></div>`;}).join(''):'<div class="empty">还没有闹钟</div>'}
+  ${S.alarms.length?S.alarms.map(a=>{const c=getC(a.contactId);return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div><b style="font-size:18px">${a.time}</b> ${esc(a.label)} <span class="tag">${a.repeat==='daily'?'每天':'仅一次'}</span><small>${c?esc(c.remark||c.name):'?'} 提醒</small></div><div><span class="sw ${a.enabled?'on':''}" onclick="alarmToggle('${a.id}')"></span> <span onclick="alarmDelete('${a.id}')" style="color:#fa5151;cursor:pointer;margin-left:10px">✕</span></div></div>`;}).join(''):'<div class="empty">还没有闹钟</div>'}
   <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 let _alarmFired={};
-function checkAlarms(){if(!isMain())return;const now=new Date();const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const tag=now.toDateString()+hhmm;
+function checkAlarms(){if(!isMain()||_nativeAlarmAuthorized)return;const now=new Date();const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const tag=now.toDateString()+hhmm;
   for(const a of [...S.alarms]){if(!a.enabled||a.time!==hhmm||_alarmFired[a.id]===tag||_call)continue;if(!incomingCall(a.contactId,'voice'))continue;_alarmFired[a.id]=tag;if(a.repeat!=='daily')S.alarms=S.alarms.filter(z=>z.id!==a.id);save();break;}}
 setInterval(checkAlarms,15000);
+window.addEventListener('small-phone-native-ready',()=>setTimeout(()=>nativeAlarmSync(false),200));
+window.addEventListener('pageshow',()=>setTimeout(()=>nativeAlarmSync(false),800));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>nativeAlarmSync(false),500);});
+setTimeout(()=>nativeAlarmSync(false),3500);
 setInterval(suspicionTick,1000);
 let _stepReportBusy=false;
 function checkStepReport(){if(!isMain()||offlineFocusActive()||_call||_stepReportBusy)return;ensureDailySteps();const now=new Date();if(now.getHours()!==23)return;const today=now.toDateString();if(S.me._stepRptDate===today)return;if(S.jail&&S.jail.active||S.me.sleep&&S.me.sleep.active||S.me.report&&S.me.report.active)return;

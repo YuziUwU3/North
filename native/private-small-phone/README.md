@@ -56,4 +56,4 @@ node native/private-small-phone/scripts/stage-private-phone-web.mjs native/priva
 - MapKit 看门狗日志命中真实 `ContentView.swift` 的常驻 `Map`；私人副本在 scene 进入 inactive 时移除地图，保留独立的定位记录。
 - Windows 无法执行 Xcode/Swift 编译，最终仍须在 Mac 编译全部 Target 并真机回归。
 
-当前私人安装版本为 1.0.32 (32)，内置共享网页核心为 v908。后台静默推送处理器已从可选页面生命周期移到 App 启动入口；一分钟测试、App 查看测试、回复接力和设备接力均不再允许模型以“保持安静”取消明确任务。APNs 状态、apns-id、设备回执会分别保留用于排查。宠物睡眠按物种和数量缩放，最多四只均位于左侧粉色窝垫内。迁移 202608130003 与 phone-role-push 已部署，Windows 自动回归 503/503 通过；Mac 五 Target 编译和真实 iPhone 后台通知仍需验收。
+当前私人安装版本为 1.0.33 (33)，内置共享网页核心为 v909。App 查看测试改为读取 Screen Time 子快照的真实采集时间；服务器消息必须先持久化进角色聊天，再向服务器确认，避免只见通知不见聊天。iOS 26 私人版新增 AlarmKit 系统闹钟同步，退到后台后仍由系统持续提醒；网页和安卓保留原前台闹钟逻辑。宠物睡眠锚点按背景实图下移到左侧粉色窝垫内部。phone-role-push 需部署 v909，Mac 五 Target 编译和真实 iPhone AlarmKit 授权、后台响铃仍需验收。

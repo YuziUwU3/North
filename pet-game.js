@@ -3,12 +3,12 @@ const PET_DAY=86400000;
 const PET_HOUR=3600000;
 const PET_MAX=4;
 const PET_ROOM_SPOTS=[{x:35,y:71},{x:64,y:71},{x:43,y:52},{x:72,y:52}];
-/* SVG 的可见身体位于画布下半部，所以锚点要放到窝口上方，成像后才真正落在窝垫里。 */
+/* SVG 的可见身体位于画布下半部；这里按整张房间背景的粉色垫子实际区域落点，不能再停在窝顶/窗台。 */
 const PET_SLEEP_LAYOUTS={
-  1:[{x:21.5,y:46.2}],
-  2:[{x:16.5,y:46.4},{x:26.5,y:46.4}],
-  3:[{x:14.5,y:46.8},{x:22,y:43.4},{x:29,y:46.8}],
-  4:[{x:15.5,y:42.8},{x:27,y:42.8},{x:15.5,y:45.8},{x:27,y:45.8}],
+  1:[{x:21.5,y:55.2}],
+  2:[{x:16.8,y:54.8},{x:26.2,y:54.8}],
+  3:[{x:14.8,y:56.1},{x:21.5,y:52.8},{x:28.2,y:56.1}],
+  4:[{x:15.2,y:52.6},{x:27.1,y:52.6},{x:15.2,y:56.8},{x:27.1,y:56.8}],
 };
 function petSleepSpot(index,total){const count=Math.max(1,Math.min(4,total||1)),layout=PET_SLEEP_LAYOUTS[count]||PET_SLEEP_LAYOUTS[1];return layout[Math.max(0,index)%layout.length];}
 const PET_MEDICINE={id:'medicine',name:'宠物恢复药',icon:'✚',price:96,note:'生病时使用，恢复健康'};

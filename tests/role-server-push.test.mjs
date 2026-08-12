@@ -246,13 +246,18 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.match(pull, /roleOnlineProactiveBlocked\(c\.id\)/);
   assert.match(pull, /roleServerPushSyncSoon\(c\.id\)/);
   assert.match(pull, /_rolePushId===row\.id/);
-  assert.match(pull, /initiativeRecentlyRepeated\(c\.id,body,24\*3600000\)/);
+  assert.doesNotMatch(pull, /initiativeRecentlyRepeated\(c\.id,body/);
   assert.match(pull, /roleServerPushParts\(c,body\)/);
   assert.match(pull, /roleServerPushCallKind\(rawBody\)/);
   assert.match(pull, /incomingCall\(c\.id,callKind,\{serverPush:true\}\)/);
   assert.match(app, /window\.__smallPhoneOpenRolePush=async payload/);
   assert.match(pull, /msg\._serverProactive=true/);
   assert.match(pull, /phone_role_push_ack/);
+  assert.match(pull, /await persistWechatMessagesNow\(\)/);
+  assert.ok(
+    pull.indexOf('await persistWechatMessagesNow()') < pull.indexOf("phone_role_push_ack"),
+    'server rows must be durably persisted before they are acknowledged'
+  );
   assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);
   assert.match(app, /visibilitychange[\s\S]{0,1600}roleServerPushPull\(true\)/);
 });

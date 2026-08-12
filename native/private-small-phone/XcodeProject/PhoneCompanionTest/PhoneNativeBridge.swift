@@ -9,7 +9,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 11
+    static let contractVersion = 12
 
     weak var webView: WKWebView?
     var openDeviceManagement: (() -> Void)?
@@ -39,6 +39,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "native.management.open":
             openDeviceManagement?()
             reply(requestID: requestID, result: ["opened": true])
+        case "alarm.sync":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performAlarmSync(requestID: requestID, arguments: arguments)
         case "location.current":
             performNativeLocation(requestID: requestID)
         case "device.snapshot":
@@ -130,6 +133,32 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     "place": manager.currentPlaceName
                 ]
             )
+        }
+    }
+
+    private func performAlarmSync(
+        requestID: String,
+        arguments: [String: Any]
+    ) {
+        guard #available(iOS 26.0, *) else {
+            reply(
+                requestID: requestID,
+                result: ["supported": false, "authorized": false]
+            )
+            return
+        }
+        let alarms = arguments["alarms"] as? [[String: Any]] ?? []
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await NativeAlarmService.shared.synchronize(alarms)
+                self.reply(requestID: requestID, result: result)
+            } catch {
+                self.reply(
+                    requestID: requestID,
+                    error: "native_alarm_sync_failed:\(error.localizedDescription)"
+                )
+            }
         }
     }
 
