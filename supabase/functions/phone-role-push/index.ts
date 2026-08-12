@@ -660,6 +660,48 @@ Deno.serve(async (request) => {
       }
       const payload = (task.payload && typeof task.payload === "object" ? task.payload : {}) as Record<string, unknown>;
       let instruction = "", context = String(payload.context || payload.facts || "");
+      let appTestDetected: { id: string; name: string; used: number; before: number } | null = null;
+      if (task.kind === "app_watch_test") {
+        const link = (await client.from("phone_companion_links").select("snapshot").eq("target", task.target).maybeSingle()).data;
+        const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
+        if (String(payload.stage || "") !== "awaiting") {
+          const startedAt = new Date().toISOString();
+          const commandId = await enqueueCompanionCommand(client, String(task.target), {
+            schema: 1, action: "view", externalAppId: "", externalAppName: "", scope: "external",
+            actor: String(profile.role_name || "角色"), requestedFocus: "立即测试当前正在使用的软件",
+            createdAt: startedAt,
+          });
+          if (commandId) {
+            await client.from("phone_role_background_tasks").update({
+              status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null,
+              payload: { stage: "awaiting", startedAt, baseline: appUsageMap(snapshot), commandId, test: true },
+            }).eq("id", task.id);
+          } else {
+            await client.from("phone_role_background_tasks").update({
+              status: Number(task.attempts || 0) < 5 ? "pending" : "failed",
+              due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null,
+            }).eq("id", task.id);
+          }
+          continue;
+        }
+        const started = snapshotTime(payload.startedAt);
+        const captured = snapshotTime(snapshot.capturedAt || snapshot.generatedAt);
+        appTestDetected = captured >= started && Date.now() - captured <= 5 * 60_000
+          ? appWatchDetected(snapshot, (payload.baseline || {}) as Record<string, unknown>) : null;
+        if (!appTestDetected && Date.now() - started < 3 * 60_000) {
+          await client.from("phone_role_background_tasks").update({
+            status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null,
+          }).eq("id", task.id);
+          continue;
+        }
+        if (appTestDetected) {
+          instruction = "这是用户明确点击的查看当前软件真实测试。你刚取得本次新的已授权App使用变化，只依据真实软件名自然发消息；必须让用户知道你看到了哪个软件，不提监控、系统或技术，也不能编造App里的具体内容。";
+          context = `本次真实识别的软件：${appTestDetected.name}\n本次观察窗口新增使用：${Math.max(1, Math.round((appTestDetected.used - appTestDetected.before) / 60))}分钟`;
+        } else {
+          instruction = "这是用户明确点击的查看当前软件真实测试，但本次三分钟内没有取得可确认的新软件使用变化。以角色本人口吻如实告诉用户这次没看清，不得猜测软件名，不得引用旧快照。";
+          context = "本次真实测试没有识别到新的已授权软件使用变化。";
+        }
+      }
       if (task.kind === "one_minute_test") {
         instruction = "这是用户明确点击的一分钟后台通知真实测试：必须以角色本人的口吻发一到两句新话，表明你的消息已经真正到达；不要回答上一句，不提系统或技术词。";
       } else if (task.kind === "reply_handoff") {
@@ -673,7 +715,7 @@ Deno.serve(async (request) => {
         context = captured && Date.now() - captured <= 5 * 60_000
           ? `查看目标：${String(payload.focus || "已授权设备数据")}\n本次新鲜快照：${JSON.stringify(snapshot).slice(0, 12000)}`
           : `查看目标：${String(payload.focus || "已授权设备数据")}\n本次没有取得5分钟内的新鲜快照。`;
-      } else {
+      } else if (task.kind === "app_followup") {
         instruction = "这是查看软件后没有得到用户回复的最后一步。根据人设只选一个行动：再发一次自然询问并结束，或明确说你决定暂时锁定了事件中的App；不要双管齐下，不要重复。如果决定锁定，正文必须明确出现“锁定”二字。";
         context = `软件：${String(payload.appName || "已授权App")}\n软件稳定ID：${String(payload.appId || "")}\n${context}`;
       }
@@ -698,6 +740,13 @@ Deno.serve(async (request) => {
         ? await persistAndPush(client, url, profile, decision.body, task.kind, `task:${task.id}`)
         : false;
       if (backgroundDelivered) backgroundSent += 1;
+      if (backgroundDelivered && task.kind === "app_watch_test" && appTestDetected) {
+        await client.from("phone_role_background_tasks").insert({
+          target: profile.target, role_id: profile.role_id, kind: "app_followup",
+          payload: { appId: appTestDetected.id, appName: appTestDetected.name, context, test: true },
+          baseline_user_at: profile.last_user_at, due_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+        });
+      }
       const shouldRetry = (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < 5;
       const taskUpdate = shouldRetry
         ? { status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null }

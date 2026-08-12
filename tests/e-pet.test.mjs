@@ -22,11 +22,12 @@ test('game hall exposes a direct electronic-pet entry',()=>{
   assert.match(preview,/M8 8q4-2 8 0/,'the preview icon must match the repaired game-hall icon');
 });
 
-test('pet state is isolated, persistent and limited to two pets',()=>{
+test('pet state is isolated, persistent and limited to four pets',()=>{
   assert.match(pet,/S\.me\.ePet/);
-  assert.match(pet,/x\.pets\.length>=2/);
-  assert.match(pet,/已经养了两只宠物|已经住着两只宠物/);
-  assert.match(pet,/inventory:\{kibble:3,chicken:1,fish:1,snack:2\}/);
+  assert.match(pet,/const PET_MAX=4/);
+  assert.match(pet,/x\.pets\.length>=PET_MAX/);
+  assert.match(pet,/已经养了四只宠物|已经住着四只宠物/);
+  assert.match(pet,/inventory:\{kibble:3,chicken:1,fish:1,snack:2,medicine:0\}/);
   assert.match(pet,/ownedWear:\[\]/);
   assert.match(pet,/looks=p\.looks\.slice\(-8\)/);
 });
@@ -84,7 +85,7 @@ test('color preview, roommates and fetch play use separate live state',()=>{
   assert.match(pet,/实时全身预览/);
   assert.match(pet,/function petRenderRoomPet/);
   assert.match(pet,/pet-character \$\{active\?'drag-enabled active':'roommate'\}/);
-  assert.match(pet,/Math\.hypot\(a\.roomX-b\.roomX,a\.roomY-b\.roomY\)/,'old overlapping saves should be separated');
+  assert.match(pet,/Math\.hypot\(p\.roomX-q\.roomX,p\.roomY-q\.roomY\)/,'old overlapping saves should be separated');
   assert.match(pet,/function petChooseBall/);
   assert.match(pet,/function petThrowAt/);
   assert.match(pet,/捡到啦/);
@@ -171,12 +172,12 @@ test('Maine Coon, three hamsters and three white rabbit breeds use persistent li
 });
 
 test('preview and app load the complete visual module',()=>{
-assert.match(html,/pet-game\.css\?v=905/);
-assert.match(html,/pet-game\.js\?v=905/);
+assert.match(html,/pet-game\.css\?v=906/);
+assert.match(html,/pet-game\.js\?v=906/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);
   assert.match(css,/\.pet-painter/);
-assert.match(sw,/pet-game\.js\?v=905/);
+assert.match(sw,/pet-game\.js\?v=906/);
   assert.match(sw,/pet-room-v1\.webp/);
 });
