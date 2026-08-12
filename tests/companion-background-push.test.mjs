@@ -51,10 +51,14 @@ test('native app registers APNs and uses a command-first background wake', () =>
   assert.match(nativeApp, /backgroundWakeHandler/);
   assert.match(nativeApp, /pendingWakeCount/);
   assert.match(nativeSync, /phone_companion_register_push_token/);
-  assert.match(nativeSync, /pushCoordinator\.setBackgroundWakeHandler/);
-  assert.match(nativeSync, /setBackgroundWakeHandler/);
-  assert.match(nativeSync, /let didSynchronize = await service\.synchronizeCommandsOnly/);
-  assert.match(nativeSync, /didSynchronize \? \.newData : \.failed/);
+  const launchSetup = nativeApp.slice(
+    nativeApp.indexOf('didFinishLaunchingWithOptions'),
+    nativeApp.indexOf('func application(\n        _ application: UIApplication,\n        didRegisterForRemoteNotificationsWithDeviceToken'),
+  );
+  assert.match(launchSetup, /setBackgroundWakeHandler/);
+  assert.match(launchSetup, /let didSynchronize = await service\.synchronizeCommandsOnly/);
+  assert.match(launchSetup, /didSynchronize \? \.newData : \.failed/);
+  assert.doesNotMatch(nativeSync, /pushCoordinator\.setBackgroundWakeHandler/);
   assert.match(nativeApp, /finishBackgroundWake\(finalResult\)/);
   assert.doesNotMatch(nativeSync, /onChange\(of: pushCoordinator\.wakeSequence\)/);
   assert.match(nativeSync, /processPendingCommandsSerialized/);
@@ -64,10 +68,7 @@ test('native app registers APNs and uses a command-first background wake', () =>
   assert.match(nativeSync, /controlOnly: true/);
   assert.match(nativeApp, /Silent background pushes do not require alert authorization/);
   assert.match(nativeApp, /willPresent[\s\S]*?\{\s*\[\]\s*\}/);
-  assert.doesNotMatch(nativeSync.slice(
-    nativeSync.indexOf('pushCoordinator.setBackgroundWakeHandler'),
-    nativeSync.indexOf('locationManager.resumeTrackingIfAuthorized'),
-  ), /wellnessService\.refresh|service\.synchronize\(/);
+  assert.doesNotMatch(launchSetup, /wellnessService\.refresh|service\.synchronize\(/);
 });
 
 test('full sync processes commands before refreshing heavyweight usage data', () => {

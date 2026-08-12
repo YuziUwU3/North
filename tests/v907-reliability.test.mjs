@@ -26,6 +26,9 @@ test('explicit tests and handoffs survive transient profile state',()=>{
   assert.match(edge,/!explicitHandoff && !profile\.enabled/);
   assert.match(migration,/and kind = v_kind and status in \('pending','claimed'\)/);
   assert.doesNotMatch(migration,/kind in \('reply_handoff','device_handoff'\)/);
+  assert.match(edge,/!explicitHandoff,/);
+  assert.match(edge,/if \(!allowSilent\)/);
+  assert.match(edge,/本次不允许输出 \[保持安静\]/);
 });
 
 test('service-worker license integrity follows biometric-only recovery',()=>{
@@ -38,7 +41,9 @@ test('pet growth, regression and nest sleeping rules are present',()=>{
   assert.match(pet,/Math\.floor\(days\/30\)/);
   assert.match(pet,/function petRegress\(\)/);
   assert.match(pet,/function petRestoreGrowth\(\)/);
-  assert.match(pet,/const PET_SLEEP_SPOTS=\[\{x:16,y:28\}/);
+  assert.match(pet,/const PET_SLEEP_LAYOUTS=/);
+  assert.match(pet,/1:\[\{x:21\.5,y:46\.2\}\]/);
+  assert.match(pet,/function petSleepWidth\(species,total\)/);
   assert.match(pet,/closeModal\(\);petReaction\(p,reaction,bubble,1600\)/);
 });
 

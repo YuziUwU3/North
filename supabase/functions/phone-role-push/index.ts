@@ -261,6 +261,7 @@ async function roleMessage(
   recentBodies: string[],
   eventInstruction = "",
   eventContext = "",
+  allowSilent = true,
 ) {
   const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
   const providerFailures: string[] = [];
@@ -323,6 +324,12 @@ async function roleMessage(
     { role: "user", content: promptText },
   ];
   if (eventInstruction) baseMessages[0].content = eventInstruction;
+  if (!allowSilent) {
+    baseMessages.splice(2, 0, {
+      role: "system",
+      content: "这是用户明确发起且正在等待结果的任务，必须生成一条真实、自然的角色消息；本次不允许输出 [保持安静]、[不说话] 或空内容。普通随机主动联系是否保持安静的规则不适用于本次任务。",
+    });
+  }
   try {
     let sawGeneratedCandidate = false;
     for (const provider of providers) {
@@ -356,7 +363,15 @@ async function roleMessage(
             .trim().replace(/^[“\"']|[”\"']$/g, "");
           if (!text) break;
           sawGeneratedCandidate = true;
-          if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
+          if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) {
+            if (allowSilent) return { kind: "silent", body: "" };
+            attemptMessages = [
+              ...baseMessages,
+              { role: "assistant", content: text },
+              { role: "user", content: "这次是用户明确发起并等待结果的任务，不能保持安静。请根据本次真实事件和角色设定，直接生成一条自然的新消息。" },
+            ];
+            continue;
+          }
           const body = roleMessageParts(text.slice(0, 1200), messageMax).join("\n").trim();
           const bodyKey = roleTextKey(body);
           const repeated = !!bodyKey && repeatCandidates.some((old) => roleMessageRepeated(body, old));
@@ -381,7 +396,7 @@ async function roleMessage(
         }
       }
     }
-    return sawGeneratedCandidate
+    return sawGeneratedCandidate && allowSilent
       ? { kind: "silent", body: "" }
       : { kind: "unavailable", body: "", reason: providerFailures.join(",") || "empty-provider-response" };
   } catch (_) {
@@ -408,6 +423,7 @@ async function sendAPNs(
   const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
   const parts = roleMessageParts(body, 10);
   if (!parts.length) return { status: "failed-empty", error: "empty-notification" };
+  const acceptedIds: string[] = [];
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
     const call = part.match(/^[\[【]来电[|｜](语音|视频)[\]】]$/);
@@ -441,10 +457,22 @@ async function sendAPNs(
       }),
     });
     if (!response.ok) {
-      return { status: `failed-${response.status}`, error: (await response.text()).slice(0, 400) };
+      const apnsId = response.headers.get("apns-id") || "";
+      const detail = (await response.text()).slice(0, 320);
+      return {
+        status: `failed-${response.status}`,
+        error: detail,
+        diagnostic: { stage: "alert", httpStatus: response.status, apnsId },
+      };
     }
+    const apnsId = response.headers.get("apns-id") || "";
+    if (apnsId) acceptedIds.push(apnsId);
   }
-  return { status: "sent", error: "" };
+  return {
+    status: "sent",
+    error: "",
+    diagnostic: { stage: "alert", acceptedIds },
+  };
 }
 
 async function sendCompanionWake(deviceToken: string, environment: string, commandId: string) {
@@ -452,7 +480,10 @@ async function sendCompanionWake(deviceToken: string, environment: string, comma
   const teamId = Deno.env.get("APNS_TEAM_ID") || "";
   const privateKey = Deno.env.get("APNS_PRIVATE_KEY") || "";
   const bundleId = Deno.env.get("APNS_BUNDLE_ID") || "";
-  if (!deviceToken || !keyId || !teamId || !privateKey || !bundleId) return false;
+  if (!deviceToken) return { ok: false, status: "no-token", apnsId: "", error: "" };
+  if (!keyId || !teamId || !privateKey || !bundleId) {
+    return { ok: false, status: "apns-not-configured", apnsId: "", error: "" };
+  }
   const jwt = await apnsJWT(teamId, keyId, privateKey);
   const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
   const response = await fetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
@@ -468,7 +499,14 @@ async function sendCompanionWake(deviceToken: string, environment: string, comma
     },
     body: JSON.stringify({ aps: { "content-available": 1 }, companion: { commandId } }),
   });
-  return response.ok;
+  const apnsId = response.headers.get("apns-id") || "";
+  const detail = response.ok ? "" : (await response.text()).slice(0, 240);
+  return {
+    ok: response.ok,
+    status: response.ok ? "accepted" : `failed-${response.status}`,
+    apnsId,
+    error: detail,
+  };
 }
 
 async function enqueueCompanionCommand(
@@ -477,7 +515,21 @@ async function enqueueCompanionCommand(
   const { data, error } = await client.from("phone_companion_commands").insert({ target, command }).select("id").single();
   if (error || !data?.id) return "";
   const link = (await client.from("phone_companion_links").select("apns_device_token,apns_environment").eq("target", target).maybeSingle()).data;
-  await sendCompanionWake(String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"), String(data.id));
+  const wake = await sendCompanionWake(
+    String(link?.apns_device_token || ""),
+    String(link?.apns_environment || "sandbox"),
+    String(data.id),
+  );
+  await client.from("phone_companion_commands").update({
+    result: {
+      wake: {
+        status: wake.status,
+        apnsId: wake.apnsId,
+        error: wake.error,
+        requestedAt: new Date().toISOString(),
+      },
+    },
+  }).eq("id", data.id);
   return String(data.id);
 }
 
@@ -634,7 +686,11 @@ async function persistAndPush(
   if (!row?.id || row.push_status === "sent") return false;
   const link = (await client.from("phone_companion_links").select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle()).data;
   const push = await sendAPNs(String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"), String(profile.role_id || ""), String(profile.role_name || "Role"), body, String(row.id), avatarURL(url, String(row.id), String(row.avatar_token || "")));
-  await client.from("phone_role_push_outbox").update({ push_status: push.status, push_error: push.error || null }).eq("id", row.id);
+  await client.from("phone_role_push_outbox").update({
+    push_status: push.status,
+    push_error: push.error || null,
+    push_diagnostic: push.diagnostic || {},
+  }).eq("id", row.id);
   return push.status === "sent";
 }
 
@@ -723,7 +779,13 @@ Deno.serve(async (request) => {
         context = `软件：${String(payload.appName || "已授权App")}\n软件稳定ID：${String(payload.appId || "")}\n${context}`;
       }
       const recentRows = (await client.from("phone_role_push_outbox").select("body").eq("target", task.target).eq("role_id", task.role_id).order("created_at", { ascending: false }).limit(6)).data || [];
-      const decision = await roleMessage(profile, recentRows.map((row) => String(row.body || "")), instruction, context);
+      const decision = await roleMessage(
+        profile,
+        recentRows.map((row) => String(row.body || "")),
+        instruction,
+        context,
+        !explicitHandoff,
+      );
       const currentTask = (await client.from("phone_role_background_tasks").select("status").eq("id", task.id).maybeSingle()).data;
       if (currentTask?.status === "canceled") continue;
       const choseLock = task.kind === "app_followup" && decision.kind === "message" &&
@@ -946,7 +1008,10 @@ Deno.serve(async (request) => {
         outboxRow = existing;
       }
       const outboxId = String(outboxRow?.id || "");
-      let push = { status: String(outboxRow?.push_status || "duplicate"), error: "" };
+      let push: { status: string; error: string; diagnostic?: Record<string, unknown> } = {
+        status: String(outboxRow?.push_status || "duplicate"),
+        error: "",
+      };
       if (outboxId && outboxRow?.push_status !== "sent") {
         const { data: link } = await client.from("phone_companion_links")
           .select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle();
@@ -955,7 +1020,11 @@ Deno.serve(async (request) => {
           String(profile.role_id || ""), String(profile.role_name || "小手机"), body, outboxId,
           avatarURL(url, outboxId, String(outboxRow?.avatar_token || "")),
         );
-        await client.from("phone_role_push_outbox").update({ push_status: push.status, push_error: push.error || null }).eq("id", outboxId);
+        await client.from("phone_role_push_outbox").update({
+          push_status: push.status,
+          push_error: push.error || null,
+          push_diagnostic: push.diagnostic || {},
+        }).eq("id", outboxId);
         sent += push.status === "sent" ? 1 : 0;
       }
       await client.from("phone_role_push_profiles").update({

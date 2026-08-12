@@ -329,18 +329,6 @@ struct CompanionSyncView: View {
             .navigationTitle("真实 iPhone 同步")
         }
         .task {
-            pushCoordinator.setBackgroundWakeHandler {
-                guard service.isPaired else {
-                    return .noData
-                }
-
-                let didSynchronize = await service.synchronizeCommandsOnly(
-                    locationManager: locationManager,
-                    wellnessService: wellnessService
-                )
-                return didSynchronize ? .newData : .failed
-            }
-
             locationManager.resumeTrackingIfAuthorized()
             await service.prepareDataAccess()
             await wellnessService.refresh()
@@ -957,7 +945,7 @@ final class CompanionSyncService: ObservableObject {
     // APNs 后台唤醒只走命令快车道：不等 DeviceActivity 报告、不刷新
     // HealthKit，也不做反向地理编码。ManagedSettings 落地和服务器回执优先。
     @discardableResult
-    fileprivate func synchronizeCommandsOnly(
+    func synchronizeCommandsOnly(
         locationManager: LocationManager,
         wellnessService: CompanionWellnessService
     ) async -> Bool {
@@ -1464,7 +1452,10 @@ final class CompanionSyncService: ObservableObject {
                     "p_device_secret": secret,
                     "p_command_id": row.id,
                     "p_snapshot": snapshot,
-                    "p_result": ["message": result]
+                    "p_result": [
+                        "message": result,
+                        "deviceAcknowledgedAt": iso8601(Date())
+                    ]
                 ]
             )
             guard completed else {

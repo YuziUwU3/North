@@ -186,6 +186,21 @@ final class CompanionPushAppDelegate: NSObject,
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
             await clearAppBadge()
+            CompanionPushCoordinator.shared.setBackgroundWakeHandler {
+                let service = CompanionSyncService.shared
+                guard service.isPaired else {
+                    return .noData
+                }
+
+                await CompanionWellnessService.shared.refresh()
+                let didSynchronize = await service.synchronize(
+                    locationManager: LocationManager.shared,
+                    wellnessService: CompanionWellnessService.shared,
+                    quiet: true,
+                    refreshUsage: true
+                )
+                return didSynchronize ? .newData : .failed
+            }
             await CompanionPushCoordinator.shared
                 .refreshAuthorizationStatus()
         }

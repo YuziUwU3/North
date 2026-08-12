@@ -179,6 +179,18 @@ final class CompanionPushAppDelegate: NSObject,
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
+            CompanionPushCoordinator.shared.setBackgroundWakeHandler {
+                let service = CompanionSyncService.shared
+                guard service.isPaired else {
+                    return .noData
+                }
+
+                let didSynchronize = await service.synchronizeCommandsOnly(
+                    locationManager: LocationManager.shared,
+                    wellnessService: CompanionWellnessService.shared
+                )
+                return didSynchronize ? .newData : .failed
+            }
             await CompanionPushCoordinator.shared
                 .refreshAuthorizationStatus()
         }

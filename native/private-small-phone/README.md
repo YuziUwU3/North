@@ -55,3 +55,5 @@ node native/private-small-phone/scripts/stage-private-phone-web.mjs native/priva
 - 已从真实工程确认 Team、Bundle ID、App Group 和五个 Target，不再使用猜测值。
 - MapKit 看门狗日志命中真实 `ContentView.swift` 的常驻 `Map`；私人副本在 scene 进入 inactive 时移除地图，保留独立的定位记录。
 - Windows 无法执行 Xcode/Swift 编译，最终仍须在 Mac 编译全部 Target 并真机回归。
+
+当前私人安装版本为 1.0.32 (32)，内置共享网页核心为 v908。后台静默推送处理器已从可选页面生命周期移到 App 启动入口；一分钟测试、App 查看测试、回复接力和设备接力均不再允许模型以“保持安静”取消明确任务。APNs 状态、apns-id、设备回执会分别保留用于排查。宠物睡眠按物种和数量缩放，最多四只均位于左侧粉色窝垫内。迁移 202608130003 与 phone-role-push 已部署，Windows 自动回归 503/503 通过；Mac 五 Target 编译和真实 iPhone 后台通知仍需验收。
