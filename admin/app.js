@@ -202,7 +202,7 @@ function renderLicenseUsers() {
       </div>
       <div class="actions">
         ${active ? `<button class="btn danger" onclick="openBlockLicense('${esc(user.id)}','${esc(actionLabel)}')">移出去</button>` : ''}
-        <button class="btn approve" onclick="openRecoverLicense('${esc(user.id)}','${esc(actionLabel)}',${active ? 'false' : 'true'})">${active ? '生成恢复码' : '放进来并生成恢复码'}</button>
+        ${active ? '' : `<button class="btn approve" onclick="openUnblockLicense('${esc(user.id)}','${esc(actionLabel)}')">放进来</button>`}
       </div>
     </article>`;
   }).join('');
@@ -299,7 +299,7 @@ function openOrdersView(nextScope) {
 
 window.openBlockLicense = (id, phoneId) => {
   openSheet(`<h2>移出 ${esc(phoneId)}</h2>
-    <p>移出后，这个用户的全部浏览器授权、扫脸/指纹通行密钥和恢复码都会失效。聊天和本机存档不会被后台删除。</p>
+    <p>移出后，这个用户的全部浏览器会退出，但已经绑定的扫脸/指纹通行密钥会保留，方便管理员放回后仍由本人验证恢复。聊天和本机存档不会被后台删除。</p>
     <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn danger" id="licenseActionBtn" onclick="confirmBlockLicense('${esc(id)}')">确认移出</button></div>`);
 };
 
@@ -321,9 +321,9 @@ window.confirmBlockLicense = async (id) => {
 
 window.openRestoreAllLicenses = () => {
   if (adminAccessRole !== 'owner') return;
-  openSheet(`<h2>一键恢复异常授权</h2>
-    <p>系统会把全部授权（包括当前显示“已移出”的用户）恢复到当前版本，并开放 24 小时本机身份自动找回。</p>
-    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="licenseRestoreAllConfirmBtn" onclick="confirmRestoreAllLicenses()">确认恢复</button></div>`);
+  openSheet(`<h2>一键放回异常授权</h2>
+    <p>系统会把全部授权（包括当前显示“已移出”的用户）恢复到当前版本。放回后仍只能由本人扫脸或验证指纹，不会生成代码，也不会使用本机身份自动找回。</p>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="licenseRestoreAllConfirmBtn" onclick="confirmRestoreAllLicenses()">确认放回</button></div>`);
 };
 
 window.confirmRestoreAllLicenses = async () => {
@@ -335,9 +335,9 @@ window.confirmRestoreAllLicenses = async () => {
     const data = await api('admin_license_restore_all');
     await loadLicenseUsers(false);
     const expires = data.expires_at ? fmtDateTime(data.expires_at) : '24 小时后';
-    openSheet(`<h2>恢复通道已开启</h2>
+    openSheet(`<h2>异常授权已放回</h2>
       <p>全部授权共 <b>${Number(data.total || 0).toLocaleString()}</b> 条，本次修正 <b>${Number(data.restored || 0).toLocaleString()}</b> 条，已移出的用户也包含在内。</p>
-      <p>用户重新打开小手机后，会用本机身份自动找回授权；通道有效至 ${esc(expires)}。</p>
+      <p>用户重新打开小手机后，必须扫脸或验证指纹恢复设备。后台维护窗口有效至 ${esc(expires)}。</p>
       <div class="sheet-actions"><button class="btn approve" onclick="closeSheet()">完成</button></div>`);
   } catch (error) {
     alert('批量恢复失败：' + error.message);
@@ -346,42 +346,26 @@ window.confirmRestoreAllLicenses = async () => {
   }
 };
 
-window.openRecoverLicense = (id, phoneId, blocked) => {
-  openSheet(`<h2>${blocked ? '放进来' : '生成恢复码'} · ${esc(phoneId)}</h2>
-    <p>${blocked ? '系统会重新启用这条授权，' : ''}并生成一个 24 小时有效、只能使用一次的管理员恢复码。把号码私下发给本人，让对方在登录页选择“迁移码 / 备用恢复码”进入。</p>
-    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="licenseActionBtn" onclick="confirmRecoverLicense('${esc(id)}')">生成号码</button></div>`);
+window.openUnblockLicense = (id, phoneId) => {
+  openSheet(`<h2>放进来 · ${esc(phoneId)}</h2>
+    <p>系统会重新启用这条授权，但不会生成任何迁移码或恢复码。本人仍须通过已经绑定的人脸或指纹恢复设备。</p>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="licenseActionBtn" onclick="confirmUnblockLicense('${esc(id)}')">确认放进来</button></div>`);
 };
 
-window.confirmRecoverLicense = async (id) => {
+window.confirmUnblockLicense = async (id) => {
   if (actionBusy) return;
   actionBusy = true;
   const button = $('licenseActionBtn');
-  if (button) { button.disabled = true; button.textContent = '正在生成…'; }
+  if (button) { button.disabled = true; button.textContent = '正在放回…'; }
   try {
-    const data = await api('admin_license_recovery', {license_id:id});
+    await api('admin_license_unblock', {license_id:id});
     await loadLicenseUsers(false);
-    openSheet(`<h2>一次性管理员恢复码</h2>
-      <p>24 小时内有效，只能使用一次。请私下发给对应用户；生成下一枚恢复码后，这一枚会失效。</p>
-      <input class="recovery-code" id="adminRecoveryCode" readonly value="${esc(data.code || '')}">
-      <div class="sheet-actions"><button class="btn" onclick="closeSheet()">关闭</button><button class="btn approve" onclick="copyAdminRecoveryCode()">复制号码</button></div>`);
+    closeSheet();
   } catch (error) {
-    alert('生成失败：' + error.message);
+    alert('放回失败：' + error.message);
   } finally {
     actionBusy = false;
   }
-};
-
-window.copyAdminRecoveryCode = async () => {
-  const input = $('adminRecoveryCode');
-  const value = String(input && input.value || '');
-  let copied = false;
-  try {
-    await navigator.clipboard.writeText(value);
-    copied = true;
-  } catch (_) {
-    try { input.focus(); input.select(); copied = !!document.execCommand('copy'); } catch (_) {}
-  }
-  alert(copied ? '恢复码已复制' : '请长按号码手动复制');
 };
 
 async function loadOrders(showLoading) {

@@ -5,15 +5,12 @@ const backend = fs.readFileSync(new URL('../supabase/functions/phone-license/ind
 const migration = fs.readFileSync(new URL('../supabase/migrations/202607210004_license_transfer_security.sql', import.meta.url), 'utf8');
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 
-assert.match(backend, /TRANSFER_CREATE_COOLDOWN_MS = 30 \* 1000/);
-assert.match(backend, /TRANSFER_CREATE_HOURLY_LIMIT = 10/);
-assert.match(backend, /TRANSFER_REDEEM_FAILURE_LIMIT = 8/);
-assert.match(backend, /TRANSFER_ATTEMPT_RETENTION_MS = 24 \* 60 \* 60 \* 1000/);
-assert.match(backend, /迁移码尝试过多，请10分钟后再试/);
-assert.match(backend, /from\('phone_license_transfer_attempts'\)/);
+assert.match(backend, /\['transfer_create', 'transfer_redeem', 'recovery_create', 'recovery_redeem', 'local_identity_restore'\]\.includes\(action\)/);
+assert.match(backend, /设备恢复只允许使用本人的人脸或指纹验证/);
 assert.match(migration, /create table if not exists public\.phone_license_transfer_attempts/);
 assert.match(migration, /revoke all on public\.phone_license_transfer_attempts from public, anon, authenticated/);
 assert.match(app, /Safari \/ Edge 授权合并/);
-assert.match(app, /30秒内不能重复生成，每小时最多10次/);
+assert.match(app, /扫脸 \/ 指纹合并/);
+assert.doesNotMatch(app, /生成迁移码|生成备用恢复码|gateTransferInp/);
 
 console.log('license transfer security tests passed');

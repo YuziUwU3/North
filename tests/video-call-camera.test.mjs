@@ -49,7 +49,13 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(analyze,/callVideoVisionStatus\('working'\)/);
   assert.match(analyze,/callVideoVisionStatus\('failed'\)/);
   const callAI=functionSource('callAI');
-  assert.match(callAI,/const hist=_videoVision\?\[\]:chatHistoryWithDateBoundaries/,'vision replies must not receive stale chat turns');
+  assert.match(callAI,/const hist=_videoVisionAutomatic\?\[\]:chatHistoryWithDateBoundaries/,'automatic vision replies must not receive stale chat turns');
+  assert.match(callAI,/if\(sysNote&&!_videoVisionAutomatic\)hist\.push/,'the proven spoken vision path keeps its existing system-note structure');
+  assert.match(callAI,/_videoVisionTurn=sysNote/,'the current frame remains the only active vision event');
+  assert.match(callAI,/if\(_videoVisionAutomatic\)/,'only automatic vision uses the cinema-style synthetic user event');
+  assert.match(callAI,/else rows\.push\(\{role:'user',content:_videoVisionTurn\}\)/,'automatic vision providers receive a real user turn');
+  assert.match(callAI,/content:String\(last\.content\|\|''\)\+'\\n\\n'\+_videoVisionTurn/,'automatic vision retries also end with the current frame');
+  assert.match(callAI,/if\(_videoVision\)\{_call\.sub=null;updateCallSub\(\);callVideoVisionStatus\('failed'\);\}/,'vision chat failures stay out of the central subtitle');
   assert.match(callAI,/_callVisionPend\.push/,'vision replies use a dedicated priority queue');
   assert.match(callAI,/callVideoVisionReplyGrounded/,'vision replies must mention a concrete scene detail');
 });
@@ -72,6 +78,6 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 26/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.26/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 27/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.27/);
 });

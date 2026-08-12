@@ -221,7 +221,7 @@
   }
 
   async function bindPasskey() {
-    if (!supportsPasskey()) throw new Error('当前浏览器不支持系统扫脸/指纹，请使用迁移码');
+    if (!supportsPasskey()) throw new Error('当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
     const current = session();
     if (!current) throw new Error('请先在当前浏览器完成授权');
     const start = await api('register_options', { sessionToken: current.token });
@@ -245,7 +245,7 @@
   }
 
   async function restorePasskey() {
-    if (!supportsPasskey()) throw new Error('当前浏览器不支持系统扫脸/指纹，请使用迁移码');
+    if (!supportsPasskey()) throw new Error('当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
     const start = await api('restore_options', {});
     let credential;
     try {
@@ -297,68 +297,6 @@
     const result = await api('session_check', { sessionToken: current.token }, 15000);
     writeJSON(META_KEY, Object.assign({}, meta(), result, { checkedAt: Date.now() }));
     return result;
-  }
-
-  async function createTransfer() {
-    const current = session();
-    if (!current) throw new Error('本浏览器还没有授权');
-    return api('transfer_create', { sessionToken: current.token });
-  }
-
-  async function createRecovery() {
-    const current = session();
-    if (!current) throw new Error('本浏览器还没有授权');
-    const result = await api('recovery_create', { sessionToken: current.token });
-    writeJSON(META_KEY, Object.assign({}, meta(), {
-      recoveryCount: 1,
-      recoveryExpiresAt: result.expiresAt || '',
-      checkedAt: Date.now(),
-    }));
-    return result;
-  }
-
-  async function redeemTransfer(transferCode) {
-    const result = await api('transfer_redeem', { transferCode: transferCode, deviceLabel: deviceLabel() });
-    saveSession(result.session, {
-      sessionCount: result.session.activeCount || 1,
-      passkeyCount: 0,
-      evicted: result.session.evicted || [],
-    });
-    return result;
-  }
-
-  async function redeemRecovery(recoveryCode) {
-    const result = await api('recovery_redeem', { recoveryCode: recoveryCode, deviceLabel: deviceLabel() });
-    saveSession(result.session, {
-      sessionCount: result.session.activeCount || 1,
-      passkeyCount: 0,
-      recoveryCount: 0,
-      evicted: result.session.evicted || [],
-    });
-    return result;
-  }
-
-  async function restoreLocalIdentity(phoneFriendId, phoneFriendSecret, aiUserId, aiClientSecret) {
-    const result = await api('local_identity_restore', {
-      phoneFriendId: phoneFriendId,
-      phoneFriendSecret: phoneFriendSecret,
-      aiUserId: aiUserId,
-      aiClientSecret: aiClientSecret,
-      deviceLabel: deviceLabel(),
-    });
-    saveSession(result.session, {
-      sessionCount: result.session.activeCount || 1,
-      passkeyCount: meta().passkeyCount || 0,
-      recoveryCount: meta().recoveryCount || 0,
-      evicted: result.session.evicted || [],
-    });
-    return result;
-  }
-
-  async function relinkTransfer(transferCode) {
-    const previous = session();
-    const result = await redeemTransfer(transferCode);
-    return retirePreviousSession(previous, result);
   }
 
   async function listSessions() {
@@ -423,12 +361,6 @@
     restorePasskey,
     relinkPasskey,
     check,
-    createTransfer,
-    createRecovery,
-    redeemTransfer,
-    redeemRecovery,
-    restoreLocalIdentity,
-    relinkTransfer,
     listSessions,
     revokeSession,
     syncAIIdentity,

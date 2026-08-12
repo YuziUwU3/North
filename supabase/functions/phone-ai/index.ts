@@ -226,16 +226,6 @@ function resolvePointCost(feature: string, requestedCost?: number) {
   return cost;
 }
 
-function randomLicenseRecoveryCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(24));
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
-}
-
-function formatLicenseRecoveryCode(code: string) {
-  return code.match(/.{1,4}/g)?.join("-") || code;
-}
-
 async function sha256Hex(value: string) {
   const bytes = new TextEncoder().encode(value);
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
@@ -1132,12 +1122,11 @@ Deno.serve(async (req) => {
         .update({ status: "blocked", updated_at: now })
         .eq("id", license.id);
       if (blockError) throw blockError;
-      const [sessions, passkeys, codes] = await Promise.all([
+      const [sessions, codes] = await Promise.all([
         supabase.from("phone_license_sessions").update({ revoked_at: now }).eq("license_id", license.id).is("revoked_at", null),
-        supabase.from("phone_license_passkeys").delete().eq("license_id", license.id),
         supabase.from("phone_license_transfers").update({ used_at: now }).eq("license_id", license.id).is("used_at", null),
       ]);
-      if (sessions.error || passkeys.error || codes.error) throw sessions.error || passkeys.error || codes.error;
+      if (sessions.error || codes.error) throw sessions.error || codes.error;
       await supabase.from("phone_license_admin_actions").insert({
         license_id: license.id,
         phone_friend_id: license.phone_friend_id,
@@ -1147,7 +1136,7 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
-    if (action === "admin_license_recovery") {
+    if (action === "admin_license_unblock") {
       const identity = requireLicenseAdmin(req, body);
       const licenseId = String(body.license_id || "").trim();
       if (!/^[0-9a-f-]{36}$/i.test(licenseId)) {
@@ -1161,22 +1150,6 @@ Deno.serve(async (req) => {
       if (findError) throw findError;
       if (!license) return json({ ok: false, error: "license-not-found" }, 404);
       const now = new Date().toISOString();
-      const code = randomLicenseRecoveryCode();
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const codeHash = await sha256Hex(code);
-      await supabase
-        .from("phone_license_transfers")
-        .update({ used_at: now })
-        .eq("license_id", license.id)
-        .eq("kind", "recovery")
-        .is("used_at", null);
-      const { error: codeError } = await supabase.from("phone_license_transfers").insert({
-        license_id: license.id,
-        code_hash: codeHash,
-        kind: "recovery",
-        expires_at: expiresAt,
-      });
-      if (codeError) throw codeError;
       const { error: restoreError } = await supabase
         .from("phone_licenses")
         .update({ status: "active", epoch: LICENSE_EPOCH, updated_at: now })
@@ -1188,7 +1161,7 @@ Deno.serve(async (req) => {
         action: "recovery",
         operator_id: identity.operatorId,
       });
-      return json({ ok: true, code: formatLicenseRecoveryCode(code), expires_at: expiresAt });
+      return json({ ok: true });
     }
 
     if (action === "admin_orders") {

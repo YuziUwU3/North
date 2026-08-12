@@ -32,7 +32,7 @@
     .viewer{position:fixed;inset:0;background:#000;z-index:30;display:grid;place-items:center;padding:16px}.viewer img{max-width:100%;max-height:92vh;object-fit:contain}.viewer button{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:12px}
     .install-tip{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
     .license-tools{display:flex;gap:8px;margin:2px 0 12px}.license-tools input{flex:1;min-width:180px}.license-tools input,.license-tools select{border:1px solid var(--line);background:#17181c;color:var(--text);border-radius:8px;padding:12px;outline:0}.license-tools input:focus,.license-tools select:focus{border-color:#8b6675}.license-tools select{min-width:112px}
-    .license-id{font-size:18px;font-weight:800;letter-spacing:.8px}.license-state{font-size:12px;padding:4px 8px;border-radius:999px;background:#153322;color:#8ce2ad}.license-state.blocked{background:#3a2023;color:#ffadb2}.recovery-code{width:100%;margin:12px 0;padding:13px 8px;text-align:center;font-size:17px;letter-spacing:1px;border:1px solid #735a3b;border-radius:8px;background:#15110d;color:#f3d29c}
+    .license-id{font-size:18px;font-weight:800;letter-spacing:.8px}.license-state{font-size:12px;padding:4px 8px;border-radius:999px;background:#153322;color:#8ce2ad}.license-state.blocked{background:#3a2023;color:#ffadb2}
     .license-summary{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 2px 12px}.license-pager{display:flex;justify-content:center;align-items:center;gap:10px;padding:16px 0 2px}.license-pager .btn{min-width:88px}.license-pager .btn:disabled{opacity:.42;cursor:default}.license-page{min-width:110px;text-align:center;color:var(--muted);font-size:13px}
     @media(max-width:560px){.shell{padding-left:10px;padding-right:10px}.meta{grid-template-columns:1fr}.order{padding:12px}.tools .btn{padding:0 10px}.hide-mobile{display:none}.license-tools{flex-wrap:wrap}.license-tools input{flex-basis:100%}.license-tools select{flex:1}.license-summary{align-items:flex-start;flex-direction:column}}
   </style>
@@ -72,9 +72,9 @@
             <option value="blocked">已移出</option>
           </select>
           <button class="btn" id="licenseRefreshBtn">刷新</button>
-          <button class="btn approve" id="licenseRestoreAllBtn" data-owner-only>一键恢复异常授权</button>
+          <button class="btn approve" id="licenseRestoreAllBtn" data-owner-only>一键放回异常授权</button>
         </div>
-        <div class="license-summary sub"><span>云端搜索，每页只读取50人；完整邀请码可查到所有使用者；一键恢复会把全部授权（包括已移出）恢复为可进入。</span><span id="licenseResultText">准备读取用户</span></div>
+        <div class="license-summary sub"><span>云端搜索，每页只读取50人；完整邀请码可查到所有使用者；一键放回后，用户仍须扫脸或指纹恢复设备。</span><span id="licenseResultText">准备读取用户</span></div>
         <section id="licenseUsers" class="orders"></section>
         <div class="license-pager">
           <button class="btn" id="licensePrevBtn">上一页</button>

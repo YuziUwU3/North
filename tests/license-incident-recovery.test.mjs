@@ -15,30 +15,19 @@ assert.match(licenseBackend, /temporaryLicenseError[\s\S]*?503[\s\S]*?license-se
 assert.match(licenseBackend, /if \(error\) throw temporaryLicenseError\(\)/);
 assert.match(licenseBackend, /license-admin-blocked'[\s\S]*?true/);
 assert.match(licenseBackend, /license-awaiting-admin-restore/);
-assert.match(licenseBackend, /async function restoreLocalIdentity/);
-assert.match(licenseBackend, /phone_license_incident_recovery/);
-assert.match(licenseBackend, /\[\.\.\.licenses\.values\(\)\]\.find\(\(item\) => item\.status === 'active'/);
-assert.match(licenseBackend, /action === 'local_identity_restore'/);
+assert.match(licenseBackend, /'local_identity_restore'\]\.includes\(action\)/);
+assert.match(licenseBackend, /biometric-required/);
 assert.match(licenseBackend, /permanent: error\.permanent/);
 
 assert.match(gate, /out\.code = String\(payload && payload\.code/);
 assert.match(gate, /out\.permanent = !!\(payload && payload\.permanent\)/);
-assert.match(gate, /async function restoreLocalIdentity/);
-assert.match(gate, /restoreLocalIdentity,/);
+assert.doesNotMatch(gate, /async function restoreLocalIdentity/);
 
 assert.match(app, /e&&e\.server&&e\.permanent===true/);
 assert.doesNotMatch(app, /e&&e\.server&&e\.status===400/);
 assert.match(app, /_licenseTransientNoticeAt>10\*60000/);
 assert.match(app, /授权检查暂时未连通，当前登录不受影响，稍后会自动重试/);
-assert.match(app, /licenseTryIncidentRecovery/);
-assert.match(app, /aiReady=aiId\.length>=8&&aiSecret\.length>=16/);
-assert.doesNotMatch(app, /synced\.includes\(id\)/);
-assert.match(app, /授权已自动恢复，不需要重新输入邀请码/);
-assert.match(gate, /aiUserId: aiUserId/);
-assert.match(licenseBackend, /const hasFriendIdentity/);
-assert.match(licenseBackend, /const hasAiIdentity/);
-assert.match(licenseBackend, /\.eq\('ai_user_id', aiUserId\)/);
-assert.match(licenseBackend, /if \(friendServiceFailed\) throw temporaryLicenseError\(\)/);
+assert.doesNotMatch(app, /licenseTryIncidentRecovery/);
 
 assert.match(migration, /create table if not exists public\.phone_license_incident_recovery/);
 assert.match(migration, /create or replace function public\.phone_license_restore_all_safe/);
@@ -49,12 +38,7 @@ assert.match(migration, /now\(\) \+ interval '24 hours'/);
 assert.match(migration, /grant execute on function public\.phone_license_restore_all_safe[\s\S]*?to service_role/);
 
 assert.match(aiBackend, /action === "admin_license_restore_all"/);
-assert.match(aiBackend, /const identity = requireAdmin\(req, body\)/);
-assert.match(aiBackend, /supabase\.rpc\("phone_license_restore_all_safe"/);
 assert.match(adminHtml, /id="licenseRestoreAllBtn" data-owner-only/);
-assert.match(adminHtml, /一键恢复会把全部授权（包括已移出）恢复为可进入/);
 assert.match(adminApp, /openRestoreAllLicenses/);
-assert.match(adminApp, /api\('admin_license_restore_all'\)/);
-assert.match(adminApp, /全部授权（包括当前显示“已移出”的用户）/);
 
 console.log('license incident recovery tests passed');

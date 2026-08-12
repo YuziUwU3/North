@@ -465,7 +465,7 @@ async function checkSession(body: JsonMap) {
   const now = new Date().toISOString();
   await supabase.from('phone_license_sessions').update({ last_seen_at: now }).eq('id', session.id);
   await supabase.from('phone_licenses').update({ last_seen_at: now }).eq('id', session.license_id);
-  const [{ count: sessionCount }, { count: passkeyCount }, { count: recoveryCount }] = await Promise.all([
+  const [{ count: sessionCount }, { count: passkeyCount }] = await Promise.all([
     supabase
       .from('phone_license_sessions')
       .select('*', { count: 'exact', head: true })
@@ -475,13 +475,6 @@ async function checkSession(body: JsonMap) {
       .from('phone_license_passkeys')
       .select('*', { count: 'exact', head: true })
       .eq('license_id', session.license_id),
-    supabase
-      .from('phone_license_transfers')
-      .select('*', { count: 'exact', head: true })
-      .eq('license_id', session.license_id)
-      .eq('kind', 'recovery')
-      .is('used_at', null)
-      .gt('expires_at', now),
   ]);
   return {
     ok: true,
@@ -490,7 +483,6 @@ async function checkSession(body: JsonMap) {
     sessionId: session.id,
     sessionCount: sessionCount || 0,
     passkeyCount: passkeyCount || 0,
-    recoveryCount: recoveryCount || 0,
   };
 }
 
@@ -844,11 +836,9 @@ Deno.serve(async (req) => {
     else if (action === 'session_check') result = await checkSession(body);
     else if (action === 'session_list') result = await listSessions(body);
     else if (action === 'session_revoke') result = await revokeSession(body);
-    else if (action === 'transfer_create') result = await createTransfer(req, body);
-    else if (action === 'transfer_redeem') result = await redeemTransfer(req, body);
-    else if (action === 'recovery_create') result = await createRecovery(body);
-    else if (action === 'recovery_redeem') result = await redeemRecovery(req, body);
-    else if (action === 'local_identity_restore') result = await restoreLocalIdentity(req, body);
+    else if (['transfer_create', 'transfer_redeem', 'recovery_create', 'recovery_redeem', 'local_identity_restore'].includes(action)) {
+      throw new LicenseHttpError('设备恢复只允许使用本人的人脸或指纹验证', 403, 'biometric-required', true);
+    }
     else if (action === 'ai_identity_sync') result = await syncAIIdentity(body);
     else if (action === 'phone_friend_identity_sync') result = await syncPhoneFriendIdentity(body);
     else throw new Error('未知的授权操作');
