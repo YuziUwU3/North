@@ -77,12 +77,12 @@ test('automatic safety snapshot rejects an out-of-order older write',async()=>{
   assert.equal(written,false);
 });
 
-test('v900 shell and service worker are aligned',()=>{
+test('v901 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v900 · 语音模型防误配'/);
-  assert.match(html,/app\.js\?v=900/);
-  assert.match(sw,/BUILD='900'/);
+  assert.match(app,/APP_VER='v901 · 视频通话摄像头与苹果横幅适配'/);
+  assert.match(html,/app\.js\?v=901/);
+  assert.match(sw,/BUILD='901'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

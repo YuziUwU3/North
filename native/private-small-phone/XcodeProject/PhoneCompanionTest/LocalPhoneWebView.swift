@@ -81,8 +81,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
             decisionHandler: @escaping (WKPermissionDecision) -> Void
         ) {
             let bundledPage = webView.url?.isFileURL == true
+            let supportedCapture =
+                type == .microphone ||
+                type == .camera ||
+                type == .cameraAndMicrophone
             decisionHandler(
-                bundledPage && type == .microphone ? .grant : .deny
+                bundledPage && supportedCapture ? .grant : .deny
             )
         }
 
@@ -155,6 +159,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
+        configuration.allowsInlineMediaPlayback = true
         configuration.userContentController.add(
             context.coordinator.bridge,
             name: PhoneNativeBridge.handlerName
@@ -255,7 +260,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.24 (24)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.25 (25)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

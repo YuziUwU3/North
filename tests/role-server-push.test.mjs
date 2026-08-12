@@ -85,7 +85,7 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /for \(let attempt = 0; attempt < 2; attempt \+= 1\)/);
   assert.match(edge, /与近期已经发过的话过于相似/);
   assert.match(edge, /不要只改几个字重复原意/);
-  assert.match(edge, /sawGeneratedCandidate \? \{ kind: "silent"/);
+  assert.match(edge, /sawGeneratedCandidate\s*[\s\S]{0,80}\? \{ kind: "silent"/);
   assert.match(edge, /phone_role_push_outbox[\s\S]{0,300}select\("body"\)/);
   assert.match(edge, /profile\.recent_context/);
   assert.match(edge, /profile\.memory_context/);

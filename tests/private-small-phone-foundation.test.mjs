@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.24 \(24\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.25 \(25\)'/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
@@ -124,8 +124,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 24;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.24;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 25;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.25;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -251,7 +251,7 @@ test('private app rebuilds speech after role audio and reuses the proven web key
   assert.match(project, /INFOPLIST_KEY_NSSpeechRecognitionUsageDescription/g);
   assert.match(webView, /WKNavigationDelegate, WKUIDelegate/);
   assert.match(webView, /requestMediaCapturePermissionFor/);
-  assert.match(webView, /type == \.microphone \? \.grant : \.deny/);
+  assert.match(webView, /type == \.cameraAndMicrophone/);
   assert.match(webView, /window\.SmallPhoneNativeSpeech = Object\.freeze/);
   assert.match(bridge, /case "speech\.start"/);
   assert.match(bridge, /SFSpeechAudioBufferRecognitionRequest/);

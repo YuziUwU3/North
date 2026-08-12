@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='900'){
+if(window.__NORTH_SHELL_BUILD__!=='901'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v900 · 语音模型防误配';
+const APP_VER='v901 · 视频通话摄像头与苹果横幅适配';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -366,7 +366,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRing:'soft', showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:0, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
+hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRing:'soft', showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:0, callProb:35, callSilentMin:3, callPace:1, videoVisionIntervalSec:60, videoVisionMaxPerCall:6, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -1399,7 +1399,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=900';
+  const url='sw.js?v=901';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2698,10 +2698,12 @@ async function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur)
 let _homePage=0,_homeSnapTimer=null;
 function homeClockVisible(){return !(S.settings&&S.settings.homeClock===false);}
 function homeClockToggle(){S.settings=S.settings||{};S.settings.homeClock=!homeClockVisible();save();render();toast(S.settings.homeClock?'主屏幕时间和日期已显示':'主屏幕时间和日期已隐藏');}
-function appleHomeCompatEnvironment(){const nativePrivate=typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true;if(nativePrivate)return false;const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
-function appleHomeCompatOn(){const nativePrivate=typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true;return !nativePrivate&&!!(S.settings&&S.settings.appleHomeCompat);}
-function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,on=appleHomeCompatEnvironment()&&appleHomeCompatOn();if(root&&root.classList)root.classList.toggle('north-ios-home-safe',on);return on;}
-function appleHomeCompatToggle(){if(typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true){applyAppleHomeCompat();render();toast('原生小手机由 iOS 自动适配，无需开启');return;}S.settings=S.settings||{};S.settings.appleHomeCompat=!appleHomeCompatOn();applyAppleHomeCompat();save();render();toast(S.settings.appleHomeCompat?(appleHomeCompatEnvironment()?'苹果主屏幕适配已开启':'设置已保存；只会在苹果主屏幕模式生效'):'苹果主屏幕适配已关闭');}
+function appleHomeCompatNative(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true;}
+function appleHomeCompatBrowserEnvironment(){const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
+function appleHomeCompatEnvironment(){return appleHomeCompatNative()||appleHomeCompatBrowserEnvironment();}
+function appleHomeCompatOn(){return !!(S.settings&&S.settings.appleHomeCompat);}
+function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,on=appleHomeCompatEnvironment()&&appleHomeCompatOn(),browser=appleHomeCompatBrowserEnvironment()&&on;if(root&&root.classList){root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',on);}return on;}
+function appleHomeCompatToggle(){S.settings=S.settings||{};S.settings.appleHomeCompat=!appleHomeCompatOn();applyAppleHomeCompat();save();render();toast(S.settings.appleHomeCompat?(appleHomeCompatEnvironment()?'苹果兼容适配已开启':'设置已保存；只会在苹果主屏幕或私人 App 生效'):'苹果兼容适配已关闭，已恢复原位置');}
 function privateNativeAppOn(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true&&window.SmallPhoneNative&&typeof window.SmallPhoneNative.request==='function';}
 function privateNativeSettingsAction(){return privateNativeAppOn()?`<button type="button" aria-label="真实 iPhone 管理" onclick="privateNativeOpenManagement()" style="width:34px;height:34px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);color:#fff;cursor:pointer">${svgIc('phone',18,'#fff')}</button>`:'';}
 async function privateNativeOpenManagement(){if(!privateNativeAppOn()){toast('真实 iPhone 管理只在私人小手机 App 内可用');return;}try{await window.SmallPhoneNative.request('native.management.open');}catch(e){toast('真实 iPhone 管理页暂时打不开');}}
@@ -3410,9 +3412,11 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     <div class="section" id="set_prefs">
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
+      <div class="it"><span>视频摄像头自动识图间隔（秒）<br><small style="color:#888">打开摄像头后按此间隔识别当前画面；填 0 = 只在你说“你看一下”等口令时识别</small></span><input id="s_vvision_interval" type="number" min="0" max="3600" value="${videoVisionIntervalSec()}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it"><span>每次视频最多识别画面次数<br><small style="color:#888">自动识别和口头要求合计；达到上限后本次视频不再读取新画面</small></span><input id="s_vvision_max" type="number" min="1" max="100" value="${videoVisionMaxPerCall()}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>语音逐句生成<br><small style="color:#888">关闭：沿用整轮预生成；开启：聊天语音、语音通话和视频通话按顺序一条条生成，首句更早开始且降低并发异常</small></span><span class="sw ${voiceProgressiveOn()?'on':''}" onclick="S.settings.voiceProgressive=!voiceProgressiveOn();save();render()"></span></div>
       <div class="it"><span>主屏幕时间和日期<br><small style="color:#888">关闭后仅隐藏文字并保留原位置，主屏布局、其他 App、组件和锁屏时间都不移动</small></span><span class="sw ${homeClockVisible()?'on':''}" onclick="homeClockToggle()"></span></div>
-      <div class="it"><span>苹果主屏幕适配<br><small style="color:#888">仅添加到 iPhone / iPad 主屏幕后生效：避开灵动岛并补齐底部安全区；Safari 浏览器和安卓始终不受影响</small></span><span class="sw ${appleHomeCompatOn()?'on':''}" onclick="appleHomeCompatToggle()"></span></div>
+      <div class="it"><span>苹果兼容适配<br><small style="color:#888">在 iPhone / iPad 主屏幕版和私人小手机 App 生效；远程操控顶部横幅会向下避让。关闭后恢复原位置，Safari 浏览器和安卓始终不受影响</small></span><span class="sw ${appleHomeCompatOn()?'on':''}" onclick="appleHomeCompatToggle()"></span></div>
       <div style="padding:11px 14px 5px;font-weight:700;color:#ffafc9">手动回复场景（可多选）</div>
       <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
@@ -3479,7 +3483,7 @@ function saveSettings(){if(!chatModelFormReady())return false;const g=id=>$('#'+
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
   if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
 const oldInitiativeMin=Math.max(0,Number(S.settings.proactiveIdleMin)||0);
-S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.proactiveIdleMin=Math.max(0,Math.min(1440,parseInt(($('#s_pidle')&&$('#s_pidle').value)||'0',10)||0));S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));
+S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.proactiveIdleMin=Math.max(0,Math.min(1440,parseInt(($('#s_pidle')&&$('#s_pidle').value)||'0',10)||0));S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.videoVisionIntervalSec=Math.max(0,Math.min(3600,parseInt(($('#s_vvision_interval')&&$('#s_vvision_interval').value)||'0',10)||0));S.settings.videoVisionMaxPerCall=Math.max(1,Math.min(100,parseInt(($('#s_vvision_max')&&$('#s_vvision_max').value)||'6',10)||6));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));
   if(oldInitiativeMin!==S.settings.proactiveIdleMin)initiativeArmAll();save();chatRouteRefreshUI();ttsRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' 和 '+TTS_ROUTE_NAMES[S.settings.ttsRouteActive]+' ✅');return true;}
 function clearPhoneFriendChatsKeepPeople(p,now){p=p||{};now=+now||Date.now();p.messages={};p.groupMessages={};p.friendRead={};p.groupRead={};p.clearBefore=p.clearBefore||{};p.groupClearBefore=p.groupClearBefore||{};
   (p.friends||[]).forEach(f=>{const id=(''+(f&&((f.phone_id||f.id))||'')).toUpperCase();if(id)p.clearBefore[id]=now;});
@@ -10509,6 +10513,21 @@ function restoreActiveCall(){
 function callBackgroundHold(){if(_call&&_call.state==='active'){_call._bgHold=true;_call.lastUserTs=Date.now();_call.silentStage=0;callPersist();}}
 function callResumeHold(){if(_call&&_call.state==='active'){if(_call._bgHold){_call._bgHold=false;_call.lastUserTs=Date.now();_call.silentStage=0;callPersist();renderCallTime();}return;}restoreActiveCall();}
 let _callBusy=false,_callPend=null;/* 通话回复串行锁：同一时间只跑一轮callAI，防止"边聊边查手机"两轮叠在一起、说得飞快 */
+/* ===== 视频通话真实摄像头：只在用户主动打开后取流；识图只保存文字描述，不保存截图 ===== */
+let _callCameraStream=null,_callCameraFacing='user',_callCameraTimer=null,_callCameraVisionBusy=false,_callCameraToken=0;
+function videoVisionIntervalSec(){const n=Number(S.settings&&S.settings.videoVisionIntervalSec);return Number.isFinite(n)?Math.max(0,Math.min(3600,Math.round(n))):60;}
+function videoVisionMaxPerCall(){const n=Number(S.settings&&S.settings.videoVisionMaxPerCall);return Number.isFinite(n)?Math.max(1,Math.min(100,Math.round(n))):6;}
+function callVideoVisionAsked(text){return !!(_call&&_call.kind==='video'&&_call.state==='active'&&/你\s*(?:看|瞧)(?:一?下|一?眼|看)?|看\s*(?:一?下|一?眼)?\s*(?:这个|这边|这里|镜头|画面|东西)|看看\s*(?:这个|这边|这里|镜头|画面|东西)|帮我看|给你看/i.test(String(text||'')));}
+function callVideoVisionCanAnalyze(){return !!(_call&&callVideoCameraOn()&&!_callCameraVisionBusy&&Math.max(0,+_call.videoVisionCount||0)<videoVisionMaxPerCall());}
+function callVideoCameraOn(){return !!(_callCameraStream&&_callCameraStream.getVideoTracks&&_callCameraStream.getVideoTracks().some(t=>t.readyState==='live'));}
+function callVideoCameraAttach(){const v=$('#callCameraPreview');if(!v||!callVideoCameraOn())return false;try{if(v.srcObject!==_callCameraStream)v.srcObject=_callCameraStream;const p=v.play();if(p&&typeof p.catch==='function')p.catch(()=>{});return true;}catch(_){return false;}}
+function callVideoCameraArm(){clearInterval(_callCameraTimer);_callCameraTimer=null;const sec=videoVisionIntervalSec(),sess=_call&&_call.session;if(!sec||!sess||!callVideoCameraOn())return;_callCameraTimer=setInterval(()=>{if(!_call||_call.session!==sess||_call.kind!=='video'||_call.state!=='active'||!callVideoCameraOn()){clearInterval(_callCameraTimer);_callCameraTimer=null;return;}callVideoVisionAnalyze('auto');},sec*1000);}
+function callVideoCameraStop(reason){_callCameraToken++;clearInterval(_callCameraTimer);_callCameraTimer=null;_callCameraVisionBusy=false;const stream=_callCameraStream;_callCameraStream=null;try{stream&&stream.getTracks().forEach(t=>t.stop());}catch(_){}const v=$('#callCameraPreview');if(v)try{v.srcObject=null;}catch(_){}if(_call&&reason!=='replace')renderCall();return true;}
+async function callVideoCameraStart(facing){if(!_call||_call.kind!=='video'||_call.state!=='active')return false;if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('这台设备或浏览器不支持打开摄像头');return false;}const sess=_call.session,token=++_callCameraToken;callVideoCameraStop('replace');_callCameraToken=token;_callCameraFacing=facing==='environment'?'environment':'user';try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:_callCameraFacing},width:{ideal:1280},height:{ideal:720}},audio:false});if(token!==_callCameraToken||!_call||_call.session!==sess){stream.getTracks().forEach(t=>t.stop());return false;}_callCameraStream=stream;stream.getVideoTracks().forEach(t=>t.addEventListener('ended',()=>{if(_callCameraStream===stream)callVideoCameraStop('ended');},{once:true}));renderCall();setTimeout(callVideoCameraAttach,0);callVideoCameraArm();toast(_callCameraFacing==='environment'?'后置摄像头已打开':'前置摄像头已打开');return true;}catch(e){if(token===_callCameraToken){_callCameraStream=null;renderCall();const name=String(e&&e.name||'');toast(/NotAllowed|Security/.test(name)?'没有取得摄像头权限，请在系统设置中允许':'摄像头打开失败，请检查是否被其他 App 占用');}return false;}}
+function callVideoCameraToggle(){if(callVideoCameraOn())callVideoCameraStop('user');else callVideoCameraStart(_callCameraFacing);}
+function callVideoCameraFlip(){if(!_call||_call.kind!=='video'||_call.state!=='active')return;callVideoCameraStart(_callCameraFacing==='user'?'environment':'user');}
+function callVideoFrameData(){const v=$('#callCameraPreview');if(!v||!callVideoCameraOn()||v.readyState<2||!v.videoWidth||!v.videoHeight)return'';const max=720,scale=Math.min(1,max/Math.max(v.videoWidth,v.videoHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(v.videoWidth*scale));canvas.height=Math.max(1,Math.round(v.videoHeight*scale));const ctx=canvas.getContext('2d');if(!ctx)return'';if(_callCameraFacing==='user'){ctx.translate(canvas.width,0);ctx.scale(-1,1);}ctx.drawImage(v,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.78);}
+async function callVideoVisionAnalyze(trigger,spoken){if(!_call||_call.kind!=='video'||_call.state!=='active')return false;if(!callVideoCameraOn()){if(trigger!=='auto')toast('先点右下角的小摄像头打开真实画面');return false;}const max=videoVisionMaxPerCall(),used=Math.max(0,+_call.videoVisionCount||0);if(used>=max){if(!_call.videoVisionLimitShown){_call.videoVisionLimitShown=true;toast('本次视频已达到 '+max+' 次画面识别上限');}return false;}if(_callCameraVisionBusy)return false;const sess=_call.session,token=_callCameraToken,data=callVideoFrameData();if(!data){if(trigger!=='auto')toast('摄像头画面还没准备好，请稍等一下');return false;}_callCameraVisionBusy=true;_call.videoVisionCount=used+1;_call.sub={who:'me',text:'正在让 '+(getC(_call.id).remark||getC(_call.id).name)+' 看当前画面…'};updateCallSub();try{const desc=await visionAPI(data,'这是一次正在进行的视频通话中，用户主动打开摄像头给角色看的实时画面。请客观、具体地用中文描述此刻真正看见的人、物品、文字、环境和明显动作；不要猜镜头外信息，不要替角色回应，2到4句即可。');if(!_call||_call.session!==sess||token!==_callCameraToken)return false;const note='[视频通话实时画面｜这是你刚刚真实看到的当前摄像头画面]\n'+desc+'\n'+(spoken?'用户刚才口头说：“'+String(spoken).slice(0,100)+'”。':'这是按用户设置自动识别到的新画面。')+'\n请直接根据你真正看到的画面自然说话：可以回答、辨认、关心、评价或追问；不要说没看到图片，不要复述整段画面描述，不要提识图、模型、系统或截图。';_call.sub={who:'me',text:'画面已看清，等ta回应…'};updateCallSub();callAI(note,{videoVision:true});return true;}catch(e){if(_call&&_call.session===sess){_call.sub={who:'me',text:'这次画面没有识别成功'};updateCallSub();if(trigger!=='auto')toast('画面识别失败：'+String(e&&e.message||'请检查识图线路').slice(0,80));}return false;}finally{_callCameraVisionBusy=false;}}
 /* ===== 免提模式：对着屏幕说话→自动识别→他语音回你→接着听，全程不用动手 ===== */
 let _callHF=false,_callSR=null,_callHFBusy=false,_hfIgnoreUntil=0,_callHFLastFinal='',_callHFLastFinalAt=0,_callHFSawInterim=false;
 function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();audioRouteReset(false);toast('已关闭免提，触屏即可恢复普通声音');}else{audioHardWake(true);callHFStart();}render();}
@@ -10531,7 +10550,7 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   try{if(!callOnUserSay(t))await callAI();}catch(e){}
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 他刚说完那一下，麦克风可能还收着他的尾音，继续忽略一小段再听你 */
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
-function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');callHFStop();}
+function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');callVideoCameraStop('call-ended');callHFStop();}
 const INCOMING_RING_CHOICES=[
   {key:'soft',label:'微信高低轻响',tip:'原提示音高声接一声柔和低音',url:'assets/incoming-wechat-ding-low-v1.wav'},
   {key:'morning',label:'清脆双响',tip:'短促明亮的两声轻响',url:'assets/incoming-morning-chime-v1.wav'},
@@ -10652,6 +10671,7 @@ function callSleepIntent(t){return /困了|想睡|要睡|睡觉|睡了|晚安|�
 function callAfkIntent(t){return /等(我|下|会)|马上回|一会儿回|稍等|去(洗澡|上厕所|厕所|拿|倒水|开门|趟|忙|做)|待会|等一下|去趟/.test(t||'');}
 // 你在通话里说了话 → 更新"最后说话时间"、按内容进入哄睡/暂离，并触发对应回应；返回true表示已自行处理回应
 function callOnUserSay(t){if(!_call)return false;_call.lastUserTs=Date.now();_call.silentStage=0;callPersist();
+  if(callVideoVisionAsked(t)&&callVideoVisionCanAnalyze()){callVideoVisionAnalyze('voice',t);return true;}
   if(callStoryIntent(t)){_call.lull=true;callAI('[系统：'+S.me.name+'想让你讲个睡前故事、连麦陪ta睡。请你【放轻声音、放慢节奏】，认真讲一个完整、温暖治愈的睡前小故事（中等偏长、可以分几小段娓娓道来，像真的在哄ta入睡），别敷衍三两句就完。讲的中间偶尔轻声哄ta（乖、闭上眼睛、有我在），讲完轻声跟ta道晚安。]',{max:1300});return true;}
   if(callSleepIntent(t)){_call.lull=true;callAI('[系统：'+S.me.name+'困了、想在通话里睡着。你温柔放轻声音哄ta睡：柔声说几句晚安情话让ta安心闭眼，节奏放慢。接下来ta可能就不出声睡着了——你别催ta别吵ta，安静陪着就好，偶尔很轻地说一句"睡吧，有我呢"。]');return true;}
   if(callAfkIntent(t)){_call.afkUntil=Date.now()+12*60000;}// 暂离豁免12分钟
@@ -10683,7 +10703,7 @@ function renderCall(){const L=$('#callLayer');if(!L)return;const _clrPos=()=>{L.
     L.innerHTML=`<div class="cav cdrag" style="width:34px;height:34px;min-width:34px;font-size:18px;border-radius:10px">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div><span style="font-size:13px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:4px">${esc(c.remark||c.name)} ${video?svgIc('video',15,'#cfcfe0'):svgIc('phonecall',14,'#cfcfe0')}<span id="callStat" style="margin-left:3px">${_call.state==='active'?'':'呼叫中'}</span></span><span class="cmax" onclick="callMax()" title="放大" style="cursor:pointer;padding:0 4px;display:flex">${svgIc('expand',16,'#fff')}</span><span class="cbtn red" style="width:32px;height:32px" onclick="hangupCall()">${svgIc('hangup',17,'#fff')}</span>`;
     setTimeout(makeMiniDraggable,0);
     updateCallSub();return;}
-  _clrPos();L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'');
+  _clrPos();L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'')+(video&&callVideoCameraOn()?' camera-on':'');
   L.style.background=S.me.callBg?('linear-gradient(rgba(0,0,0,.38),rgba(0,0,0,.5)),url('+S.me.callBg+') center/cover'):'';
   const label=video?'视频通话':'语音通话';
   const stat=_call.state==='incoming'?('邀请你'+label):_call.state==='outgoing'?'正在呼叫…':'<span id="callStat">00:00</span>';
@@ -10692,12 +10712,13 @@ function renderCall(){const L=$('#callLayer');if(!L)return;const _clrPos=()=>{L.
   else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">${svgIc('hangup',26,'#fff')}</div>取消</div>`;
   else{_call.replyVoice=true;btns=`<div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">${svgIc('hangup',24,'#fff')}</div>挂断</div>`;}
   const callInput=_call.state==='active'?`<div class="callinput show" id="callInput"><button data-call-mic="1" onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'};border:none;border-radius:50%;width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">${svgIc('mic',18,'#fff')}</button><input id="callMsg" inputmode="text" enterkeyhint="send" placeholder="${_callHF?'免提中·直接对我说…':'打字说…'}" onkeydown="if(event.key==='Enter'){event.preventDefault();callSend()}"><button onclick="callSend()">发</button></div>`:'';
-  L.innerHTML=`${(_call.state==='active'||_call.state==='outgoing')?`<div onclick="callMin()" title="缩小，可以边通话边聊天/玩手机" style="position:absolute;left:16px;top:50px;font-size:24px;cursor:pointer;z-index:3">⤵︎</div>`:''}<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
+  const cameraView=video&&_call.state==='active'?`<video id="callCameraPreview" class="call-camera-preview${callVideoCameraOn()?' show':''}${_callCameraFacing==='environment'?' rear':''}" autoplay muted playsinline aria-label="我的实时摄像头画面"></video><div class="call-camera-tools"><button class="call-camera-toggle${callVideoCameraOn()?' on':''}" onclick="callVideoCameraToggle()" title="${callVideoCameraOn()?'关闭摄像头':'打开摄像头'}" aria-label="${callVideoCameraOn()?'关闭摄像头':'打开摄像头'}">${svgIc('camera',15,'#fff')}</button>${callVideoCameraOn()?`<button class="call-camera-flip" onclick="callVideoCameraFlip()" title="翻转摄像头" aria-label="翻转摄像头">↻</button>`:''}</div>`:'';
+  L.innerHTML=`${cameraView}${(_call.state==='active'||_call.state==='outgoing')?`<div onclick="callMin()" title="缩小，可以边通话边聊天/玩手机" style="position:absolute;left:16px;top:50px;font-size:24px;cursor:pointer;z-index:3">⤵︎</div>`:''}<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
     ${callInput}
     <div class="callbtns">${btns}</div>`;
-  updateCallSub();}
+  if(callVideoCameraOn())setTimeout(callVideoCameraAttach,0);updateCallSub();}
 function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_call.sub;
   box.innerHTML=s?`<div class="csline ${s.who==='me'?'me':''}">${esc(s.text).replace(/\n/g,'<br>')}</div>`:'';}
 function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}

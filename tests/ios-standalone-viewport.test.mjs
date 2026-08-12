@@ -16,7 +16,7 @@ function functionSource(name){
 
 function compatEnvironment(navigator,standaloneMedia=false,privateApp=false){
   const context=vm.createContext({navigator,matchMedia:()=>({matches:standaloneMedia}),window:{__SMALL_PHONE_PRIVATE__:privateApp}});
-  vm.runInContext(functionSource('appleHomeCompatEnvironment')+';globalThis.result=appleHomeCompatEnvironment();',context);
+  vm.runInContext(functionSource('appleHomeCompatNative')+';'+functionSource('appleHomeCompatBrowserEnvironment')+';'+functionSource('appleHomeCompatEnvironment')+';globalThis.result=appleHomeCompatEnvironment();',context);
   return context.result;
 }
 
@@ -45,18 +45,18 @@ test('no script may substitute physical screen height for the app viewport',()=>
   assert.doesNotMatch(app,/function syncAppViewport|--north-app-height/,'do not restore the keyboard-sensitive global viewport script');
 });
 
-test('manual safe-area mode is available only to Apple home-screen web apps',()=>{
+test('manual safe-area mode stays Apple-only and the private app shares the explicit switch',()=>{
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:true}),true);
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:false}),false,'ordinary iPhone Safari must keep its existing layout');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Linux; Android 15)',platform:'Linux armv8l',maxTouchPoints:5,standalone:false},true),false,'Android standalone must never receive the Apple workaround');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Macintosh)',platform:'MacIntel',maxTouchPoints:5,standalone:true}),true,'iPad desktop user agent is still supported');
-  assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),false,'the native app must not reuse the browser-only layout workaround');
-  assert.equal(compatOn(true,true),false,'the native app must ignore a restored browser setting');
+  assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),true,'the private iOS app may apply the explicit Apple compatibility switch');
+  assert.equal(compatOn(true,true),true,'the private app must honor the shared explicit switch');
   assert.equal(compatOn(false,false),false,'the ordinary browser keeps its existing opt-in behavior');
 });
 
 test('Apple compatibility switch preserves the proven shell and targets the final rendered app headers',()=>{
-  assert.match(functionSource('renderSettings'),/苹果主屏幕适配/);
+  assert.match(functionSource('renderSettings'),/苹果兼容适配/);
   assert.match(functionSource('renderSettings'),/Safari 浏览器和安卓始终不受影响/);
   assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:env\(safe-area-inset-bottom,0px\)\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');
@@ -68,6 +68,8 @@ test('Apple compatibility switch preserves the proven shell and targets the fina
   assert.match(html,/\.north-ios-home-safe \.dytab\{[^}]*var\(--north-ios-home-safe-bottom\)/);
   assert.match(html,/\.north-ios-home-safe \.msgbanner\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.spybanner\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.match(html,/html\.north-apple-remote-safe \.remote-control-top\{transform:translateY\(var\(--north-apple-remote-offset\)\)\}/,'the remote-control top banner moves only under the explicit Apple class');
+  assert.match(html,/html\.north-native-app\.north-apple-remote-safe\{--north-apple-remote-offset:14px\}/,'the private app uses a small opt-in offset without receiving the browser-wide safe-area layout');
   assert.match(html,/\.north-ios-home-safe \.callscreen\.mini\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.nav\.cohab-wx-nav\{[^}]*height:calc\(56px \+ var\(--north-ios-home-safe-top\)\)!important/,'the co-living WeChat header must not compress its safe area');
   assert.match(html,/\.north-ios-home-safe \.callscreen\.mini \.cav\{margin:0!important\}/,'the mini-call avatar must override the full-screen call inset');
@@ -87,7 +89,7 @@ test('Apple compatibility switch preserves the proven shell and targets the fina
   assert.match(app,/class="travel-head"/);
   assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
-  assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of per-app offsets');
+  assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of browser-wide offsets');
   assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container reserves the entire tappable top safe area');
   assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\)/,'the web view must never extend under the iPhone status bar');
 });

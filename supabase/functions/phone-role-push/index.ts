@@ -258,6 +258,7 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
 
 async function roleMessage(profile: Record<string, unknown>, recentBodies: string[]) {
   const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
+  const providerFailures: string[] = [];
   const key = Deno.env.get("OPENAI_API_KEY") || "";
   if (key) providers.push({
     name: "configured",
@@ -272,7 +273,14 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
     base: (Deno.env.get("DASHSCOPE_BASE_URL") || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, ""),
     model: Deno.env.get("ROLE_PUSH_DASHSCOPE_MODEL") || "qwen-plus",
   });
-  if (!providers.length) return { kind: "unavailable", body: "" };
+  const minimaxKey = Deno.env.get("MINIMAX_API_KEY") || "";
+  if (minimaxKey) providers.push({
+    name: "minimax",
+    key: minimaxKey,
+    base: (Deno.env.get("ROLE_PUSH_MINIMAX_BASE_URL") || "https://api.minimaxi.com/v1").replace(/\/$/, ""),
+    model: Deno.env.get("ROLE_PUSH_MINIMAX_MODEL") || "MiniMax-M2.7",
+  });
+  if (!providers.length) return { kind: "unavailable", body: "", reason: "no-provider" };
   const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
   const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
   const recentContext = String(profile.recent_context || "").slice(-8000).trim();
@@ -312,11 +320,20 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
             }),
           });
           if (!response.ok) {
-            console.warn("role-message-provider-failed", provider.name, response.status);
+            const failureText = await response.text();
+            let failureCode = "provider-error";
+            try {
+              const failure = JSON.parse(failureText);
+              failureCode = String(failure?.error?.code || failure?.error?.type || failure?.base_resp?.status_code || failureCode);
+            } catch (_) {}
+            console.warn("role-message-provider-failed", provider.name, response.status, failureCode);
+            providerFailures.push(`${provider.name}:http-${response.status}:${failureCode}`);
             break;
           }
           const data = await response.json();
-          const text = String(data?.choices?.[0]?.message?.content || "").trim().replace(/^[“\"']|[”\"']$/g, "");
+          const text = String(data?.choices?.[0]?.message?.content || "")
+            .replace(/<think>[\s\S]*?<\/think>/gi, "")
+            .trim().replace(/^[“\"']|[”\"']$/g, "");
           if (!text) break;
           sawGeneratedCandidate = true;
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) return { kind: "silent", body: "" };
@@ -339,13 +356,16 @@ async function roleMessage(profile: Record<string, unknown>, recentBodies: strin
           ];
         } catch (error) {
           console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
+          providerFailures.push(`${provider.name}:network-error`);
           break;
         }
       }
     }
-    return sawGeneratedCandidate ? { kind: "silent", body: "" } : { kind: "unavailable", body: "" };
+    return sawGeneratedCandidate
+      ? { kind: "silent", body: "" }
+      : { kind: "unavailable", body: "", reason: providerFailures.join(",") || "empty-provider-response" };
   } catch (_) {
-    return { kind: "unavailable", body: "" };
+    return { kind: "unavailable", body: "", reason: "decision-error" };
   }
 }
 
@@ -419,6 +439,7 @@ Deno.serve(async (request) => {
     if (error) throw error;
     const profiles = Array.isArray(due) ? due : [];
     let sent = 0, silent = 0, unavailable = 0;
+    const unavailableReasons: Record<string, number> = {};
     for (const profile of profiles) {
       const { data: freshProfile } = await client.from("phone_role_push_profiles")
         .select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
@@ -459,7 +480,11 @@ Deno.serve(async (request) => {
       }
       if (decision.kind !== "message") {
         if (decision.kind === "silent") silent += 1;
-        else unavailable += 1;
+        else {
+          unavailable += 1;
+          const reason = String(decision.reason || "unknown").slice(0, 600);
+          unavailableReasons[reason] = (unavailableReasons[reason] || 0) + 1;
+        }
         await client.from("phone_role_push_profiles").update({
           claimed_until: null,
           next_due_at: nextDue(profile),
@@ -507,7 +532,7 @@ Deno.serve(async (request) => {
         updated_at: new Date().toISOString(),
       }).eq("target", profile.target).eq("role_id", profile.role_id);
     }
-    return reply({ ok: true, claimed: profiles.length, sent, silent, unavailable });
+    return reply({ ok: true, claimed: profiles.length, sent, silent, unavailable, unavailableReasons });
   } catch (error) {
     return reply({ error: String(error?.message || error) }, 500);
   }

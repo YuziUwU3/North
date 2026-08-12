@@ -3,6 +3,14 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const duePreservationSql = fs.readFileSync(
+  new URL('../supabase/migrations/202608120001_phone_role_push_due_preservation.sql', import.meta.url),
+  'utf8'
+);
+const pushFunction = fs.readFileSync(
+  new URL('../supabase/functions/phone-role-push/index.ts', import.meta.url),
+  'utf8'
+);
 
 function functionSource(name) {
   const start = source.indexOf(`function ${name}`);
@@ -336,5 +344,31 @@ assert.equal(location.calls.queued, 1);
 const conflictCall=schedulerContext({planKind:'conflict',callProb:100});
 assert.equal(conflictCall.calls.called,0,'an unresolved argument follow-up must not suddenly become a casual proactive call');
 assert.equal(conflictCall.calls.queued,1);
+
+assert.match(
+  duePreservationSql,
+  /phone_role_push_upsert_profile\s*\(\s*p_target text,\s*p_owner_secret text,\s*p_profile jsonb/i,
+  'the migration must replace the legacy three-argument RPC actually called by app.js'
+);
+assert.match(
+  duePreservationSql,
+  /when phone_role_push_profiles\.next_due_at is not null\s+then phone_role_push_profiles\.next_due_at/i,
+  'a harmless profile refresh must keep an already-due schedule'
+);
+assert.doesNotMatch(
+  duePreservationSql,
+  /next_due_at\s*>\s*now\(\)/i,
+  'preserving only future schedules would postpone every task as soon as it becomes due'
+);
+assert.match(
+  duePreservationSql,
+  /else phone_role_push_profiles\.claimed_until/i,
+  'a harmless profile refresh must not clear a live worker claim'
+);
+
+assert.match(pushFunction, /name:\s*"minimax"/i, 'scheduled role messages need an independent third provider fallback');
+assert.match(pushFunction, /ROLE_PUSH_MINIMAX_BASE_URL/i, 'scheduled role messages must use the current MiniMax OpenAI-compatible endpoint');
+assert.match(pushFunction, /unavailableReasons/i, 'provider failures must be diagnosable without exposing credentials');
+assert.doesNotMatch(pushFunction, /providerFailures\.push\([^\n]*failureText/i, 'provider diagnostics must not echo arbitrary upstream bodies');
 
 console.log('proactive contact tests passed');
