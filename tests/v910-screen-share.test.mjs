@@ -13,11 +13,11 @@ const broadcast = read('native/private-small-phone/XcodeProject/PhoneScreenBroad
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
-test('v910 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v910 · 通话屏幕共享与后台查看修复'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 34;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.34;/);
-  assert.match(bridge, /contractVersion = 13/);
+test('current release versions stay aligned after v910 screen-share support', () => {
+  assert.match(app, /APP_VER='v911 · 后台共享取帧与软件查看真修复'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 35;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.35;/);
+  assert.match(bridge, /contractVersion = 14/);
 });
 
 test('video call can switch recognition source to screen share', () => {

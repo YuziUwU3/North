@@ -55,13 +55,86 @@ final class ScreenShareCoordinator {
         UserDefaults(suiteName: Self.appGroup)?.set(true, forKey: "screenShare.stopRequested.v1")
     }
 
-    func latestFrameDataURL() -> String? {
+    func latestFrameDataURL(frozenToken: String? = nil) -> String? {
         guard let base = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: Self.appGroup
         ) else { return nil }
-        let url = base.appendingPathComponent("screen-share-latest.jpg")
+        let cleanToken = (frozenToken ?? "").trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        let url: URL
+        if !cleanToken.isEmpty,
+           UUID(uuidString: cleanToken) != nil {
+            url = base.appendingPathComponent(
+                "screen-share-frozen-\(cleanToken).jpg"
+            )
+        } else {
+            url = base.appendingPathComponent("screen-share-latest.jpg")
+        }
         guard let data = try? Data(contentsOf: url), !data.isEmpty else { return nil }
+        if !cleanToken.isEmpty {
+            try? FileManager.default.removeItem(at: url)
+        }
         return "data:image/jpeg;base64," + data.base64EncodedString()
+    }
+
+    /// Freeze the exact system frame that existed when native speech finished.
+    /// WKWebView JavaScript is suspended while another App is foreground, so
+    /// asking for "latest" after it resumes would otherwise capture the small
+    /// phone call screen instead of the App the user was looking at while they
+    /// spoke.
+    func freezeLatestFrame() -> [String: Any]? {
+        let defaults = UserDefaults(suiteName: Self.appGroup)
+        guard defaults?.bool(forKey: "screenShare.active.v1") == true,
+              let base = FileManager.default.containerURL(
+                  forSecurityApplicationGroupIdentifier: Self.appGroup
+              ) else { return nil }
+        let source = base.appendingPathComponent("screen-share-latest.jpg")
+        guard let data = try? Data(contentsOf: source), !data.isEmpty else {
+            return nil
+        }
+        let token = UUID().uuidString
+        let target = base.appendingPathComponent(
+            "screen-share-frozen-\(token).jpg"
+        )
+        do {
+            try data.write(to: target, options: .atomic)
+        } catch {
+            return nil
+        }
+        cleanupFrozenFrames(in: base, keeping: target)
+        return [
+            "screenFrameToken": token,
+            "screenFrameAt": defaults?.double(
+                forKey: "screenShare.frameAt.v1"
+            ) ?? 0,
+            "screenFrameSequence": defaults?.integer(
+                forKey: "screenShare.sequence.v1"
+            ) ?? 0
+        ]
+    }
+
+    private func cleanupFrozenFrames(in base: URL, keeping target: URL) {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: base,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+        let frozen = files.filter {
+            $0.lastPathComponent.hasPrefix("screen-share-frozen-") &&
+                $0.pathExtension == "jpg" && $0 != target
+        }.sorted {
+            let left = (try? $0.resourceValues(
+                forKeys: [.contentModificationDateKey]
+            ).contentModificationDate) ?? .distantPast
+            let right = (try? $1.resourceValues(
+                forKeys: [.contentModificationDateKey]
+            ).contentModificationDate) ?? .distantPast
+            return left > right
+        }
+        for file in frozen.dropFirst(5) {
+            try? FileManager.default.removeItem(at: file)
+        }
     }
 
     private func poll(force: Bool = false) {

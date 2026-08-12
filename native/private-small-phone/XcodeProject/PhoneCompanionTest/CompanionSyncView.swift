@@ -1728,11 +1728,36 @@ final class CompanionSyncService: ObservableObject {
 
         for row in rows {
             let result: String
+            var reportForReceipt = latestDirectUsageSnapshot
             do {
                 result = try await applyRemoteCommand(
                     row.command,
                     locationManager: locationManager
                 )
+                // A remote "view" command means "read now", not "return the
+                // last value still held in memory".  The previous path
+                // completed the command with a newer outer snapshot timestamp
+                // but an old screenTime.generatedAt, so the server correctly
+                // rejected it as a fresh App-usage observation.
+                if row.command.action == "view" {
+                    guard #available(iOS 26.0, *) else {
+                        throw CompanionSyncError.message(
+                            "当前 iOS 版本不支持刷新真实逐 App 使用时长"
+                        )
+                    }
+                    switch await fetchTodayDirectUsageWithTimeout() {
+                    case .report(let snapshot):
+                        reportForReceipt = snapshot
+                    case .unavailable:
+                        throw CompanionSyncError.message(
+                            "本次没有取得新的真实逐 App 使用快照"
+                        )
+                    case .timedOut:
+                        throw CompanionSyncError.message(
+                            "刷新真实逐 App 使用时长超过 8 秒"
+                        )
+                    }
+                }
             } catch {
                 let _: Bool = try await rpc(
                     "phone_companion_ack_command",
@@ -1752,10 +1777,10 @@ final class CompanionSyncService: ObservableObject {
 
             let snapshot = await makeSnapshot(
                 locationManager: locationManager,
-                report: latestDirectUsageSnapshot,
+                report: reportForReceipt,
                 wellnessService: wellnessService,
                 resolvePlaceNames: false,
-                controlOnly: true
+                controlOnly: row.command.action != "view"
             )
             let completed: Bool = try await rpc(
                 "phone_companion_complete_command",
@@ -1983,7 +2008,8 @@ final class CompanionSyncService: ObservableObject {
                 webDomains: [],
                 threshold: DateComponents(
                     minute: setting.minutes
-                )
+                ),
+                includesPastActivity: true
             )
 
             if let tokenData = try? JSONEncoder().encode(

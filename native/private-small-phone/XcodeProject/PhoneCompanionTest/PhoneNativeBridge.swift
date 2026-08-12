@@ -9,7 +9,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 13
+    static let contractVersion = 14
 
     weak var webView: WKWebView? {
         didSet {
@@ -19,6 +19,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     }
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
+    private var pendingSpeechEvents: [[String: Any]] = []
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -97,6 +98,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "speech.stop", "speech.abort":
             nativeSpeech.stop(notify: false)
             reply(requestID: requestID, result: ["stopped": true])
+        case "speech.pending":
+            let events = pendingSpeechEvents
+            pendingSpeechEvents.removeAll(keepingCapacity: true)
+            reply(requestID: requestID, result: ["events": events])
         case "screenShare.start", "screenShare.stopPrompt":
             let opened = ScreenShareCoordinator.shared.presentSystemPicker()
             reply(requestID: requestID, result: ["pickerPresented": opened])
@@ -106,7 +111,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "screenShare.status":
             reply(requestID: requestID, result: ScreenShareCoordinator.shared.status())
         case "screenShare.frame":
-            guard let dataURL = ScreenShareCoordinator.shared.latestFrameDataURL() else {
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let frozenToken = arguments["token"] as? String
+            guard let dataURL = ScreenShareCoordinator.shared.latestFrameDataURL(
+                frozenToken: frozenToken
+            ) else {
                 reply(requestID: requestID, error: "screen_share_frame_unavailable")
                 return
             }
@@ -304,8 +313,20 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     }
 
     private func emitSpeechEvent(_ event: [String: Any]) {
-        guard JSONSerialization.isValidJSONObject(event),
-              let data = try? JSONSerialization.data(withJSONObject: event),
+        var enriched = event
+        if event["type"] as? String == "result",
+           event["isFinal"] as? Bool == true {
+            enriched["eventId"] = UUID().uuidString
+            if let frozen = ScreenShareCoordinator.shared.freezeLatestFrame() {
+                enriched.merge(frozen) { _, new in new }
+            }
+            pendingSpeechEvents.append(enriched)
+            if pendingSpeechEvents.count > 8 {
+                pendingSpeechEvents.removeFirst(pendingSpeechEvents.count - 8)
+            }
+        }
+        guard JSONSerialization.isValidJSONObject(enriched),
+              let data = try? JSONSerialization.data(withJSONObject: enriched),
               let json = String(data: data, encoding: .utf8) else {
             return
         }
@@ -1338,7 +1359,10 @@ private final class NativeSpeechRecognitionController {
         restartTask?.cancel()
         restartTask = nil
         latestTranscript = ""
-        cleanupCurrentRecognition(deactivateAudioSession: true)
+        // Keep the play-and-record session alive between continuous chunks.
+        // Deactivating it here lets iOS suspend the microphone as soon as the
+        // user switches to another App during a call.
+        cleanupCurrentRecognition(deactivateAudioSession: false)
 
         let session = sessionID
         restartTask = Task { @MainActor [weak self] in

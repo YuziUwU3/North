@@ -772,7 +772,8 @@ struct ContentView: View {
                 applications: [token],
                 categories: [],
                 webDomains: [],
-                threshold: DateComponents(minute: minutes)
+                threshold: DateComponents(minute: minutes),
+                includesPastActivity: true
             )
 
             if let tokenData = try? JSONEncoder().encode(token) {

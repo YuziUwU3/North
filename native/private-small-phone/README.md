@@ -56,4 +56,4 @@ node native/private-small-phone/scripts/stage-private-phone-web.mjs native/priva
 - MapKit 看门狗日志命中真实 `ContentView.swift` 的常驻 `Map`；私人副本在 scene 进入 inactive 时移除地图，保留独立的定位记录。
 - Windows 无法执行 Xcode/Swift 编译，最终仍须在 Mac 编译全部 Target 并真机回归。
 
-当前私人安装版本为 1.0.34 (34)，内置共享网页核心为 v910，原生桥契约为 13。视频通话新增 ReplayKit 屏幕共享、角色请求共享的双重同意弹框、PiP 双语字幕与后台通话音频；共享帧只在 App Group 原子覆盖保存最新一张，结束即删除。摄像头与共享屏幕共用分钟间隔和每通自动次数，口头查看仍不限次数。App 查看只接受请求后的新鲜 Screen Time 子快照，主动消息优先延续普通真实聊天并感知沉默。phone-role-push 需部署 v910；Mac 六 Target 编译、签名、真实 iPhone 系统共享、PiP、麦克风与后台音频仍需验收。
+当前私人安装版本为 1.0.35 (35)，内置共享网页核心为 v911，原生桥契约为 14。ReplayKit 在原生语音完成时冻结当刻系统画面，网页恢复后按一次性令牌读取，避免回到小手机后误识别通话页；私人通话退后台不再由网页主动关闭原生听筒，连续语音分段期间保持录音会话，后台最终语音会在回到小手机时补投。角色共享申请固定覆盖在通话界面上。后台 App 查看收到 view 命令后会真实刷新 Screen Time 并用请求后的新快照回执，不再回传内存旧值；每日限额重建明确纳入当日此前使用量。Mac 六 Target 编译、签名及真实 iPhone 后台麦克风、系统共享、Screen Time 和每日限额阈值仍需最终验收。

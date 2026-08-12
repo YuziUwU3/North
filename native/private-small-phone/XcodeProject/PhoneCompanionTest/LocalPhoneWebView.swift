@@ -260,7 +260,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.34 (34)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.35 (35)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -365,7 +365,16 @@ struct LocalPhoneWebView: UIViewRepresentable {
           }
         });
       } catch (_) {}
+      const deliveredSpeechEvents = new Set();
       window.__smallPhoneNativeSpeechEvent = payload => {
+        const eventId = payload && payload.eventId;
+        if (eventId && deliveredSpeechEvents.has(eventId)) return;
+        if (eventId) {
+          deliveredSpeechEvents.add(eventId);
+          if (deliveredSpeechEvents.size > 32) {
+            deliveredSpeechEvents.delete(deliveredSpeechEvents.values().next().value);
+          }
+        }
         const client = payload && speechClients.get(payload.sessionId);
         if (!client) return;
         if (payload.type === 'result') {
@@ -373,7 +382,13 @@ struct LocalPhoneWebView: UIViewRepresentable {
           const result = [alternative];
           result.isFinal = payload.isFinal === true;
           if (typeof client.onresult === 'function') {
-            client.onresult({ resultIndex: 0, results: [result] });
+            client.onresult({
+              resultIndex: 0,
+              results: [result],
+              screenFrameToken: payload.screenFrameToken || '',
+              screenFrameAt: Number(payload.screenFrameAt || 0),
+              screenFrameSequence: Number(payload.screenFrameSequence || 0)
+            });
           }
           return;
         }
@@ -388,6 +403,13 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
       };
       window.SmallPhoneNativeSpeech = Object.freeze({
+        flushPending() {
+          return window.SmallPhoneNative.request('speech.pending').then(payload => {
+            const events = payload && Array.isArray(payload.events) ? payload.events : [];
+            events.forEach(event => window.__smallPhoneNativeSpeechEvent(event));
+            return events.length;
+          });
+        },
         create() {
           const client = {
             lang: 'zh-CN',
