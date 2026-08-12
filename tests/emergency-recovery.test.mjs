@@ -77,12 +77,12 @@ test('automatic safety snapshot rejects an out-of-order older write',async()=>{
   assert.equal(written,false);
 });
 
-test('v903 shell and service worker are aligned',()=>{
+test('v904 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v903 · 视频识图上游兼容修复'/);
-  assert.match(html,/app\.js\?v=903/);
-  assert.match(sw,/BUILD='903'/);
+  assert.match(app,/APP_VER='v904 · 识图关闭与后台通知修复'/);
+  assert.match(html,/app\.js\?v=904/);
+  assert.match(sw,/BUILD='904'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

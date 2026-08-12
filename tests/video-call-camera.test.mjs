@@ -37,7 +37,9 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(analyze,/callAI\(note,\{videoVision:true,videoVisionScene:desc/);
   assert.match(analyze,/videoVisionMaxPerCall\(\)/);
   assert.match(functionSource('callVideoCameraArm'),/videoVisionIntervalMin\(\)/);
+  assert.match(functionSource('callVideoCameraArm'),/if\(!videoVisionIntervalMin\(\)/,'a timer that was armed before saving 0 must stop on its next tick');
   assert.match(functionSource('callVideoCameraArm'),/min\*60000/);
+  assert.match(analyze,/if\(!manual&&!videoVisionIntervalMin\(\)\)return false/,'0 must also block stale automatic callbacks at the analysis boundary');
   assert.match(functionSource('callOnUserSay'),/callVideoVisionAsked\(t\)&&callVideoVisionCanAnalyze\('voice'\)/);
   assert.match(functionSource('callVideoVisionCanAnalyze'),/callVideoCameraOn\(\)/);
   assert.match(functionSource('callVideoVisionCanAnalyze'),/manual\|\|/,'spoken requests bypass the automatic limit');
@@ -71,6 +73,8 @@ test('preferences expose minute interval and an automatic-only per-call limit',(
   assert.match(save,/videoVisionIntervalMin/);
   assert.doesNotMatch(save,/S\.settings\.videoVisionIntervalSec=/);
   assert.match(save,/videoVisionMaxPerCall/);
+  assert.match(save,/oldVideoVisionInterval!==videoVisionIntervalMin\(\)/,'saving the preference must immediately re-arm or clear the live-call timer');
+  assert.match(functionSource('videoVisionIntervalMin'),/:0;/,'missing interval settings default to oral-only recognition');
 });
 
 test('private iOS app grants bundled camera capture and declares privacy usage',()=>{
@@ -78,6 +82,6 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 27/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.27/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 28/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.28/);
 });

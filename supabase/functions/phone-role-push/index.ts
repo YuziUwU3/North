@@ -412,7 +412,7 @@ async function sendAPNs(
           badge: 1,
           "content-available": 1,
           "mutable-content": 1,
-          "thread-id": `role-${roleId}`,
+          "thread-id": `role-${roleId}-${outboxId}-${index}`,
         },
         rolePush: {
           outboxId, roleId, roleName, avatarURL: roleAvatarURL,

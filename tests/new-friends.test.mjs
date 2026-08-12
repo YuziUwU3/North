@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v903 · 视频识图上游兼容修复'/);
+assert.match(source, /APP_VER='v904 · 识图关闭与后台通知修复'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);

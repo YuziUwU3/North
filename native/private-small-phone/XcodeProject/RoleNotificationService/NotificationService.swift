@@ -34,7 +34,11 @@ final class NotificationService: UNNotificationServiceExtension {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let displayName = roleName.flatMap { $0.isEmpty ? nil : $0 }
             ?? content.title
-        content.threadIdentifier = "role-\(roleID)"
+        let outboxID = (rolePush["outboxId"] as? String) ?? UUID().uuidString
+        let messageIndex = (rolePush["messageIndex"] as? NSNumber)?.intValue ?? 0
+        let notificationID = "role-\(roleID)-\(outboxID)-\(messageIndex)"
+        content.threadIdentifier = notificationID
+        content.title = displayName
 
         guard let value = rolePush["avatarURL"] as? String,
               let avatarURL = URL(string: value),
@@ -43,6 +47,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 content: content,
                 roleID: roleID,
                 roleName: displayName,
+                notificationID: notificationID,
                 avatarData: nil
             )
             return
@@ -64,6 +69,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 content: content,
                 roleID: roleID,
                 roleName: displayName,
+                notificationID: notificationID,
                 avatarData: valid ? data : nil
             )
         }
@@ -81,6 +87,7 @@ final class NotificationService: UNNotificationServiceExtension {
         content: UNMutableNotificationContent,
         roleID: String,
         roleName: String,
+        notificationID: String,
         avatarData: Data?
     ) {
         let handle = INPersonHandle(value: roleID, type: .unknown)
@@ -103,19 +110,20 @@ final class NotificationService: UNNotificationServiceExtension {
             outgoingMessageType: .outgoingMessageText,
             content: content.body,
             speakableGroupName: nil,
-            conversationIdentifier: "role-\(roleID)",
+            conversationIdentifier: notificationID,
             serviceName: "小手机",
             sender: sender,
             attachments: nil
         )
         let interaction = INInteraction(intent: intent, response: nil)
         interaction.direction = .incoming
-        interaction.donate(completion: nil)
-
-        do {
-            finish(with: try content.updating(from: intent))
-        } catch {
-            finish(with: content)
+        interaction.donate { [weak self] _ in
+            guard let self else { return }
+            do {
+                self.finish(with: try content.updating(from: intent))
+            } catch {
+                self.finish(with: content)
+            }
         }
     }
 

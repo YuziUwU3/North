@@ -15,7 +15,7 @@ const unifiedPushMigration = readFileSync(join(root, 'supabase', 'migrations', '
 const legacyClaimMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110005_private_phone_unified_push_legacy_rpc.sql'), 'utf8');
 const resetMemoryMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110006_phone_role_push_reset_memory.sql'), 'utf8');
 const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
-const notificationService = readFileSync(join(root, 'docs', 'ios', 'v831角色头像通信通知', 'NotificationService.swift'), 'utf8');
+const notificationService = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'RoleNotificationService', 'NotificationService.swift'), 'utf8');
 
 function functionSource(name) {
   const start = app.indexOf(`function ${name}(`);
@@ -137,6 +137,8 @@ test('role notification avatars use bounded thumbnails and unguessable fetch URL
   assert.match(avatarMigration, /avatar_token uuid not null default gen_random_uuid\(\)/);
   assert.match(avatarMigration, /length\(v_avatar\) > 50000/);
   assert.match(functionSource('rolePushAvatarData'), /canvas\.width=96/);
+  assert.match(functionSource('rolePushAvatarSourceReady'), /await imgGet\(key\)/,'an evicted IndexedDB avatar must be loaded before profile sync');
+  assert.match(functionSource('rolePushAvatarData'), /await rolePushAvatarSourceReady\(c\)/);
   assert.match(functionSource('rolePushAvatarData'), /toDataURL\('image\/jpeg',\.78\)/);
   assert.match(functionSource('roleServerPushSync'), /profile\.avatarData=await rolePushAvatarData\(c\)/);
   assert.match(edge, /eq\("avatar_token", token\)/);
@@ -152,8 +154,12 @@ test('iOS notification service upgrades role pushes to communication notificatio
   assert.match(notificationService, /INSendMessageIntent\(/);
   assert.match(notificationService, /interaction\.direction = \.incoming/);
   assert.match(notificationService, /content\.updating\(from: intent\)/);
+  assert.match(notificationService, /interaction\.donate \{ \[weak self\]/,'the content update waits for the interaction donation');
   assert.match(notificationService, /avatarURL\.scheme == "https"/);
   assert.match(notificationService, /data\?\.count \?\? 0\) <= 64_000/);
+  assert.match(edge, /"thread-id": `role-\$\{roleId\}-\$\{outboxId\}-\$\{index\}`/,'each message bubble remains a separate notification card');
+  assert.match(notificationService, /content\.threadIdentifier = notificationID/);
+  assert.match(notificationService, /content\.title = displayName/);
 });
 
 test('web client opt-in sends bounded memory and recent context', () => {
