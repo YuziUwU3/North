@@ -34,8 +34,8 @@ test('pet state is isolated, persistent and limited to four pets',()=>{
 
 test('care loop covers growth, meals, mood, cleaning and sleep',()=>{
   assert.match(pet,/PET_STAGE_NAMES=\['奶团期','幼崽期','少年期','成长期','成年期'\]/);
-  assert.match(pet,/days\/15\*12\*boost/,'fifteen real days should equal about one pet year');
-  assert.match(pet,/Math\.min\(\.18,/,'good care may accelerate growth by at most eighteen percent');
+  assert.match(pet,/Math\.floor\(days\/30\)/,'pet evolves once per real month');
+  assert.match(pet,/const PET_STAGE_MONTHS=\[0,1,2,3,4\]/);
   assert.match(pet,/breakfast.*lunch.*dinner/s);
   assert.match(pet,/p\.poop>=3\|\|p\.clean<24/);
   assert.match(pet,/petIsNight\(\)\?elapsed\*4\.2/,'night restores energy');
@@ -172,12 +172,12 @@ test('Maine Coon, three hamsters and three white rabbit breeds use persistent li
 });
 
 test('preview and app load the complete visual module',()=>{
-assert.match(html,/pet-game\.css\?v=906/);
-assert.match(html,/pet-game\.js\?v=906/);
+assert.match(html,/pet-game\.css\?v=907/);
+assert.match(html,/pet-game\.js\?v=907/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);
   assert.match(css,/\.pet-painter/);
-assert.match(sw,/pet-game\.js\?v=906/);
+assert.match(sw,/pet-game\.js\?v='\+BUILD/);
   assert.match(sw,/pet-room-v1\.webp/);
 });

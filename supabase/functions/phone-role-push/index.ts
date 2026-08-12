@@ -654,7 +654,10 @@ Deno.serve(async (request) => {
       const profile = (await client.from("phone_role_push_profiles").select("*").eq("target", task.target).eq("role_id", task.role_id).maybeSingle()).data;
       const baseline = snapshotTime(task.baseline_user_at);
       const latestUser = snapshotTime(profile?.last_user_at);
-      if (!profile?.enabled || (baseline && latestUser > baseline + 1000)) {
+      const explicitHandoff = ["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test"].includes(String(task.kind || ""));
+      /* 这些任务由用户操作直接创建，不能因页面退后台后 profile.enabled 的瞬时变化被取消。
+         正式主动消息仍保持原来的 enabled 与新消息基线限制。 */
+      if (!profile || (!explicitHandoff && !profile.enabled) || (!explicitHandoff && baseline && latestUser > baseline + 1000)) {
         await client.from("phone_role_background_tasks").update({ status: "canceled", completed_at: new Date().toISOString() }).eq("id", task.id);
         continue;
       }

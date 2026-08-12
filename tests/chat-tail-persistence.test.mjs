@@ -53,7 +53,9 @@ test('each completed role turn is journaled and durably flushed before reply com
   const ai=functionSource('aiReply');
   assert.match(ai,/msgs\(id\)\.push\(vm\);wechatTailJournalWrite\(id,replyAccount\)/);
   assert.match(ai,/msgs\(id\)\.push\(msg\);wechatTailJournalWrite\(id,replyAccount\)/);
-  assert.match(ai,/if\(delivered\)\{roleBackgroundCancel\(id,\['reply_handoff'\]\);roleServerPushTouchActivity\(id,roleServerPushLastUserAt\(c\)\|\|Date\.now\(\),true\);wechatTailJournalWrite\(id,replyAccount\);try\{await persistWechatMessagesNow\(\);\}catch\(_\)\{saveNow\(\);\}\}/);
+  const durable=ai.match(/if\(delivered\)\{\/\* 先把回复真正落盘[\s\S]*?roleBackgroundCancel\(id,\['reply_handoff'\]\);\}/)?.[0]||'';
+  assert.ok(durable.indexOf('persistWechatMessagesNow()')>=0);
+  assert.ok(durable.indexOf('persistWechatMessagesNow()')<durable.indexOf('roleBackgroundCancel'));
   assert.match(functionSource('bootImages'),/wechatTailJournalMerge\(\)/);
   assert.match(source,/pagehide'[\s\S]{0,500}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);
   assert.match(source,/visibilitychange'[\s\S]{0,900}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);

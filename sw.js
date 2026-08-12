@@ -1,5 +1,5 @@
-const BUILD='906';
-const SHELL_CACHE='north-shell-v906';
+const BUILD='907';
+const SHELL_CACHE='north-shell-v907';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -18,8 +18,8 @@ const OPTIONAL_FILES=[
   './commerce-ui.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './thought-card-effects.js?v='+BUILD,
-  './pet-game.js?v=906',
-  './pet-game.css?v=906',
+  './pet-game.js?v='+BUILD,
+  './pet-game.css?v='+BUILD,
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',
@@ -55,7 +55,7 @@ function validShellText(kind,text){
   if(kind==='license')return text.length>10000
     &&text.includes('window.NorthLicense')
     &&text.includes('restorePasskey')
-    &&text.includes('redeemTransfer');
+    &&text.includes('supportsPasskey');
   if(kind==='ai')return text.length>30000
     &&text.includes('function renderAIAccount()')
     &&text.includes('function aiAccountApplyResult(');
