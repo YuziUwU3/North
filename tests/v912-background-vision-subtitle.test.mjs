@@ -11,10 +11,10 @@ const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('current release versions align', () => {
-  assert.match(app, /APP_VER='v920 · 通话角色声音稳定回退'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='920'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 44;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.44;/);
+  assert.match(app, /APP_VER='v921 · 主屏幕通话字幕恢复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='921'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 45;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.45;/);
   assert.match(bridge, /contractVersion = 18/);
 });
 
@@ -28,21 +28,23 @@ test('shared-screen vision owns a finite native background task', () => {
   assert.match(app, /finally\{callNativeScreenVisionComplete\(frameToken\)/);
 });
 
-test('main call subtitles reveal each complete phrase and shrink long translations', () => {
+test('main call subtitles reveal each complete phrase at the v850 fixed size', () => {
   assert.match(html, /\.csline\{[^}]*animation:csphrasein \.3s/);
   assert.match(html, /@keyframes csphrasein/);
-  assert.match(html, /\.csline\.compact\{font-size:15px/);
-  assert.match(html, /\.csline\.dense\{font-size:12px/);
-  assert.match(app, /function callSubtitleSizeClass\(text\)/);
+  assert.match(html, /\.csline\{[^}]*font-size:18px/);
+  assert.doesNotMatch(html, /\.csline\.compact/);
+  assert.doesNotMatch(html, /\.csline\.dense/);
+  assert.doesNotMatch(app, /function callSubtitleSizeClass\(text\)/);
   assert.doesNotMatch(app, /function callSubtitleChars/);
 });
 
-test('native floating subtitles mirror the complete-phrase timing and movement', () => {
+test('native floating subtitles keep their independent size and mirror the complete-phrase motion', () => {
   assert.match(pip, /duration: 0\.3/);
   assert.match(pip, /translationX: 0, y: 8/);
   assert.match(pip, /subtitleLabel\.alpha = 0/);
   assert.match(pip, /controlPoint1: CGPoint\(x: 0\.25, y: 0\.1\)/);
   assert.match(pip, /controlPoint2: CGPoint\(x: 0\.25, y: 1\)/);
+  assert.match(pip, /length > 130 \? 9\.5 : \(length > 80 \? 11 : 14\)/);
   assert.match(pip, /self\.subtitleLabel\.alpha = 1/);
   assert.doesNotMatch(pip, /private final class CallSubtitleView/);
 });

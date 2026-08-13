@@ -10,11 +10,11 @@ const bridge = read('../native/private-small-phone/XcodeProject/PhoneCompanionTe
 const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift');
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
-test('v920 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v920 · 通话角色声音稳定回退'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='920'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 44;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.44;/);
+test('v921 web and private versions are aligned', () => {
+  assert.match(app, /APP_VER='v921 · 主屏幕通话字幕恢复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='921'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 45;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.45;/);
   assert.match(bridge, /contractVersion = 18/);
 });
 
@@ -43,7 +43,7 @@ test('native call audio mixes external media with microphone and role voice', ()
 test('subtitles reveal complete phrases naturally and speech finalization allows correction', () => {
   assert.match(html, /@keyframes csphrasein/);
   assert.match(app, /function callSubtitleEnter\(box\)/);
-  assert.match(app, /function callSubtitleSizeClass\(text\)/);
+  assert.doesNotMatch(app, /function callSubtitleSizeClass\(text\)/);
   assert.doesNotMatch(app, /function callSubtitleChars/);
   assert.match(bridge, /schedulePartialCommit\(transcript\)/);
   assert.match(bridge, /Task\.sleep\(nanoseconds: 1_650_000_000\)/);

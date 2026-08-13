@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='920'){
+if(window.__NORTH_SHELL_BUILD__!=='921'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -360,7 +360,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v920 · 通话角色声音稳定回退';
+const APP_VER='v921 · 主屏幕通话字幕恢复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1408,7 +1408,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=920';
+  const url='sw.js?v=921';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -10803,9 +10803,8 @@ function callNativePiPSubtitlePayload(){const s=_call&&_call.sub;return{subtitle
 function callNativePiPStart(){if(!privateNativeAppOn()||!_call||_call.state!=='active')return;const c=getC(_call.id);window.SmallPhoneNative.request('call.pip.start',Object.assign({name:c&&(c.remark||c.name)||'角色',kind:_call.kind},callNativePiPSubtitlePayload())).catch(()=>{});}
 function callNativePiPUpdate(){if(!privateNativeAppOn()||!_call||_call.state!=='active')return;const c=getC(_call.id);window.SmallPhoneNative.request('call.pip.update',Object.assign({name:c&&(c.remark||c.name)||'角色',kind:_call.kind,screenSharing:!!_call.screenSharing},callNativePiPSubtitlePayload())).catch(()=>{});}
 function callNativePiPEnd(){if(privateNativeAppOn())window.SmallPhoneNative.request('call.pip.end',{}).catch(()=>{});}
-function callSubtitleSizeClass(text){const n=Array.from(String(text||'')).length;return n>130?'dense':n>80?'compact':'';}
 function callSubtitleEnter(box){const line=box&&box.querySelector&&box.querySelector('.csline'),m=CALL_SUBTITLE_MOTION;if(!line)return;line.animate&&line.animate([{opacity:0,transform:'translateY('+m.translateY+'px) scale('+m.scale+')'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:m.phraseDurationMs,easing:`cubic-bezier(${m.x1},${m.y1},${m.x2},${m.y2})`,fill:'both'});}
-function updateCallSub(){const box=$('#callSub'),s=_call&&_call.sub;if(box){if(!s){box.innerHTML='';delete box.dataset.text;delete box.dataset.who;}else{const text=String(s.text||''),who=s.who==='me'?'me':'them';if(box.dataset.text!==text||box.dataset.who!==who){const size=callSubtitleSizeClass(text);box.innerHTML=`<div class="csline${who==='me'?' me':''}${size?' '+size:''}">${esc(text)}</div>`;callSubtitleEnter(box);box.dataset.text=text;box.dataset.who=who;}}}callNativePiPUpdate();}
+function updateCallSub(){const box=$('#callSub'),s=_call&&_call.sub;if(box){if(!s){box.innerHTML='';delete box.dataset.text;delete box.dataset.who;}else{const text=String(s.text||''),who=s.who==='me'?'me':'them';if(box.dataset.text!==text||box.dataset.who!==who){box.innerHTML=`<div class="csline${who==='me'?' me':''}">${esc(text)}</div>`;callSubtitleEnter(box);box.dataset.text=text;box.dataset.who=who;}}}callNativePiPUpdate();}
 function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}
 function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
   stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;if(m.error)toast('语音识别失败；原语音仍会发送，内置识别失败会自动退点');const um={role:'user',type:'voice',audio:m.audio,content:m.content||'',showText:!!m.content,dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session};msgs(id).push(um);behaviorOnUserMsg(id,um);lifeNoteOnUserMsg(id,um);emotionOnUserMsg(id,um);save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}if(_call&&callOnUserSay(m.content||''))return;callAI();});}

@@ -20,6 +20,15 @@ test('user and role subtitles both use the v700 complete-phrase reveal', () => {
   assert.match(pip, /length > 130 \? 9\.5 : \(length > 80 \? 11 : 14\)/);
 });
 
+test('main call subtitle restores v850 size and vertical position without changing PiP sizing', () => {
+  assert.match(html, /\.callsub\{[^}]*bottom:190px;[^}]*align-items:center;[^}]*justify-content:center/);
+  assert.match(html, /\.csline\{[^}]*font-size:18px/);
+  assert.doesNotMatch(html, /\.csline\.compact/);
+  assert.doesNotMatch(html, /\.csline\.dense/);
+  assert.doesNotMatch(app, /function callSubtitleSizeClass/);
+  assert.match(pip, /length > 130 \? 9\.5 : \(length > 80 \? 11 : 14\)/);
+});
+
 test('background role audio can reactivate the mixed native call session', () => {
   assert.match(pip, /func playAudio\(data: Data/);
   assert.match(pip, /guard player\.play\(\)/);
