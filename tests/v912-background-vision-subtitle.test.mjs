@@ -10,11 +10,11 @@ const alarm = fs.readFileSync(new URL('../native/private-small-phone/XcodeProjec
 const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneCompanionTestApp.swift', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v913 release versions align', () => {
-  assert.match(app, /APP_VER='v913 · 通话框字幕与轻透布局'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='913'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 37;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.37;/);
+test('v914 release versions align', () => {
+  assert.match(app, /APP_VER='v914 · 悬浮通话透视与免登录在线音乐'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='914'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 38;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.38;/);
   assert.match(bridge, /contractVersion = 16/);
 });
 

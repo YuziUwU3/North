@@ -36,11 +36,12 @@ test('share-start response is isolated from the previous user sentence', () => {
   assert.match(app, /stopCallMediaAudio\('screen-share-state'\)/);
 });
 
-test('expanded call subtitles use the same natural motion in a shorter glass panel', () => {
+test('expanded call subtitles use natural motion without an empty glass panel', () => {
   assert.match(app, /duration:300,easing:'cubic-bezier\(\.25,\.1,\.25,1\)'/);
-  assert.match(html, /\.callsub\{[^}]*min-height:38px;max-height:92px/);
-  assert.match(html, /backdrop-filter:blur\(13px\)/);
+  assert.match(html, /\.callsub\{[^}]*padding:0 26px[^}]*min-height:60px/);
+  assert.match(html, /\.callsub:empty\{display:none\}/);
+  assert.doesNotMatch(html, /\.callsub\{[^}]*backdrop-filter/);
   assert.match(pip, /preferredContentSize = CGSize\(width: 360, height: 176\)/);
-  assert.match(pip, /alpha: 0\.78/);
+  assert.match(pip, /alpha: 0\.38/);
   assert.match(pip, /centerYAnchor\.constraint\(equalTo: root\.centerYAnchor, constant: -7\)/);
 });

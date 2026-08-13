@@ -14,6 +14,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     private let nameLabel = UILabel()
     private let stateLabel = UILabel()
     private let subtitleLabel = UILabel()
+    private var subtitleMinimumHeight: NSLayoutConstraint?
     private var subtitleAnimator: UIViewPropertyAnimator?
     private var audioPlayer: AVAudioPlayer?
     private var audioCompletion: ((Bool) -> Void)?
@@ -63,6 +64,14 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         subtitleAnimator?.stopAnimation(true)
         subtitleLabel.layer.removeAllAnimations()
         subtitleLabel.text = subtitle
+        let hasSubtitle = !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        subtitleLabel.isHidden = !hasSubtitle
+        subtitleMinimumHeight?.isActive = hasSubtitle
+        guard hasSubtitle else {
+            subtitleLabel.alpha = 0
+            subtitleLabel.transform = .identity
+            return
+        }
         subtitleLabel.alpha = 0
         subtitleLabel.transform = CGAffineTransform(
             translationX: 0,
@@ -140,9 +149,11 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
 
     private func configureContent(in root: UIView) {
         root.isOpaque = false
-        root.backgroundColor = UIColor(red: 0.055, green: 0.06, blue: 0.085, alpha: 0.78)
+        root.backgroundColor = UIColor(red: 0.045, green: 0.05, blue: 0.072, alpha: 0.38)
         root.layer.cornerRadius = 20
         root.layer.masksToBounds = true
+        root.layer.borderWidth = 0.7
+        root.layer.borderColor = UIColor.white.withAlphaComponent(0.16).cgColor
         nameLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         nameLabel.textColor = .white
         nameLabel.textAlignment = .center
@@ -155,6 +166,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         subtitleLabel.numberOfLines = 4
         subtitleLabel.adjustsFontSizeToFitWidth = true
         subtitleLabel.minimumScaleFactor = 0.72
+        subtitleLabel.isHidden = true
 
         let stack = UIStackView(arrangedSubviews: [nameLabel, stateLabel, subtitleLabel])
         stack.axis = .vertical
@@ -162,11 +174,12 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         stack.spacing = 5
         stack.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(stack)
+        let subtitleHeight = subtitleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 42)
+        subtitleMinimumHeight = subtitleHeight
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
-            stack.centerYAnchor.constraint(equalTo: root.centerYAnchor, constant: -7),
-            subtitleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 42)
+            stack.centerYAnchor.constraint(equalTo: root.centerYAnchor, constant: -7)
         ])
     }
 }
