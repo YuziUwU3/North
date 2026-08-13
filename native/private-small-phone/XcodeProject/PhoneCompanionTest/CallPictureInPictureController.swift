@@ -13,9 +13,8 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     private var contentController: AVPictureInPictureVideoCallViewController?
     private let nameLabel = UILabel()
     private let stateLabel = UILabel()
-    private let subtitleLabel = UILabel()
+    private let subtitleView = CallSubtitleView()
     private var subtitleMinimumHeight: NSLayoutConstraint?
-    private var subtitleAnimator: UIViewPropertyAnimator?
     private var audioPlayer: AVAudioPlayer?
     private var audioCompletion: ((Bool) -> Void)?
 
@@ -23,7 +22,13 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         self.webView = webView
     }
 
-    func start(name: String, kind: String, subtitle: String) -> Bool {
+    func start(
+        name: String,
+        kind: String,
+        subtitle: String,
+        subtitleWho: String,
+        subtitleMotion: [String: Any]
+    ) -> Bool {
         guard AVPictureInPictureController.isPictureInPictureSupported(), let webView else {
             return false
         }
@@ -48,45 +53,40 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             controller.canStartPictureInPictureAutomaticallyFromInline = true
             pictureController = controller
         }
-        update(name: name, kind: kind, subtitle: subtitle, screenSharing: false)
+        update(
+            name: name,
+            kind: kind,
+            subtitle: subtitle,
+            subtitleWho: subtitleWho,
+            subtitleMotion: subtitleMotion,
+            screenSharing: false
+        )
         activateCallAudio()
         return true
     }
 
-    func update(name: String, kind: String, subtitle: String, screenSharing: Bool) {
+    func update(
+        name: String,
+        kind: String,
+        subtitle: String,
+        subtitleWho: String,
+        subtitleMotion: [String: Any],
+        screenSharing: Bool
+    ) {
         nameLabel.text = name.isEmpty ? "角色" : name
         stateLabel.text = screenSharing ? "屏幕共享中" : (kind == "video" ? "视频通话" : "语音通话")
-        updateSubtitle(subtitle)
+        updateSubtitle(subtitle, who: subtitleWho, motion: subtitleMotion)
     }
 
-    private func updateSubtitle(_ subtitle: String) {
-        guard subtitleLabel.text != subtitle else { return }
-        subtitleAnimator?.stopAnimation(true)
-        subtitleLabel.layer.removeAllAnimations()
-        subtitleLabel.text = subtitle
+    private func updateSubtitle(
+        _ subtitle: String,
+        who: String,
+        motion: [String: Any]
+    ) {
         let hasSubtitle = !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        subtitleLabel.isHidden = !hasSubtitle
+        subtitleView.isHidden = !hasSubtitle
         subtitleMinimumHeight?.isActive = hasSubtitle
-        guard hasSubtitle else {
-            subtitleLabel.alpha = 0
-            subtitleLabel.transform = .identity
-            return
-        }
-        subtitleLabel.alpha = 0
-        subtitleLabel.transform = CGAffineTransform(
-            translationX: 0,
-            y: 8
-        )
-        let animator = UIViewPropertyAnimator(
-            duration: 0.3,
-            controlPoint1: CGPoint(x: 0.25, y: 0.1),
-            controlPoint2: CGPoint(x: 0.25, y: 1)
-        ) {
-            self.subtitleLabel.alpha = 1
-            self.subtitleLabel.transform = .identity
-        }
-        subtitleAnimator = animator
-        animator.startAnimation()
+        subtitleView.update(text: subtitle, who: who, motion: motion)
     }
 
     func end() {
@@ -160,22 +160,16 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         stateLabel.font = .systemFont(ofSize: 11, weight: .medium)
         stateLabel.textColor = UIColor.white.withAlphaComponent(0.62)
         stateLabel.textAlignment = .center
-        subtitleLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        subtitleLabel.textColor = .white
-        subtitleLabel.textAlignment = .center
-        subtitleLabel.numberOfLines = 4
-        subtitleLabel.adjustsFontSizeToFitWidth = true
-        subtitleLabel.minimumScaleFactor = 0.72
-        subtitleLabel.isHidden = true
+        subtitleView.isHidden = true
 
-        [nameLabel, stateLabel, subtitleLabel].forEach { label in
+        [nameLabel, stateLabel].forEach { label in
             label.layer.shadowColor = UIColor.black.cgColor
             label.layer.shadowOpacity = 0.72
             label.layer.shadowRadius = 2.5
             label.layer.shadowOffset = CGSize(width: 0, height: 1)
         }
 
-        let stack = UIStackView(arrangedSubviews: [nameLabel, stateLabel, subtitleLabel])
+        let stack = UIStackView(arrangedSubviews: [nameLabel, stateLabel, subtitleView])
         stack.axis = .vertical
         stack.alignment = .fill
         stack.spacing = 3
@@ -183,7 +177,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         root.addSubview(stack)
         nameLabel.setContentHuggingPriority(.required, for: .vertical)
         stateLabel.setContentHuggingPriority(.required, for: .vertical)
-        let subtitleHeight = subtitleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 56)
+        let subtitleHeight = subtitleView.heightAnchor.constraint(greaterThanOrEqualToConstant: 56)
         subtitleMinimumHeight = subtitleHeight
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
@@ -191,5 +185,158 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 10),
             stack.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor, constant: -8)
         ])
+    }
+}
+
+private final class CallSubtitleView: UIView {
+    private struct Item {
+        let character: Character
+        let label: UILabel?
+    }
+
+    private let subtitleFont = UIFont.systemFont(ofSize: 14, weight: .medium)
+    private var items: [Item] = []
+    private var currentText = ""
+    private var currentWho = ""
+    private var animatedStartIndex = 0
+    private var activeAnimators: [UIViewPropertyAnimator] = []
+    private var motion: [String: CGFloat] = [
+        "charDurationMs": 420,
+        "charStaggerMs": 24,
+        "maxDelayMs": 420,
+        "lineDurationMs": 260,
+        "translateY": 5,
+        "scale": 0.96,
+        "charX1": 0.25,
+        "charY1": 0.1,
+        "charX2": 0.25,
+        "charY2": 1,
+        "lineX1": 0.22,
+        "lineY1": 0.78,
+        "lineX2": 0.23,
+        "lineY2": 1
+    ]
+
+    func update(text: String, who: String, motion rawMotion: [String: Any]) {
+        guard text != currentText || who != currentWho else { return }
+        for key in Array(motion.keys) {
+            if let value = rawMotion[key] as? NSNumber {
+                motion[key] = CGFloat(truncating: value)
+            }
+        }
+        let isAppend = who == currentWho && text.hasPrefix(currentText)
+        animatedStartIndex = isAppend ? currentText.filter { $0 != "\n" }.count : 0
+        currentText = text
+        currentWho = who
+        rebuildItems()
+    }
+
+    private func rebuildItems() {
+        activeAnimators.forEach { $0.stopAnimation(true) }
+        activeAnimators.removeAll()
+        subviews.forEach { $0.removeFromSuperview() }
+        items = currentText.map { character in
+            guard character != "\n" else { return Item(character: character, label: nil) }
+            let label = UILabel()
+            label.text = String(character)
+            label.font = subtitleFont
+            label.textColor = .white
+            label.textAlignment = .center
+            label.layer.shadowColor = UIColor.black.cgColor
+            label.layer.shadowOpacity = 0.72
+            label.layer.shadowRadius = 2.5
+            label.layer.shadowOffset = CGSize(width: 0, height: 1)
+            addSubview(label)
+            return Item(character: character, label: label)
+        }
+        setNeedsLayout()
+        layoutIfNeeded()
+        animateNewCharacters()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width > 0 else { return }
+        let lineHeight = ceil(subtitleFont.lineHeight)
+        var lines: [[(UILabel, CGFloat)]] = [[]]
+        var lineWidths: [CGFloat] = [0]
+        for item in items {
+            guard let label = item.label else {
+                if lines.count < 4 {
+                    lines.append([])
+                    lineWidths.append(0)
+                }
+                continue
+            }
+            let width = max(3, ceil((label.text! as NSString).size(withAttributes: [.font: subtitleFont]).width))
+            let lineIndex = lines.count - 1
+            if !lines[lineIndex].isEmpty && lineWidths[lineIndex] + width > bounds.width && lines.count < 4 {
+                lines.append([(label, width)])
+                lineWidths.append(width)
+            } else {
+                lines[lineIndex].append((label, width))
+                lineWidths[lineIndex] += width
+            }
+        }
+        let totalHeight = CGFloat(lines.count) * lineHeight
+        var y = max(0, (bounds.height - totalHeight) / 2)
+        for (index, line) in lines.enumerated() {
+            var x = max(0, (bounds.width - lineWidths[index]) / 2)
+            for (label, width) in line {
+                label.frame = CGRect(x: x, y: y, width: width, height: lineHeight)
+                x += width
+            }
+            y += lineHeight
+        }
+    }
+
+    private func animateNewCharacters() {
+        let labels = items.compactMap(\.label)
+        let start = min(animatedStartIndex, labels.count)
+        let duration = TimeInterval((motion["charDurationMs"] ?? 420) / 1_000)
+        let charTiming = UICubicTimingParameters(
+            controlPoint1: CGPoint(x: motion["charX1"] ?? 0.25, y: motion["charY1"] ?? 0.1),
+            controlPoint2: CGPoint(x: motion["charX2"] ?? 0.25, y: motion["charY2"] ?? 1)
+        )
+        let stagger = motion["charStaggerMs"] ?? 24
+        let maxDelay = motion["maxDelayMs"] ?? 420
+        let translateY = motion["translateY"] ?? 5
+        let scale = motion["scale"] ?? 0.96
+        for (index, label) in labels.enumerated() {
+            guard index >= start else {
+                label.alpha = 1
+                label.transform = .identity
+                continue
+            }
+            label.alpha = 0
+            label.transform = CGAffineTransform(translationX: 0, y: translateY)
+                .scaledBy(x: scale, y: scale)
+            let delay = TimeInterval(min(maxDelay, CGFloat(index - start) * stagger) / 1_000)
+            let animator = UIViewPropertyAnimator(duration: duration, timingParameters: charTiming)
+            animator.addAnimations {
+                label.alpha = 1
+                label.transform = .identity
+            }
+            activeAnimators.append(animator)
+            animator.startAnimation(afterDelay: delay)
+        }
+        if start == 0 && !labels.isEmpty {
+            alpha = 0.62
+            transform = CGAffineTransform(translationX: 0, y: motion["translateY"] ?? 5)
+            let lineTiming = UICubicTimingParameters(
+                controlPoint1: CGPoint(x: motion["lineX1"] ?? 0.22, y: motion["lineY1"] ?? 0.78),
+                controlPoint2: CGPoint(x: motion["lineX2"] ?? 0.23, y: motion["lineY2"] ?? 1)
+            )
+            let animator = UIViewPropertyAnimator(
+                duration: TimeInterval((motion["lineDurationMs"] ?? 260) / 1_000),
+                timingParameters: lineTiming
+            )
+            animator.addAnimations {
+                self.alpha = 1
+                self.transform = .identity
+            }
+            activeAnimators.append(animator)
+            animator.startAnimation()
+        }
     }
 }

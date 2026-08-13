@@ -13,11 +13,11 @@ const contentView = read('native/private-small-phone/XcodeProject/PhoneCompanion
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('current web and private release versions align', () => {
-  assert.match(app, /APP_VER='v916 · 自主共享观察与通话音频修复'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 40;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.40;/);
+  assert.match(app, /APP_VER='v917 · 通话同声与线上群聊修复'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 41;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.41;/);
   assert.match(bridge, /contractVersion = 17/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.40 \(40\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.41 \(41\)'/);
 });
 
 test('native speech freezes the system frame that belongs to the final utterance', () => {
@@ -26,7 +26,8 @@ test('native speech freezes the system frame that belongs to the final utterance
   assert.match(coordinator, /screen-share-frozen-/);
   assert.match(coordinator, /screenFrameToken/);
   assert.match(webView, /screenFrameToken: payload\.screenFrameToken/);
-  assert.match(app, /hfHeard\(t,\{screenFrameToken:/);
+  assert.match(app, /const meta=\{screenFrameToken:String\(ev\.screenFrameToken\|\|''\)/);
+  assert.match(app, /hfHeard\(t,meta\)/);
   assert.match(app, /screenShare\.frame',frameToken\?\{token:String\(frameToken\)\}:\{\}/);
 });
 

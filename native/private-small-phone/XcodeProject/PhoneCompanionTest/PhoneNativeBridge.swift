@@ -147,24 +147,41 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             let token = arguments["token"] as? String ?? ""
             finishVisionBackgroundTask(token: token)
             reply(requestID: requestID, result: ["finished": true])
-        case "call.pip.start", "call.pip.update":
+        case "call.pip.start":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             let name = arguments["name"] as? String ?? "角色"
             let kind = arguments["kind"] as? String ?? "video"
             let subtitle = arguments["subtitle"] as? String ?? ""
+            let subtitleWho = arguments["subtitleWho"] as? String ?? "them"
+            let subtitleMotion = arguments["subtitleMotion"] as? [String: Any] ?? [:]
             let sharing = arguments["screenSharing"] as? Bool ?? false
             let supported = CallPictureInPictureController.shared.start(
                 name: name,
                 kind: kind,
-                subtitle: subtitle
+                subtitle: subtitle,
+                subtitleWho: subtitleWho,
+                subtitleMotion: subtitleMotion
             )
             CallPictureInPictureController.shared.update(
                 name: name,
                 kind: kind,
                 subtitle: subtitle,
+                subtitleWho: subtitleWho,
+                subtitleMotion: subtitleMotion,
                 screenSharing: sharing
             )
             reply(requestID: requestID, result: ["supported": supported])
+        case "call.pip.update":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            CallPictureInPictureController.shared.update(
+                name: arguments["name"] as? String ?? "角色",
+                kind: arguments["kind"] as? String ?? "video",
+                subtitle: arguments["subtitle"] as? String ?? "",
+                subtitleWho: arguments["subtitleWho"] as? String ?? "them",
+                subtitleMotion: arguments["subtitleMotion"] as? [String: Any] ?? [:],
+                screenSharing: arguments["screenSharing"] as? Bool ?? false
+            )
+            reply(requestID: requestID, result: ["updated": true])
         case "call.pip.end":
             CallPictureInPictureController.shared.end()
             reply(requestID: requestID, result: ["ended": true])
@@ -1337,6 +1354,9 @@ private final class NativeSpeechRecognitionController {
         let engine = AVAudioEngine()
         audioEngine = engine
         let input = engine.inputNode
+        if #available(iOS 13.0, *) {
+            try input.setVoiceProcessingEnabled(true)
+        }
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw NativeSpeechError.noAudioInput

@@ -14,9 +14,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v916 · 自主共享观察与通话音频修复'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 40;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.40;/);
+  assert.match(app, /APP_VER='v917 · 通话同声与线上群聊修复'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 41;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.41;/);
   assert.match(bridge, /contractVersion = 17/);
 });
 
@@ -44,7 +44,7 @@ test('native app provides broadcast extension, PiP subtitles, and background aud
   assert.match(broadcast, /screen-share-latest\.jpg/);
   assert.match(coordinator, /RPSystemBroadcastPickerView/);
   assert.match(pip, /AVPictureInPictureVideoCallViewController/);
-  assert.match(pip, /subtitleLabel/);
+  assert.match(pip, /subtitleView = CallSubtitleView/);
   assert.match(bridge, /call\.audio\.play/);
   assert.match(info, /<string>audio<\/string>/);
 });

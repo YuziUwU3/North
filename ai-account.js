@@ -92,7 +92,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div style="font-size:38px;font-weight:700;margin:6px 0">${bal}</div>
       <div style="font-size:12px;color:#cbd5e1;word-break:break-all">用户ID：${esc(id)} <button class="minibtn" onclick="aiCopyId()" style="margin-left:6px">复制</button></div>
     </div>
-    <div style="margin:0 0 12px;padding:12px 14px;border:1px solid rgba(255,72,92,.62);border-radius:9px;background:rgba(255,72,92,.11);color:#ff5b6f;font-size:14px;font-weight:800;line-height:1.65">充值需要人工审核，如未及时到账，请联系管理员处理。</div>
+    <div style="margin:0 0 12px;padding:12px 14px;border:1px solid rgba(255,72,92,.62);border-radius:9px;background:rgba(255,72,92,.11);color:#ff5b6f;font-size:14px;font-weight:800;line-height:1.65">内置配置仅为方便新手使用，会收取人工服务费；自己注册并使用外置配置通常更省钱。两种方式可自行选择，不强制。<br><span style="font-size:12px;font-weight:700">充值需要人工审核，如未及时到账，请联系管理员处理。</span></div>
     <button onclick="showManual('ai')" style="width:100%;margin:0 0 12px;padding:11px 12px;border:1px solid rgba(165,180,252,.3);background:#171a24;color:#cdd5ff;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between"><span>AI账户使用说明与常见问题</span><b style="font-size:16px">›</b></button>
     <div class="section">
       <div class="it"><span>点数不足提醒<br><small style="color:#888">余额低于设定值时在小手机屏幕弹窗提醒</small></span><span class="sw ${low.lowBalanceAlertOn?'on':''}" onclick="aiToggleLowBalance()"></span></div>

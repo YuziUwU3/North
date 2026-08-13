@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.40 \(40\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.41 \(41\)'/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
@@ -126,8 +126,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 40;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.40;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 41;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.41;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -233,7 +233,7 @@ test('private app keeps device management in Settings and clears stale app badge
   assert.match(project, /UserNotifications\.framework in Frameworks/);
 });
 
-test('private app rebuilds speech after role audio and reuses the proven web keyboard flow', () => {
+test('private app keeps speech active during role audio and reuses the proven web keyboard flow', () => {
   const bridge = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'
   );
@@ -279,14 +279,13 @@ test('private app rebuilds speech after role audio and reuses the proven web key
   assert.doesNotMatch(bridge, /finishCurrentSession\(\)/);
   assert.match(app, /window\.SmallPhoneNativeSpeech&&window\.SmallPhoneNativeSpeech\.create/);
   assert.match(app, /if\(ev\.results\[i\]\.isFinal\)fin\+=text/);
-  assert.match(app, /if\(t\)[\s\S]{0,700}hfHeard\(t,\{screenFrameToken:/);
+  assert.match(app, /const meta=\{screenFrameToken:[\s\S]{0,500}hfHeard\(t,meta\)/);
   assert.match(app, /callHFPauseForRoleAudio/);
   assert.match(app, /callHFResumeAfterRoleAudio/);
-  assert.match(app, /hfAudioPaused=true;await callHFPauseForRoleAudio\(\)/);
-  assert.match(app, /await sleep\(760\)/);
-  assert.match(app, /typeof _callSR\.rebuild==='function'/);
-  assert.match(app, /callHFStop\(\);callHFStart\(\);return!!_callHF/);
-  assert.match(app, /if\(hfAudioPaused\)await callHFResumeAfterRoleAudio\(sess\)/);
+  assert.doesNotMatch(app, /hfAudioPaused=true;await callHFPauseForRoleAudio\(\)/);
+  assert.doesNotMatch(app, /await sleep\(760\)/);
+  assert.doesNotMatch(app, /typeof _callSR\.rebuild==='function'/);
+  assert.match(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
   assert.doesNotMatch(webView, /keyboardWillChangeFrameNotification/);
   assert.doesNotMatch(webView, /keyboardFrameEndUserInfoKey/);
   assert.doesNotMatch(webView, /__smallPhoneNativeKeyboard/);
