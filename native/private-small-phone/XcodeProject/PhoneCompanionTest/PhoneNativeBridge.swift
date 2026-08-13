@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 15
+    static let contractVersion = 16
 
     weak var webView: WKWebView? {
         didSet {
@@ -122,6 +122,20 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 return
             }
             reply(requestID: requestID, result: ["dataURL": dataURL])
+        case "screenShare.realtime.frame":
+            guard let frozen = ScreenShareCoordinator.shared.freezeLatestFrame(),
+                  let token = frozen["screenFrameToken"] as? String,
+                  let dataURL = ScreenShareCoordinator.shared.latestFrameDataURL(
+                      frozenToken: token
+                  ) else {
+                reply(requestID: requestID, error: "screen_share_frame_unavailable")
+                return
+            }
+            beginVisionBackgroundTask(token: token)
+            reply(
+                requestID: requestID,
+                result: ["dataURL": dataURL, "token": token]
+            )
         case "screenShare.vision.complete":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             let token = arguments["token"] as? String ?? ""

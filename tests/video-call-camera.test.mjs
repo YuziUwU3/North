@@ -39,7 +39,7 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(functionSource('callVideoVisionArm'),/videoVisionIntervalMin\(\)/);
   assert.match(functionSource('callVideoVisionArm'),/if\(!videoVisionIntervalMin\(\)/,'a timer that was armed before saving 0 must stop on its next tick');
   assert.match(functionSource('callVideoVisionArm'),/min\*60000/);
-  assert.match(analyze,/if\(!manual&&!videoVisionIntervalMin\(\)\)return false/,'0 must also block stale automatic callbacks at the analysis boundary');
+  assert.match(analyze,/if\(!manual&&!live&&!videoVisionIntervalMin\(\)\)return false/,'0 must block minute-timer callbacks while the independent live-share mode remains available');
   assert.match(functionSource('callOnUserSay'),/callVideoVisionAsked\(t\)&&callVideoVisionCanAnalyze\('voice'\)/);
   assert.match(functionSource('callVideoVisionCanAnalyze'),/callVideoSourceOn\(\)/);
   assert.match(functionSource('callVideoVisionCanAnalyze'),/manual\|\|/,'spoken requests bypass the automatic limit');
@@ -51,8 +51,8 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(analyze,/callVideoVisionStatus\('working'\)/);
   assert.match(analyze,/callVideoVisionStatus\('failed'\)/);
   const callAI=functionSource('callAI');
-  assert.match(callAI,/const hist=_videoVisionAutomatic\?\[\]:chatHistoryWithDateBoundaries/,'automatic vision replies must not receive stale chat turns');
-  assert.match(callAI,/if\(sysNote&&!_videoVisionAutomatic\)hist\.push/,'the proven spoken vision path keeps its existing system-note structure');
+  assert.match(callAI,/const hist=\(_videoVisionAutomatic\|\|_screenShareEvent\)\?\[\]:chatHistoryWithDateBoundaries/,'automatic vision replies must not receive stale chat turns');
+  assert.match(callAI,/if\(sysNote&&!_videoVisionAutomatic\)hist\.push/,'the proven spoken vision path keeps its existing event-note structure');
   assert.match(callAI,/_videoVisionTurn=sysNote/,'the current frame remains the only active vision event');
   assert.match(callAI,/if\(_videoVisionAutomatic\)/,'only automatic vision uses the cinema-style synthetic user event');
   assert.match(callAI,/else rows\.push\(\{role:'user',content:_videoVisionTurn\}\)/,'automatic vision providers receive a real user turn');
@@ -82,6 +82,6 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 36/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.36/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 37/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.37/);
 });

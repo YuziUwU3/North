@@ -12,6 +12,8 @@ final class ScreenShareCoordinator {
     private weak var webView: WKWebView?
     private var timer: Timer?
     private var lastActive = false
+    private var lastFrameSequence = 0
+    private var lastRealtimeNotifyAt: TimeInterval = 0
     private var picker: RPSystemBroadcastPickerView?
 
     func attach(to webView: WKWebView?) {
@@ -138,14 +140,30 @@ final class ScreenShareCoordinator {
     }
 
     private func poll(force: Bool = false) {
-        let active = UserDefaults(suiteName: Self.appGroup)?.bool(
-            forKey: "screenShare.active.v1"
-        ) ?? false
-        guard force || active != lastActive else { return }
-        lastActive = active
+        let defaults = UserDefaults(suiteName: Self.appGroup)
+        let active = defaults?.bool(forKey: "screenShare.active.v1") ?? false
+        let sequence = defaults?.integer(forKey: "screenShare.sequence.v1") ?? 0
         guard let webView else { return }
-        let activeLiteral = active ? "true" : "false"
-        let script = "window.__smallPhoneScreenShareEvent && window.__smallPhoneScreenShareEvent({active:\(activeLiteral)});"
-        webView.evaluateJavaScript(script, completionHandler: nil)
+        if force || active != lastActive {
+            lastActive = active
+            let activeLiteral = active ? "true" : "false"
+            let script = "window.__smallPhoneScreenShareEvent && window.__smallPhoneScreenShareEvent({active:\(activeLiteral)});"
+            webView.evaluateJavaScript(script, completionHandler: nil)
+        }
+        if !active {
+            lastFrameSequence = sequence
+            lastRealtimeNotifyAt = 0
+            return
+        }
+        let now = Date().timeIntervalSince1970
+        if sequence != lastFrameSequence,
+           now - lastRealtimeNotifyAt >= 3.6 {
+            lastFrameSequence = sequence
+            lastRealtimeNotifyAt = now
+            webView.evaluateJavaScript(
+                "window.__smallPhoneScreenShareFrameEvent && window.__smallPhoneScreenShareFrameEvent({sequence:\(sequence)});",
+                completionHandler: nil
+            )
+        }
     }
 }

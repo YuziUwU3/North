@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='912';</script>
+<script>window.__NORTH_SHELL_BUILD__='913';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-912';
+  var key='north-sw-reloaded-913';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=912';
+  var url='sw.js?v=913';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -691,8 +691,10 @@ body{background:#000;padding:0;}
 @keyframes callVisionSpin{to{transform:rotate(360deg)}}
 .callscreen .cname{font-size:24px;margin-top:18px;font-weight:600;}
 .callscreen .cstat{font-size:14px;color:#cfcfcf;margin-top:8px;}
+.callscreen:not(.mini) .cname{transform:translateY(-6px)}
+.callscreen:not(.mini) .cstat{transform:translateY(-6px)}
 .callsubs{position:absolute;bottom:200px;left:0;right:0;max-height:34%;overflow-y:auto;padding:0 18px;display:flex;flex-direction:column;gap:8px;}
-.callsub{position:absolute;bottom:190px;left:0;right:0;padding:0 26px;text-align:center;min-height:60px;display:flex;align-items:center;justify-content:center;}
+.callsub{position:absolute;bottom:190px;left:0;right:0;margin:0 auto;width:calc(100% - 24px);padding:8px 14px;text-align:center;min-height:38px;max-height:92px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:17px;background:linear-gradient(135deg,rgba(32,34,43,.46),rgba(18,19,26,.31));box-shadow:0 10px 30px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(13px) saturate(1.12);-webkit-backdrop-filter:blur(13px) saturate(1.12);}
 .csline{font-size:18px;color:#fff;line-height:1.5;text-shadow:0 1px 6px rgba(0,0,0,.6);animation:csin .3s ease;}
 .csline.me{color:#ffd6e8;}
 @keyframes csin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -1199,7 +1201,7 @@ html.north-ios-home-safe .callscreen .cav{margin-top:calc(88px + var(--north-ios
 /* v906：只在“苹果兼容适配”开启并实际生效时，下移全屏通话的角色备注与时间；
    关闭开关、安卓和普通浏览器继续保持原坐标。 */
 html.north-apple-remote-safe .callscreen:not(.mini) .cname,
-html.north-apple-remote-safe .callscreen:not(.mini) .cstat{transform:translateY(14px)}
+html.north-apple-remote-safe .callscreen:not(.mini) .cstat{transform:translateY(8px)}
 /* 微信共同生活顶栏本身用 !important 固定为 56px；必须在同一优先级下把安全区
    加回总高度，否则标题、状态胶囊和返回键会被压进系统状态栏。迷你通话头像也不能
    继承全屏通话的安全区上边距。 */
@@ -1244,7 +1246,7 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="pet-game.css?v=912">
+<link rel="stylesheet" href="pet-game.css?v=913">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1294,12 +1296,12 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=912" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=912" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=912" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=912" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=912" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=912" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=912"></script>
+<script src="license-gate.js?v=913" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=913" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=913" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=913" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=913" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=913" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=913"></script>
 </body>
 </html>

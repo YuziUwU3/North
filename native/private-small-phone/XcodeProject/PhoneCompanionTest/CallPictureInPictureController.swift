@@ -34,7 +34,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             sourceView = source
 
             let videoCall = AVPictureInPictureVideoCallViewController()
-            videoCall.preferredContentSize = CGSize(width: 360, height: 202)
+            videoCall.preferredContentSize = CGSize(width: 360, height: 176)
             configureContent(in: videoCall.view)
             contentController = videoCall
 
@@ -139,7 +139,10 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     }
 
     private func configureContent(in root: UIView) {
-        root.backgroundColor = UIColor(red: 0.055, green: 0.06, blue: 0.085, alpha: 1)
+        root.isOpaque = false
+        root.backgroundColor = UIColor(red: 0.055, green: 0.06, blue: 0.085, alpha: 0.78)
+        root.layer.cornerRadius = 20
+        root.layer.masksToBounds = true
         nameLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         nameLabel.textColor = .white
         nameLabel.textAlignment = .center
@@ -162,8 +165,8 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
-            stack.centerYAnchor.constraint(equalTo: root.centerYAnchor),
-            subtitleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 54)
+            stack.centerYAnchor.constraint(equalTo: root.centerYAnchor, constant: -7),
+            subtitleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 42)
         ])
     }
 }
