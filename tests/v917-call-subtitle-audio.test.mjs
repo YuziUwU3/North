@@ -32,11 +32,11 @@ test('PiP updates no longer restart PiP or reactivate the global audio session',
   assert.doesNotMatch(updateCase, /AVAudioSession/);
 });
 
-test('native hands-free keeps capture alive while role audio plays', () => {
+test('native hands-free pauses capture while role audio plays and resumes afterwards', () => {
   assert.match(bridge, /try input\.setVoiceProcessingEnabled\(true\)/);
   assert.match(bridge, /options: \[\.defaultToSpeaker, \.allowBluetoothHFP, \.mixWithOthers\]/);
-  assert.doesNotMatch(app, /hfAudioPaused=true;await callHFPauseForRoleAudio\(\)/);
-  assert.doesNotMatch(app, /_hfIgnoreUntil=Math\.max\(_hfIgnoreUntil,Date\.now\(\)\+1500\)/);
-  assert.match(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
-  assert.match(app, /const pending=_callHFPending\.shift\(\)/);
+  assert.match(app, /hfAudioPaused=true;await callHFPauseForRoleAudio\(\)/);
+  assert.match(app, /_hfIgnoreUntil=Math\.max\(_hfIgnoreUntil,Date\.now\(\)\+1500\)/);
+  assert.doesNotMatch(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
+  assert.doesNotMatch(app, /const pending=_callHFPending\.shift\(\)/);
 });

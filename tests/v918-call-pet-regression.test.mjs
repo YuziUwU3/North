@@ -20,23 +20,23 @@ test('user and role subtitles both use the v700 complete-phrase reveal', () => {
   assert.match(pip, /length > 130 \? 9\.5 : \(length > 80 \? 11 : 14\)/);
 });
 
-test('role audio reactivates the mixed call session immediately before every native playback', () => {
+test('background role audio can reactivate the mixed native call session', () => {
   assert.match(pip, /func playAudio\(data: Data/);
   assert.match(pip, /guard player\.play\(\)/);
   assert.match(pip, /options: \[\.defaultToSpeaker, \.allowBluetoothHFP, \.mixWithOthers\]/);
   assert.match(pip.match(/func playAudio[\s\S]*?func stopAudio/)?.[0] ?? '', /stopAudio\(\)[\s\S]*?activateCallAudio\(\)[\s\S]*?AVAudioPlayer/);
-  assert.match(bridge, /if !audioSessionConfigured/);
+  assert.doesNotMatch(bridge, /if !audioSessionConfigured/);
 });
 
-test('hands-free final results use the last verified v917 queue path', () => {
-  assert.match(bridge, /lastVoiceActivityAt/);
-  assert.match(bridge, /rms >= 0\.008/);
-  assert.match(bridge, /event\["voiceActivity"\]/);
-  assert.match(webView, /voiceActivity: payload\.voiceActivity !== false/);
+test('hands-free final results use the v800-v850 busy-period rejection path', () => {
+  assert.doesNotMatch(bridge, /lastVoiceActivityAt/);
+  assert.doesNotMatch(bridge, /rms >= 0\.008/);
+  assert.doesNotMatch(bridge, /event\["voiceActivity"\]/);
+  assert.doesNotMatch(webView, /voiceActivity: payload\.voiceActivity !== false/);
   assert.doesNotMatch(app, /function callHFLooksLikePlayback/);
   assert.doesNotMatch(app, /callHFRememberRoleSpeech/);
-  assert.match(app, /if\(_callHFBusy\|\|_callBusy\)\{_callHFPending\.push/);
-  assert.match(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
+  assert.match(app, /if\(!_callHF\|\|_callHFBusy\|\|_callBusy\|\|Date\.now\(\)<_hfIgnoreUntil\)return/);
+  assert.doesNotMatch(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
 });
 
 test('voice and video calls both expose real screen sharing', () => {

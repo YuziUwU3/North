@@ -13,13 +13,31 @@ test('ordinary voice and video calls reactivate iOS audio before role playback',
   assert.match(play, /guard player\.play\(\)/);
 });
 
-test('the v917 hands-free result path is restored without touching subtitle animation', () => {
+test('the v800-v850 hands-free noise filter is restored without touching subtitle animation', () => {
   assert.doesNotMatch(app, /function callHFLooksLikePlayback/);
   assert.doesNotMatch(app, /callHFRememberRoleSpeech/);
-  assert.match(app, /if\(_callHFBusy\|\|_callBusy\)\{_callHFPending\.push/);
+  assert.match(app, /if\(!_callHF\|\|_callHFBusy\|\|_callBusy\|\|Date\.now\(\)<_hfIgnoreUntil\)return/);
+  assert.doesNotMatch(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
+  assert.match(app, /Date\.now\(\)\+1200/);
+  assert.match(app, /Date\.now\(\)\+1500/);
   assert.match(app, /const CALL_SUBTITLE_MOTION=\{phraseDurationMs:300,translateY:8,scale:0\.98,x1:0\.25,y1:0\.1,x2:0\.25,y2:1\}/);
   assert.match(app, /function callSubtitleEnter\(box\)/);
   assert.match(html, /@keyframes csphrasein/);
+});
+
+test('foreground calls use the v907 web player while native playback is reserved for background PiP', () => {
+  const play = app.match(/async function playCallMediaWait[\s\S]*?async function prepareCallSpeech/)?.[0] ?? '';
+  assert.match(play, /const nativeBackground=privateNativeAppOn\(\).*document\.hidden/);
+  assert.match(play, /if\(nativeBackground\)[\s\S]*?call\.audio\.play/);
+  assert.match(play, /const a=callMediaElement\(\)/);
+});
+
+test('role audio uses the proven v907 pause and rebuild handoff with bounded waits', () => {
+  assert.match(app, /hfAudioPaused=true;await callHFPauseForRoleAudio\(\)/);
+  assert.match(app, /await sleep\(760\)/);
+  assert.match(app, /typeof _callSR\.rebuild==='function'/);
+  assert.match(app, /Promise\.race\(\[Promise\.resolve\(_callSR\.pause\(\)\)/);
+  assert.match(app, /if\(hfAudioPaused\)await callHFResumeAfterRoleAudio\(sess\)/);
 });
 
 test('chat composer stays above the sticker panel and iOS does not zoom a 15px textarea', () => {

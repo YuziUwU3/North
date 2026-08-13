@@ -29,6 +29,8 @@ v903 授权补充：保留第一次正常邀请码与扫脸／指纹恢复；删
 
 手机号功能启用前，不需要打开 Phone Provider，也不需要 Twilio 或短信服务。只需执行 `supabase/migrations/202608110001_private_phone_accounts.sql`，再在 Supabase Authentication 中手动建立一名已确认的私人用户：内部邮箱格式为 `smallphone.86手机号@example.com`，例如手机号 `13812345678` 对应 `smallphone.8613812345678@example.com`。App 登录页仍输入原手机号和该用户的密码。
 
+当前私人安装版本为 1.0.44 (44)，内置共享网页核心为 v920，原生桥契约仍为 18。v919 在真实 iPhone 的普通电话和普通视频里仍然只有用户字幕，角色没有声音和角色字幕，因此不能记为完成。v920 对照 v800、v850、v907，恢复角色忙碌期丢弃识别、尾音隔离、角色播音前暂停识别和播音后重建；普通前台恢复网页 audio，只有后台或 PiP 才使用原生 call.audio.play。字幕动画没有修改。Windows 566 项自动测试通过，仍需 Mac 编译和真实 iPhone 验收。
+
 ## 目录
 
 - `XcodeProject/`：可在 Mac Xcode 打开的真实六 Target 工程（含 ReplayKit 屏幕共享扩展）。
