@@ -39,8 +39,8 @@ test('APNs and device acknowledgements leave diagnostics without exposing creden
 });
 
 test('sleeping pets are species-sized and anchored below the kennel rim inside the pink cushion', () => {
-  assert.match(pet, /1:\[\{x:21\.5,y:55\.2\}\]/);
-  assert.match(pet, /4:\[\{x:15\.2,y:52\.6\},\{x:27\.1,y:52\.6\},\{x:15\.2,y:56\.8\},\{x:27\.1,y:56\.8\}\]/);
+  assert.match(pet, /1:\[\{x:20\.5,y:45\.0\}\]/);
+  assert.match(pet, /4:\[\{x:15\.1,y:42\.7\},\{x:25\.9,y:42\.7\},\{x:15\.1,y:47\.1\},\{x:25\.9,y:47\.1\}\]/);
   assert.match(pet, /petSleepWidth\(q\.species,total\)/);
   assert.match(petCss, /width:min\(var\(--pet-sleep-width,30%\),132px\)/);
   assert.doesNotMatch(pet, /PET_SLEEP_SPOTS/);

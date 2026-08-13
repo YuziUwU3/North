@@ -260,7 +260,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.41 (41)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.42 (42)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -378,13 +378,17 @@ struct LocalPhoneWebView: UIViewRepresentable {
         const client = payload && speechClients.get(payload.sessionId);
         if (!client) return;
         if (payload.type === 'result') {
-          const alternative = { transcript: payload.transcript || '', confidence: 0 };
+          const alternative = {
+            transcript: payload.transcript || '',
+            confidence: Number(payload.confidence || 0)
+          };
           const result = [alternative];
           result.isFinal = payload.isFinal === true;
           if (typeof client.onresult === 'function') {
             client.onresult({
               resultIndex: 0,
               results: [result],
+              voiceActivity: payload.voiceActivity !== false,
               screenFrameToken: payload.screenFrameToken || '',
               screenFrameAt: Number(payload.screenFrameAt || 0),
               screenFrameSequence: Number(payload.screenFrameSequence || 0)

@@ -27,8 +27,9 @@ assert.deepEqual(
     'E73280D330239BEE006DC874',
     'E73280EC3024F9F5006DC874',
     'E74615C33022636200B3739D',
+    'F10000000000000000000010',
   ].sort(),
-  'only the five TargetAttributes entries may repeat target identifiers'
+  'only the six TargetAttributes entries may repeat target identifiers'
 );
 
 const allIdentifiers = new Set(
@@ -50,6 +51,7 @@ for (const target of [
   'PhoneCompanionMonitor',
   'PhoneCompanionShield',
   'RoleNotificationService',
+  'PhoneScreenBroadcast',
 ]) {
   assert.match(project, new RegExp(`name = ${target};`));
 }

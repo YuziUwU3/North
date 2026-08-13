@@ -13,17 +13,16 @@ const pip = fs.readFileSync(
 );
 
 test('web and native PiP share one subtitle motion contract', () => {
-  assert.match(app, /const CALL_SUBTITLE_MOTION=\{charDurationMs:420,charStaggerMs:24,maxDelayMs:420,lineDurationMs:260,translateY:5,scale:0\.96,charX1:0\.25,charY1:0\.1,charX2:0\.25,charY2:1,lineX1:0\.22,lineY1:0\.78,lineX2:0\.23,lineY2:1\}/);
+  assert.match(app, /const CALL_SUBTITLE_MOTION=\{phraseDurationMs:300,translateY:8,scale:0\.98,x1:0\.25,y1:0\.1,x2:0\.25,y2:1\}/);
   assert.match(app, /subtitleWho:s&&s\.who==='me'\?'me':'them'/);
   assert.match(app, /subtitleMotion:CALL_SUBTITLE_MOTION/);
   assert.match(bridge, /let subtitleMotion = arguments\["subtitleMotion"\]/);
-  assert.match(pip, /private final class CallSubtitleView/);
-  assert.match(pip, /let isAppend = who == currentWho && text\.hasPrefix\(currentText\)/);
-  assert.match(pip, /"charDurationMs": 420/);
-  assert.match(pip, /"charStaggerMs": 24/);
-  assert.match(pip, /motion\["lineX1"\] \?\? 0\.22/);
-  assert.match(pip, /"translateY": 5/);
-  assert.doesNotMatch(pip, /private var subtitleAnimator: UIViewPropertyAnimator/);
+  assert.match(pip, /private let subtitleLabel = UILabel\(\)/);
+  assert.match(pip, /private var subtitleAnimator: UIViewPropertyAnimator\?/);
+  assert.match(pip, /subtitleLabel\.alpha = 0/);
+  assert.match(pip, /translationX: 0, y: 8/);
+  assert.match(pip, /duration: 0\.3/);
+  assert.match(pip, /length > 130 \? 9\.5 : \(length > 80 \? 11 : 14\)/);
 });
 
 test('PiP updates no longer restart PiP or reactivate the global audio session', () => {

@@ -17,8 +17,8 @@ test('reply and device work can be handed to the server without racing user acti
   assert.match(edge, /currentTask\?\.status === "canceled"/);
 });
 
-test('one minute test is an independent durable task', () => {
-  assert.match(app, /'one_minute_test'.*Date\.now\(\)\+60000/s);
+test('role profile no longer exposes the one minute real test', () => {
+  assert.doesNotMatch(app, /roleServerPushOneMinuteTest|one_minute_test.*Date\.now\(\)\+60000/s);
   assert.match(edge, /task\.kind === "one_minute_test"/);
   assert.match(sql, /one_minute_test/);
 });

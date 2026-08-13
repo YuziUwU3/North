@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v917 and private 1.0.41 versions align',()=>{
-  assert.match(app,/APP_VER='v917 · 通话同声与线上群聊修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 41;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.41;/);
+test('v918 and private 1.0.42 versions align',()=>{
+  assert.match(app,/APP_VER='v918 · 通话字幕、降噪与宠物回窝修复'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 42;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.42;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{
@@ -27,7 +27,7 @@ test('public music search needs no user login and reuses together-listen songs',
 });
 
 test('full call page is opaque while only native PiP is translucent',()=>{
-  assert.match(html,/\.callsub\{position:absolute;bottom:190px;left:0;right:0;padding:0 26px/);
+  assert.match(html,/\.callsub\{position:absolute;bottom:190px;left:0;right:0;max-height:40%;overflow:visible;padding:0 26px/);
   assert.match(html,/\.callsub:empty\{display:none\}/);
   assert.doesNotMatch(html,/\.callsub\{[^}]*backdrop-filter/);
   assert.match(pip,/root\.backgroundColor = \.clear/);

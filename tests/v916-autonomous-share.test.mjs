@@ -10,12 +10,12 @@ const bridge = read('../native/private-small-phone/XcodeProject/PhoneCompanionTe
 const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift');
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
-test('v917 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v917 · 通话同声与线上群聊修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='917'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 41;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.41;/);
-  assert.match(bridge, /contractVersion = 17/);
+test('v918 web and private versions are aligned', () => {
+  assert.match(app, /APP_VER='v918 · 通话字幕、降噪与宠物回窝修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='918'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 42;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.42;/);
+  assert.match(bridge, /contractVersion = 18/);
 });
 
 test('screen observation continues only after the role explicitly chooses it', () => {
@@ -40,11 +40,11 @@ test('native call audio mixes external media with microphone and role voice', ()
   assert.match(pip, /allowBluetoothHFP, \.mixWithOthers/);
 });
 
-test('subtitles reveal characters naturally and speech finalization allows correction', () => {
-  assert.match(html, /\.cschar\{/);
-  assert.match(html, /@keyframes cscharin/);
-  assert.match(app, /function callSubtitleChars/);
-  assert.match(app, /ch===' '\?'&nbsp;'/);
+test('subtitles reveal complete phrases naturally and speech finalization allows correction', () => {
+  assert.match(html, /@keyframes csphrasein/);
+  assert.match(app, /function callSubtitleEnter\(box\)/);
+  assert.match(app, /function callSubtitleSizeClass\(text\)/);
+  assert.doesNotMatch(app, /function callSubtitleChars/);
   assert.match(bridge, /schedulePartialCommit\(transcript\)/);
   assert.match(bridge, /Task\.sleep\(nanoseconds: 1_650_000_000\)/);
 });

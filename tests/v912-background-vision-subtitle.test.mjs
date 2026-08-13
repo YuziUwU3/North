@@ -11,11 +11,11 @@ const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('current release versions align', () => {
-  assert.match(app, /APP_VER='v917 · 通话同声与线上群聊修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='917'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 41;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.41;/);
-  assert.match(bridge, /contractVersion = 17/);
+  assert.match(app, /APP_VER='v918 · 通话字幕、降噪与宠物回窝修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='918'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 42;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.42;/);
+  assert.match(bridge, /contractVersion = 18/);
 });
 
 test('shared-screen vision owns a finite native background task', () => {
@@ -28,23 +28,23 @@ test('shared-screen vision owns a finite native background task', () => {
   assert.match(app, /finally\{callNativeScreenVisionComplete\(frameToken\)/);
 });
 
-test('main call subtitles progressively reveal corrected characters', () => {
-  assert.match(html, /\.csline\{[^}]*animation:csin \.3s ease/);
-  assert.match(html, /@keyframes csin\{from\{opacity:0;transform:translateY\(8px\)\}to\{opacity:1;transform:translateY\(0\)\}\}/);
-  assert.match(html, /@keyframes cscharin/);
-  assert.match(app, /function callSubtitleChars/);
-  assert.match(app, /text\.startsWith\(old\)/);
+test('main call subtitles reveal each complete phrase and shrink long translations', () => {
+  assert.match(html, /\.csline\{[^}]*animation:csphrasein \.3s/);
+  assert.match(html, /@keyframes csphrasein/);
+  assert.match(html, /\.csline\.compact\{font-size:15px/);
+  assert.match(html, /\.csline\.dense\{font-size:12px/);
+  assert.match(app, /function callSubtitleSizeClass\(text\)/);
+  assert.doesNotMatch(app, /function callSubtitleChars/);
 });
 
-test('native floating subtitles mirror the original timing and movement', () => {
-  assert.match(pip, /"charDurationMs": 420/);
-  assert.match(pip, /"charStaggerMs": 24/);
-  assert.match(pip, /"lineDurationMs": 260/);
-  assert.match(pip, /motion\["charX1"\] \?\? 0\.25/);
-  assert.match(pip, /motion\["charY1"\] \?\? 0\.1/);
-  assert.match(pip, /motion\["lineX1"\] \?\? 0\.22/);
-  assert.match(pip, /label\.alpha = 0/);
-  assert.match(pip, /translationX: 0,[\s\S]*motion\["translateY"\] \?\? 5/);
+test('native floating subtitles mirror the complete-phrase timing and movement', () => {
+  assert.match(pip, /duration: 0\.3/);
+  assert.match(pip, /translationX: 0, y: 8/);
+  assert.match(pip, /subtitleLabel\.alpha = 0/);
+  assert.match(pip, /controlPoint1: CGPoint\(x: 0\.25, y: 0\.1\)/);
+  assert.match(pip, /controlPoint2: CGPoint\(x: 0\.25, y: 1\)/);
+  assert.match(pip, /self\.subtitleLabel\.alpha = 1/);
+  assert.doesNotMatch(pip, /private final class CallSubtitleView/);
 });
 
 test('alarm notes become role messages in background and chat history', () => {

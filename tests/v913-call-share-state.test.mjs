@@ -28,7 +28,7 @@ test('optional realtime understanding is role-paced and reacts only to changed s
   assert.match(app, /screenShare\.realtime\.frame/);
   assert.match(bridge, /case "screenShare\.realtime\.frame"/);
   assert.match(coordinator, /__smallPhoneScreenShareFrameEvent/);
-  assert.match(bridge, /contractVersion = 17/);
+  assert.match(bridge, /contractVersion = 18/);
 });
 
 test('share-start response is isolated from the previous user sentence', () => {
@@ -36,12 +36,13 @@ test('share-start response is isolated from the previous user sentence', () => {
   assert.match(app, /绝对不要回答、复述、改写或延续共享状态改变前用户的最后一句话/);
   assert.match(app, /const hist=\(_videoVisionAutomatic\|\|_screenShareEvent\)\?\[\]/);
   assert.match(app, /_callStateStale=/);
-  assert.match(app, /stopCallMediaAudio\('screen-share-state'\)/);
+  assert.doesNotMatch(app, /stopCallMediaAudio\('screen-share-state'\)/);
 });
 
 test('expanded call subtitles use natural motion without an empty glass panel', () => {
-  assert.match(app, /function callSubtitleChars\(text,start\)/);
-  assert.match(html, /\.cschar\{[^}]*animation:cscharin \.42s/);
+  assert.match(app, /function callSubtitleEnter\(box\)/);
+  assert.match(html, /@keyframes csphrasein/);
+  assert.doesNotMatch(html, /@keyframes cscharin/);
   assert.match(html, /\.callsub\{[^}]*padding:0 26px[^}]*min-height:60px/);
   assert.match(html, /\.callsub:empty\{display:none\}/);
   assert.doesNotMatch(html, /\.callsub\{[^}]*backdrop-filter/);

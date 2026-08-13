@@ -14,10 +14,10 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v917 · 通话同声与线上群聊修复'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 41;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.41;/);
-  assert.match(bridge, /contractVersion = 17/);
+  assert.match(app, /APP_VER='v918 · 通话字幕、降噪与宠物回窝修复'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 42;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.42;/);
+  assert.match(bridge, /contractVersion = 18/);
 });
 
 test('video call can switch recognition source to screen share', () => {
@@ -44,7 +44,8 @@ test('native app provides broadcast extension, PiP subtitles, and background aud
   assert.match(broadcast, /screen-share-latest\.jpg/);
   assert.match(coordinator, /RPSystemBroadcastPickerView/);
   assert.match(pip, /AVPictureInPictureVideoCallViewController/);
-  assert.match(pip, /subtitleView = CallSubtitleView/);
+  assert.match(pip, /private let subtitleLabel = UILabel\(\)/);
+  assert.match(pip, /subtitleLabel\.numberOfLines = 0/);
   assert.match(bridge, /call\.audio\.play/);
   assert.match(info, /<string>audio<\/string>/);
 });

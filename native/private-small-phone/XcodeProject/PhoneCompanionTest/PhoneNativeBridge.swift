@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 17
+    static let contractVersion = 18
 
     weak var webView: WKWebView? {
         didSet {
@@ -1221,10 +1221,13 @@ private final class NativeSpeechRecognitionController {
     private var partialCommitTask: Task<Void, Never>?
     private var restartTask: Task<Void, Never>?
     private var latestTranscript = ""
+    private var latestConfidence: Float = 0
+    private var lastVoiceActivityAt = Date.distantPast
     private var language = "zh-CN"
     private var recognitionGeneration = UUID()
     private var isActive = false
     private var isPaused = false
+    private var audioSessionConfigured = false
     private var restartFailures = 0
 
     func start(
@@ -1241,6 +1244,9 @@ private final class NativeSpeechRecognitionController {
         eventHandler = onEvent
         isActive = true
         isPaused = false
+        audioSessionConfigured = false
+        latestConfidence = 0
+        lastVoiceActivityAt = .distantPast
 
         SFSpeechRecognizer.requestAuthorization { status in
             Task { @MainActor [weak self] in
@@ -1275,6 +1281,9 @@ private final class NativeSpeechRecognitionController {
         startToken = UUID()
         isActive = false
         isPaused = false
+        audioSessionConfigured = false
+        latestConfidence = 0
+        lastVoiceActivityAt = .distantPast
         recognitionGeneration = UUID()
         partialCommitTask?.cancel()
         partialCommitTask = nil
@@ -1296,6 +1305,7 @@ private final class NativeSpeechRecognitionController {
         restartTask?.cancel()
         restartTask = nil
         latestTranscript = ""
+        latestConfidence = 0
         cleanupCurrentRecognition(deactivateAudioSession: true)
     }
 
@@ -1320,6 +1330,7 @@ private final class NativeSpeechRecognitionController {
         restartTask?.cancel()
         restartTask = nil
         latestTranscript = ""
+        latestConfidence = 0
         cleanupCurrentRecognition(deactivateAudioSession: true)
         isPaused = false
         do {
@@ -1339,13 +1350,16 @@ private final class NativeSpeechRecognitionController {
             throw NativeSpeechError.unavailable
         }
 
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(
-            .playAndRecord,
-            mode: .voiceChat,
-            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
-        )
-        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        if !audioSessionConfigured {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(
+                .playAndRecord,
+                mode: .voiceChat,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+            )
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            audioSessionConfigured = true
+        }
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
@@ -1366,6 +1380,22 @@ private final class NativeSpeechRecognitionController {
             bufferSize: 1_024,
             format: format
         ) { buffer, _ in
+            if let samples = buffer.floatChannelData?[0] {
+                let count = Int(buffer.frameLength)
+                var squareSum: Float = 0
+                if count > 0 {
+                    for index in 0..<count {
+                        let value = samples[index]
+                        squareSum += value * value
+                    }
+                    let rms = sqrt(squareSum / Float(count))
+                    if rms >= 0.008 {
+                        Task { @MainActor [weak self] in
+                            self?.lastVoiceActivityAt = Date()
+                        }
+                    }
+                }
+            }
             request.append(buffer)
         }
         tapInstalled = true
@@ -1384,10 +1414,18 @@ private final class NativeSpeechRecognitionController {
                     self.restartFailures = 0
                     let transcript = result.bestTranscription.formattedString
                     self.latestTranscript = transcript
+                    let confidences = result.bestTranscription.segments.map(\.confidence)
+                    let confidence = confidences.isEmpty
+                        ? 0
+                        : confidences.reduce(0, +) / Float(confidences.count)
+                    self.latestConfidence = confidence
+                    let voiceActivity = Date().timeIntervalSince(self.lastVoiceActivityAt) < 1.8
                     self.emit(
                         type: "result",
                         transcript: transcript,
-                        isFinal: result.isFinal
+                        isFinal: result.isFinal,
+                        confidence: confidence,
+                        voiceActivity: voiceActivity
                     )
                     if result.isFinal {
                         self.partialCommitTask?.cancel()
@@ -1421,7 +1459,9 @@ private final class NativeSpeechRecognitionController {
             self.emit(
                 type: "result",
                 transcript: self.latestTranscript,
-                isFinal: true
+                isFinal: true,
+                confidence: self.latestConfidence,
+                voiceActivity: Date().timeIntervalSince(self.lastVoiceActivityAt) < 1.8
             )
             self.rotateRecognition(afterNanoseconds: 220_000_000)
         }
@@ -1435,6 +1475,7 @@ private final class NativeSpeechRecognitionController {
         restartTask?.cancel()
         restartTask = nil
         latestTranscript = ""
+        latestConfidence = 0
         // Keep the play-and-record session alive between continuous chunks.
         // Deactivating it here lets iOS suspend the microphone as soon as the
         // user switches to another App during a call.
@@ -1480,6 +1521,7 @@ private final class NativeSpeechRecognitionController {
                 false,
                 options: .notifyOthersOnDeactivation
             )
+            audioSessionConfigured = false
         }
     }
 
@@ -1487,6 +1529,8 @@ private final class NativeSpeechRecognitionController {
         type: String,
         transcript: String = "",
         isFinal: Bool = false,
+        confidence: Float = 0,
+        voiceActivity: Bool? = nil,
         error: String = ""
     ) {
         guard !sessionID.isEmpty else { return }
@@ -1497,6 +1541,10 @@ private final class NativeSpeechRecognitionController {
         if !transcript.isEmpty {
             event["transcript"] = transcript
             event["isFinal"] = isFinal
+            event["confidence"] = confidence
+            if let voiceActivity {
+                event["voiceActivity"] = voiceActivity
+            }
         }
         if !error.isEmpty {
             event["error"] = error
