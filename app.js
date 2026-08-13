@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='918'){
+if(window.__NORTH_SHELL_BUILD__!=='919'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -360,7 +360,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v918 · 通话字幕、降噪与宠物回窝修复';
+const APP_VER='v919 · 通话声音与输入框回归修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1408,7 +1408,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=918';
+  const url='sw.js?v=919';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8917,7 +8917,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
     ${idleForceBanner(id)}
     <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
     <div class="panel" id="panel">
-      <div class="ptabs"><span class="${_panelPage!=='emoji'?'on':''}" onclick="_panelPage='fn';render();$('#panel').classList.add('show')">功能</span><span class="${_panelPage==='emoji'?'on':''}" onclick="_panelPage='emoji';render();$('#panel').classList.add('show')"><span style="display:inline-flex;align-items:center;gap:5px">${svgIc('smile',16)}表情</span></span></div>
+      <div class="ptabs"><span class="${_panelPage!=='emoji'?'on':''}" onclick="chatPanelOpen('fn')">功能</span><span class="${_panelPage==='emoji'?'on':''}" onclick="chatPanelOpen('emoji')"><span style="display:inline-flex;align-items:center;gap:5px">${svgIc('smile',16)}表情</span></span></div>
       ${_panelPage==='emoji'?`<div class="ppage">${emojiPanel(id)}</div>`:`<div class="pgrid">
       <div class="it" onclick="cPhoto('${id}')"><div class="b">${svgIc('image',26,'#e6e6ee')}</div><span>相册</span></div>
       <div class="it" onclick="cTransfer('${id}')"><div class="b">${svgIc('money',26,'#e6e6ee')}</div><span>转账</span></div>
@@ -8937,7 +8937,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <span class="plus" style="background:${_voiceMode?'linear-gradient(145deg,#5a5c61,#303236)':'transparent'};box-shadow:${_voiceMode?'0 3px 9px rgba(0,0,0,.32)':'none'};color:${_voiceMode?'#f3f3f4':'#9b9ca0'}" onclick="_voiceMode=!_voiceMode;render()">${svgIc('mic',19,_voiceMode?'#f3f3f4':'#9b9ca0')}</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入文字，发送为语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
-      <span class="plus" onclick="_panelPage='fn';$('#panel').classList.toggle('show')">＋</span>
+      <span class="plus" onclick="chatPanelToggle()">＋</span>
     </div>`}`;}
 function bubbleRow(c,m){
   const me=m.role==='user';
@@ -9106,6 +9106,9 @@ function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid()
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)cb.scrollTop=cb.scrollHeight;}}}
 
 let _voiceMode=false;let _panelPage='fn';
+function chatPanelKeyboardDismiss(){const ta=$('#cinput');if(ta&&document.activeElement===ta)ta.blur();}
+function chatPanelOpen(page){chatPanelKeyboardDismiss();_panelPage=page==='emoji'?'emoji':'fn';render();requestAnimationFrame(()=>{const p=$('#panel');if(p)p.classList.add('show');});}
+function chatPanelToggle(){const p=$('#panel');if(!p)return;const open=!p.classList.contains('show');if(open){chatPanelKeyboardDismiss();_panelPage='fn';}p.classList.toggle('show',open);}
 function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
   if(c._cbTries)c._cbTries=0;// 她主动发消息=重新搭理ta，回拨追逐结束、计数清零
   const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
@@ -10604,16 +10607,12 @@ function callVideoVisionFallback(scene){const first=String(scene||'').split(/[�
 async function callVideoVisionAnalyze(trigger,spoken,meta){if(!_call||_call.state!=='active'||(_call.kind!=='video'&&!callScreenShareOn()))return false;const live=trigger==='live',manual=trigger!=='auto'&&!live;if(!manual&&!live&&!videoVisionIntervalMin())return false;if(live&&(_callScreenObserveMode!=='observing'||!screenShareRealtimeVisionOn()||!callScreenShareOn()))return false;if(!callVideoSourceOn()){if(manual)toast('请先打开右下角摄像头，或左下角屏幕共享');return false;}const frameToken=String(meta&&meta.screenFrameToken||'');if(_callCameraVisionBusy){if(manual)_callCameraVisionPend.push({trigger:'voice',spoken:String(spoken||'').slice(0,120),meta:frameToken?{screenFrameToken:frameToken}:null,session:_call.session});return manual;}const max=videoVisionMaxPerCall(),used=Math.max(0,+_call.videoVisionCount||0);if(!manual&&used>=max){if(!_call.videoVisionLimitShown){_call.videoVisionLimitShown=true;toast('本次通话已达到 '+max+' 次自动画面识别上限；口头让ta看仍不限次数');}if(live)callScreenAutonomyApply('结束');return false;}const sess=_call.session,token=_callCameraToken+'|'+_callScreenToken,screen=callScreenShareOn(),data=String(meta&&meta.liveData||'')||await callVideoFrameData(frameToken);if(!data){callNativeScreenVisionComplete(frameToken);if(manual)toast(screen?'共享画面还没准备好，请稍等一下':'摄像头画面还没准备好，请稍等一下');return false;}_callCameraVisionBusy=true;if(!manual)_call.videoVisionCount=used+1;callVideoVisionStatus('working');try{const source=screen?'屏幕共享':'摄像头',overlay=screen?'画面上可能覆盖着“小手机”的悬浮通话框，里面会出现角色自己的名字、头像、字幕和角色刚说过的话；那只是本 App 浮层，必须完整忽略，不能当成共享内容里另一个人、另一款软件或用户正在阅读的正文。':'';const desc=String(await visionAPI(data,'这是一次正在进行的通话中，用户主动给角色看的实时'+source+'画面。'+overlay+'请只描述浮层之外真正共享的手机内容，客观、具体地用中文说出当前软件界面、文字、人物、物品、环境和明显动作；不确定软件名称时描述可见特征，不要凭配色猜应用名。不要猜画面外信息，不要替角色回应，2到4句即可。')||'').trim();if(!_call||_call.session!==sess||token!==_callCameraToken+'|'+_callScreenToken)return false;if(!desc)throw new Error('没有识别到画面');callVideoVisionStatus('');const note='[通话当前画面：这是你刚刚通过'+source+'真实看到的新画面，也是这一轮唯一需要回应的事件]\n'+desc+'\n'+(spoken?'用户这次让你看画面时说：“'+String(spoken).slice(0,100)+'”。这句话只用于说明看画面的意图，不要继续回答更早的用户话语。':live?'这是实时共享理解自主观察到的明显新画面。先按你的性格判断是否真的在意：不必每次出声；如果在意就只问一个问题并停下来等用户回答；没有想问的可以自行决定稍后再看、等待用户切换，或结束本轮观察。不要承接聊天历史中更早的用户话语。':'这是定时自动取得的新画面，不要承接或回答聊天历史中更早的用户话语。')+'\n'+(live?'只有决定提问时，第一句台词才必须明确点出画面中至少一个具体可见细节；决定继续、等待切换或结束时不要说任何话。':'你的第一句台词必须明确点出画面中至少一个具体可见的人、物品、软件、文字、颜色、动作或环境细节，证明你确实看到了它；再按人设自然评价、关心、回答或追问。')+'不要只说“看到了”，不要复述用户上一句话，不要提识图、模型、系统或截图。';const reply=callAI(note,{videoVision:true,videoVisionScene:desc,videoVisionSpoken:String(spoken||'').slice(0,100),videoVisionManual:manual,screenShare:screen,realtimeScreenShare:live,screenShareAutonomy:live});if(frameToken)await reply;return true;}catch(e){if(_call&&_call.session===sess)callVideoVisionStatus('failed');return false;}finally{callNativeScreenVisionComplete(frameToken);_callCameraVisionBusy=false;const pending=_callCameraVisionPend.shift();if(pending&&_call&&_call.session===pending.session&&callVideoSourceOn())setTimeout(()=>callVideoVisionAnalyze(pending.trigger,pending.spoken,pending.meta),120);}}
 /* ===== 免提模式：对着屏幕说话→自动识别→他语音回你→接着听，全程不用动手 ===== */
 let _callHF=false,_callSR=null,_callHFBusy=false,_callHFPending=[],_hfIgnoreUntil=0,_callHFLastFinal='',_callHFLastFinalAt=0,_callHFSawInterim=false;
-let _callHFRoleEchoes=[];
-function callHFEchoKey(text){return String(text||'').toLowerCase().replace(/[^a-z0-9\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g,'');}
-function callHFRememberRoleSpeech(text,durationMs){const key=callHFEchoKey(text);if(!key)return;const now=Date.now();_callHFRoleEchoes=_callHFRoleEchoes.filter(x=>x.until>now);_callHFRoleEchoes.push({key,until:now+Math.max(6000,Number(durationMs)||0)+4500});_callHFRoleEchoes=_callHFRoleEchoes.slice(-8);_hfIgnoreUntil=Math.max(_hfIgnoreUntil,now+380);}
-function callHFLooksLikePlayback(text,confidence,voiceActivity){const key=callHFEchoKey(text),now=Date.now();_callHFRoleEchoes=_callHFRoleEchoes.filter(x=>x.until>now);if(!key||voiceActivity===false)return true;if(Number.isFinite(+confidence)&&+confidence>0&&(+confidence<.18||(key.length===1&&+confidence<.5)))return true;return _callHFRoleEchoes.some(x=>{const min=Math.min(key.length,x.key.length);return min>=2&&(key===x.key||(min>=4&&(key.includes(x.key)||x.key.includes(key)))||(min>=6&&replyBigramScore(key,x.key)>=.78));});}
 function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();audioRouteReset(false);toast('已关闭免提，触屏即可恢复普通声音');}else{audioHardWake(true);callHFStart();}render();}
 function callHFStart(){audioMicRouteCancel();const sr=makeSR();if(!sr){toast('这台设备/浏览器不支持语音识别，先用打字或按住说话吧（安卓Chrome支持最好）');_callHF=false;return;}
   _callHF=true;_callSR=sr;_callHFPending=[];_callHFLastFinal='';_callHFLastFinalAt=0;_callHFSawInterim=false;
   /* 全程保持一次聆听，不每轮停/开——避免麦克风开关的"嘀"提示音。他说话时只是【忽略】识别结果而不停止 */
-  sr.onresult=ev=>{if(!_callHF||Date.now()<_hfIgnoreUntil)return;let fin='',interim='',confidence=0;for(let i=ev.resultIndex;i<ev.results.length;i++){const alt=ev.results[i][0]||{},text=String(alt.transcript||'');confidence=Math.max(confidence,+alt.confidence||0);if(ev.results[i].isFinal)fin+=text;else interim+=text;}
-    if(interim.trim())_callHFSawInterim=true;const t=(fin||'').trim();if(t){const key=t.toLowerCase().replace(/[\s，。、！？!?,.~～…：:；;（）()「」『』“”'"\-—]/g,''),now=Date.now(),sawInterim=_callHFSawInterim,stale=!!key&&key===_callHFLastFinal&&!sawInterim&&now-_callHFLastFinalAt<30000,voiceActivity=ev.voiceActivity,playback=callHFLooksLikePlayback(t,confidence,voiceActivity);_callHFSawInterim=false;if(stale||playback)return;const busy=_callHFBusy||_callBusy;if(busy&&(!sawInterim||voiceActivity===false||(confidence>0&&confidence<.32)))return;_callHFLastFinal=key;_callHFLastFinalAt=now;const meta={screenFrameToken:String(ev.screenFrameToken||''),screenFrameAt:+ev.screenFrameAt||0,screenFrameSequence:+ev.screenFrameSequence||0,confidence,voiceActivity};if(busy){_callHFPending.push({text:t,meta});_callHFPending=_callHFPending.slice(-3);return;}if(_call){_call.sub={who:'me',text:t};updateCallSub();}hfHeard(t,meta);}
+  sr.onresult=ev=>{if(!_callHF||Date.now()<_hfIgnoreUntil)return;let fin='',interim='';for(let i=ev.resultIndex;i<ev.results.length;i++){const text=String(ev.results[i][0].transcript||'');if(ev.results[i].isFinal)fin+=text;else interim+=text;}
+    if(interim.trim())_callHFSawInterim=true;const t=(fin||'').trim();if(t){const key=t.toLowerCase().replace(/[\s，。、！？!?,.~～…：:；;（）()「」『』“”'"\-—]/g,''),now=Date.now(),stale=!!key&&key===_callHFLastFinal&&!_callHFSawInterim&&now-_callHFLastFinalAt<30000;_callHFSawInterim=false;if(stale)return;_callHFLastFinal=key;_callHFLastFinalAt=now;const meta={screenFrameToken:String(ev.screenFrameToken||''),screenFrameAt:+ev.screenFrameAt||0,screenFrameSequence:+ev.screenFrameSequence||0};if(_callHFBusy||_callBusy){_callHFPending.push({text:t,meta});_callHFPending=_callHFPending.slice(-3);return;}if(_call){_call.sub={who:'me',text:t};updateCallSub();}hfHeard(t,meta);}
     else{const it=interim.trim();if(it&&!_callHFBusy&&!_callBusy&&_call){_call.sub={who:'me',text:it};updateCallSub();}}};
   sr.onerror=e=>{if(_callHF&&(e.error==='no-speech'||e.error==='aborted'||e.error==='network'))setTimeout(hfRestart,500);};
   sr.onend=()=>{if(_callHF)setTimeout(hfRestart,300);};/* 只有系统自己把识别结束了才重启(少数情况),正常一轮一轮不重启 */
@@ -10621,7 +10620,7 @@ function callHFStart(){audioMicRouteCancel();const sr=makeSR();if(!sr){toast('�
 function hfRestart(){if(!_callHF||!_call)return;try{_callSR&&_callSR.start();}catch(e){}}
 async function callHFPauseForRoleAudio(){/* 原生 voice processing 负责回声抑制；角色播音期间保持话筒持续工作，允许用户插话。 */return false;}
 async function callHFResumeAfterRoleAudio(sess){return!!(_callHF&&_call&&_call.session===sess&&_callSR);}
-function callHFStop(){_callHF=false;_callHFBusy=false;_callHFPending=[];_callHFRoleEchoes=[];_hfIgnoreUntil=0;_callHFLastFinal='';_callHFLastFinalAt=0;_callHFSawInterim=false;try{if(_callSR){_callSR.onend=null;_callSR.onresult=null;_callSR.onerror=null;if(typeof _callSR.abort==='function')_callSR.abort();else _callSR.stop();}}catch(e){}_callSR=null;audioMicRouteCancel();audioMarkWakeRequired();}
+function callHFStop(){_callHF=false;_callHFBusy=false;_callHFPending=[];_hfIgnoreUntil=0;_callHFLastFinal='';_callHFLastFinalAt=0;_callHFSawInterim=false;try{if(_callSR){_callSR.onend=null;_callSR.onresult=null;_callSR.onerror=null;if(typeof _callSR.abort==='function')_callSR.abort();else _callSR.stop();}}catch(e){}_callSR=null;audioMicRouteCancel();audioMarkWakeRequired();}
 async function hfHeard(t,meta){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他回复时不停识别、只忽略结果，所以不会有开关麦克风的声音 */
   const id=_call.id,um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};if(!wechatNaturalOn())suspicionOnUserMsg(id,um);msgs(id).push(um);save();
   _call.sub={who:'me',text:t};updateCallSub();
@@ -10821,7 +10820,7 @@ async function prepareCallSpeech(text,c,opt){opt=opt||{};const attempts=opt.shor
 function callPrefetchSpeech(rows,c,stillActive){rows=Array.isArray(rows)?rows:[];const slots=rows.map(()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve};});let next=0;const worker=async()=>{while(next<rows.length){const i=next++,row=rows[i]||{};if(!row.spoken||stillActive&&!stillActive()){slots[i].resolve(null);continue;}const ready=await prepareCallSpeech(row.spoken,c,{cue:row.cue,interjection:row.interjection,quiet:true});if(stillActive&&!stillActive()){if(ready&&ready.ab)await ttsRefundAudio(ready.ab,'call-prefetch-cancelled');slots[i].resolve(null);}else slots[i].resolve(ready);}};if(rows.length)worker();return slots.map(x=>x.promise);}
 async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;const t=ttsSentencePauseText(ttsSafeProsody(ttsCleanBase(text),c),c);
   if(!t)return new Promise(r=>setTimeout(r,1100));
-  let started=false;const start=durationMs=>{if(started)return;started=true;callHFRememberRoleSpeech(text,durationMs);if(opt.onAudioStart)try{opt.onAudioStart(durationMs);}catch(_){}};
+  let started=false;const start=durationMs=>{if(started)return;started=true;if(opt.onAudioStart)try{opt.onAudioStart(durationMs);}catch(_){}};
   if(ttsApiOn()){const ready=opt.prepared?await opt.prepared:await prepareCallSpeech(text,c,opt);if(ready&&ready.buf){if(opt.cacheMessage)await callReplayStoreAudio(opt.cacheMessage,ready.ab,ready.buf.duration);await playCallMediaWait(ready.ab,ready.buf,start);}return;}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);u.rate=1;if(v){u.rate=voiceRate(v);u.pitch=voicePitch(v);u.volume=1;applySystemVoice(u,v);}const expected=Math.max(900,Math.min(12000,t.length*185/Math.max(.5,u.rate||1)));u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);start(expected);setTimeout(res,expected+800);}catch(e){res();}});}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';

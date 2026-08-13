@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v918 and private 1.0.42 versions align',()=>{
-  assert.match(app,/APP_VER='v918 · 通话字幕、降噪与宠物回窝修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 42;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.42;/);
+test('v919 and private 1.0.43 versions align',()=>{
+  assert.match(app,/APP_VER='v919 · 通话声音与输入框回归修复'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 43;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.43;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

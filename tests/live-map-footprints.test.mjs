@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
@@ -65,6 +65,6 @@ assert.match(html, /\.lmzones path/);
 assert.match(html, /\.lmroutes path/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmzones"/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmroutes"/);
-assert.match(html, /app\.js\?v=918/);
+assert.match(html, /app\.js\?v=919/);
 
 console.log('live map footprint tests passed');

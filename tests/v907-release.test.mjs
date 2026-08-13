@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -12,12 +12,12 @@ const migration = read('supabase/migrations/202608130001_background_app_watch_te
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v918 and private 1.0.42 versions are aligned', () => {
-  assert.match(app, /APP_VER='v918 · 通话字幕、降噪与宠物回窝修复'/);
-  assert.match(html, /app\.js\?v=918/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 42;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.42;/);
-  assert.match(nativeWeb, /1\.0\.42 \(42\)/);
+test('v919 and private 1.0.43 versions are aligned', () => {
+  assert.match(app, /APP_VER='v919 · 通话声音与输入框回归修复'/);
+  assert.match(html, /app\.js\?v=919/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 43;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.43;/);
+  assert.match(nativeWeb, /1\.0\.43 \(43\)/);
 });
 
 test('Apple compatibility alone moves call identity and mood updates live', () => {

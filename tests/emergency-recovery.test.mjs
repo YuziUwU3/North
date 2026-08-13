@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
@@ -80,9 +80,9 @@ test('automatic safety snapshot rejects an out-of-order older write',async()=>{
 test('v914 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v918 · 通话字幕、降噪与宠物回窝修复'/);
-  assert.match(html,/app\.js\?v=918/);
-  assert.match(sw,/BUILD='918'/);
+  assert.match(app,/APP_VER='v919 · 通话声音与输入框回归修复'/);
+  assert.match(html,/app\.js\?v=919/);
+  assert.match(sw,/BUILD='919'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{

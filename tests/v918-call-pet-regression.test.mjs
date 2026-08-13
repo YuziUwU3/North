@@ -20,21 +20,22 @@ test('user and role subtitles both use the v700 complete-phrase reveal', () => {
   assert.match(pip, /length > 130 \? 9\.5 : \(length > 80 \? 11 : 14\)/);
 });
 
-test('role audio remains playable while the mixed call audio session stays stable', () => {
+test('role audio reactivates the mixed call session immediately before every native playback', () => {
   assert.match(pip, /func playAudio\(data: Data/);
   assert.match(pip, /guard player\.play\(\)/);
   assert.match(pip, /options: \[\.defaultToSpeaker, \.allowBluetoothHFP, \.mixWithOthers\]/);
-  assert.doesNotMatch(pip.match(/func playAudio[\s\S]*?func stopAudio/)?.[0] ?? '', /activateCallAudio\(\)/);
+  assert.match(pip.match(/func playAudio[\s\S]*?func stopAudio/)?.[0] ?? '', /stopAudio\(\)[\s\S]*?activateCallAudio\(\)[\s\S]*?AVAudioPlayer/);
   assert.match(bridge, /if !audioSessionConfigured/);
 });
 
-test('native speech rejects silence and role playback without disabling interruption', () => {
+test('hands-free final results use the last verified v917 queue path', () => {
   assert.match(bridge, /lastVoiceActivityAt/);
   assert.match(bridge, /rms >= 0\.008/);
   assert.match(bridge, /event\["voiceActivity"\]/);
   assert.match(webView, /voiceActivity: payload\.voiceActivity !== false/);
-  assert.match(app, /function callHFLooksLikePlayback\(text,confidence,voiceActivity\)/);
-  assert.match(app, /busy&&\(!sawInterim\|\|voiceActivity===false/);
+  assert.doesNotMatch(app, /function callHFLooksLikePlayback/);
+  assert.doesNotMatch(app, /callHFRememberRoleSpeech/);
+  assert.match(app, /if\(_callHFBusy\|\|_callBusy\)\{_callHFPending\.push/);
   assert.match(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
 });
 

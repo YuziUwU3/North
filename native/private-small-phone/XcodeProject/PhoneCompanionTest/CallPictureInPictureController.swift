@@ -132,6 +132,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
 
     func playAudio(data: Data, volume: Float, completion: @escaping (Bool) -> Void) {
         stopAudio()
+        activateCallAudio()
         do {
             let player = try AVAudioPlayer(data: data)
             player.delegate = self
