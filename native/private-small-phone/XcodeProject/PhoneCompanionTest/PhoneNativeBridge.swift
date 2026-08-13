@@ -4,12 +4,13 @@ import CryptoKit
 import Foundation
 import Security
 import Speech
+import UIKit
 import WebKit
 
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 14
+    static let contractVersion = 15
 
     weak var webView: WKWebView? {
         didSet {
@@ -20,6 +21,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
     private var pendingSpeechEvents: [[String: Any]] = []
+    private var visionBackgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -120,6 +122,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 return
             }
             reply(requestID: requestID, result: ["dataURL": dataURL])
+        case "screenShare.vision.complete":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let token = arguments["token"] as? String ?? ""
+            finishVisionBackgroundTask(token: token)
+            reply(requestID: requestID, result: ["finished": true])
         case "call.pip.start", "call.pip.update":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             let name = arguments["name"] as? String ?? "角色"
@@ -319,6 +326,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             enriched["eventId"] = UUID().uuidString
             if let frozen = ScreenShareCoordinator.shared.freezeLatestFrame() {
                 enriched.merge(frozen) { _, new in new }
+                if let token = frozen["screenFrameToken"] as? String {
+                    beginVisionBackgroundTask(token: token)
+                }
             }
             pendingSpeechEvents.append(enriched)
             if pendingSpeechEvents.count > 8 {
@@ -333,6 +343,30 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         webView?.evaluateJavaScript(
             "window.__smallPhoneNativeSpeechEvent && window.__smallPhoneNativeSpeechEvent(\(json));"
         )
+    }
+
+    private func beginVisionBackgroundTask(token: String) {
+        guard !token.isEmpty, visionBackgroundTasks[token] == nil else {
+            return
+        }
+        var taskID = UIBackgroundTaskIdentifier.invalid
+        taskID = UIApplication.shared.beginBackgroundTask(
+            withName: "ScreenShareVision-\(token.prefix(8))"
+        ) { [weak self] in
+            Task { @MainActor in
+                self?.finishVisionBackgroundTask(token: token)
+            }
+        }
+        guard taskID != .invalid else { return }
+        visionBackgroundTasks[token] = taskID
+    }
+
+    private func finishVisionBackgroundTask(token: String) {
+        guard !token.isEmpty,
+              let taskID = visionBackgroundTasks.removeValue(
+                  forKey: token
+              ) else { return }
+        UIApplication.shared.endBackgroundTask(taskID)
     }
 
     private func performStorageAction(

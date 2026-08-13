@@ -267,6 +267,16 @@ final class CompanionPushAppDelegate: NSObject,
         didReceive response: UNNotificationResponse
     ) async {
         await clearAppBadge()
+        if #available(iOS 26.0, *),
+           let alarm = response.notification.request.content
+            .userInfo["smallPhoneAlarm"] as? [String: Any] {
+            await MainActor.run {
+                NativeAlarmService.shared.recordInteractedRoleAlarm(
+                    alarm,
+                    deliveredAt: response.notification.date
+                )
+            }
+        }
         guard let rolePush = response.notification.request.content
             .userInfo["rolePush"] as? [String: Any],
               let roleID = rolePush["roleId"] as? String,

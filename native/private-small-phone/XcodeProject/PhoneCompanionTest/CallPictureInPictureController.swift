@@ -14,6 +14,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     private let nameLabel = UILabel()
     private let stateLabel = UILabel()
     private let subtitleLabel = UILabel()
+    private var subtitleAnimator: UIViewPropertyAnimator?
     private var audioPlayer: AVAudioPlayer?
     private var audioCompletion: ((Bool) -> Void)?
 
@@ -54,7 +55,29 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     func update(name: String, kind: String, subtitle: String, screenSharing: Bool) {
         nameLabel.text = name.isEmpty ? "角色" : name
         stateLabel.text = screenSharing ? "屏幕共享中" : (kind == "video" ? "视频通话" : "语音通话")
+        updateSubtitle(subtitle)
+    }
+
+    private func updateSubtitle(_ subtitle: String) {
+        guard subtitleLabel.text != subtitle else { return }
+        subtitleAnimator?.stopAnimation(true)
+        subtitleLabel.layer.removeAllAnimations()
         subtitleLabel.text = subtitle
+        subtitleLabel.alpha = 0
+        subtitleLabel.transform = CGAffineTransform(
+            translationX: 0,
+            y: 8
+        )
+        let animator = UIViewPropertyAnimator(
+            duration: 0.3,
+            controlPoint1: CGPoint(x: 0.25, y: 0.1),
+            controlPoint2: CGPoint(x: 0.25, y: 1)
+        ) {
+            self.subtitleLabel.alpha = 1
+            self.subtitleLabel.transform = .identity
+        }
+        subtitleAnimator = animator
+        animator.startAnimation()
     }
 
     func end() {

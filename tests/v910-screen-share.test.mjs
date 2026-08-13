@@ -14,10 +14,10 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v911 · 后台共享取帧与软件查看真修复'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 35;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.35;/);
-  assert.match(bridge, /contractVersion = 14/);
+  assert.match(app, /APP_VER='v912 · 后台识图续跑与自然字幕'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 36;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.36;/);
+  assert.match(bridge, /contractVersion = 15/);
 });
 
 test('video call can switch recognition source to screen share', () => {
