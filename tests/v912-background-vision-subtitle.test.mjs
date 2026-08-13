@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
@@ -11,10 +11,10 @@ const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('v914 release versions align', () => {
-  assert.match(app, /APP_VER='v914 · 悬浮通话透视与免登录在线音乐'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='914'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 38;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.38;/);
+  assert.match(app, /APP_VER='v915 · 后台共享取帧与悬浮字幕空间修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='915'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 39;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.39;/);
   assert.match(bridge, /contractVersion = 16/);
 });
 

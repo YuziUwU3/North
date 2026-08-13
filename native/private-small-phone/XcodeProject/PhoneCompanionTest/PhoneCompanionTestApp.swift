@@ -185,6 +185,7 @@ final class CompanionPushAppDelegate: NSObject,
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
+            ScreenShareCoordinator.shared.setHostForeground(true)
             await clearAppBadge()
             CompanionPushCoordinator.shared.setBackgroundWakeHandler {
                 let service = CompanionSyncService.shared
@@ -209,7 +210,25 @@ final class CompanionPushAppDelegate: NSObject,
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         Task { @MainActor in
+            ScreenShareCoordinator.shared.setHostForeground(true)
             await clearAppBadge()
+        }
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        Task { @MainActor in
+            ScreenShareCoordinator.shared.setHostForeground(false)
+        }
+    }
+
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        Task { @MainActor in
+            // Preserve the external frame until the web call consumes it;
+            // only the foreground flag changes here.
+            UserDefaults(suiteName: ScreenShareCoordinator.appGroup)?.set(
+                true,
+                forKey: "screenShare.hostForeground.v1"
+            )
         }
     }
 

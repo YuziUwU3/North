@@ -20,7 +20,8 @@ test('screen-share state is polled and owns a protected call queue', () => {
 test('optional realtime understanding reacts only to changed shared frames', () => {
   assert.match(app, /实时共享理解（测试）/);
   assert.match(app, /function callScreenFrameChanged\(next,prev\)/);
-  assert.match(app, /setInterval\(\(\)=>callScreenRealtimeTick\(sess\),4000\)/);
+  assert.match(app, /_callScreenRealtimeTimer=setInterval\(tick,4000\)/);
+  assert.match(app, /_callScreenObserveMode!=='observing'/);
   assert.match(app, /callVideoVisionAnalyze\('live'/);
   assert.match(app, /screenShare\.realtime\.frame/);
   assert.match(bridge, /case "screenShare\.realtime\.frame"/);
@@ -41,7 +42,7 @@ test('expanded call subtitles use natural motion without an empty glass panel', 
   assert.match(html, /\.callsub\{[^}]*padding:0 26px[^}]*min-height:60px/);
   assert.match(html, /\.callsub:empty\{display:none\}/);
   assert.doesNotMatch(html, /\.callsub\{[^}]*backdrop-filter/);
-  assert.match(pip, /preferredContentSize = CGSize\(width: 360, height: 176\)/);
-  assert.match(pip, /alpha: 0\.38/);
-  assert.match(pip, /centerYAnchor\.constraint\(equalTo: root\.centerYAnchor, constant: -7\)/);
+  assert.match(pip, /preferredContentSize = CGSize\(width: 360, height: 144\)/);
+  assert.match(pip, /root\.backgroundColor = \.clear/);
+  assert.match(pip, /stack\.topAnchor\.constraint\(equalTo: root\.topAnchor, constant: 10\)/);
 });

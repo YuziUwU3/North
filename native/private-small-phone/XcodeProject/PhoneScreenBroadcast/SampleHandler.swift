@@ -55,6 +55,19 @@ final class SampleHandler: RPBroadcastSampleHandler {
         let url = base.appendingPathComponent("screen-share-latest.jpg")
         try? data.write(to: url, options: .atomic)
         let defaults = UserDefaults(suiteName: appGroup)
+        if defaults?.bool(forKey: "screenShare.hostForeground.v1") != true {
+            let backgroundURL = base.appendingPathComponent(
+                "screen-share-background-latest.jpg"
+            )
+            do {
+                try data.write(to: backgroundURL, options: .atomic)
+                defaults?.set(true, forKey: "screenShare.backgroundFrameReady.v1")
+                defaults?.set(now * 1000, forKey: "screenShare.backgroundFrameAt.v1")
+            } catch {
+                // The ordinary latest frame remains available. A failed
+                // handoff write must never terminate the user's broadcast.
+            }
+        }
         defaults?.set(now * 1000, forKey: "screenShare.frameAt.v1")
         defaults?.set((defaults?.integer(forKey: "screenShare.sequence.v1") ?? 0) + 1,
                       forKey: "screenShare.sequence.v1")
@@ -76,5 +89,13 @@ final class SampleHandler: RPBroadcastSampleHandler {
         try? FileManager.default.removeItem(
             at: base.appendingPathComponent("screen-share-latest.jpg")
         )
+        try? FileManager.default.removeItem(
+            at: base.appendingPathComponent(
+                "screen-share-background-latest.jpg"
+            )
+        )
+        let defaults = UserDefaults(suiteName: appGroup)
+        defaults?.set(false, forKey: "screenShare.backgroundFrameReady.v1")
+        defaults?.synchronize()
     }
 }

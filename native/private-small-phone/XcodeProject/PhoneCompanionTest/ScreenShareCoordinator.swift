@@ -16,6 +16,28 @@ final class ScreenShareCoordinator {
     private var lastRealtimeNotifyAt: TimeInterval = 0
     private var picker: RPSystemBroadcastPickerView?
 
+    func setHostForeground(_ foreground: Bool) {
+        let defaults = UserDefaults(suiteName: Self.appGroup)
+        defaults?.set(foreground, forKey: "screenShare.hostForeground.v1")
+        if !foreground {
+            // Start a fresh external-App handoff window. The broadcast
+            // extension will keep a separate last frame while the host App is
+            // in the background, so returning to the call screen cannot
+            // overwrite the frame the role needs to inspect.
+            defaults?.set(false, forKey: "screenShare.backgroundFrameReady.v1")
+            if let base = FileManager.default.containerURL(
+                forSecurityApplicationGroupIdentifier: Self.appGroup
+            ) {
+                try? FileManager.default.removeItem(
+                    at: base.appendingPathComponent(
+                        "screen-share-background-latest.jpg"
+                    )
+                )
+            }
+        }
+        defaults?.synchronize()
+    }
+
     func attach(to webView: WKWebView?) {
         self.webView = webView
         guard webView != nil else {
@@ -35,7 +57,13 @@ final class ScreenShareCoordinator {
         let defaults = UserDefaults(suiteName: Self.appGroup)
         return [
             "active": defaults?.bool(forKey: "screenShare.active.v1") ?? false,
-            "frameAt": defaults?.double(forKey: "screenShare.frameAt.v1") ?? 0
+            "frameAt": defaults?.double(forKey: "screenShare.frameAt.v1") ?? 0,
+            "backgroundFrameReady": defaults?.bool(
+                forKey: "screenShare.backgroundFrameReady.v1"
+            ) ?? false,
+            "backgroundFrameAt": defaults?.double(
+                forKey: "screenShare.backgroundFrameAt.v1"
+            ) ?? 0
         ]
     }
 
@@ -91,7 +119,15 @@ final class ScreenShareCoordinator {
               let base = FileManager.default.containerURL(
                   forSecurityApplicationGroupIdentifier: Self.appGroup
               ) else { return nil }
-        let source = base.appendingPathComponent("screen-share-latest.jpg")
+        let backgroundSource = base.appendingPathComponent(
+            "screen-share-background-latest.jpg"
+        )
+        let useBackground = defaults?.bool(
+            forKey: "screenShare.backgroundFrameReady.v1"
+        ) == true && FileManager.default.fileExists(atPath: backgroundSource.path)
+        let source = useBackground
+            ? backgroundSource
+            : base.appendingPathComponent("screen-share-latest.jpg")
         guard let data = try? Data(contentsOf: source), !data.isEmpty else {
             return nil
         }
@@ -104,12 +140,17 @@ final class ScreenShareCoordinator {
         } catch {
             return nil
         }
+        if useBackground {
+            defaults?.set(false, forKey: "screenShare.backgroundFrameReady.v1")
+            try? FileManager.default.removeItem(at: backgroundSource)
+        }
         cleanupFrozenFrames(in: base, keeping: target)
         return [
             "screenFrameToken": token,
-            "screenFrameAt": defaults?.double(
-                forKey: "screenShare.frameAt.v1"
-            ) ?? 0,
+            "screenFrameAt": defaults?.double(forKey: useBackground
+                ? "screenShare.backgroundFrameAt.v1"
+                : "screenShare.frameAt.v1") ?? 0,
+            "screenFrameSource": useBackground ? "externalApp" : "latest",
             "screenFrameSequence": defaults?.integer(
                 forKey: "screenShare.sequence.v1"
             ) ?? 0

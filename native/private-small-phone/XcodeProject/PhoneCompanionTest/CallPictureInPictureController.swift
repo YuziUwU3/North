@@ -35,7 +35,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             sourceView = source
 
             let videoCall = AVPictureInPictureVideoCallViewController()
-            videoCall.preferredContentSize = CGSize(width: 360, height: 176)
+            videoCall.preferredContentSize = CGSize(width: 360, height: 144)
             configureContent(in: videoCall.view)
             contentController = videoCall
 
@@ -149,18 +149,18 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
 
     private func configureContent(in root: UIView) {
         root.isOpaque = false
-        root.backgroundColor = UIColor(red: 0.045, green: 0.05, blue: 0.072, alpha: 0.38)
-        root.layer.cornerRadius = 20
-        root.layer.masksToBounds = true
-        root.layer.borderWidth = 0.7
-        root.layer.borderColor = UIColor.white.withAlphaComponent(0.16).cgColor
-        nameLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        // The system owns the outer PiP surface. Keep our content fully clear;
+        // iOS may still provide its own black backing, but the App must not add
+        // a second opaque panel that hides the screen underneath.
+        root.backgroundColor = .clear
+        root.layer.borderWidth = 0
+        nameLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         nameLabel.textColor = .white
         nameLabel.textAlignment = .center
         stateLabel.font = .systemFont(ofSize: 11, weight: .medium)
         stateLabel.textColor = UIColor.white.withAlphaComponent(0.62)
         stateLabel.textAlignment = .center
-        subtitleLabel.font = .systemFont(ofSize: 15, weight: .medium)
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .medium)
         subtitleLabel.textColor = .white
         subtitleLabel.textAlignment = .center
         subtitleLabel.numberOfLines = 4
@@ -168,18 +168,28 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         subtitleLabel.minimumScaleFactor = 0.72
         subtitleLabel.isHidden = true
 
+        [nameLabel, stateLabel, subtitleLabel].forEach { label in
+            label.layer.shadowColor = UIColor.black.cgColor
+            label.layer.shadowOpacity = 0.72
+            label.layer.shadowRadius = 2.5
+            label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        }
+
         let stack = UIStackView(arrangedSubviews: [nameLabel, stateLabel, subtitleLabel])
         stack.axis = .vertical
         stack.alignment = .fill
-        stack.spacing = 5
+        stack.spacing = 3
         stack.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(stack)
-        let subtitleHeight = subtitleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 42)
+        nameLabel.setContentHuggingPriority(.required, for: .vertical)
+        stateLabel.setContentHuggingPriority(.required, for: .vertical)
+        let subtitleHeight = subtitleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 56)
         subtitleMinimumHeight = subtitleHeight
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
-            stack.centerYAnchor.constraint(equalTo: root.centerYAnchor, constant: -7)
+            stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 10),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor, constant: -8)
         ])
     }
 }

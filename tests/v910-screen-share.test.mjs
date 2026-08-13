@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -14,9 +14,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v914 · 悬浮通话透视与免登录在线音乐'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 38;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.38;/);
+  assert.match(app, /APP_VER='v915 · 后台共享取帧与悬浮字幕空间修复'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 39;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.39;/);
   assert.match(bridge, /contractVersion = 16/);
 });
 
