@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 16
+    static let contractVersion = 17
 
     weak var webView: WKWebView? {
         didSet {
@@ -134,7 +134,13 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             beginVisionBackgroundTask(token: token)
             reply(
                 requestID: requestID,
-                result: ["dataURL": dataURL, "token": token]
+                result: [
+                    "dataURL": dataURL,
+                    "token": token,
+                    "sequence": frozen["screenFrameSequence"] as? Int ?? 0,
+                    "frameAt": frozen["screenFrameAt"] as? Double ?? 0,
+                    "source": frozen["screenFrameSource"] as? String ?? "latest"
+                ]
             )
         case "screenShare.vision.complete":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
@@ -1320,7 +1326,7 @@ private final class NativeSpeechRecognitionController {
         try audioSession.setCategory(
             .playAndRecord,
             mode: .voiceChat,
-            options: [.defaultToSpeaker, .allowBluetoothHFP]
+            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
         )
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
@@ -1385,7 +1391,9 @@ private final class NativeSpeechRecognitionController {
         }
         let session = sessionID
         partialCommitTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 1_150_000_000)
+            // Give Apple's partial transcription enough time to revise the
+            // last words before they are committed to the conversation.
+            try? await Task.sleep(nanoseconds: 1_650_000_000)
             guard !Task.isCancelled else { return }
             guard let self,
                   self.sessionID == session,

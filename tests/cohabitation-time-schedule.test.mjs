@@ -86,7 +86,7 @@ test('common life shows a live calendar and reuses the editable role schedule',(
   const system=functionSource('cohabSystem'),online=functionSource('cohabWechatPrompt'),panel=functionSource('cohabSettingsPanel'),schedule=functionSource('schedSet'),render=functionSource('renderCohab');
   assert.match(system,/timeAwarenessPrompt\(S\.me\.name,'cohab'\)/);
   assert.match(system,/roleSchedulePrompt\(c\)/);
-  assert.match(system,/真正离开后再输出上班状态/);
+  assert.match(system,/作息表会按真实钟点自动把共同生活状态推进/);
   assert.match(panel,/作息时间表/);
   assert.match(panel,/schedSet\('\$\{id\}'\)/);
   assert.match(panel,/roleScheduleBrief\(c\)/);

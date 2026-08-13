@@ -142,7 +142,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         try? session.setCategory(
             .playAndRecord,
             mode: .voiceChat,
-            options: [.defaultToSpeaker, .allowBluetoothHFP]
+            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
         )
         try? session.setActive(true)
     }

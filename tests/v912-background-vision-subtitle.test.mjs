@@ -10,12 +10,12 @@ const alarm = fs.readFileSync(new URL('../native/private-small-phone/XcodeProjec
 const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneCompanionTestApp.swift', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v914 release versions align', () => {
-  assert.match(app, /APP_VER='v915 · 后台共享取帧与悬浮字幕空间修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='915'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 39;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.39;/);
-  assert.match(bridge, /contractVersion = 16/);
+test('current release versions align', () => {
+  assert.match(app, /APP_VER='v916 · 自主共享观察与通话音频修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='916'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 40;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.40;/);
+  assert.match(bridge, /contractVersion = 17/);
 });
 
 test('shared-screen vision owns a finite native background task', () => {
@@ -28,10 +28,12 @@ test('shared-screen vision owns a finite native background task', () => {
   assert.match(app, /finally\{callNativeScreenVisionComplete\(frameToken\)/);
 });
 
-test('main call subtitles replay the original animation on every update', () => {
+test('main call subtitles progressively reveal corrected characters', () => {
   assert.match(html, /\.csline\{[^}]*animation:csin \.3s ease/);
   assert.match(html, /@keyframes csin\{from\{opacity:0;transform:translateY\(8px\)\}to\{opacity:1;transform:translateY\(0\)\}\}/);
-  assert.match(app, /duration:300,easing:'cubic-bezier\(\.25,\.1,\.25,1\)'/);
+  assert.match(html, /@keyframes cscharin/);
+  assert.match(app, /function callSubtitleChars/);
+  assert.match(app, /text\.startsWith\(old\)/);
 });
 
 test('native floating subtitles mirror the original timing and movement', () => {

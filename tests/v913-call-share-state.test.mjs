@@ -17,16 +17,18 @@ test('screen-share state is polled and owns a protected call queue', () => {
   assert.match(app, /if\(_callStatePend&&_call&&_call\.state==='active'\)/);
 });
 
-test('optional realtime understanding reacts only to changed shared frames', () => {
+test('optional realtime understanding is role-paced and reacts only to changed shared frames', () => {
   assert.match(app, /实时共享理解（测试）/);
   assert.match(app, /function callScreenFrameChanged\(next,prev\)/);
-  assert.match(app, /_callScreenRealtimeTimer=setInterval\(tick,4000\)/);
+  assert.match(app, /_callScreenRealtimeTimer=setTimeout\(tick,wait\)/);
+  assert.doesNotMatch(app, /_callScreenRealtimeTimer=setInterval\(tick,4000\)/);
+  assert.match(app, /decision!=='继续'/);
   assert.match(app, /_callScreenObserveMode!=='observing'/);
   assert.match(app, /callVideoVisionAnalyze\('live'/);
   assert.match(app, /screenShare\.realtime\.frame/);
   assert.match(bridge, /case "screenShare\.realtime\.frame"/);
   assert.match(coordinator, /__smallPhoneScreenShareFrameEvent/);
-  assert.match(bridge, /contractVersion = 16/);
+  assert.match(bridge, /contractVersion = 17/);
 });
 
 test('share-start response is isolated from the previous user sentence', () => {
@@ -38,7 +40,8 @@ test('share-start response is isolated from the previous user sentence', () => {
 });
 
 test('expanded call subtitles use natural motion without an empty glass panel', () => {
-  assert.match(app, /duration:300,easing:'cubic-bezier\(\.25,\.1,\.25,1\)'/);
+  assert.match(app, /function callSubtitleChars\(text,start\)/);
+  assert.match(html, /\.cschar\{[^}]*animation:cscharin \.42s/);
   assert.match(html, /\.callsub\{[^}]*padding:0 26px[^}]*min-height:60px/);
   assert.match(html, /\.callsub:empty\{display:none\}/);
   assert.doesNotMatch(html, /\.callsub\{[^}]*backdrop-filter/);
