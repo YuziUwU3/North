@@ -1,8 +1,8 @@
 /* 高级玻璃材质预览：原配色由既有主题决定，这里只替换容器材质与层级。 */
 html.north-glass-ui{--ng-blur:28px;--ng-sat:155%;--ng-line:rgba(255,255,255,.22);--ng-line-soft:rgba(255,255,255,.11);--ng-shadow:0 18px 44px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.18);--ng-dark:rgba(30,27,34,.57);--ng-dark-strong:rgba(25,22,29,.72);--ng-light:rgba(255,255,255,.56);--ng-light-strong:rgba(255,255,255,.7)}
 html.north-glass-ui .glass-app{isolation:isolate}
-html.north-glass-ui .home .app:not(.app-locked) .ic.glass-pack-icon,
-html.north-glass-ui .home:not(.tpink):not(.twhite) .app:not(.app-locked) .ic.glass-pack-icon{background:transparent!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
+html.north-glass-ui .home .app .ic.glass-pack-icon,
+html.north-glass-ui .home:not(.tpink):not(.twhite) .app .ic.glass-pack-icon{background:transparent!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
 html.north-glass-ui .home .app .ic.glass-pack-icon>img{inset:0!important;width:100%!important;height:100%!important;max-width:100%!important;object-fit:contain!important;object-position:50% 50%!important;border-radius:inherit;filter:none;transform:none}
 html.north-glass-ui .glass-app>.nav,
 html.north-glass-ui .glass-app>.tabbar,

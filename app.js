@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='928'){
+if(window.__NORTH_SHELL_BUILD__!=='929'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -362,7 +362,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v928 · 安卓拖拽与苹果网页安全区修复';
+const APP_VER='v929 · 苹果网页底栏与锁定图标修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1419,7 +1419,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=928';
+  const url='sw.js?v=929';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2744,7 +2744,7 @@ function appleHomeCompatNative(){return typeof window!=='undefined'&&window.__SM
 function appleHomeCompatBrowserEnvironment(){const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
 function appleHomeCompatEnvironment(){return appleHomeCompatNative()||appleHomeCompatBrowserEnvironment();}
 function appleHomeCompatOn(){return !!(S.settings&&S.settings.appleHomeCompat);}
-function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,pwa=appleHomeCompatBrowserEnvironment(),on=appleHomeCompatEnvironment()&&appleHomeCompatOn(),browser=pwa&&on;if(root&&root.classList){root.classList.toggle('north-ios-pwa-shell',pwa);root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',on);}return on;}
+function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,pwa=appleHomeCompatBrowserEnvironment(),on=appleHomeCompatEnvironment()&&appleHomeCompatOn(),browser=pwa&&on;if(root&&root.classList){root.classList.toggle('north-ios-pwa-shell',browser);root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',on);}return on;}
 function appleHomeCompatToggle(){S.settings=S.settings||{};S.settings.appleHomeCompat=!appleHomeCompatOn();applyAppleHomeCompat();save();render();toast(S.settings.appleHomeCompat?(appleHomeCompatEnvironment()?'苹果兼容适配已开启':'设置已保存；只会在苹果主屏幕或私人 App 生效'):'苹果兼容适配已关闭，已恢复原位置');}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
 function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}return on;}

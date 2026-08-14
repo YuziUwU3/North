@@ -7,11 +7,11 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v928 web fix leaves private 1.0.53 untouched', () => {
-  assert.match(app, /APP_VER='v928 · 安卓拖拽与苹果网页安全区修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='928'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 53;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.53;/g) || []).length, 12);
+test('v929 web and private 1.0.54 releases are aligned', () => {
+  assert.match(app, /APP_VER='v929 · 苹果网页底栏与锁定图标修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='929'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 54;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.54;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {
@@ -24,7 +24,9 @@ test('first glass page reserves a non-shrinking line box for every app name', ()
 
 test('iOS home-screen shell paints the bottom safe area without affecting Android or the private app', () => {
   assert.match(html, /html\.north-ios-pwa-shell \.phone\{[^}]*bottom:calc\(0px - var\(--north-ios-pwa-bottom\)\)/);
-  assert.match(app, /root\.classList\.toggle\('north-ios-pwa-shell',pwa\)/);
+  assert.match(html, /--north-ios-home-safe-bottom:max\(env\(safe-area-inset-bottom,0px\),34px\)/);
+  assert.match(html, /html\.north-ios-home-safe \.tabbar\{[^}]*padding-bottom:var\(--north-ios-home-safe-bottom\)/);
+  assert.match(app, /root\.classList\.toggle\('north-ios-pwa-shell',browser\)/);
   assert.match(app, /root\.classList\.toggle\('north-ios-home-safe',browser\)/);
   assert.match(app, /pwa=appleHomeCompatBrowserEnvironment\(\),on=/);
   assert.match(app, /browser=pwa&&on/);

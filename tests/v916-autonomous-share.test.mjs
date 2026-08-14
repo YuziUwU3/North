@@ -10,11 +10,11 @@ const bridge = read('../native/private-small-phone/XcodeProject/PhoneCompanionTe
 const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift');
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
-test('v928 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v928 · 安卓拖拽与苹果网页安全区修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='928'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 53;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.53;/);
+test('v929 web and private versions are aligned', () => {
+  assert.match(app, /APP_VER='v929 · 苹果网页底栏与锁定图标修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='929'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 54;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.54;/);
   assert.match(bridge, /contractVersion = 18/);
 });
 

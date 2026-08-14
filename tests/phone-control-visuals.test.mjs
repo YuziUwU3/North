@@ -9,8 +9,11 @@ const root = dirname(here);
 const app = readFileSync(join(root, 'app.js'), 'utf8');
 const html = readFileSync(join(root, '小手机.html'), 'utf8');
 
-test('locked apps are visually disabled without an emoji label', () => {
+test('locked apps keep their original icon and use no emoji label', () => {
   assert.ok(app.includes(`class="app home-item'+(locked?' app-locked':'')+'"`));
+  assert.match(html, /\.app\.app-locked\{cursor:not-allowed;opacity:1;\}/);
+  assert.doesNotMatch(html, /\.home \.app\.app-locked \.ic:before/);
+  assert.doesNotMatch(html, /\.home \.app\.app-locked \.ic>img[^}]*filter:grayscale/);
 });
 
 test('locked apps use an outlined red name-side lock and reject home-screen launches', () => {

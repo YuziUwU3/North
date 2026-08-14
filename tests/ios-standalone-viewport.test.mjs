@@ -59,10 +59,12 @@ test('manual safe-area mode stays Apple-only and the private app shares the expl
 test('Apple compatibility switch preserves the proven shell and targets the final rendered app headers',()=>{
   assert.match(functionSource('renderSettings'),/苹果兼容适配/);
   assert.match(functionSource('renderSettings'),/Safari 浏览器和安卓始终不受影响/);
-  assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:env\(safe-area-inset-bottom,0px\)\}/);
+  assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:max\(env\(safe-area-inset-bottom,0px\),34px\)\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');
   assert.match(html,/\.north-ios-home-safe \.home-premium-head\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.inputbar\{[^}]*var\(--north-ios-home-safe-bottom\)/);
+  assert.match(html,/\.north-ios-home-safe \.tabbar\{[^}]*min-height:calc\(54px \+ var\(--north-ios-home-safe-bottom\)\);[^}]*padding-bottom:var\(--north-ios-home-safe-bottom\)/);
+  assert.match(html,/\.north-ios-home-safe \.wx-premium>\.tabbar\{[^}]*height:calc\(58px \+ var\(--north-ios-home-safe-bottom\)\)/);
   assert.match(html,/\.north-ios-home-safe \.xnav\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.music-topbar\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.smshead\{[^}]*var\(--north-ios-home-safe-top\)/);

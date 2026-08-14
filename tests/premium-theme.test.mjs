@@ -100,5 +100,7 @@ test('WeChat keeps the formal dynamic, microphone and bottom-tab line paths',()=
 test('software lock rendering remains independent of the visual theme',()=>{
   assert.match(app,/const locked=!!\(a\.lk&&appLocked\(k\)\)/);
   assert.match(app,/if\(appLocked\(k\)\)\{toast\('「'\+\(LOCKABLE\[k\]\|\|k\)\+'」已被ta锁定/);
-  assert.match(html,/\.home \.app\.app-locked \.ic\{/);
+  assert.match(html,/\.app\.app-locked\{cursor:not-allowed;opacity:1;\}/);
+  assert.doesNotMatch(html,/\.home \.app\.app-locked \.ic:before/);
+  assert.doesNotMatch(html,/\.home \.app\.app-locked \.ic>img[^}]*grayscale/);
 });
