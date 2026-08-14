@@ -29,7 +29,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='940';</script>
+<script>window.__NORTH_SHELL_BUILD__='941';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -45,11 +45,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-940';
+  var key='north-sw-reloaded-941';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=940';
+  var url='sw.js?v=941';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1281,6 +1281,8 @@ html.north-native-app .phone{position:fixed;inset:0;width:100%;height:auto;min-h
 html.north-native-app .screen{width:100%;height:100%;min-height:0;max-height:none}
 /* iOS 26 WebKit：键盘会让 fixed 祖先的视觉位置与光标坐标脱节。只在角色聊天存在时改为同尺寸 absolute，其他页面、Android 与系统底栏不变。 */
 html.north-native-app .phone:has(.chat-inputbar),html.north-ios-home-safe .phone:has(.chat-inputbar){position:absolute}
+/* 同一 WebKit 问题也会影响整屏通话输入：只在苹果兼容环境且通话输入已显示时释放 fixed 坐标系；Android 不进入该规则。 */
+html.north-native-app .phone:has(.callscreen.show:not(.mini) .callinput.show),html.north-ios-home-safe .phone:has(.callscreen.show:not(.mini) .callinput.show){position:absolute}
   /* 私人 App 的电话页与已验证正常的网页版共用同一套输入、挂断和键盘整体位移。
      禁止在 north-native-app 下单独覆盖 callinput/callbtns，否则会与 WKWebView 的
      系统键盘动画形成两次布局，表现为打开或收起时上下闪跳。 */
@@ -1305,8 +1307,8 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px}
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=940">
-<link rel="stylesheet" href="pet-game.css?v=940">
+<link rel="stylesheet" href="glass-theme.css?v=941">
+<link rel="stylesheet" href="pet-game.css?v=941">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1356,12 +1358,12 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=940" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=940" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=940" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=940" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=940" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=940" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=940"></script>
+<script src="license-gate.js?v=941" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=941" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=941" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=941" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=941" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=941" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=941"></script>
 </body>
 </html>

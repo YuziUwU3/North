@@ -14,7 +14,7 @@ assert.match(source,/wechatRoleDrift\(content\)&&!_routeState\.fallback/);
 assert.match(source,/content:_stableSys/,'natural mode failures must use the complete stable prompt');
 assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|\|wechatAuxConfigured\(\)\}\)/);
 assert.match(source,/const fix=await wechatRoleRepair\(\[\{role:'system',content:_stableSys\}/,'role drift should use the bounded auxiliary repair helper');
-assert.match(source,/c\.model==='aux'\?'「'\+\(c\.remark\|\|c\.name\)\+'」改用副模型聊天了'[\s\S]{0,180},3000/,'manual model changes should remain visible for three seconds');
+assert.match(source,/toast\(c\.model==='aux'\?'已切换副模型':'已切换主模型',3000\)/,'manual model changes should use the short three-second notice');
 
 const calls=[];
 const notices=[];
@@ -39,7 +39,7 @@ const role={id:'c1'};
 sandbox.mode='throw';let directState={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, directState,{id:'direct-failure'}),'aux reply');
 assert.deepEqual(calls.splice(0),[false,true]);
-assert.deepEqual(notices.splice(0),[['本轮已切换到副模型',3000]],'the first request must announce a direct main-to-aux fallback');
+assert.deepEqual(notices.splice(0),[['已切换副模型',3000]],'the first request must announce a direct main-to-aux fallback');
 
 let state={fallback:false};
 sandbox.mode='normal';
@@ -52,18 +52,18 @@ sandbox.mode='throw';state={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, state,role),'aux reply');
 assert.deepEqual(calls.splice(0),[false,true]);
 assert.equal(state.fallback,true);
-assert.deepEqual(notices.splice(0),[['本轮已切换到副模型',3000]]);
+assert.deepEqual(notices.splice(0),[['已切换副模型',3000]]);
 
 sandbox.mode='normal';state={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, state,role),'main reply');
 assert.deepEqual(calls.splice(0),[false]);
-assert.deepEqual(notices.splice(0),[['本轮已切换到主模型',3000]]);
+assert.deepEqual(notices.splice(0),[['已切换主模型',3000]]);
 
 sandbox.mode='empty';state={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, state,role),'aux reply');
 assert.deepEqual(calls.splice(0),[false,true]);
 assert.equal(state.fallback,true);
-assert.deepEqual(notices.splice(0),[['本轮已切换到副模型',3000]]);
+assert.deepEqual(notices.splice(0),[['已切换副模型',3000]]);
 
 sandbox.mode='throw';state={fallback:false};
 sandbox.chatAPI=async(_messages,md)=>{calls.push(!!md.aux);throw new Error(md.aux?'aux failed':'primary failed');};
@@ -89,7 +89,7 @@ assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, driftState,driftR
 assert.deepEqual(calls.splice(0),[false]);
 assert.equal(await sandbox.wechatRoleRepair([], {aux:true}, driftState,driftRole),'repaired in character');
 assert.deepEqual(calls.splice(0),[true]);
-assert.deepEqual(notices.splice(0),[['本轮已切换到副模型',3000]]);
+assert.deepEqual(notices.splice(0),[['已切换副模型',3000]]);
 assert.equal(await sandbox.wechatRoleRepair([], {aux:true}, driftState,driftRole),null,'role drift repair must be limited to one auxiliary attempt');
 assert.deepEqual(calls.splice(0),[]);
 

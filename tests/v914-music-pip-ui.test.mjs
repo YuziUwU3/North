@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v940 source and private 1.0.64 versions align',()=>{
-  assert.match(app,/APP_VER='v940 · 音乐聊天键盘与苹果布局修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 64;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.64;/);
+test('v941 source and private 1.0.65 versions align',()=>{
+  assert.match(app,/APP_VER='v941 · 通话输入与防跳出开关修复'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 65;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.65;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

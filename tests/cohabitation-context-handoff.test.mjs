@@ -108,7 +108,7 @@ test('common-life reply core is wired to the common-life repair prompt and arriv
   await sandbox.run({id:'c1'},[],{},{});
   await sandbox.run({id:'c1'},[],{},{});
   assert.deepEqual(calls,['main','aux','main']);
-  assert.deepEqual(notices,[['本轮已切换到副模型',3000],['本轮已切换到主模型',3000]]);
+  assert.deepEqual(notices,[['已切换副模型',3000],['已切换主模型',3000]]);
 });
 
 test('the existing online-offline sync switch also gates common-life context',()=>{
