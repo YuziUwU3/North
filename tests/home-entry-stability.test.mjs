@@ -90,7 +90,8 @@ test('home widgets, apps, and dock share live reorder data without browser text 
   assert.match(source, /function appLiveReorder\(x,y\)/);
   assert.match(source, /appSwapNodes\(d\.item,target\)/);
   assert.match(source, /function homeReferenceSlotsRefresh\(page\)/);
-  assert.match(source, /refresh=\(\)=>homeReferenceSlotsRefresh\(document\.querySelector\('#appswipe \.glass-reference-page'\)\)/);
+  assert.match(source, /function homeSecondSlotsRefresh\(page\)/);
+  assert.match(source, /refresh=\(\)=>\{homeReferenceSlotsRefresh\(document\.querySelector\('#appswipe \.glass-reference-page'\)\);homeSecondSlotsRefresh\(document\.querySelector\('#appswipe \.glass-second-page'\)\);\}/);
   assert.match(source, /function homeLayoutReadDom\(\)/);
   assert.match(source, /data-token="w:\$\{k\}" onpointerdown="appDown\(event,'w:\$\{k\}'\)"/);
   assert.match(html, /\.home,\.home \*\{[^}]*-webkit-user-select:none;user-select:none;-webkit-touch-callout:none/);

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='937'){
+if(window.__NORTH_SHELL_BUILD__!=='938'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -363,7 +363,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v937 · 音乐、安卓视频与苹果光标修复';
+const APP_VER='v938 · 第二页照片组件与主题布局';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1420,7 +1420,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=937';
+  const url='sw.js?v=938';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2819,7 +2819,7 @@ const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:
 const APP_PAGES=3;
 const APP_DEFLAYOUT=[['wechat','phoneapp','settings','aiaccount','worldbook','browser','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','cinema','tale','dread'],[]];
 const HOME_DOCK_DEFAULT=['calendar','games','mail','settings'];
-const HOME_SHORTCUTS={};
+const HOME_SHORTCUTS={clock:{e:'',c:'#1a1a1f',t:'时钟',icon:'calendar',run:()=>openApp('calendar')}};
 function appLayoutInit(){let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
@@ -2835,6 +2835,7 @@ function homeLayoutInit(){
   let H=S.me.homeLayout;
   if(!Array.isArray(H)||!Array.isArray(H[0]))H=S.me.appLayout.map((pg,i)=>(i===0?S.me.widgets.map(k=>'w:'+k):[]).concat(pg));
   if(!S.me._glassReferenceLayoutV2){const first=['w:dashboard','douyin','wechat','cinema','x','w:vinyl','w:sweetie','worldbook','phoneapp','music','spy'],reserved=new Set(first.concat(HOME_DOCK_DEFAULT)),rest=[];(Array.isArray(H)?H.flat():[]).concat(Object.keys(APPDEFS)).forEach(k=>{if(APPDEFS[k]&&!reserved.has(k)){reserved.add(k);rest.push(k);}});H=[first,rest,[]];dock=HOME_DOCK_DEFAULT.slice();S.me._glassReferenceLayoutV2=1;save(250);}
+  if(!S.me._glassSecondPageLayoutV1){const first=Array.isArray(H[0])?H[0].slice():[],reserved=new Set(first.concat(dock)),rest=[];(Array.isArray(H)?H.slice(1).flat():[]).concat(Object.keys(APPDEFS),'clock').forEach(k=>{if(homeTokenValid(k)&&!reserved.has(k)){reserved.add(k);rest.push(k);}});H=[first,rest.slice(0,12),rest.slice(12)];S.me._glassSecondPageLayoutV1=1;save(250);}
   const dockSeen=new Set();dock=dock.filter(k=>APPDEFS[k]&&!dockSeen.has(k)&&(dockSeen.add(k),true)).slice(0,4);HOME_DOCK_DEFAULT.forEach(k=>{if(dock.length<4&&APPDEFS[k]&&!dockSeen.has(k)){dockSeen.add(k);dock.push(k);}});
   H=H.map(p=>Array.isArray(p)?p.slice():[]);while(H.length<APP_PAGES)H.push([]);H=H.slice(0,APP_PAGES);
   const enabledWidgets=new Set(S.me.widgets.map(k=>'w:'+k)),seen=new Set(dock),clean=[];
@@ -2843,6 +2844,7 @@ function homeLayoutInit(){
   const firstApps=clean[0].filter(k=>APPDEFS[k]),keepFirst=new Set(firstApps.slice(0,HOME_REFERENCE_APP_SLOTS.length)),overflow=firstApps.slice(HOME_REFERENCE_APP_SLOTS.length);
   if(overflow.length){clean[0]=clean[0].filter(k=>!APPDEFS[k]||keepFirst.has(k));clean[1]=overflow.concat(clean[1]);}
   Object.keys(APPDEFS).forEach(k=>{if(!seen.has(k)){clean[1].push(k);seen.add(k);}});
+  Object.keys(HOME_SHORTCUTS).forEach(k=>{if(!seen.has(k)){clean[1].push(k);seen.add(k);}});
   S.me.homeLayout=clean;S.me.appDock=dock;
   homeLayoutSyncLegacy();
 }
@@ -2866,7 +2868,16 @@ function homeReferenceSlotsRefresh(page){if(!page||!page.classList||!page.classL
 function homeReferencePageAtPoint(x,y){const page=document.querySelector('#appswipe .glass-reference-page');if(!page)return null;const r=page.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom?page:null;}
 function homeReferenceSlotAtPoint(page,x,y){if(!page)return null;let best=null,dist=Infinity;page.querySelectorAll(':scope>.glass-app-drop-slot').forEach(slot=>{const r=slot.getBoundingClientRect();if(x>=r.left-12&&x<=r.right+12&&y>=r.top-12&&y<=r.bottom+12){const d=Math.hypot(x-(r.left+r.width/2),y-(r.top+r.height/2));if(d<dist){dist=d;best=slot;}}});return best?Number(best.dataset.refSlot):null;}
 function homeReferenceMoveToSlot(page,item,n){if(!page||!item||String(item.dataset.token||'').startsWith('w:')||!Number.isInteger(n))return false;const old=Number(item.dataset.refSlot),other=Array.from(page.querySelectorAll(':scope>.home-item[data-ref-slot="'+n+'"]')).find(el=>el!==item);if(other&&Number.isInteger(old))homeReferenceApplyAppSlot(other,old);else if(other)homeReferenceApplyAppSlot(other,null);homeReferenceApplyAppSlot(item,n);return true;}
-function homeAppsHtml(){homeLayoutInit();return S.me.homeLayout.map((pg,pi)=>'<div class="apppage home-dropzone'+(pi===0?' glass-reference-page':'')+'" data-zone="page" data-pg="'+pi+'">'+(pi===0?homeReferencePageHtml(pg):pg.map(homeTokenCell).join(''))+'</div>').join('');}
+function homeSecondPrefs(){S.me.homeSecondPage=S.me.homeSecondPage&&typeof S.me.homeSecondPage==='object'?S.me.homeSecondPage:{};if(!Array.isArray(S.me.homeSecondPage.photos))S.me.homeSecondPage.photos=[];return S.me.homeSecondPage;}
+function homeSecondPhotoSources(){const p=homeSecondPrefs(),sweet=sweetiePrefs(),dash=dashboardPrefs(),c=S.couple&&S.couple.cid?getC(S.couple.cid):null,defaults=[dash.photo,sweet.me||S.me.homeAvMe||S.me.avatar,sweet.ta||S.me.homeAvTa||(c&&c.avatar),S.me.avatar].filter(Boolean),photos=[];for(let i=0;i<3;i++)photos.push(p.photos[i]||defaults[i%Math.max(1,defaults.length)]||'');return{portrait:p.portrait||sweet.ta||S.me.homeAvTa||(c&&c.avatar)||dash.photo||sweet.me||S.me.avatar||'',photos};}
+function homeSecondPortraitHtml(){const p=homeSecondPrefs(),src=homeSecondPhotoSources().portrait,c=S.couple&&S.couple.cid?getC(S.couple.cid):null,name=p.name||(c&&(c.remark||c.name))||sweetiePrefs().taName||'promise',sub=p.line||'与你一起，收藏每一天';return `<section class="glass-second-portrait"><span class="glass-second-avatar-picker" role="button" tabindex="0" aria-label="更换第二页圆形头像" onclick="event.stopPropagation();homeSecondPick('portrait',0)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();homeSecondPick('portrait',0)}">${src?`<img src="${src}" alt="圆形头像">`:`<span class="glass-second-photo-empty">${svgIc('user',34,'#fff')}</span>`}</span><div class="glass-second-portrait-copy" role="button" tabindex="0" aria-label="编辑人物组件文字" onclick="homeSecondEdit('portrait')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();homeSecondEdit('portrait')}"><b>${esc(name)}</b><span>${esc(sub)}</span></div></section>`;}
+function homeSecondPhotosHtml(){const photos=homeSecondPhotoSources().photos;return `<section class="glass-second-photos"><div class="glass-second-polaroids">${photos.map((src,i)=>`<figure class="glass-second-polaroid p${i+1}" role="button" tabindex="0" aria-label="更换第 ${i+1} 张照片" onclick="event.stopPropagation();homeSecondPick('photo',${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();homeSecondPick('photo',${i})}">${src?`<img src="${src}" alt="照片 ${i+1}">`:`<span class="glass-second-photo-empty">${svgIc('image',28,'#aaa')}</span>`}<i></i></figure>`).join('')}</div></section>`;}
+function homeSecondPageHtml(pg){return homeSecondPortraitHtml()+homeSecondPhotosHtml()+pg.map((k,i)=>{const raw=homeTokenCell(k);return raw.replace('class="','class="glass-second-app glass-second-slot-'+i+' ').replace(' data-token="',' data-second-slot="'+i+'" data-token="');}).join('');}
+function homeSecondSlotsRefresh(page){if(!page||!page.classList||!page.classList.contains('glass-second-page'))return;Array.from(page.querySelectorAll(':scope>.home-item[data-token]')).forEach((item,i)=>{Array.from(item.classList).filter(c=>c.startsWith('glass-second-slot-')).forEach(c=>item.classList.remove(c));item.classList.add('glass-second-app','glass-second-slot-'+i);item.dataset.secondSlot=''+i;});}
+function homeSecondEdit(kind){const p=homeSecondPrefs(),photos=homeSecondPhotoSources().photos;if(kind==='portrait'){openModal(`<h3>第二页头像文字</h3><div class="hint">圆形头像直接点头像更换；这里编辑卡片里的称呼和一句话，不会修改微信头像或第一页。</div><div class="field"><label>人物称呼</label><input class="second-page-text-input" id="second_name" value="${esc(p.name||'')}"></div><div class="field"><label>下面一句话</label><input class="second-page-text-input" id="second_line" value="${esc(p.line||'')}"></div><div class="btns"><button class="btn g" onclick="homeSecondPick('portrait',0)">更换圆形头像</button><button class="btn p" onclick="homeSecondPortraitSave()">保存文字</button></div>`);return;}openModal(`<h3>第二页三照片组件</h3><div class="hint">分别点按更换三张照片；只影响第二页。</div><div class="btns">${photos.map((_,i)=>`<button class="btn g" onclick="homeSecondPick('photo',${i})">第 ${i+1} 张</button>`).join('')}</div><div class="btns" style="margin-top:10px"><button class="btn p" onclick="closeModal()">完成</button></div>`);}
+function homeSecondPortraitSave(){const p=homeSecondPrefs(),name=$('#second_name'),line=$('#second_line');p.name=name?name.value.trim():'';p.line=line?line.value.trim():'';save();closeModal();render();}
+function homeSecondPick(kind,index){pickFile('image/*',async f=>{const p=homeSecondPrefs(),src=await compress(f,900,.86);if(kind==='portrait')p.portrait=src;else p.photos[Math.max(0,Math.min(2,+index||0))]=src;save();closeModal();render();toast(kind==='portrait'?'人物照片已更换':'照片已更换');});}
+function homeAppsHtml(){homeLayoutInit();return S.me.homeLayout.map((pg,pi)=>'<div class="apppage home-dropzone'+(pi===0?' glass-reference-page':pi===1?' glass-second-page':'')+'" data-zone="page" data-pg="'+pi+'">'+(pi===0?homeReferencePageHtml(pg):pi===1?homeSecondPageHtml(pg):pg.map(homeTokenCell).join(''))+'</div>').join('');}
 function homeDockHtml(){homeLayoutInit();return S.me.appDock.map(homeTokenCell).join('');}
 const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620;
 let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0,_aNoClick=0;
@@ -2895,7 +2906,7 @@ function appGhostMove(x,y){if(!_aDrag)return;const g=_aDrag.ghost;g.style.left=(
   let dir=0;if(x>r.right-40)dir=1;else if(x<r.left+40)dir=-1;
   if(dir!==_aFlipDir){_aFlipDir=dir;clearTimeout(_aFlip);if(dir)_aFlip=setTimeout(()=>appFlip(dir),430);}}
 function appSwapNodes(a,b){if(!a||!b||a===b)return;const ap=a.parentNode,bp=b.parentNode;if(!ap||!bp)return;const am=document.createComment('home-a'),bm=document.createComment('home-b');ap.replaceChild(am,a);bp.replaceChild(bm,b);ap.replaceChild(b,am);bp.replaceChild(a,bm);}
-function appLiveReorder(x,y){const d=_aDrag;if(!d||!d.item)return;const hit=document.elementFromPoint(x,y),target=hit&&hit.closest?hit.closest('.home-item'):null,zone=hit&&hit.closest?hit.closest('.home-dropzone'):null,refresh=()=>homeReferenceSlotsRefresh(document.querySelector('#appswipe .glass-reference-page')),ref=homeReferencePageAtPoint(x,y)||(zone&&zone.classList&&zone.classList.contains('glass-reference-page')?zone:null),refSlot=ref&&APPDEFS[d.item.dataset.token]?homeReferenceSlotAtPoint(ref,x,y):null;if(ref&&refSlot!=null){const source=d.item.parentElement,occupant=Array.from(ref.querySelectorAll(':scope>.home-item[data-ref-slot="'+refSlot+'"]')).find(el=>el!==d.item);if(source!==ref){if(source&&source.dataset.zone==='dock'&&!occupant)return;if(occupant)appSwapNodes(d.item,occupant);else ref.appendChild(d.item);}homeReferenceMoveToSlot(ref,d.item,refSlot);return;}if(target&&target!==d.item){const sp=d.item.parentElement,tp=target.parentElement,sd=sp&&sp.dataset.zone==='dock',td=tp&&tp.dataset.zone==='dock';if(sd!==td){appSwapNodes(d.item,target);refresh();return;}const r=target.getBoundingClientRect(),after=y>r.top+r.height*.58||(Math.abs(y-(r.top+r.height/2))<r.height*.28&&x>r.left+r.width/2);tp.insertBefore(d.item,after?target.nextSibling:target);refresh();return;}if(zone&&zone.dataset.zone==='page'&&d.item.parentElement&&d.item.parentElement.dataset.zone!=='dock'&&d.item.parentElement!==zone){zone.appendChild(d.item);refresh();}}
+function appLiveReorder(x,y){const d=_aDrag;if(!d||!d.item)return;const hit=document.elementFromPoint(x,y),target=hit&&hit.closest?hit.closest('.home-item'):null,zone=hit&&hit.closest?hit.closest('.home-dropzone'):null,refresh=()=>{homeReferenceSlotsRefresh(document.querySelector('#appswipe .glass-reference-page'));homeSecondSlotsRefresh(document.querySelector('#appswipe .glass-second-page'));},ref=homeReferencePageAtPoint(x,y)||(zone&&zone.classList&&zone.classList.contains('glass-reference-page')?zone:null),refSlot=ref&&APPDEFS[d.item.dataset.token]?homeReferenceSlotAtPoint(ref,x,y):null;if(ref&&refSlot!=null){const source=d.item.parentElement,occupant=Array.from(ref.querySelectorAll(':scope>.home-item[data-ref-slot="'+refSlot+'"]')).find(el=>el!==d.item);if(source!==ref){if(source&&source.dataset.zone==='dock'&&!occupant)return;if(occupant)appSwapNodes(d.item,occupant);else ref.appendChild(d.item);}homeReferenceMoveToSlot(ref,d.item,refSlot);return;}if(target&&target!==d.item){const sp=d.item.parentElement,tp=target.parentElement,sd=sp&&sp.dataset.zone==='dock',td=tp&&tp.dataset.zone==='dock';if(sd!==td){appSwapNodes(d.item,target);refresh();return;}const r=target.getBoundingClientRect(),after=y>r.top+r.height*.58||(Math.abs(y-(r.top+r.height/2))<r.height*.28&&x>r.left+r.width/2);tp.insertBefore(d.item,after?target.nextSibling:target);refresh();return;}if(zone&&zone.dataset.zone==='page'&&d.item.parentElement&&d.item.parentElement.dataset.zone!=='dock'&&d.item.parentElement!==zone){if(zone.classList.contains('glass-second-page')&&zone.querySelectorAll(':scope>.home-item[data-token]').length>=12)return;zone.appendChild(d.item);refresh();}}
 function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.clientWidth;let pg=Math.max(0,Math.min(APP_PAGES-1,Math.round(sw.scrollLeft/w)+dir));
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
@@ -11554,7 +11565,7 @@ async function emergencyRestoreConfirm(){const c=_recoveryCandidate;if(!c)return
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
-    me:pickObj(me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
+    me:pickObj(me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','homeSecondPage','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
     phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
     phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
     music:pickObj(music,['bg','cover','theme','layout','widgets']),
@@ -11570,7 +11581,7 @@ function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
-  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
+  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','homeSecondPage','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
   const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
   const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});
