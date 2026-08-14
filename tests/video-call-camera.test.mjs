@@ -57,7 +57,8 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(callAI,/if\(_videoVisionAutomatic\)/,'only automatic vision uses the cinema-style synthetic user event');
   assert.match(callAI,/else rows\.push\(\{role:'user',content:_videoVisionTurn\}\)/,'automatic vision providers receive a real user turn');
   assert.match(callAI,/content:String\(last\.content\|\|''\)\+'\\n\\n'\+_videoVisionTurn/,'automatic vision retries also end with the current frame');
-  assert.match(callAI,/if\(_videoVision\)\{_call\.sub=null;updateCallSub\(\);callVideoVisionStatus\('failed'\);\}/,'vision chat failures stay out of the central subtitle');
+  assert.match(callAI,/if\(_videoVision&&!systemText\)\{_call\.sub=null;updateCallSub\(\);callVideoVisionStatus\('failed'\);\}/,'ordinary vision transport failures stay out of the central subtitle');
+  assert.match(callAI,/_call\.sub=\{who:systemText\?'system':'them',text:systemText\|\|callFailureText\(e\)\}/,'guarded model failures may show an explicit non-spoken system notice');
   assert.match(callAI,/_callVisionPend\.push/,'vision replies use a dedicated priority queue');
   assert.match(callAI,/callVideoVisionReplyGrounded/,'vision replies must mention a concrete scene detail');
 });
@@ -82,6 +83,6 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 62/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.62/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 63/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.63/);
 });

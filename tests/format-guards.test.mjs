@@ -38,7 +38,7 @@ const context = vm.createContext({
   S: { me: { active: "main", name: "North", callName: "北", accounts: [{ id: "main", name: "North", callName: "北" }] } },
   actId: () => "main",
 });
-for (const name of ["parsePayCardLine", "memoryScopeKey", "summaryAccountProfile", "summaryUserLabel", "summaryStripModelNoise", "summaryReplaceAliasStable", "summaryCleanText", "summaryNorm", "isRefusal", "isOOCLine"]) {
+for (const name of ["parsePayCardLine", "memoryScopeKey", "summaryAccountProfile", "summaryUserLabel", "summaryStripModelNoise", "summaryReplaceAliasStable", "summaryCleanText", "summaryNorm", "selfHarmSafetyRefusal", "intimateRoleRefusal", "isRefusal", "isCallRefusal", "isOOCLine"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -68,7 +68,20 @@ assert.equal(context.isOOCLine("I miss you."), false);
 assert.equal(context.isRefusal("I can't discuss that."), true);
 assert.equal(context.isRefusal("I cannot address that request."), true);
 assert.equal(context.isRefusal("I am unable to talk about this."), true);
+assert.equal(context.isCallRefusal("I need to step out of character here and pause this roleplay."), true);
+assert.equal(context.isCallRefusal("I can't romanticize a controlling relationship dynamic."), true);
+assert.equal(context.isCallRefusal("I'd be happy to explore a different, safer scenario."), true);
+assert.equal(context.isCallRefusal("我需要先跳出角色，暂停这段亲密角色扮演。"), true);
+assert.equal(context.isCallRefusal("我担心这是自我伤害，请联系危机热线。"), true);
+assert.equal(context.isRefusal("I need to step out of character here and pause this roleplay."), false);
 assert.equal(context.isRefusal("I want to discuss our trip tomorrow."), false);
+assert.equal(context.isRefusal("疼……轻一点。"), false);
+assert.equal(context.isRefusal("先停一下，我看看你疼不疼。"), false);
+assert.equal(context.isCallRefusal("疼……轻一点。"), false);
+assert.equal(context.isCallRefusal("我不许你伤害自己。"), false);
+assert.equal(context.isCallRefusal("Let's change the topic."), false);
+assert.equal(context.isCallRefusal("That crosses my boundary."), false);
+assert.equal(context.isCallRefusal("我们换个话题。"), false);
 
 const c = { name: "先生", callme: "小狗" };
 assert.equal(context.summaryUserLabel(c), "小狗");

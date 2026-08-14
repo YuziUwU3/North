@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v938 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v938 · 第二页照片组件与主题布局'/);
-  assert.match(app,/const url='sw\.js\?v=938'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='938'/);
-  assert.match(html,/app\.js\?v=938/);
-  assert.match(sw,/const BUILD='938'/);
-  assert.match(sw,/north-shell-v938/);
-  assert.match(index,/小手机\.html\?v=938/);
-  assert.match(repair,/小手机\.html\?v=938/);
+test('v939 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v939 · 通话拒绝拦截与副模型兜底'/);
+  assert.match(app,/const url='sw\.js\?v=939'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='939'/);
+  assert.match(html,/app\.js\?v=939/);
+  assert.match(sw,/const BUILD='939'/);
+  assert.match(sw,/north-shell-v939/);
+  assert.match(index,/小手机\.html\?v=939/);
+  assert.match(repair,/小手机\.html\?v=939/);
 });
 
-test('the private iOS package is aligned with the shared v938 core',()=>{
-  assert.match(privateBundle,/<string>938<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.62;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 62;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.62 \(62\)'/);
+test('the private iOS package is aligned with the shared v939 core',()=>{
+  assert.match(privateBundle,/<string>939<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.63;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 63;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.63 \(63\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

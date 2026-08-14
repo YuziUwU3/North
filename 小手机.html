@@ -29,7 +29,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='938';</script>
+<script>window.__NORTH_SHELL_BUILD__='939';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -45,11 +45,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-938';
+  var key='north-sw-reloaded-939';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=938';
+  var url='sw.js?v=939';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -720,6 +720,7 @@ body{background:#000;padding:0;}
 .callsub{position:absolute;bottom:190px;left:0;right:0;max-height:40%;overflow:visible;padding:0 26px;text-align:center;min-height:60px;display:flex;align-items:center;justify-content:center;pointer-events:none}.callsub:empty{display:none}
 .csline{max-width:100%;font-size:18px;color:#fff;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;text-shadow:0 1px 6px rgba(0,0,0,.6);animation:csphrasein .3s cubic-bezier(.25,.1,.25,1) both;}
 .csline.me{color:#ffd6e8;}
+.csline.system{max-width:min(92%,520px);padding:9px 14px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(12,13,16,.78);color:#f0d7a8;font-size:14px;line-height:1.5;text-shadow:none;box-shadow:0 8px 24px rgba(0,0,0,.28);}
 @keyframes csphrasein{0%{opacity:0;transform:translateY(8px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
 .callsubs .cb{background:rgba(255,255,255,.14);padding:8px 12px;border-radius:14px;font-size:14px;max-width:78%;align-self:flex-start;}
 .callsubs .cb.me{align-self:flex-end;background:linear-gradient(135deg,#ffd6e8,#ffb0cf);color:#6b2942;}
@@ -1290,8 +1291,8 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=938">
-<link rel="stylesheet" href="pet-game.css?v=938">
+<link rel="stylesheet" href="glass-theme.css?v=939">
+<link rel="stylesheet" href="pet-game.css?v=939">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1341,12 +1342,12 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=938" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=938" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=938" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=938" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=938" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=938" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=938"></script>
+<script src="license-gate.js?v=939" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=939" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=939" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=939" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=939" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=939" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=939"></script>
 </body>
 </html>
