@@ -7,9 +7,9 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v927 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v927 · 苹果首屏文字、安全区与美化导入修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='927'/);
+test('v928 web fix leaves private 1.0.53 untouched', () => {
+  assert.match(app, /APP_VER='v928 · 安卓拖拽与苹果网页安全区修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='928'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 53;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.53;/g) || []).length, 12);
 });
@@ -22,10 +22,12 @@ test('first glass page reserves a non-shrinking line box for every app name', ()
   assert.match(css, /\.glass-reference-page \.app>span\{[^}]*min-height:20px!important;[^}]*flex:0 0 20px!important/);
 });
 
-test('iOS home-screen safe shell fills the viewport only through the compatibility class', () => {
-  assert.match(html, /html\.north-ios-home-safe \.phone\{position:fixed;inset:0;width:100%;height:auto;min-height:0;max-height:none\}/);
+test('iOS home-screen shell paints the bottom safe area without affecting Android or the private app', () => {
+  assert.match(html, /html\.north-ios-pwa-shell \.phone\{[^}]*bottom:calc\(0px - var\(--north-ios-pwa-bottom\)\)/);
+  assert.match(app, /root\.classList\.toggle\('north-ios-pwa-shell',pwa\)/);
   assert.match(app, /root\.classList\.toggle\('north-ios-home-safe',browser\)/);
-  assert.match(app, /browser=appleHomeCompatBrowserEnvironment\(\)&&on/);
+  assert.match(app, /pwa=appleHomeCompatBrowserEnvironment\(\),on=/);
+  assert.match(app, /browser=pwa&&on/);
 });
 
 test('beauty packs never overwrite page, widget, or Dock placement', () => {
@@ -39,9 +41,13 @@ test('beauty packs never overwrite page, widget, or Dock placement', () => {
   assert.match(imported, /'appIcons'/);
 });
 
-test('long-press dragging keeps the icon under the finger and survives iOS touch delivery', () => {
+test('long-press dragging starts reliably on Android and keeps page scrolling on both mobile systems', () => {
   assert.match(css, /html\.north-glass-ui \.home\.home-editing \.home-scroll\{padding-top:38px\}/);
+  assert.match(css, /html\.north-glass-ui #homeDesktop \.home-item\{touch-action:none\}/);
   assert.match(app, /opacity:\.94;transform:none/);
+  assert.match(app, /p\.pan=ax>ay\?'x':'y'/);
+  assert.match(app, /p\.sw\.scrollLeft=p\.swLeft-dx/);
+  assert.match(app, /p\.scroll\.scrollTop=p\.scrollTop-dy/);
   assert.match(app, /function appTouchMove\(e\)\{if\(!_aDrag\)return;[\s\S]*?e\.preventDefault\(\);appGhostMove\(t\.clientX,t\.clientY\)/);
   assert.match(app, /function appTouchEnd\(e\)\{if\(!_aDrag\)return;[\s\S]*?appDrop\(t\.clientX,t\.clientY\)/);
   assert.match(app, /function appDrop\(x,y\)\{const d=_aDrag;_aDrag=null;_aPend=null;clearTimeout\(_aTimer\)/);

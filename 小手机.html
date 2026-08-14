@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='927';</script>
+<script>window.__NORTH_SHELL_BUILD__='928';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-927';
+  var key='north-sw-reloaded-928';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=927';
+  var url='sw.js?v=928';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1187,7 +1187,12 @@ html,body,.phone,.screen{height:100%;min-height:0;max-height:100%;overflow:hidde
 /* v882：Apple 主屏幕模式保留 v877 已验证的 100% 外壳，不再用 100dvh 二次缩短页面。
    部分已安装主屏幕 WebApp 会把 env() 回报为 0，因此手动适配模式提供可点击的保守下限。 */
 html.north-ios-home-safe{--north-ios-home-safe-top:max(env(safe-area-inset-top,0px),47px);--north-ios-home-safe-bottom:env(safe-area-inset-bottom,0px)}
-html.north-ios-home-safe .phone{position:fixed;inset:0;width:100%;height:auto;min-height:0;max-height:none}
+/* iOS“添加到主屏幕”底部安全区属于网页外壳，不依赖兼容开关；向安全区下方延伸壁纸，安卓和私人 App 均不会命中。 */
+html.north-ios-pwa-shell{--north-ios-pwa-bottom:env(safe-area-inset-bottom,0px)}
+html.north-ios-pwa-shell,html.north-ios-pwa-shell body{position:fixed;inset:0;width:100%;height:100%;min-height:0;max-height:none;overflow:hidden}
+html.north-ios-pwa-shell .phone{position:fixed;top:0;left:0;right:0;bottom:calc(0px - var(--north-ios-pwa-bottom));width:100%;height:auto;min-height:0;max-height:none}
+html.north-ios-pwa-shell .screen{width:100%;height:100%;min-height:0;max-height:none}
+html.north-ios-home-safe .phone{position:fixed;top:0;left:0;right:0;bottom:calc(0px - var(--north-ios-pwa-bottom,0px));width:100%;height:auto;min-height:0;max-height:none}
 html.north-ios-home-safe .screen{width:100%;height:100%;min-height:0;max-height:none}
 html.north-ios-home-safe .home-premium-head{height:calc(67px + var(--north-ios-home-safe-top));padding-top:calc(18px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .nav{height:calc(46px + var(--north-ios-home-safe-top));flex-basis:calc(46px + var(--north-ios-home-safe-top));padding-top:var(--north-ios-home-safe-top)}
@@ -1255,8 +1260,8 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=927">
-<link rel="stylesheet" href="pet-game.css?v=927">
+<link rel="stylesheet" href="glass-theme.css?v=928">
+<link rel="stylesheet" href="pet-game.css?v=928">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1306,12 +1311,12 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=927" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=927" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=927" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=927" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=927" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=927" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=927"></script>
+<script src="license-gate.js?v=928" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=928" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=928" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=928" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=928" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=928" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=928"></script>
 </body>
 </html>

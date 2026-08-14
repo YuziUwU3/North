@@ -12,9 +12,9 @@ const migration = read('supabase/migrations/202608130001_background_app_watch_te
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v927 source and private 1.0.53 versions are aligned', () => {
-  assert.match(app, /APP_VER='v927 · 苹果首屏文字、安全区与美化导入修复'/);
-  assert.match(html, /app\.js\?v=927/);
+test('v928 source and private 1.0.53 versions are aligned', () => {
+  assert.match(app, /APP_VER='v928 · 安卓拖拽与苹果网页安全区修复'/);
+  assert.match(html, /app\.js\?v=928/);
   assert.match(project, /CURRENT_PROJECT_VERSION = 53;/);
   assert.match(project, /MARKETING_VERSION = 1\.0\.53;/);
   assert.match(nativeWeb, /1\.0\.53 \(53\)/);

@@ -117,7 +117,8 @@ html.north-glass-ui .home .dock .app .ic{width:64px!important;height:64px!import
 html.north-glass-ui .glass-reference-page{position:relative;display:block!important;min-height:635px;padding:8px 16px 16px!important}
 html.north-glass-ui .glass-reference-page>.home-item{position:absolute!important;margin:0!important}
 html.north-glass-ui .glass-reference-page>.glass-app-drop-slot{position:absolute!important;display:block;pointer-events:none;visibility:hidden}
-html.north-glass-ui #homeDesktop .home-item{touch-action:pan-x pan-y}
+/* 长按拖拽必须从触点落下时就接管手势；横向翻页和纵向滚动由 appMove 保留，避免 Android 在长按完成前发出 pointercancel。 */
+html.north-glass-ui #homeDesktop .home-item{touch-action:none}
 html.north-glass-ui body.home-drag-active #homeDesktop .home-item{touch-action:none}
 html.north-glass-ui .glass-reference-page~.apppage{content-visibility:auto;contain-intrinsic-size:390px 635px}
 html.north-glass-ui .glass-reference-page>.glass-place-dashboard{left:16px!important;right:auto!important;top:8px!important;width:calc(100% - 32px)!important;height:154px!important;min-width:0!important;min-height:0!important;max-width:348px!important;box-sizing:border-box!important;overflow:hidden!important}

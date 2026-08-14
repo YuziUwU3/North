@@ -227,7 +227,8 @@ test('glass packs keep a free persisted mixed app-widget layout and appearance p
   assert.match(app,/function appDown\(e,k\)\{if\(e\.pointerType/);
   assert.doesNotMatch(app,/function appDown\(e,k\)[\s\S]*?if\(e\.cancelable\)e\.preventDefault\(\);/);
   assert.match(app,/function appBeginDrag\(\)[\s\S]*?p\.el\.setPointerCapture\(p\.pid\)/);
-  assert.match(css,/#homeDesktop \.home-item\{touch-action:pan-x pan-y\}/);
+  assert.match(css,/#homeDesktop \.home-item\{touch-action:none\}/);
+  assert.match(app,/p\.pan=ax>ay\?'x':'y'/);
   assert.match(css,/glass-reference-page~\.apppage\{content-visibility:auto/);
   assert.match(css,/grid-auto-flow:dense/);
   assert.match(css,/north-pack-black \.home-dashboard-card[\s\S]*rgba\(34,35,40,\.18\)/);

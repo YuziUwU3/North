@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='927'){
+if(window.__NORTH_SHELL_BUILD__!=='928'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -362,7 +362,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v927 · 苹果首屏文字、安全区与美化导入修复';
+const APP_VER='v928 · 安卓拖拽与苹果网页安全区修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1419,7 +1419,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=927';
+  const url='sw.js?v=928';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2744,7 +2744,7 @@ function appleHomeCompatNative(){return typeof window!=='undefined'&&window.__SM
 function appleHomeCompatBrowserEnvironment(){const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
 function appleHomeCompatEnvironment(){return appleHomeCompatNative()||appleHomeCompatBrowserEnvironment();}
 function appleHomeCompatOn(){return !!(S.settings&&S.settings.appleHomeCompat);}
-function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,on=appleHomeCompatEnvironment()&&appleHomeCompatOn(),browser=appleHomeCompatBrowserEnvironment()&&on;if(root&&root.classList){root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',on);}return on;}
+function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,pwa=appleHomeCompatBrowserEnvironment(),on=appleHomeCompatEnvironment()&&appleHomeCompatOn(),browser=pwa&&on;if(root&&root.classList){root.classList.toggle('north-ios-pwa-shell',pwa);root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',on);}return on;}
 function appleHomeCompatToggle(){S.settings=S.settings||{};S.settings.appleHomeCompat=!appleHomeCompatOn();applyAppleHomeCompat();save();render();toast(S.settings.appleHomeCompat?(appleHomeCompatEnvironment()?'苹果兼容适配已开启':'设置已保存；只会在苹果主屏幕或私人 App 生效'):'苹果兼容适配已关闭，已恢复原位置');}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
 function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}return on;}
@@ -2852,7 +2852,8 @@ function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
   const f=APPRUN[k];if(f)f();}
 function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}const f=APPRUN[k];if(f)setTimeout(f,0);}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
-  _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId};clearTimeout(_aTimer);
+  const sw=$('#appswipe'),scroll=$('#homeDesktop .home-scroll');
+  _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId,pan:'',sw,scroll,swLeft:sw?sw.scrollLeft:0,scrollTop:scroll?scroll.scrollTop:0};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
 function appBeginDrag(){const p=_aPend;if(!p)return;const desktop=$('#homeDesktop'),sw=$('#appswipe');if(!desktop||!sw)return;
   const cell=p.el&&p.el.isConnected?p.el:desktop.querySelector('.home-item[data-token="'+p.k+'"]');if(!cell)return;
@@ -2875,10 +2876,12 @@ function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
 function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}
-  if(_aPend){const dx=e.clientX-_aPend.x,dy=e.clientY-_aPend.y;if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.15){clearTimeout(_aTimer);_aPend=null;return;}if(Math.abs(dx)>APP_TAP_MOVE||Math.abs(dy)>APP_TAP_MOVE){clearTimeout(_aTimer);_aPend=null;_aNoClick=Date.now()+450;}}}
+  const p=_aPend;if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y,ax=Math.abs(dx),ay=Math.abs(dy);
+  if(!p.pan&&Math.max(ax,ay)>12){clearTimeout(_aTimer);p.pan=ax>ay?'x':'y';_aNoClick=Date.now()+450;try{if(p.el&&p.el.setPointerCapture)p.el.setPointerCapture(p.pid);}catch(_){}}
+  if(p.pan){e.preventDefault();if(p.pan==='x'&&p.sw){p.sw.scrollLeft=p.swLeft-dx;homePgScroll(p.sw);}else if(p.pan==='y'&&p.scroll)p.scroll.scrollTop=p.scrollTop-dy;}}
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
-  const p=_aPend;_aPend=null;if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
+  const p=_aPend;_aPend=null;if(p&&p.pan){if(p.pan==='x'&&p.sw)homeSnapPage(p.sw);return;}if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
 function appTouchMove(e){if(!_aDrag)return;const t=e.touches&&e.touches[0];if(!t)return;e.preventDefault();appGhostMove(t.clientX,t.clientY);}
 function appTouchEnd(e){if(!_aDrag)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){appCancel();return;}e.preventDefault();appDrop(t.clientX,t.clientY);}
 function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(typeof document!=='undefined'&&document.body)document.body.classList.remove('home-drag-active');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(d){if(typeof render==='function')render();if(typeof requestAnimationFrame==='function')requestAnimationFrame(homeEditStart);return;}if(sw)sw.classList.remove('aedit');}
