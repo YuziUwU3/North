@@ -84,7 +84,7 @@ test('music player stays silver while every home vinyl keeps its theme texture',
 
 test('glass home keeps only the dashboard clock',()=>{
   assert.match(app,/function homeClockColorSet\(value\)/);
-  assert.match(app,/主屏时间颜色/);
+  assert.match(app,/时间颜色（主屏 \/ 屏保）/);
   assert.match(css,/html\.north-glass-ui \.home-premium-head\{display:none!important/);
   assert.match(css,/\.dash-time b\{[^}]*font-size:24px/);
 });

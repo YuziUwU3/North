@@ -73,7 +73,17 @@ test('glass themes no longer override the v910 screensaver presentation', () => 
   for (const selector of ['lockshade', 'locktop', 'locktime', 'lockdate', 'locknote', 'lockempty', 'lockquick', 'lockpull']) {
     assert.doesNotMatch(glass, new RegExp(`north-glass-ui \\.${selector}`));
   }
-  assert.match(source, /<div class="locktop"><div class="locktime">\$\{hm\(\)\}<\/div><div class="lockdate">\$\{lockDateText\(\)\}<\/div><\/div>/);
-  assert.match(html, /\.locktop\{position:relative;z-index:2;padding:54px 22px 0;text-align:center/);
-  assert.match(html, /\.locktime\{font-family:var\(--north-clock-font\);font-size:96px;font-weight:400/);
+  assert.match(source, /<div class="locktop"><div class="lockdate">\$\{lockDateText\(\)\}<\/div><div class="locktime" data-time="\$\{clock\}">\$\{clock\}<\/div><\/div>/);
+  assert.match(source, /function lockAppearanceVars\(\)[\s\S]*?homeClockColor\(\)[\s\S]*?glassWidgetTint\(\)[\s\S]*?glassWidgetOpacity\(\)/);
+  assert.match(source, /function applyLockAppearance\(el\)[\s\S]*?style\.setProperty/);
+  assert.match(source, /applyLockAppearance\(el\);const clock=hm\(\)/);
+  assert.match(source, /时间颜色（主屏 \/ 屏保）/);
+  assert.match(html, /--lock-time-rgb/);
+  assert.match(html, /--lock-glass-main/);
+  assert.match(html, /\.locktop\{position:relative;z-index:2;padding:51px 16px 0;text-align:center/);
+  assert.match(html, /\.locktime\{[^}]*font-family:-apple-system[^}]*font-size:100px;font-weight:520/);
+  assert.match(html, /\.locktime\{[^}]*background:none/);
+  assert.match(html, /\.locktime::after\{[^}]*color:transparent[^}]*mask-image:linear-gradient/);
+  assert.match(html, /\.locknotes\{[^}]*gap:14px/,'continuous role notifications stay visibly separated');
+  assert.match(html, /\.locknote\{[^}]*box-shadow:0 5px 12px rgba\(0,0,0,\.16\)[^}]*isolation:isolate/,'each notification keeps its own glass card without a joined dark haze');
 });

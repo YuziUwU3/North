@@ -56,9 +56,12 @@ test('manual safe-area mode stays Apple-only and the private app shares the expl
   assert.equal(compatOn(false,false),false,'the ordinary browser keeps its existing opt-in behavior');
 });
 
-test('Apple compatibility switch preserves the proven shell and targets the final rendered app headers',()=>{
-  assert.match(functionSource('renderSettings'),/苹果兼容适配/);
-  assert.match(functionSource('renderSettings'),/Safari 浏览器和安卓始终不受影响/);
+test('iOS home-screen bottom paint is automatic while the compatibility switch remains available',()=>{
+  assert.match(functionSource('renderSettings'),/苹果兼容适配<br>/);
+  assert.match(functionSource('applyAppleHomeCompat'),/north-ios-pwa-shell',pwa/);
+  assert.match(functionSource('applyAppleHomeCompat'),/north-ios-home-safe',browser/);
+  assert.match(functionSource('applyAppleHomeCompat'),/north-apple-remote-safe',on/);
+  assert.match(html,/html\.north-ios-pwa-shell\{--north-ios-pwa-bottom:env\(safe-area-inset-bottom,0px\)\}/);
   assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:max\(env\(safe-area-inset-bottom,0px\),34px\)\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');
   assert.match(html,/\.north-ios-home-safe \.home-premium-head\{[^}]*var\(--north-ios-home-safe-top\)/);

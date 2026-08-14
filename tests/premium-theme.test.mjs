@@ -19,9 +19,9 @@ test('home time, couple avatars, mood face and original app line icons stay inta
   assert.match(app,/class="home-premium-head\$\{clockOn\?'':' home-clock-hidden'\}"[\s\S]*?id="homeLiveTime">\$\{hm\(\)\}<\/time>/);
   assert.match(html,/@font-face\{font-family:"North Stencil Clock"[^}]*data:font\/woff2;base64,/);
   assert.match(html,/\.home-premium-clock time\{[^}]*font-family:var\(--north-clock-font\)[^}]*font-size:34px/);
-  assert.match(html,/\.locktime\{[^}]*font-family:var\(--north-clock-font\)[^}]*font-size:96px/);
-  assert.match(html,/@media \(max-height:690px\)\{[\s\S]{0,160}\.locktime\{font-size:78px\}/);
-  assert.match(app,/function renderLockClock\(\)\{[^}]*t\.textContent=hm\(\)/);
+  assert.match(html,/\.locktime\{[^}]*font-family:-apple-system[^}]*font-size:100px[^}]*-webkit-text-stroke:\.68px/);
+  assert.match(html,/@media \(max-height:690px\)\{[\s\S]{0,160}\.locktime\{font-size:80px\}/);
+  assert.match(app,/function renderLockClock\(\)\{[^}]*v=hm\(\);if\(t\)\{t\.textContent=v;t\.dataset\.time=v;applyLockTimeMaterial\(t,v\);\}/);
   assert.ok(fs.existsSync(path.join(root,'fonts','SairaStencilOne-OFL.txt')));
   assert.doesNotMatch(app,/class="home-premium-head"[^\n]*早上好/);
   assert.match(app,/function wCouple2\(\)[\s\S]*?<div class="av2">\$\{cir\(me\)\}\$\{cir\(ta\)\}<\/div>/);
