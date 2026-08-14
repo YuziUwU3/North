@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='934'){
+if(window.__NORTH_SHELL_BUILD__!=='935'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -363,7 +363,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v934 · 真机安装核验与苹果底栏融合';
+const APP_VER='v935 · 输入栏与微信来电铃声修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -375,7 +375,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRing:'soft', incomingRingSongId:'', showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:0, callProb:35, callSilentMin:3, callPace:1, videoVisionIntervalMin:0, videoVisionMaxPerCall:6, screenShareRealtimeVision:false, screenShareSpeechVision:false, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
+hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:0, callProb:35, callSilentMin:3, callPace:1, videoVisionIntervalMin:0, videoVisionMaxPerCall:6, screenShareRealtimeVision:false, screenShareSpeechVision:false, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',uiMaterial:'glass',appIconPack:'black',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -1420,7 +1420,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=934';
+  const url='sw.js?v=935';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2576,7 +2576,7 @@ async function musicAddSave(){musicInit();const t=($('#mu_t').value||'').trim()|
   else if(url){src={t:'url',url};}
   else{toast('上传个文件、或贴个链接');return;}
   S.music.songs.unshift({id,title:t,artist:a,lyrics:l,src});window._muBlob=null;save();closeModal();render();toast('已添加 🎵');}
-async function musicDel(id,view){if(!await uiConfirm('删除这首歌？'))return;S.music.songs=S.music.songs.filter(s=>s.id!==id);mDelIDB(id);if(S.music.lastSongId===id)S.music.lastSongId='';if(S.settings&&S.settings.incomingRing==='music'&&S.settings.incomingRingSongId===id){ringStop();S.settings.incomingRing='soft';S.settings.incomingRingSongId='';toast('来电铃声已恢复默认轻响');}if(_mAudioSongId===id){_mPlayToken++;try{_ma&&_ma.pause();}catch(e){}_mAudioSongId=null;if(_mUrl){try{URL.revokeObjectURL(_mUrl);}catch(e){}_mUrl=null;}}if(_mCur===id){_mCur=null;_mPlaying=false;}musicEnsureCurrent();save();view==='list'?musicListModal():musicMenu();render();}
+async function musicDel(id,view){if(!await uiConfirm('删除这首歌？'))return;S.music.songs=S.music.songs.filter(s=>s.id!==id);mDelIDB(id);if(S.music.lastSongId===id)S.music.lastSongId='';if(_mAudioSongId===id){_mPlayToken++;try{_ma&&_ma.pause();}catch(e){}_mAudioSongId=null;if(_mUrl){try{URL.revokeObjectURL(_mUrl);}catch(e){}_mUrl=null;}}if(_mCur===id){_mCur=null;_mPlaying=false;}musicEnsureCurrent();save();view==='list'?musicListModal():musicMenu();render();}
 function musicEdit(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;openModal(`<h3>改歌名 / 歌词</h3>
   <div class="field"><label>歌名</label><input id="me_t" value="${esc(s.title||'')}"></div>
   <div class="field"><label>歌手</label><input id="me_a" value="${esc(s.artist||'')}"></div>
@@ -3536,7 +3536,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>时间感知<br><small style="color:#888">关闭后微信、通话、线下约会、共同生活和服务器主动消息都不知道日期、时间、星期、时段或间隔</small></span><span class="sw ${S.settings.timeAware?'on':''}" onclick="toggleTimeAwareness()"></span></div>
       <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
-      <div class="it" style="display:block"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>来电铃声<br><small style="color:#888">可用内置铃声，也可从音乐库选择；只改变别人打给你时的铃声</small></span><button class="minibtn" onclick="event.stopPropagation();ringPreviewStop()">停止试听</button></div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px">${incomingRingChoices().map(x=>`<button type="button" onclick="incomingRingSelect('${x.key}')" style="min-width:0;border:1px solid ${incomingRingKey()===x.key?'#ff8fab':'#3a3a3c'};border-radius:9px;padding:8px 4px;background:${incomingRingKey()===x.key?'rgba(255,143,171,.18)':'#242426'};color:${incomingRingKey()===x.key?'#ffd3df':'#ddd'};font-size:12px;cursor:pointer">${x.label}<small style="display:block;margin-top:3px;color:#888;font-size:10px">${x.tip}</small></button>`).join('')}</div><button type="button" class="minibtn" onclick="incomingRingMusicModal()" style="width:100%;margin-top:8px;padding:9px;border-color:${incomingRingKey()==='music'?'#ff8fab':'#3a3a3c'};color:${incomingRingKey()==='music'?'#ffd3df':'#ddd'}">♫ ${incomingRingKey()==='music'?esc(incomingRingCurrentLabel()):'从音乐库选择歌曲'}</button></div>
+      <div class="it" style="display:block"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>微信来电铃声<br><small style="color:#888">已固定为本次提供的 MP3；网页版和私人 App 使用同一首</small></span><span style="display:flex;gap:6px"><button class="minibtn" onclick="event.stopPropagation();incomingRingPreview()">试听</button><button class="minibtn" onclick="event.stopPropagation();ringPreviewStop()">停止</button></span></div></div>
       <div class="it" style="flex-wrap:wrap"><span>${svgIc('volume',15,'#bbb')} 音量 <b style="color:#07c160">${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}%</b><small style="color:#999;display:block">后台听歌听不清ta讲话，可调到100%以上加大</small></span><input type="range" min="0" max="300" step="10" value="${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}" style="width:100%;margin-top:6px" oninput="S.settings.volume=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'" onchange="playDing()"></div>
       <div class="it">后台通知（点开授权）<span class="v" onclick="reqNotify()">允许 ›</span></div>
     </div>
@@ -10624,7 +10624,7 @@ function editSumItem(id,i){const c=getC(id),x=c&&summaryList(c)[i];if(!x)return;
   <div class="btns"><button class="btn g" onclick="editSummary('${id}')">返回</button><button class="btn p" onclick="summaryEditAt('${id}',${i},$('#si_t').value)">保存</button></div>`);}
 
 /* =================== 通话 =================== */
-let _call=null,_ring=null,_ringPreviewTimer=null,_ringOwnedUrl='',_ringLoadToken=0,_callTimer=null,_callSilTimer=null,_callMissT=null;
+let _call=null,_ring=null,_ringPreviewTimer=null,_callTimer=null,_callSilTimer=null,_callMissT=null;
 function callPersist(){
   if(_call&&_call.state==='active'){
     S._activeCall={
@@ -10724,25 +10724,12 @@ async function hfHeard(t,meta){if(_callHFBusy||!_call)return;_callHFBusy=true;/*
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 沿用 v800：角色尾音和环境回声不再被当成用户的新一句话。 */
   _callHFBusy=false;_callHFPending=[];if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 话筒持续开启，但角色回复期间不提交识别结果。 */}
 function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');if(_callScreenNative&&privateNativeAppOn())window.SmallPhoneNative.request('screenShare.stop',{}).catch(()=>{});callScreenShareSet(false,'end');callVideoCameraStop('call-ended');callNativePiPEnd();callHFStop();}
-const INCOMING_RING_CHOICES=[
-  {key:'soft',label:'微信高低轻响',tip:'原提示音高声接一声柔和低音',url:'assets/incoming-wechat-ding-low-v1.wav'},
-  {key:'morning',label:'清脆双响',tip:'短促明亮的两声轻响',url:'assets/incoming-morning-chime-v1.wav'},
-  {key:'night',label:'木质叮咚',tip:'偏低沉的温和双响',url:'assets/incoming-warm-night-v1.wav'}
-];
-function incomingRingChoices(){return INCOMING_RING_CHOICES.slice();}
-function incomingRingKey(key){key=key==null?(S.settings&&S.settings.incomingRing):key;return key==='music'||INCOMING_RING_CHOICES.some(x=>x.key===key)?key:'soft';}
-function incomingRingUrl(key){const k=incomingRingKey(key),row=INCOMING_RING_CHOICES.find(x=>x.key===k);return row?row.url:INCOMING_RING_CHOICES[0].url;}
-function incomingRingSong(){musicInit();const id=String(S.settings&&S.settings.incomingRingSongId||'');return (S.music.songs||[]).find(x=>x.id===id)||null;}
-function incomingRingCurrentLabel(){const song=incomingRingSong();return song?('音乐库 · '+(song.title||'未命名')):'音乐库歌曲已失效';}
-function incomingRingMusicModal(){musicInit();const songs=S.music.songs||[],selected=String(S.settings&&S.settings.incomingRingSongId||''),rows=songs.map(s=>`<button type="button" class="btn ${selected===s.id&&incomingRingKey()==='music'?'p':'g'}" style="margin-bottom:8px;text-align:left" data-song-id="${esc(String(s.id||''))}" onclick="incomingRingSongSelect(this.dataset.songId)">♫ ${esc(s.title||'未命名')}${s.artist?`<small style="display:block;margin-top:3px;opacity:.68">${esc(s.artist)}</small>`:''}</button>`).join('');openModal(`<h3>从音乐库选择来电铃声</h3><div class="hint" style="margin-bottom:10px">来电时会循环播放所选歌曲；歌曲被删除或文件失效时，会自动使用默认轻响。</div>${rows||'<div class="hint">音乐库还是空的，请先到“音乐”里添加或收藏歌曲。</div>'}<div class="btns"><button class="btn g" onclick="closeModal()">取消</button>${songs.length?'':`<button class="btn p" onclick="closeModal();go('music')">去添加音乐</button>`}</div>`);}
-function incomingRingSongSelect(id){const song=(S.music&&S.music.songs||[]).find(x=>x.id===id);if(!song){toast('这首歌已不在音乐库');return false;}S.settings.incomingRing='music';S.settings.incomingRingSongId=song.id;save();closeModal();incomingRingPreview();render();toast('已用「'+(song.title||'未命名')+'」作为来电铃声');return true;}
-async function incomingRingMusicSource(){const song=incomingRingSong();if(!song)return null;if(song.src&&song.src.t==='url'&&song.src.url)return{url:song.src.url,owned:false};const blob=await mGet(song.id);if(!blob)return null;try{return{url:URL.createObjectURL(blob),owned:true};}catch(_){return null;}}
+const INCOMING_RING_URL='assets/incoming-wechat-call-default-v2.mp3';
+function incomingRingUrl(){return INCOMING_RING_URL;}
 function ringAssetStart(a,onFail,url){if(!a)return false;try{a.pause();a.loop=true;a.volume=Math.max(0,Math.min(1,.42*volMul()));a.src=url||incomingRingUrl();a.currentTime=0;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>{if(_ring===a&&onFail)onFail();});return true;}catch(_){return false;}}
-async function incomingRingMusicStart(preview){const token=++_ringLoadToken,source=await incomingRingMusicSource();if(token!==_ringLoadToken){if(source&&source.owned)try{URL.revokeObjectURL(source.url);}catch(_){}return false;}const url=source&&source.url||incomingRingUrl('soft');if(source&&source.owned)_ringOwnedUrl=source.url;const primary=ringToneElement(),fallback=()=>{const shared=uiToneElement();if(!shared||shared===primary)return false;_ring=shared;return ringAssetStart(shared,()=>{if(_ring===shared)_ring=null;},url);};if(primary){_ring=primary;if(!ringAssetStart(primary,fallback,url)){_ring=null;if(!fallback())return false;}}else if(!fallback())return false;if(preview){_ringPreviewTimer=setTimeout(()=>ringStop(),4800);if(!source)toast('所选歌曲已失效，正在试听默认轻响');}return true;}
-function ringStart(){ringStop();if(S.settings.sound){if(incomingRingKey()==='music')incomingRingMusicStart(false);else{const primary=ringToneElement(),fallback=()=>{const shared=uiToneElement();if(!shared||shared===primary){_ring=null;return false;}_ring=shared;if(!ringAssetStart(shared,()=>{if(_ring===shared)_ring=null;})){_ring=null;return false;}return true;};if(primary){_ring=primary;if(!ringAssetStart(primary,fallback)){_ring=null;fallback();}}else fallback();}}if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
-function ringStop(){_ringLoadToken++;if(_ringPreviewTimer){clearTimeout(_ringPreviewTimer);_ringPreviewTimer=null;}if(_ring){if(typeof _ring==='number')clearInterval(_ring);else try{_ring.pause();_ring.loop=false;_ring.currentTime=0;}catch(_){}_ring=null;}if(_ringOwnedUrl){try{URL.revokeObjectURL(_ringOwnedUrl);}catch(_){}_ringOwnedUrl='';}if(navigator.vibrate)navigator.vibrate(0);}
-function incomingRingPreview(){if(_call){toast('通话中不能试听来电铃声');return false;}ringStop();audioUnlock();if(incomingRingKey()==='music'){incomingRingMusicStart(true);return true;}const primary=ringToneElement(),url=incomingRingUrl(),fallback=()=>{const shared=uiToneElement();if(!shared||shared===primary)return false;_ring=shared;return ringAssetStart(shared,()=>{if(_ring===shared)_ring=null;},url);};if(primary){_ring=primary;if(!ringAssetStart(primary,fallback,url)){_ring=null;if(!fallback())return false;}}else if(!fallback())return false;_ringPreviewTimer=setTimeout(()=>ringStop(),4800);return true;}
-function incomingRingSelect(key){S.settings.incomingRing=incomingRingKey(key);save();incomingRingPreview();render();toast('已选择「'+INCOMING_RING_CHOICES.find(x=>x.key===S.settings.incomingRing).label+'」');}
+function ringStart(){ringStop();if(S.settings.sound){const primary=ringToneElement(),fallback=()=>{const shared=uiToneElement();if(!shared||shared===primary){_ring=null;return false;}_ring=shared;if(!ringAssetStart(shared,()=>{if(_ring===shared)_ring=null;})){_ring=null;return false;}return true;};if(primary){_ring=primary;if(!ringAssetStart(primary,fallback)){_ring=null;fallback();}}else fallback();}if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
+function ringStop(){if(_ringPreviewTimer){clearTimeout(_ringPreviewTimer);_ringPreviewTimer=null;}if(_ring){if(typeof _ring==='number')clearInterval(_ring);else try{_ring.pause();_ring.loop=false;_ring.currentTime=0;}catch(_){}_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
+function incomingRingPreview(){if(_call){toast('通话中不能试听微信来电铃声');return false;}ringStop();audioUnlock();const primary=ringToneElement(),url=incomingRingUrl(),fallback=()=>{const shared=uiToneElement();if(!shared||shared===primary)return false;_ring=shared;return ringAssetStart(shared,()=>{if(_ring===shared)_ring=null;},url);};if(primary){_ring=primary;if(!ringAssetStart(primary,fallback,url)){_ring=null;if(!fallback())return false;}}else if(!fallback())return false;_ringPreviewTimer=setTimeout(()=>ringStop(),4800);return true;}
 function ringPreviewStop(){ringStop();toast('已停止试听');}
 function blip(freq,dur){playMediaTone([[freq,dur]],{key:'blip-'+freq+'-'+dur,level:.35});}
 function incomingCall(id,kind,opt){if(offlineFocusActive())return false;if(cinemaRoleOccupied(id))return false;const c=getC(id);if(!c||c.blocked||_call)return false;opt=opt&&typeof opt==='object'?opt:{};

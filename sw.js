@@ -1,5 +1,5 @@
-const BUILD='934';
-const SHELL_CACHE='north-shell-v934';
+const BUILD='935';
+const SHELL_CACHE='north-shell-v935';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -12,10 +12,8 @@ const CORE_FILES=[
 ];
 const OPTIONAL_FILES=[
   './icon.png',
-  './assets/incoming-wechat-ding-low-v1.wav',
+  './assets/incoming-wechat-call-default-v2.mp3',
   './assets/message-notification-user-v1.mp3',
-  './assets/incoming-morning-chime-v1.wav',
-  './assets/incoming-warm-night-v1.wav',
   './assets/pet-room-v1.webp',
   './pay-assets/alipay-receive.jpg',
   './pay-assets/wechat-receive.jpg',
