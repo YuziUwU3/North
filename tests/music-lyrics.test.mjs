@@ -115,7 +115,8 @@ assert.equal(vm.runInContext('_ma.src',raceContext),'blob:second');
 assert.deepEqual(revoked,[],'the stale request must not revoke the latest song URL');
 
 assert.match(source,/if\(_mAudioSongId!==id\|\|!_ma\|\|!_ma\.src\)await musicPlay\(id\)/);
-assert.match(source,/if\(!await mGet\(s\.id\)\)/,'music packs must verify each IndexedDB write');
+assert.match(functionSource('musicImportSong'),/mPutVerified\(s\.id,blob\)/,'music packs must verify every IndexedDB write');
+assert.match(functionSource('musicPlay'),/musicMissingModal\(s\)/,'missing audio must offer in-place repair instead of telling users to delete timed lyrics');
 assert.match(source,/跳过 '\+skipped\+' 首不完整歌曲/);
 assert.match(functionSource('musicPlay'),/onloadedmetadata=\(\)=>mLyricTick\(true\)/,'metadata readiness must repaint keyed lyrics');
 assert.match(functionSource('musicPlay'),/onseeked=\(\)=>mLyricTick\(true\)/,'seeking to an authored cue must repaint immediately');

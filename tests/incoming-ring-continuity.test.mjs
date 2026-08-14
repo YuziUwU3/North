@@ -49,30 +49,37 @@ test('the exact new user MP3 is the only bundled WeChat incoming-call ringtone',
   }
 });
 
-test('preferences expose one fixed ringtone without old choices or music-library override',()=>{
+test('preferences keep the user MP3 as default and restore the music-library override',()=>{
   assert.match(source,/微信来电铃声/);
-  assert.match(source,/已固定为本次提供的 MP3/);
-  assert.doesNotMatch(source,/incomingRingMusicModal|incomingRingSongSelect|incomingRingMusicStart|INCOMING_RING_CHOICES/);
-  assert.doesNotMatch(source,/从音乐库选择来电铃声|微信高低轻响|清脆双响|木质叮咚/);
-  assert.doesNotMatch(source,/incomingRingSongId|incomingRing:'soft'/);
+  assert.match(source,/默认使用本次 MP3，也可以从音乐库选择/);
+  assert.match(source,/incomingRingMusicModal|incomingRingSongSelect|incomingRingMusicStart/);
+  assert.match(source,/从音乐库选择来电铃声/);
+  assert.match(source,/incomingRingSongId|incomingRing:'default'/);
+  assert.doesNotMatch(source,/INCOMING_RING_CHOICES|微信高低轻响|清脆双响|木质叮咚/);
 });
 
-test('incoming calls loop only the fixed MP3 and retain iOS media fallback and vibration',()=>{
+test('incoming calls use the selected library song or fixed MP3 fallback with iOS media fallback and vibration',()=>{
   assert.equal(functionSource('incomingRingUrl'),"function incomingRingUrl(){return INCOMING_RING_URL;}");
   const start=functionSource('ringStart');
   const assetStart=functionSource('ringAssetStart');
-  assert.match(start,/ringToneElement\(\)/);
-  assert.match(start,/uiToneElement\(\)/);
+  const selectedStart=functionSource('incomingRingMusicStart');
+  const sharedStart=functionSource('incomingRingAssetStart');
+  assert.match(sharedStart,/ringToneElement\(\)/);
+  assert.match(sharedStart,/uiToneElement\(\)/);
   assert.match(start,/S\.settings\.sound/);
   assert.match(start,/navigator\.vibrate/);
+  assert.match(start,/incomingRingKey\(\)==='music'/);
+  assert.match(selectedStart,/incomingRingMusicSource\(\)/);
+  assert.match(selectedStart,/incomingRingUrl\(\)/);
   assert.match(assetStart,/a\.loop=true/);
   assert.match(assetStart,/a\.src=url\|\|incomingRingUrl\(\)/);
-  assert.doesNotMatch(start+assetStart,/playMediaTone|webToneSequence|incomingRingKey|music/);
+  assert.doesNotMatch(start+assetStart+sharedStart,/playMediaTone|webToneSequence/);
 });
 
 test('sound-off incoming calls do not start ringtone playback',()=>{
   const start=functionSource('ringStart');
   const soundCheck=start.indexOf('if(S.settings.sound)');
-  const primary=start.indexOf('ringToneElement()');
-  assert.ok(soundCheck>=0&&primary>soundCheck);
+  const selected=start.indexOf("incomingRingKey()==='music'");
+  const fallback=start.indexOf('incomingRingAssetStart(incomingRingUrl(),false)');
+  assert.ok(soundCheck>=0&&selected>soundCheck&&fallback>soundCheck);
 });
