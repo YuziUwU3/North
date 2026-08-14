@@ -31,6 +31,20 @@ test('optional realtime understanding is role-paced and reacts only to changed s
   assert.match(bridge, /contractVersion = 18/);
 });
 
+test('private screen share can recognize exactly once after each completed user sentence', () => {
+  assert.match(app, /screenShareSpeechVision:false/);
+  assert.match(app, /说一句，看一次共享画面/);
+  assert.match(app, /function screenShareSpeechVisionOn\(\)/);
+  assert.match(app, /function screenShareSpeechVisionToggle\(el\)/);
+  assert.match(app, /call-screen-speech/);
+  assert.match(app, /<small>逐句看<\/small>/);
+  assert.match(html, /\.call-screen-tools\.call-screen-speech\{left:max\(72px/);
+  assert.match(app, /if\(screenShareSpeechVisionOn\(\)&&callScreenShareOn\(\)\)\{callVideoVisionAnalyze\('voice',t,meta\);return true;\}/);
+  assert.match(app, /callScreenShareOn\(\)&&\(screenShareRealtimeVisionOn\(\)\|\|screenShareSpeechVisionOn\(\)\)/);
+  assert.match(app, /if\(!sess\|\|screenShareSpeechVisionOn\(\)\|\|!screenShareRealtimeVisionOn\(\)/);
+  assert.match(app, /已恢复原来的共享识别逻辑/);
+});
+
 test('share-start response is isolated from the previous user sentence', () => {
   assert.match(app, /本轮普通聊天历史已隔离/);
   assert.match(app, /绝对不要回答、复述、改写或延续共享状态改变前用户的最后一句话/);

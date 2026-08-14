@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
 
 function functionSource(name) {
   const start = source.indexOf(`function ${name}(`);
@@ -78,6 +79,10 @@ assert.match(afterChat, /addEventListener\('input'[\s\S]*chatComposerReflow\(thi
 assert.match(reflow, /style\.overflowY=full>max\?'auto':'hidden'/,'a one-line caret must remain clipped to the textarea instead of leaking below it');
 assert.doesNotMatch(reflow, /setSelectionRange|getBoundingClientRect|visualViewport/,'textarea resizing must not force WebKit to repaint the caret from stale keyboard geometry');
 assert.doesNotMatch(source, /function chatComposerViewportBind|_northChatCaretBound/,'keyboard viewport movement must remain owned by iOS and WKWebView');
+assert.match(source,/class="inputbar chat-inputbar"/,'the normal WeChat composer has a shared web/native layout hook');
+assert.match(html,/\.chat-inputbar\{position:relative;top:-4px;gap:5px;padding-left:5px;padding-right:5px;\}/,'only the lower composer moves up slightly and gives the textarea more width');
+assert.match(html,/\.chat-inputbar textarea\{padding-top:6px;padding-bottom:10px;line-height:20px;\}/,'the caret keeps more room below its line without changing the proven 36px box');
+assert.match(html,/\.manual-reply-row\{display:flex;justify-content:flex-end;padding:5px 10px 0;background:#0b0b0c;\}/,'the manual reply button keeps its established position');
 
 assert.match(source, /\[点外卖\\\|[\s\S]*?refreshChatMessages\(id\);continue;/, 'special role cards must use the safe message-only refresh');
 assert.match(source, /\[表情\\\|[\s\S]*?refreshChatMessages\(id\);/, 'role stickers must use the safe message-only refresh');

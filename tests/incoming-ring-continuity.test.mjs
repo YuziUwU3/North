@@ -114,9 +114,24 @@ test('all three selectable ringtones are bundled, distinct short chimes, and off
   assert.match(source, /label:'微信高低轻响'/);
   assert.match(source, /label:'清脆双响'/);
   assert.match(source, /label:'木质叮咚'/);
-  assert.match(source, /点一种会立即试听并自动保存/);
+  assert.match(source, /可用内置铃声，也可从音乐库选择/);
   assert.match(source, /function incomingRingSelect\(key\)/);
   assert.match(source, /function incomingRingPreview\(\)/);
+});
+
+test('preferences can select a music-library song as the incoming ringtone', () => {
+  assert.match(source, /incomingRingSongId:''/);
+  assert.match(source, /从音乐库选择歌曲/);
+  assert.match(functionSource('incomingRingKey'), /key==='music'/);
+  assert.match(functionSource('incomingRingSongSelect'), /S\.settings\.incomingRing='music'/);
+  assert.match(functionSource('incomingRingSongSelect'), /S\.settings\.incomingRingSongId=song\.id/);
+  assert.match(functionSource('incomingRingMusicSource'), /song\.src&&song\.src\.t==='url'/);
+  assert.match(functionSource('incomingRingMusicSource'), /await mGet\(song\.id\)/, 'local library files must resolve from IndexedDB');
+  assert.match(functionSource('incomingRingMusicStart'), /await incomingRingMusicSource\(\)/);
+  assert.match(functionSource('incomingRingMusicStart'), /incomingRingUrl\('soft'\)/, 'missing music must fall back to the safe bundled ringtone');
+  assert.match(functionSource('ringStart'), /incomingRingKey\(\)==='music'/);
+  assert.match(functionSource('ringStop'), /URL\.revokeObjectURL\(_ringOwnedUrl\)/, 'temporary local-song URLs must be released');
+  assert.match(functionSource('musicDel'), /incomingRingSongId===id[\s\S]*incomingRing='soft'/, 'deleting the selected song must restore the default ringtone');
 });
 
 test('default ringtone repeats the same soft decay used by the WeChat message ding', () => {
@@ -177,7 +192,7 @@ test('incoming calls use an independent audio element and fall back to the same 
     uiToneElement: () => shared,
     clearInterval() {}, clearTimeout() {},
   });
-  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-low-v1.wav'},{key:'morning',url:'assets/incoming-morning-chime-v1.wav'},{key:'night',url:'assets/incoming-warm-night-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.api={start:ringStart,stop:ringStop,ring:()=>_ring};`, ctx);
+  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringOwnedUrl='',_ringLoadToken=0,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-low-v1.wav'},{key:'morning',url:'assets/incoming-morning-chime-v1.wav'},{key:'night',url:'assets/incoming-warm-night-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.api={start:ringStart,stop:ringStop,ring:()=>_ring};`, ctx);
 
   ctx.api.start();
   const primary = created[0];
@@ -213,7 +228,7 @@ test('sound-off calls vibrate without creating or playing a ringtone element', (
     uiToneElement() { sharedRequested++; return null; },
     clearInterval() {}, clearTimeout() {},
   });
-  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-low-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.start=ringStart;`, ctx);
+  vm.runInContext(`let _ring=null,_ringPreviewTimer=null,_ringOwnedUrl='',_ringLoadToken=0,_ringMediaAudio=null;const INCOMING_RING_CHOICES=[{key:'soft',url:'assets/incoming-wechat-ding-low-v1.wav'}];${functionSource('incomingRingKey')}${functionSource('incomingRingUrl')}${functionSource('ringToneElement')}${functionSource('ringAssetStart')}${functionSource('ringStop')}${functionSource('ringStart')}globalThis.start=ringStart;`, ctx);
   ctx.start();
   assert.equal(audioCreated, 0);
   assert.equal(sharedRequested, 0);

@@ -208,6 +208,14 @@ test('dashboard photo is a direct isolated upload target and sweetie text is rea
   assert.match(css,/\.home\[style\*="background:url"\]:before,html\.north-glass-ui \.home\[style\*="background:url"\]:after\{display:none!important;content:none!important\}/);
 });
 
+test('sweetie widget reuses the couple start date for an unboxed relationship-day label',()=>{
+  assert.match(app,/loveDays=S\.couple&&S\.couple\.startDate\?coupleDays\(S\.couple\.startDate\):0/);
+  assert.match(app,/class="sweetie-days">相恋 \$\{loveDays\} 天<\/div>/);
+  assert.doesNotMatch(app,/class="sweetie-days">[^<]*情侣空间/);
+  assert.match(css,/\.sweetie-days\{[^}]*position:absolute[^}]*color:inherit[^}]*font:inherit[^}]*font-size:9px[^}]*font-weight:550[^}]*text-align:center/);
+  assert.doesNotMatch(css,/\.sweetie-days\{[^}]*(?:background|border|box-shadow):/);
+});
+
 test('legacy duplicate widgets are removed while the four-slot glass dock is restored',()=>{
   assert.match(app,/const WIDS=\[\['dashboard'/);
   assert.match(app,/const HOME_DOCK_DEFAULT=\['calendar','games','mail','settings'\];/);

@@ -27,7 +27,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='932';</script>
+<script>window.__NORTH_SHELL_BUILD__='933';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -43,11 +43,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-932';
+  var key='north-sw-reloaded-933';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=932';
+  var url='sw.js?v=933';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -174,6 +174,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .inputbar .plus:active{transform:scale(.9) rotate(90deg);}
 .inputbar textarea{box-sizing:border-box;display:block;flex:1;min-width:0;height:36px;border:none;border-radius:6px;padding:8px 10px;font-size:16px;resize:none;max-height:84px;min-height:36px;line-height:1.25;outline:none;overflow-x:hidden;overflow-y:hidden;vertical-align:top;font-family:inherit;background:#fff;}
 .inputbar .send{background:linear-gradient(145deg,#f1f1f2,#bfc1c5);border:1px solid rgba(255,255,255,.3);color:#202124;font-size:14px;font-weight:650;padding:8px 13px;border-radius:7px;cursor:pointer;box-shadow:0 3px 9px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.72);}
+.chat-inputbar{position:relative;top:-4px;gap:5px;padding-left:5px;padding-right:5px;}
+.chat-inputbar textarea{padding-top:6px;padding-bottom:10px;line-height:20px;}
 .manual-reply-row{display:flex;justify-content:flex-end;padding:5px 10px 0;background:#0b0b0c;}
 .manual-reply-chip{border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 12px;background:linear-gradient(145deg,#292b30,#191a1e);color:#c9cacf;font-size:12px;font-weight:600;line-height:1;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.05);}
 .manual-reply-chip:disabled{opacity:.58;cursor:default;}
@@ -697,7 +699,9 @@ body{background:#000;padding:0;}
 .call-camera-preview.show{display:block}.call-camera-preview.rear,.call-screen-preview{transform:none}.callscreen.camera-on .cname,.callscreen.camera-on .cstat{position:relative;z-index:1;text-shadow:0 2px 10px rgba(0,0,0,.75)}
 .call-camera-tools{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:6;display:flex;align-items:center;gap:7px}
 .call-screen-tools{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(38px,env(safe-area-inset-bottom));z-index:7;display:flex;flex-direction:column;align-items:center;gap:5px;color:#d9d9df;font-size:9px;text-shadow:0 1px 4px #000}
+.call-screen-tools.call-screen-speech{left:max(72px,calc(env(safe-area-inset-left) + 72px))}
 .callscreen.video .call-screen-tools{left:max(12px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom))}.callscreen.video .call-screen-tools small{display:none}
+.callscreen.video .call-screen-tools.call-screen-speech{left:max(54px,calc(env(safe-area-inset-left) + 54px))}
 .call-camera-tools button,.call-screen-tools button{width:32px;height:32px;border:1px solid rgba(255,255,255,.14);border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(24,24,29,.55);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.24);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;opacity:.72}
 .call-camera-tools button.on,.call-screen-tools button.on{background:rgba(61,99,91,.72);opacity:.95}.call-camera-tools button:active,.call-screen-tools button:active{transform:scale(.94)}.call-camera-flip{font-size:17px!important}.call-screen-toggle{font-size:15px!important}.call-screen-toggle.pending{border-color:rgba(149,196,255,.8);box-shadow:0 0 0 3px rgba(123,170,235,.15);animation:screenpending 1s ease-in-out infinite}@keyframes screenpending{50%{opacity:.48}}
 .call-camera-vision{position:absolute;right:2px;bottom:41px;display:none;min-width:18px;height:18px;align-items:center;justify-content:center;box-sizing:border-box;pointer-events:none;color:#ffd0d0;font-size:10px;font-weight:700;text-shadow:0 1px 5px #000}
@@ -1279,8 +1283,8 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=932">
-<link rel="stylesheet" href="pet-game.css?v=932">
+<link rel="stylesheet" href="glass-theme.css?v=933">
+<link rel="stylesheet" href="pet-game.css?v=933">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1330,12 +1334,12 @@ html.north-native-app .music-chat-dock:focus-within{position:fixed;left:18px;rig
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=932" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=932" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=932" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=932" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=932" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=932" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=932"></script>
+<script src="license-gate.js?v=933" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=933" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=933" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=933" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=933" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=933" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=933"></script>
 </body>
 </html>

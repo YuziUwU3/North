@@ -23,9 +23,17 @@ test('Apple compatibility moves only Apple lock arrows and leaves Android geomet
   assert.match(html,/html\.north-ios-home-safe \.lockpull\{top:calc\(7px \+ var\(--north-ios-home-safe-top\)\)\}/);
   assert.match(html,/html\.north-native-app\.north-apple-remote-safe \.lockpull\{top:calc\(7px \+ var\(--north-native-safe-top,0px\)\)\}/);
   assert.doesNotMatch(html,/html:not\(\.north-ios-home-safe\).*\.lockpull/);
+  assert.match(app,/cur\(\)\.p==='home'&&homePageClamp\(_homePage\)===0&&!_call/,'the web and private-app arrow exists only on home page one');
+  assert.match(app,/function homePageDots\(p\)[\s\S]*?renderLockPull\(\);\}/,'page swipes refresh arrow visibility immediately');
   assert.match(app,/Safari 浏览器和安卓不受影响/);
   assert.match(app,/window\.addEventListener\('pageshow',lockPullRefresh/);
   assert.match(app,/document\.addEventListener\('visibilitychange',[\s\S]*lockPullRefresh\(\)/);
+});
+
+test('Apple standalone glass home reserves a separate arrow lane without shifting Android or native app',()=>{
+  const glass=read('glass-theme.css');
+  assert.match(glass,/html\.north-ios-home-safe\.north-glass-ui \.home \.home-scroll\{padding-top:calc\(var\(--north-ios-home-safe-top\) \+ 25px\)\}/);
+  assert.doesNotMatch(glass,/html\.north-native-app[^}]*\.home-scroll/);
 });
 
 test('all glass icons are precached and retain an inline fallback',()=>{

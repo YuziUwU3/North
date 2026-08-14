@@ -1,5 +1,5 @@
-const BUILD='932';
-const SHELL_CACHE='north-shell-v932';
+const BUILD='933';
+const SHELL_CACHE='north-shell-v933';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
