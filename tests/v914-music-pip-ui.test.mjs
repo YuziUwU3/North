@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v933 source and private 1.0.57 versions align',()=>{
-  assert.match(app,/APP_VER='v933 · 苹果主页箭头与输入栏修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 57;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.57;/);
+test('v934 source and private 1.0.58 versions align',()=>{
+  assert.match(app,/APP_VER='v934 · 真机安装核验与苹果底栏融合'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 58;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.58;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

@@ -80,7 +80,7 @@ assert.match(reflow, /style\.overflowY=full>max\?'auto':'hidden'/,'a one-line ca
 assert.doesNotMatch(reflow, /setSelectionRange|getBoundingClientRect|visualViewport/,'textarea resizing must not force WebKit to repaint the caret from stale keyboard geometry');
 assert.doesNotMatch(source, /function chatComposerViewportBind|_northChatCaretBound/,'keyboard viewport movement must remain owned by iOS and WKWebView');
 assert.match(source,/class="inputbar chat-inputbar"/,'the normal WeChat composer has a shared web/native layout hook');
-assert.match(html,/\.chat-inputbar\{position:relative;top:-4px;gap:5px;padding-left:5px;padding-right:5px;\}/,'only the lower composer moves up slightly and gives the textarea more width');
+assert.match(html,/\.chat-inputbar\{position:relative;top:-8px;gap:2px;padding-left:0;padding-right:0;\}/,'only the lower composer moves up clearly and gives the textarea visibly more width');
 assert.match(html,/\.chat-inputbar textarea\{padding-top:6px;padding-bottom:10px;line-height:20px;\}/,'the caret keeps more room below its line without changing the proven 36px box');
 assert.match(html,/\.manual-reply-row\{display:flex;justify-content:flex-end;padding:5px 10px 0;background:#0b0b0c;\}/,'the manual reply button keeps its established position');
 

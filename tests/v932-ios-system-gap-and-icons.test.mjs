@@ -16,6 +16,9 @@ test('Safari system-owned gap no longer pulls the web shell below innerHeight',(
   assert.match(app,/function pwaSystemBarSync\(\)/);
   assert.match(app,/if\(!appleHomeCompatBrowserEnvironment\(\)\)return window\.__NORTH_SYSTEM_BAR_COLOR__/);
   assert.match(html,/var color=apple&&standalone\?/);
+  assert.match(html,/if\(stored==='#111318'\|\|stored==='#171820'\)stored='#0a0b0d'/);
+  assert.match(html,/background-color:var\(--north-system-bar-color,#0a0b0d\)/);
+  assert.match(app,/glassThemeOn\(\)\?'#0a0b0d'/);
   assert.match(app,/setTimeout\(\(\)=>pwaSystemBarSync\(\)\.catch/);
 });
 
