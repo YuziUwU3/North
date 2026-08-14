@@ -12,12 +12,12 @@ const migration = read('supabase/migrations/202608130001_background_app_watch_te
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v939 source and private 1.0.63 versions are aligned', () => {
-  assert.match(app, /APP_VER='v939 · 通话拒绝拦截与副模型兜底'/);
-  assert.match(html, /app\.js\?v=939/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 63;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.63;/);
-  assert.match(nativeWeb, /1\.0\.63 \(63\)/);
+test('v940 source and private 1.0.64 versions are aligned', () => {
+  assert.match(app, /APP_VER='v940 · 音乐聊天键盘与苹果布局修复'/);
+  assert.match(html, /app\.js\?v=940/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 64;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.64;/);
+  assert.match(nativeWeb, /1\.0\.64 \(64\)/);
 });
 
 test('Apple compatibility alone moves call identity and mood updates live', () => {

@@ -19,6 +19,7 @@ function harness() {
   const documentElement = { scrollTop: 62, clientHeight: 800 };
   const body = { scrollTop: 63, scrollLeft: 9 };
   let playerPresent = true;
+  let appleSafe = false;
   const listeners = {};
   const sandbox = {
     document: {
@@ -35,6 +36,7 @@ function harness() {
     setTimeout: fn => { queued.push(fn); return queued.length; },
     clearTimeout: () => {},
   };
+  documentElement.classList = { contains: name => name === 'north-apple-remote-safe' && appleSafe };
   vm.createContext(sandbox);
   vm.runInContext(`let _mView='player';${viewportSource()};globalThis.api={
     reset:musicViewportReset,
@@ -45,7 +47,7 @@ function harness() {
     focused:()=>_mChatViewportFocused,
     baseline:()=>_mChatViewportHeight
   };`, sandbox);
-  return { sandbox, root, documentElement, body, listeners, queued, setPlayerPresent: value => { playerPresent = value; } };
+  return { sandbox, root, documentElement, body, listeners, queued, setPlayerPresent: value => { playerPresent = value; }, setAppleSafe: value => { appleSafe = value; } };
 }
 
 test('music player resets only its residual document pan', () => {
@@ -94,9 +96,22 @@ test('keyboard recovery waits for viewport height to rebound', () => {
   assert.equal(h.root.scrollTop, 0);
 });
 
+test('apple compatibility uses the same natural keyboard push as WeChat', () => {
+  const h = harness();
+  h.setAppleSafe(true);
+  h.root.scrollTop = 47;
+  h.sandbox.api.focus();
+  assert.equal(h.sandbox.api.focused(), false, 'Apple flow must not arm the old forced reset');
+  assert.equal(h.sandbox.api.baseline(), 0);
+  h.sandbox.api.blur();
+  assert.equal(h.root.scrollTop, 47, 'blur must leave WebKit natural keyboard positioning alone');
+  assert.equal(h.queued.length, 0, 'Apple flow must not schedule three snap-back passes');
+});
+
 test('music input owns the recovery hooks without restoring a global viewport hack', () => {
   assert.match(app, /id="m_chat"[^>]*onfocus="musicChatViewportFocus\(\)"[^>]*onblur="musicChatViewportBlur\(\)"/);
   assert.match(app, /function musicToggleChat\(\)[\s\S]*?input\.blur\(\)[\s\S]*?musicChatViewportBlur\(\)/);
+  assert.match(app, /function musicChatNaturalKeyboardFlow\(\)[\s\S]*?north-apple-remote-safe/);
   const ordinaryApp=app.replace(/function northViewportDiagnosticStart\([^\n]*\n/,'');
   assert.doesNotMatch(ordinaryApp, /visualViewport\.addEventListener\(['"](?:resize|scroll)['"]/, 'the optional diagnostic observer is not a keyboard layout hook');
   assert.doesNotMatch(app, /--north-app-height/);

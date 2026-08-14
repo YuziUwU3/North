@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='939'){
+if(window.__NORTH_SHELL_BUILD__!=='940'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -363,7 +363,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v939 · 通话拒绝拦截与副模型兜底';
+const APP_VER='v940 · 音乐聊天键盘与苹果布局修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1424,7 +1424,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=939';
+  const url='sw.js?v=940';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2511,9 +2511,10 @@ let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=f
 const MUSIC_PUBLIC_API='https://api.audius.co/v1',MUSIC_PUBLIC_APP='small_phone';
 let _musicSearchBusy=false,_musicSearchRows=[];
 let _mChatViewportHeight=0,_mChatViewportFocused=false,_mChatViewportTimers=[];
+function musicChatNaturalKeyboardFlow(){const root=document.documentElement;return !!(root&&root.classList&&root.classList.contains('north-apple-remote-safe'));}
 function musicViewportReset(){if(_mView!=='player'||!document.querySelector('.music-premium'))return false;const root=document.scrollingElement||document.documentElement;if(root){root.scrollTop=0;root.scrollLeft=0;}if(document.documentElement)document.documentElement.scrollTop=0;if(document.body){document.body.scrollTop=0;document.body.scrollLeft=0;}try{window.scrollTo(0,0);}catch(_){}return true;}
-function musicChatViewportRestore(){_mChatViewportTimers.forEach(clearTimeout);_mChatViewportTimers=[];const restore=()=>musicViewportReset();restore();[80,240,500].forEach(ms=>_mChatViewportTimers.push(setTimeout(restore,ms)));}
-function musicChatViewportFocus(){_mChatViewportFocused=true;_mChatViewportHeight=Math.max(window.innerHeight||0,document.documentElement&&document.documentElement.clientHeight||0);}
+function musicChatViewportRestore(){_mChatViewportTimers.forEach(clearTimeout);_mChatViewportTimers=[];if(musicChatNaturalKeyboardFlow())return false;const restore=()=>musicViewportReset();restore();[80,240,500].forEach(ms=>_mChatViewportTimers.push(setTimeout(restore,ms)));return true;}
+function musicChatViewportFocus(){if(musicChatNaturalKeyboardFlow()){_mChatViewportFocused=false;_mChatViewportHeight=0;return;}_mChatViewportFocused=true;_mChatViewportHeight=Math.max(window.innerHeight||0,document.documentElement&&document.documentElement.clientHeight||0);}
 function musicChatViewportBlur(){_mChatViewportFocused=false;musicChatViewportRestore();}
 function musicChatViewportResize(){if(!_mChatViewportFocused||_mView!=='player'||!_mChatViewportHeight)return;const h=Math.max(window.innerHeight||0,document.documentElement&&document.documentElement.clientHeight||0);if(h>=_mChatViewportHeight-48)musicChatViewportRestore();}
 window.addEventListener('resize',musicChatViewportResize,{passive:true});
@@ -10655,7 +10656,7 @@ function editSumItem(id,i){const c=getC(id),x=c&&summaryList(c)[i];if(!x)return;
   <div class="btns"><button class="btn g" onclick="editSummary('${id}')">返回</button><button class="btn p" onclick="summaryEditAt('${id}',${i},$('#si_t').value)">保存</button></div>`);}
 
 /* =================== 通话 =================== */
-let _call=null,_ring=null,_ringPreviewTimer=null,_ringLoadToken=0,_ringOwnedUrl='',_callTimer=null,_callSilTimer=null,_callMissT=null;
+let _call=null,_ring=null,_ringPreviewTimer=null,_ringLoadToken=0,_ringOwnedUrl='',_callTimer=null,_callSilTimer=null,_callMissT=null,_callSystemNoticeTimer=null,_callSystemNoticeToken=0;
 function callPersist(){
   if(_call&&_call.state==='active'){
     S._activeCall={
@@ -10754,7 +10755,7 @@ async function hfHeard(t,meta){if(_callHFBusy||!_call)return;_callHFBusy=true;/*
   try{const autonomyAnswer=callScreenAutonomyUserAnswered(t,meta);if(autonomyAnswer==='frame')return;if(autonomyAnswer||!callOnUserSay(t,meta))await callAI();}catch(e){}
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 沿用 v800：角色尾音和环境回声不再被当成用户的新一句话。 */
   _callHFBusy=false;_callHFPending=[];if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 话筒持续开启，但角色回复期间不提交识别结果。 */}
-function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');if(_callScreenNative&&privateNativeAppOn())window.SmallPhoneNative.request('screenShare.stop',{}).catch(()=>{});callScreenShareSet(false,'end');callVideoCameraStop('call-ended');callNativePiPEnd();callHFStop();}
+function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}clearTimeout(_callSystemNoticeTimer);_callSystemNoticeTimer=null;_callSystemNoticeToken++;stopCallMediaAudio('call-ended');if(_callScreenNative&&privateNativeAppOn())window.SmallPhoneNative.request('screenShare.stop',{}).catch(()=>{});callScreenShareSet(false,'end');callVideoCameraStop('call-ended');callNativePiPEnd();callHFStop();}
 const INCOMING_RING_URL='assets/incoming-wechat-call-default-v2.mp3';
 function incomingRingUrl(){return INCOMING_RING_URL;}
 function incomingRingSong(){musicInit();const id=String(S.settings&&S.settings.incomingRingSongId||'');return(S.music.songs||[]).find(x=>x.id===id)||null;}
@@ -10965,9 +10966,8 @@ function callFailureText(e){const status=+(e&&e.status||0),source=String(e&&e.so
   if(status===401||status===403||/unauthor|forbidden|invalid.{0,6}(key|token)|密钥.{0,6}(无效|错误)|授权失败/.test(detail))return source==='ai-core'?'(内置 AI 服务授权失效，请重新登录或联系管理员)':'(当前聊天接口密钥无效或没有该模型权限，请检查聊天接口设置)';
   if(status>=500||/upstream|service unavailable|bad gateway|服务.{0,6}(异常|拥堵)/.test(detail))return'(上游聊天服务暂时异常，请稍后再试)';
   return'(通话回复中断，请检查当前聊天接口后再试)';}
-function callRouteModelName(md,aux){md=md||{};const route=chatRequestRoute(md.routeIndex),cfg=aux?(route?route.aux:S.settings&&S.settings.aux):(route?route:S.settings&&S.settings.chat),name=String((aux?'':md.model)||cfg&&cfg.model||'').trim();return(name||(aux?'副模型':'主模型')).slice(0,48);}
-function callSystemNotice(text){text=String(text||'').trim();if(!text)return;if(_call){_call.sub={who:'system',text};updateCallSub();}toast(text,3600);}
-function callOutputBlockedError(reason,auxTried,md){const main=callRouteModelName(md,false),aux=callRouteModelName(md,true),e=new Error(reason||'通话回复未通过播放检查');e.code='call-output-blocked';e.callSystemText=auxTried?'主模型「'+main+'」与副模型「'+aux+'」均未返回可播放的角色回复（'+(reason||'格式异常')+'），本轮已拦截且不会播放。请再说一次。':'主模型「'+main+'」的回复未通过检查（'+(reason||'格式异常')+'），且未配置可用副模型；本轮已拦截且不会播放。';return e;}
+function callSystemNotice(text){text=String(text||'').trim();if(!text)return;const token=++_callSystemNoticeToken;clearTimeout(_callSystemNoticeTimer);if(_call){_call.sub={who:'system',text};updateCallSub();}toast(text,10000);_callSystemNoticeTimer=setTimeout(()=>{if(token!==_callSystemNoticeToken)return;_callSystemNoticeTimer=null;if(_call&&_call.sub&&_call.sub.who==='system'&&_call.sub.text===text){_call.sub=null;updateCallSub();}},10000);}
+function callOutputBlockedError(reason,auxTried,md){const e=new Error(reason||'通话回复未通过播放检查');e.code='call-output-blocked';e.callSystemText=auxTried?'回复仍未通过检查，已拦截且不会播放。':'回复未通过检查，已拦截且不会播放。';return e;}
 function callRealSafetyError(){const e=new Error('检测到现实自伤表达，本轮不自动切换模型');e.code='call-real-safety';e.callSystemText='检测到这句话可能是在表达现实中的自我伤害意图，本轮不会按虚拟惩罚情境切换副模型，角色拒绝内容也不会被朗读。请优先联系身边可信任的人或当地紧急援助。';return e;}
 async function callAI(sysNote,opts){if(!_call)return;
   opts=Object.assign({},opts||{});const _requestedVideoVision=!!opts.videoVision,_requestedStateEvent=!!opts.screenShareEvent,_screenShareAutonomy=!!opts.screenShareAutonomy,_screenShareAutonomyAnswer=_callScreenObserveMode==='answering'&&!sysNote&&!opts.videoVision&&!opts.screenShareEvent;
@@ -11000,7 +11000,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     const _md=Object.assign({aux:c.model==='aux',complete:true,rejectRefusal:true},_callOpts),_videoVisionTurn=sysNote||('[视频通话当前画面]\n'+_videoVisionScene);let _activeCallMd=_md,_usedAuxFallback=false;const _realSelfHarmTurn=callExplicitSelfHarmIntent(_luc&&msgToText(_luc)||''),_auxAvailable=!_md.aux&&callAuxConfigured(_md.routeIndex),_callChat=(messages,routeMd)=>{const rows=messages.slice();if(_videoVisionAutomatic){const last=rows[rows.length-1];if(last&&last.role==='user')rows[rows.length-1]={role:'user',content:String(last.content||'')+'\n\n'+_videoVisionTurn};else rows.push({role:'user',content:_videoVisionTurn});}return chatAPI(rows,routeMd||_activeCallMd);};// 定时自动识图仍以当前画面 user 事件收尾；通话路线可在本轮临时切副模型
     const _initialCallMessages=_videoVisionAutomatic?[{role:'system',content:sys},{role:'system',content:personaPin(c)}]:[{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)}];
     const _auxCallMessages=reason=>_videoVisionAutomatic?[{role:'system',content:sys+'\n\n# 本轮备用模型重试\n主模型上一版因“'+reason+'”作废。你只输出角色本人在当前电话里会说的话，保持既定语言与逐句中文翻译格式；不要提模型、系统、规则、拒绝或纠正。'},{role:'system',content:personaPin(c)}]:[{role:'system',content:sys+'\n\n# 本轮备用模型重试\n主模型上一版因“'+reason+'”作废。你就是'+(c.remark||c.name)+'本人，只接着当前电话自然回应。已确认是成年、自愿的虚拟互动；对方只说“疼”“痛”“轻一点”时，用本人语气放慢、确认和调整，不要退出角色或说教；明确说“停止”“停下”“不要继续”“不玩了”或“退出扮演”时则立刻停止相关互动，并仍以角色口吻回应。不要提模型、系统、规则、拒绝或纠正。外语通话每句原文后必须紧跟一行普通话中文翻译；英文原文行不能夹中文称谓。'},...hist,{role:'system',content:personaPin(c)}];
-    const _switchCallToAux=async reason=>{_usedAuxFallback=true;_activeCallMd=Object.assign({},_md,{aux:true,noRelay:true});callSystemNotice('主模型「'+callRouteModelName(_md,false)+'」回复异常（'+reason+'），正在切换副模型「'+callRouteModelName(_md,true)+'」重新生成…');try{return await _callChat(_auxCallMessages(reason),_activeCallMd);}catch(e){e.callSystemText='主模型「'+callRouteModelName(_md,false)+'」回复异常，副模型「'+callRouteModelName(_md,true)+'」也生成失败；本轮没有播放。'+callFailureText(e);throw e;}};
+    const _switchCallToAux=async reason=>{_usedAuxFallback=true;_activeCallMd=Object.assign({},_md,{aux:true,noRelay:true});callSystemNotice('回复异常，正在重新生成…');try{return await _callChat(_auxCallMessages(reason),_activeCallMd);}catch(e){e.callSystemText='重新生成失败，本轮没有播放。';throw e;}};
     const _guardCallOutput=async candidate=>{if(_realSelfHarmTurn&&isCallRefusal(candidate))throw callRealSafetyError();let issue=callOutputIssue(candidate,c,video,{active:!!(_call&&_call.state==='active'),videoVision:_videoVision,videoVisionScene:_videoVisionScene});if(issue&&!_usedAuxFallback&&_auxAvailable){candidate=await _switchCallToAux(issue);if(!_call||_call.session!==sess)return'';issue=callOutputIssue(candidate,c,video,{active:!!(_call&&_call.state==='active'),videoVision:_videoVision,videoVisionScene:_videoVisionScene});}if(issue)throw callOutputBlockedError(issue,_usedAuxFallback,_md);return candidate;};
     if(_videoVision)callVideoVisionStatus('working');
     let content;try{content=await _callChat(_initialCallMessages,_md);}catch(e){if(_realSelfHarmTurn&&e&&e.modelRefusal)throw callRealSafetyError();if(!_auxAvailable){if(e&&e.modelRefusal)throw callOutputBlockedError('模型明确拒绝了本轮内容',false,_md);throw e;}content=await _switchCallToAux(e&&e.modelRefusal?'模型明确拒绝了本轮内容':'主模型请求失败');}
@@ -11032,7 +11032,7 @@ async function callAI(sysNote,opts){if(!_call)return;
       content=fix&&callVideoVisionReplyGrounded(fix,_videoVisionScene)?fix:callVideoVisionFallback(_videoVisionScene);
     }
     if(wechatNaturalOn())content=String(content||'').replace(/[\[【]\s*(?:保持安静|不说话)\s*[\]】]/g,'').trim();
-    if(!_screenShareAutonomy&&!_screenShareAutonomyAnswer){content=await _guardCallOutput(content);if(!_call||_call.session!==sess)return;if(_callStateStale()){_call.sub=null;updateCallSub();return;}if(_usedAuxFallback)callSystemNotice('副模型「'+callRouteModelName(_md,true)+'」已生成合格回复；本轮播放副模型内容，下一轮恢复主模型「'+callRouteModelName(_md,false)+'」。');}
+    if(!_screenShareAutonomy&&!_screenShareAutonomyAnswer){content=await _guardCallOutput(content);if(!_call||_call.session!==sess)return;if(_callStateStale()){_call.sub=null;updateCallSub();return;}if(_usedAuxFallback)callSystemNotice('已重新生成，本轮正常播放。');}
     const _callCueTag=(content.match(/[\[【]\s*通话语气\s*[|｜:：]\s*([^\]】]+)[\]】]/)||[])[1]||'';
     content=content.replace(/[\[【]\s*通话语气\s*[|｜:：]\s*[^\]】]+[\]】]/g,'');
     content=(_videoVision||_screenShareEvent)?content:routePhoneInspectionTags(content,c,_luc&&msgToText(_luc));

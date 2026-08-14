@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.63 \(63\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.64 \(64\)'/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
@@ -126,8 +126,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 63;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.63;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 64;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.64;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -304,6 +304,7 @@ test('private app isolates role audio from recognition and reuses the proven web
   assert.match(html, /\.callbtns\{[^}]*bottom:40px/);
   assert.doesNotMatch(html, /html\.north-native-app[^\n{}]*\.callinput\{/);
   assert.doesNotMatch(html, /html\.north-native-app[^\n{}]*\.callbtns\{/);
-  assert.match(html, /html\.north-native-app \.music-chat-dock:focus-within\{[^}]*position:fixed;[^}]*bottom:8px/);
+  assert.match(html, /html\.north-native-app:not\(\.north-apple-remote-safe\) \.music-chat-dock:focus-within\{[^}]*position:fixed;[^}]*bottom:8px/);
+  assert.match(html, /html\.north-apple-remote-safe \.phone:has\(\.music-chat-dock\)\{position:absolute\}/);
   assert.match(html, /\.callscreen\.mini\{[^}]*bottom:auto;[^}]*max-height:58px/);
 });

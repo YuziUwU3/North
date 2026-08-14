@@ -61,6 +61,10 @@ assert.match(html, /\.music-lyrics\{height:clamp\(92px,14vh,120px\);padding:0 22
 assert.match(html, /\.music-lyrics \.mlrc\{font-size:13px;line-height:1\.8\}/);
 assert.match(html, /\.music-controls\{margin-top:auto;padding:1px 22px 16px\}/);
 assert.match(html, /\.music-chat-toggle\{font-size:13px\}/);
+assert.match(html, /\.music-chatbar textarea\{[^}]*font-size:16px!important/);
+assert.match(html, /\.music-chatbar \.send\{[^}]*background:linear-gradient\(145deg,rgba\(255,255,255,\.98\)/);
+assert.match(html, /html\.north-apple-remote-safe \.music-stage\{[^}]*flex-basis:clamp\(168px,22vh,202px\)/);
+assert.match(html, /html\.north-apple-remote-safe \.music-lyrics\{height:clamp\(68px,9vh,78px\)\}/);
 assert.match(html, /@media\(max-height:720px\)\{\.music-meta\{margin-top:14px\}[\s\S]*?\.music-lyrics \.mlrc\{font-size:12px;line-height:1\.75\}[\s\S]*?\.music-controls\{padding-bottom:12px\}\.music-chat-toggle\{font-size:12px\}\}/);
 assert.doesNotMatch(html, /\.music-lyrics \.mlrc\.on\{color:#ffd6e8!important/);
 assert.match(html, /\.music-settings\{/);
