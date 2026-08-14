@@ -20,7 +20,9 @@ test('co-living stays separate from one-time dates and is opt-in',()=>{
   assert.match(source,/function offData\(id\).*S\.offline/s);
   assert.match(source,/共同生活 · 测试版/);
   assert.match(source,/关闭只会暂停/);
-  assert.match(source,/function renderOff\(id\).*mode==='cohab'.*renderCohab/s);
+  assert.match(source,/else if\(c\.p==='off'\)html=renderOff\(c\.id,c\.mode\)/);
+  assert.match(source,/function renderOff\(id,mode\).*mode==='cohab'.*renderCohab/s);
+  assert.match(source,/if\(!_off\|\|_off\.id!==id\|\|_off\.mode!=='cohab'\)_off=\{id,busy:false,mode:'cohab'\}/);
   assert.match(source,/function cohabClear\(id\)/);
 });
 
@@ -176,7 +178,7 @@ test('old dates and co-living summaries share the role-perspective memory rule',
 });
 
 test('the established offline narration presentation is preserved',()=>{
-  const originalRender=source.slice(source.indexOf('function renderOff(id)'),source.indexOf('/* ===== 信箱 ====='));
+  const originalRender=source.slice(source.indexOf('function renderOff(id,mode)'),source.indexOf('/* ===== 信箱 ====='));
   assert.match(originalRender,/if\(m\.who==='旁白'\)return `<div class="offnar[^`]+\$\{offRevealText\(m\)\}<\/div>`/);
   assert.doesNotMatch(preview,/<div class="nar">【/);
   assert.doesNotMatch(preview,/】<\/div>/);

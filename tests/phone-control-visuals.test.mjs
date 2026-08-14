@@ -13,14 +13,17 @@ test('locked apps are visually disabled without an emoji label', () => {
   assert.ok(app.includes(`class="app home-item'+(locked?' app-locked':'')+'"`));
 });
 
-test('locked apps use a line lock and reject home-screen launches', () => {
-  assert.match(app, /class="app-lock-line"/);
+test('locked apps use an outlined red name-side lock and reject home-screen launches', () => {
+  assert.match(app, /class="app-lock-name"/);
+  assert.match(app, /homeAppLabel\(a\.t,locked\)/);
   assert.match(app, /aria-disabled="/);
   assert.match(app, /if\(appLocked\(k\)\)\{toast\('「'/);
   assert.match(app, /function appLaunch\(k\)[\s\S]*?if\(appLocked\(k\)\)/);
   assert.doesNotMatch(app, /function appLk\(key\)\{return appLocked\(key\)\?'🔒'/);
   assert.match(html, /\.app\.app-locked/);
-  assert.match(html, /\.app-lock-line/);
+  assert.match(html, /\.app-lock-name/);
+  assert.match(html, /\.app-lock-body\{fill:#f04455;stroke:#ff9aa5/);
+  assert.match(html, /\.app-lock-key\{fill:#111318/);
 });
 
 test('wechat login lock screen uses animated line art and a red countdown', () => {

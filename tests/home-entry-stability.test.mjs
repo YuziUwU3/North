@@ -89,10 +89,33 @@ test('home widgets, apps, and dock share live reorder data without browser text 
   assert.match(source, /function homeTokenCell\(k\)/);
   assert.match(source, /function appLiveReorder\(x,y\)/);
   assert.match(source, /appSwapNodes\(d\.item,target\)/);
+  assert.match(source, /function homeReferenceSlotsRefresh\(page\)/);
+  assert.match(source, /refresh=\(\)=>homeReferenceSlotsRefresh\(document\.querySelector\('#appswipe \.glass-reference-page'\)\)/);
   assert.match(source, /function homeLayoutReadDom\(\)/);
   assert.match(source, /data-token="w:\$\{k\}" onpointerdown="appDown\(event,'w:\$\{k\}'\)"/);
   assert.match(html, /\.home,\.home \*\{[^}]*-webkit-user-select:none;user-select:none;-webkit-touch-callout:none/);
   assert.match(html, /\.home\.home-editing \.dock \.app/);
+});
+
+test('home paging never starts a delayed smooth snap while the finger is still scrolling', () => {
+  const scroll = functionSource('homePgScroll');
+  assert.doesNotMatch(scroll, /setTimeout\(\(\)=>homeSnapPage/);
+  assert.match(source, /onscrollend="homeSnapPage\(this\)" onpointerup="homeSnapPage\(this\)" onpointercancel="homeSnapPage\(this\)"/);
+  const css = fs.readFileSync(path.join(root, 'glass-theme.css'), 'utf8');
+  assert.match(css, /#homeDesktop \.home-item\{touch-action:pan-x pan-y\}/);
+  assert.match(css, /body\.home-drag-active #homeDesktop \.home-item\{touch-action:none\}/);
+});
+
+test('the first glass page persists empty app slots instead of compacting every drop', () => {
+  assert.match(source, /function homeReferenceAppSlotMap\(pg\)/);
+  assert.match(source, /function homeReferenceSlotAtPoint\(page,x,y\)/);
+  assert.match(source, /function homeReferenceMoveToSlot\(page,item,n\)/);
+  assert.match(source, /homeReferenceAppSlots=map/);
+  assert.match(source, /homeReferenceAppSlots','appIcons/);
+  assert.match(source, /glass-app-drop-slot/);
+  const live = functionSource('appLiveReorder');
+  assert.match(live, /homeReferenceSlotAtPoint\(ref,x,y\)/);
+  assert.match(live, /homeReferenceMoveToSlot\(ref,d\.item,refSlot\)/);
 });
 
 test('preferences adjust all home app icons and labels with portable state', () => {

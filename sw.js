@@ -1,5 +1,6 @@
-const BUILD='923';
-const SHELL_CACHE='north-shell-v923';
+const BUILD='925';
+const SHELL_CACHE='north-shell-v925';
+const GLASS_ICON_CACHE='north-glass-icons-v1';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -110,6 +111,17 @@ self.addEventListener('fetch',event=>{
   let url;
   try{url=new URL(request.url);}catch(_){return;}
   if(url.origin!==self.location.origin)return;
+
+  if(/\/assets\/app-icons\/glass\/(?:black|gray|pink|blue)\/[^/]+\.webp$/.test(url.pathname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(GLASS_ICON_CACHE),cached=await cache.match(request);
+      if(cached)return cached;
+      const response=await fetch(request,{cache:'no-cache'});
+      if(response&&response.ok)await cache.put(request,response.clone());
+      return response;
+    })());
+    return;
+  }
 
   // App Store support/privacy URLs are ordinary public documents. They must
   // never be replaced by the cached small-phone application shell.

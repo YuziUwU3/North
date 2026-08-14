@@ -21,5 +21,8 @@ assert.equal(context.validShellText('ai',ai.slice(0,20000)),false,'truncated ai-
 assert.match(sw,/Promise\.all\(CORE_FILES\.map[\s\S]*checkedResponse\(item\.url,item\.kind,3\)/);
 assert.match(sw,/currentCore\(cache,'html'\)/);
 assert.match(sw,/currentCore\(cache,'app'\)/);
+assert.match(sw,/const GLASS_ICON_CACHE='north-glass-icons-v1'/);
+assert.match(sw,/assets\\\/app-icons\\\/glass/);
+assert.match(app,/loading="lazy" decoding="async" fetchpriority="low"/);
 
 console.log('cache integrity tests passed');

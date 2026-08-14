@@ -108,6 +108,12 @@ test('final reference widgets keep the photo square and the vinyl controls remov
   assert.match(css,/\.home \.dock\{display:grid!important;width:min\(348px,calc\(100vw - 32px\)\)/);
 });
 
+test('reference vinyl and right app column scale on narrow Android viewports without changing the 390px layout',()=>{
+  assert.match(css,/glass-place-vinyl\{left:calc\(50% - 5px\)!important[^}]*width:calc\(50% - 21px\)!important/);
+  assert.match(css,/glass-place-sweetie\{[^}]*width:calc\(50% - 21px\)!important/);
+  assert.match(css,/glass-place-app-f\{left:calc\(75% - \.5px\)!important[^}]*width:calc\(25% - 27px\)!important/);
+});
+
 test('storage gauge shrinks as one complete circle while its glass tile stays fixed',()=>{
   assert.match(css,/\.dash-storage i\{[^}]*width:40px;height:40px[^}]*border-radius:50%/);
   assert.match(css,/\.dash-storage i:after\{[^}]*inset:6px[^}]*border-radius:50%/);
@@ -176,8 +182,10 @@ test('every theme keeps its own very pale transparent glass tint',()=>{
   assert.match(app,/function glassWidgetDefaultOpacity\(\)\{return appIconPack\(\)==='black'\?18:14;\}/);
 });
 
-test('dashboard inner tiles stay translucent instead of becoming solid cards',()=>{
-  assert.match(css,/\.home-dashboard-grid>div,\.home-dashboard-photo\{[^}]*rgba\(70,71,76,\.18\)[^}]*backdrop-filter:blur\(18px\)/);
+test('dashboard inner tiles stay translucent without stacking expensive blur layers',()=>{
+  const inner=css.match(/\.home-dashboard-grid>div,\.home-dashboard-photo\{[^}]*\}/)?.[0]||'';
+  assert.match(inner,/rgba\(70,71,76,\.18\)/);
+  assert.doesNotMatch(inner,/backdrop-filter/);
   assert.match(css,/north-pack-pink \.home-dashboard-grid>div[^\{]*\{[^}]*rgba\(255,232,241,\.22\)/);
   assert.match(css,/north-pack-blue \.home-dashboard-grid>div[^\{]*\{[^}]*rgba\(232,243,255,\.22\)/);
   assert.match(css,/north-pack-gray \.home-dashboard-grid>div[^\{]*\{[^}]*rgba\(255,255,255,\.24\)/);
@@ -219,9 +227,10 @@ test('glass packs keep a free persisted mixed app-widget layout and appearance p
   assert.match(app,/function glassWidgetAppearanceEnsure\(\)[\s\S]*glassWidgetAppearances=\{\}/);
   assert.match(app,/map\[pack\]/);
   assert.match(app,/function appDown\(e,k\)\{if\(e\.pointerType/);
-  assert.match(app,/if\(e\.cancelable\)e\.preventDefault\(\);/);
-  assert.match(app,/e\.currentTarget\.setPointerCapture\(e\.pointerId\)/);
-  assert.match(css,/#homeDesktop \.home-item\{touch-action:none\}/);
+  assert.doesNotMatch(app,/function appDown\(e,k\)[\s\S]*?if\(e\.cancelable\)e\.preventDefault\(\);/);
+  assert.match(app,/function appBeginDrag\(\)[\s\S]*?p\.el\.setPointerCapture\(p\.pid\)/);
+  assert.match(css,/#homeDesktop \.home-item\{touch-action:pan-x pan-y\}/);
+  assert.match(css,/glass-reference-page~\.apppage\{content-visibility:auto/);
   assert.match(css,/grid-auto-flow:dense/);
   assert.match(css,/north-pack-black \.home-dashboard-card[\s\S]*rgba\(34,35,40,\.18\)/);
 });
