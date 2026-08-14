@@ -24,6 +24,6 @@ assert.match(sw,/currentCore\(cache,'app'\)/);
 assert.match(sw,/const GLASS_ICON_CACHE='north-glass-icons-v1'/);
 assert.match(sw,/assets\\\/app-icons\\\/glass/);
 assert.doesNotMatch(app,/loading="lazy" decoding="async" fetchpriority="low"/);
-assert.match(app,/packed\?' decoding="async"':''/);
+assert.match(app,/packed\?' decoding="sync" loading="eager" fetchpriority="high"':''/);
 
 console.log('cache integrity tests passed');

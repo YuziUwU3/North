@@ -65,8 +65,8 @@ assert.match(sandbox.fixed, /真正事实会保留/);
 
 assert.match(html, /viewport-fit=cover/);
 assert.match(html, /apple-mobile-web-app-status-bar-style" content="black-translucent"/);
-assert.match(html, /theme-color" content="#000000"/);
-assert.match(html, /background_color:'#000000',theme_color:'#000000'/);
+assert.match(html, /name="theme-color" id="pwaThemeColor" content="#000000"/);
+assert.match(html, /background_color:shellColor,theme_color:shellColor/);
 assert.match(app, /music-app\$\{bg\?' has-bg':''\}/);
 assert.match(html, /\.music-app\.has-bg:after/);
 assert.match(app, /if\(musicEnsureCurrent\(\)\)_mView='player'/);

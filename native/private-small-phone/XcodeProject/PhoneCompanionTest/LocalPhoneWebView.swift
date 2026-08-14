@@ -276,7 +276,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.55 (55)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.56 (56)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
@@ -289,6 +289,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
         root.style.setProperty('--north-native-safe-bottom', safe(payload && payload.bottom, 'safe-area-inset-bottom'));
         root.style.setProperty('--north-native-safe-left', safe(payload && payload.left, 'safe-area-inset-left'));
         root.style.setProperty('--north-native-safe-right', safe(payload && payload.right, 'safe-area-inset-right'));
+        if (typeof window.lockPullRefresh === 'function') {
+          requestAnimationFrame(() => window.lockPullRefresh());
+        }
       };
       let sequence = 0;
       const waiting = new Map();

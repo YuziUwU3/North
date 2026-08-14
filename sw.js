@@ -1,6 +1,9 @@
-const BUILD='931';
-const SHELL_CACHE='north-shell-v931';
+const BUILD='932';
+const SHELL_CACHE='north-shell-v932';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
+const GLASS_ICON_PACKS=['black','gray','pink','blue'];
+const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
+const GLASS_ICON_FILES=GLASS_ICON_PACKS.flatMap(pack=>GLASS_ICON_KEYS.map(key=>'./assets/app-icons/glass/'+pack+'/'+key+'.webp'));
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -89,6 +92,12 @@ self.addEventListener('install',event=>{
         if(response&&response.ok)await cache.put(url,response);
       }catch(_){}
     }));
+    const iconCache=await caches.open(GLASS_ICON_CACHE);
+    for(let i=0;i<GLASS_ICON_FILES.length;i+=8){
+      await Promise.all(GLASS_ICON_FILES.slice(i,i+8).map(async url=>{
+        try{const response=await fetchRetry(url,{cache:'no-cache'},2);if(response&&response.ok)await iconCache.put(url,response);}catch(_){}
+      }));
+    }
     await self.skipWaiting();
   })());
 });
@@ -114,11 +123,9 @@ self.addEventListener('fetch',event=>{
 
   if(/\/assets\/app-icons\/glass\/(?:black|gray|pink|blue)\/[^/]+\.webp$/.test(url.pathname)){
     event.respondWith((async()=>{
-      const cache=await caches.open(GLASS_ICON_CACHE),cached=await cache.match(request);
+      const cache=await caches.open(GLASS_ICON_CACHE),cached=await cache.match(request,{ignoreSearch:true});
       if(cached)return cached;
-      const response=await fetch(request,{cache:'no-cache'});
-      if(response&&response.ok)await cache.put(request,response.clone());
-      return response;
+      try{const response=await fetch(request,{cache:'no-cache'});if(response&&response.ok)await cache.put(request,response.clone());return response;}catch(_){return Response.error();}
     })());
     return;
   }

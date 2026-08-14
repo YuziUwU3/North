@@ -7,11 +7,11 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v931 web and private 1.0.55 releases are aligned', () => {
-  assert.match(app, /APP_VER='v931 · 移动端修复与清水玻璃屏保'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='931'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 55;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.55;/g) || []).length, 12);
+test('v932 web and private 1.0.56 releases are aligned', () => {
+  assert.match(app, /APP_VER='v932 · 苹果主屏系统条与图标恢复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='932'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 56;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.56;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {
@@ -23,11 +23,11 @@ test('first glass page reserves a non-shrinking line box for every app name', ()
 });
 
 test('iOS home-screen shell paints the bottom safe area without affecting Android or the private app', () => {
-  assert.match(html, /html\.north-ios-pwa-shell\{--north-ios-pwa-bottom:env\(safe-area-inset-bottom,0px\)\}/);
-  assert.match(html, /html\.north-ios-pwa-shell \.phone\{[^}]*bottom:calc\(0px - var\(--north-ios-pwa-bottom\)\)/);
+  assert.doesNotMatch(html, /html\.north-ios-pwa-shell \.phone/);
+  assert.match(html, /系统底栏位于网页层外/);
   assert.match(html, /--north-ios-home-safe-bottom:max\(env\(safe-area-inset-bottom,0px\),34px\)/);
   assert.match(html, /html\.north-ios-home-safe \.tabbar\{[^}]*padding-bottom:var\(--north-ios-home-safe-bottom\)/);
-  assert.match(app, /root\.classList\.toggle\('north-ios-pwa-shell',pwa\)/);
+  assert.match(app, /root\.classList\.remove\('north-ios-pwa-shell'\)/);
   assert.match(app, /root\.classList\.toggle\('north-ios-home-safe',browser\)/);
   assert.match(app, /root\.classList\.toggle\('north-apple-remote-safe',on\)/);
   assert.match(app, /苹果兼容适配<br>/);
