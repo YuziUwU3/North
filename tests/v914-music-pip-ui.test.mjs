@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v936 source and private 1.0.60 versions align',()=>{
-  assert.match(app,/APP_VER='v936 · 音乐完整导入与长单曲导出修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 60;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.60;/);
+test('v937 source and private 1.0.61 versions align',()=>{
+  assert.match(app,/APP_VER='v937 · 音乐、安卓视频与苹果光标修复'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 61;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.61;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

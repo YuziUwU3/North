@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v936 · 音乐完整导入与长单曲导出修复'/);
+assert.match(source, /APP_VER='v937 · 音乐、安卓视频与苹果光标修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -43,7 +43,13 @@ assert.match(source, /else if\(c\.p==='cinemaread'\)html=renderCinemaRead\(\)/);
 assert.match(source, /video\/mp4,video\/webm,video\/quicktime/);
 assert.match(source, /\.srt,\.vtt,text\/vtt/);
 assert.match(source, /\.txt,\.md,\.epub/);
-assert.match(source, /URL\.createObjectURL\(f\)/);
+assert.match(functionSource("cinemaOpenVideo"), /cinemaPlayableVideoBlob\(f,f\.name,f\.type\)/);
+assert.match(functionSource("cinemaLibraryPlay"), /cinemaPlayableVideoBlob\(blob,item\.fileName,item\.mime\)/);
+assert.match(functionSource("cinemaPlayableVideoBlob"), /\.mov[\s\S]*cinemaAndroidBrowser\(\)\?'video\/mp4':'video\/quicktime'/);
+assert.match(functionSource("cinemaPlayableVideoBlob"), /octet-stream[\s\S]*video\/mp4/);
+assert.match(functionSource("cinemaVideoCodecProbe"), /cinemaMp4Library\(\)[\s\S]*videoCodec[\s\S]*audioCodec/);
+assert.match(functionSource("cinemaVideoErrorReason"), /HEVC \/ H\.265[\s\S]*安卓浏览器/);
+assert.match(functionSource("cinemaVideoPlaybackError"), /MP4 容器、H\.264 \/ AVC 视频、AAC 音频/);
 assert.doesNotMatch(source, /S\.cinema\.(?:videoFile|bookText)\s*=/);
 assert.match(source, /cinemaOpenOnlineModal/);
 assert.match(source, /cinemaOpenOnline\(\)[\s\S]*?https\?:/);
@@ -135,6 +141,7 @@ assert.match(functionSource("cinemaVideoTick"), /set\.visionEnabled&&set\.autoVi
 assert.match(functionSource("cinemaAfterVideoRender"), /cinemaVisionResetTimer\(s,Math\.max\(0,Number\(v\.currentTime\)\|\|Number\(s\.progress\)\|\|0\)\)/);
 assert.match(functionSource("cinemaAfterVideoRender"), /if\(v\.readyState>=1\)ready\(\)/);
 assert.match(functionSource("cinemaAfterVideoRender"), /seeked[\s\S]*cinemaVisionResetTimer\(s,v\.currentTime\)/);
+assert.match(functionSource("cinemaAfterVideoRender"), /error[\s\S]*cinemaVideoPlaybackError\(v\)/);
 assert.match(functionSource("cinemaAnalyzeFrame"), /automatic&&\(!set\.visionEnabled/);
 assert.doesNotMatch(functionSource("cinemaAnalyzeFrame"), /settings\.autoVision=false/);
 assert.match(functionSource("cinemaAnalyzeFrame"), /秒后自动重试/);
@@ -611,6 +618,6 @@ assert.match(functionSource("cinemaSend"), /cinemaRoleReply\([\s\S]*,false\)/);
 assert.match(functionSource("cinemaBookComment"), /,false\)/);
 assert.doesNotMatch(functionSource("cinemaBookPage"), /autoCount=.*\+1/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=936/);
+assert.match(html, /app\.js\?v=937/);
 
 console.log("cinema room tests passed");
