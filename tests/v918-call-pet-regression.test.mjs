@@ -48,10 +48,11 @@ test('hands-free final results use the v800-v850 busy-period rejection path', ()
   assert.doesNotMatch(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
 });
 
-test('voice and video calls both expose real screen sharing', () => {
-  assert.match(app, /const shareTool=_call\.state==='active'/);
+test('voice and video calls expose real screen sharing only in the private app', () => {
+  assert.match(app, /const shareTool=_call\.state==='active'&&screenShareAvailable\(\)/);
   assert.match(app, /\$\{cameraView\}\$\{shareTool\}/);
-  assert.match(app, /function callScreenShareRequest\(reason\)\{if\(!_call\|\|_call\.state!=='active'/);
+  assert.match(app, /function callScreenShareRequest\(reason\)\{if\(!screenShareAvailable\(\)\|\|!_call\|\|_call\.state!=='active'/);
+  assert.doesNotMatch(app, /getDisplayMedia/);
   assert.match(app, /callVideoVisionAnalyze\(trigger,spoken,meta\)\{if\(!_call\|\|_call\.state!=='active'\|\|\(_call\.kind!=='video'&&!callScreenShareOn\(\)\)\)/);
 });
 

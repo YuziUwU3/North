@@ -11,9 +11,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v929 source and private 1.0.54 versions are aligned', () => {
-  assert.match(app, /APP_VER='v929 · 苹果网页底栏与锁定图标修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='929'/);
-  assert.match(sw, /const BUILD='929'/);
+  assert.match(app, /APP_VER='v930 · 网页故障修复与苹果底栏诊断'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='930'/);
+  assert.match(sw, /const BUILD='930'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40|MARKETING_VERSION = 1\.0\.40/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 54;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.54;/g) || []).length, 12);

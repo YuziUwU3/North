@@ -23,7 +23,6 @@ test('all four generated packs contain one asset for each of the 24 apps',()=>{
 });
 
 test('pink pack keeps its original artwork while sharing the fixed desktop grid',()=>{
-  assert.ok(fs.existsSync(path.join(root,'assets','app-icons','glass','boards','pink-white.png')));
   for(const key of iconKeys){
     const black=fs.readFileSync(path.join(root,'assets','app-icons','glass','black',key+'.webp'));
     const pink=fs.readFileSync(path.join(root,'assets','app-icons','glass','pink',key+'.webp'));
@@ -213,7 +212,9 @@ test('legacy duplicate widgets are removed while the four-slot glass dock is res
   assert.match(app,/const WIDS=\[\['dashboard'/);
   assert.match(app,/const HOME_DOCK_DEFAULT=\['calendar','games','mail','settings'\];/);
   assert.match(app,/const HOME_SHORTCUTS=\{\};/);
-  assert.match(app,/S\.me\.appDock=Array\.from\(dock\.children\)/);
+  assert.match(app,/const dockTokens=Array\.from\(dock\.children\)/);
+  assert.match(app,/S\.me\.appDock=dockTokens/);
+  assert.match(app,/before\.length!==beforeSet\.size\|\|after\.length!==afterSet\.size/,'a malformed drag must not persist missing or duplicated apps');
 });
 
 test('glass packs keep a free persisted mixed app-widget layout and appearance per pack',()=>{

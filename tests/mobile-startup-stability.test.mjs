@@ -55,7 +55,8 @@ test('keyboard events can never resize or clip the global phone shell', () => {
   assert.doesNotMatch(app, /function syncAppViewport/);
   assert.doesNotMatch(app, /function appVisibleViewportHeight/);
   assert.doesNotMatch(app, /document\.documentElement\.style\.setProperty\(['"]--north-app-height/);
-  assert.doesNotMatch(app, /visualViewport\.addEventListener\(['"](?:resize|scroll)['"]/);
+  const ordinaryApp=app.replace(/function northViewportDiagnosticStart\([^\n]*\n/,'');
+  assert.doesNotMatch(ordinaryApp, /visualViewport\.addEventListener\(['"](?:resize|scroll)['"]/, 'only the explicit read-only diagnostic panel may observe visualViewport');
 });
 
 test('mobile pages keep independent scrolling and home supports both swipe axes', () => {

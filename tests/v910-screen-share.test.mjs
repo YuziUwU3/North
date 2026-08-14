@@ -14,14 +14,15 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v929 · 苹果网页底栏与锁定图标修复'/);
+  assert.match(app, /APP_VER='v930 · 网页故障修复与苹果底栏诊断'/);
   assert.match(project, /CURRENT_PROJECT_VERSION = 54;/);
   assert.match(project, /MARKETING_VERSION = 1\.0\.54;/);
   assert.match(bridge, /contractVersion = 18/);
 });
 
-test('video call can switch recognition source to screen share', () => {
-  assert.match(app, /navigator\.mediaDevices\.getDisplayMedia/);
+test('only the private app can switch recognition source to screen share', () => {
+  assert.doesNotMatch(app, /navigator\.mediaDevices\.getDisplayMedia/);
+  assert.match(app, /function screenShareAvailable\(\)\{return privateNativeAppOn\(\);\}/);
   assert.match(app, /screenShare\.frame/);
   assert.match(app, /function callVideoSourceOn\(\)/);
   assert.match(app, /callScreenShareOn\(\)\|\|callVideoCameraOn\(\)/);
@@ -33,6 +34,7 @@ test('video call can switch recognition source to screen share', () => {
 test('role screen-share requests always wait for owner consent', () => {
   assert.match(app, /\[请求屏幕共享\|简短原因\]/);
   assert.match(app, /function callScreenShareRequest\(reason\)/);
+  assert.match(app, /function callScreenShareRequest\(reason\)\{if\(!screenShareAvailable\(\)\|\|/);
   assert.match(app, /callScreenShareRequestApprove/);
   assert.match(app, /callScreenShareRequestDeny/);
   assert.match(app, /只有你同意并在 iPhone 系统面板确认后/);

@@ -1,5 +1,5 @@
-const BUILD='929';
-const SHELL_CACHE='north-shell-v929';
+const BUILD='930';
+const SHELL_CACHE='north-shell-v930';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},

@@ -110,14 +110,20 @@ test('home paging is manually preserved after mobile drag takes ownership at poi
 
 test('the first glass page persists empty app slots instead of compacting every drop', () => {
   assert.match(source, /function homeReferenceAppSlotMap\(pg\)/);
+  assert.match(source, /function homeReferencePageAtPoint\(x,y\)/);
   assert.match(source, /function homeReferenceSlotAtPoint\(page,x,y\)/);
   assert.match(source, /function homeReferenceMoveToSlot\(page,item,n\)/);
   assert.match(source, /homeReferenceAppSlots=map/);
   assert.match(source, /homeReferenceAppSlots','appIcons/);
   assert.match(source, /glass-app-drop-slot/);
   const live = functionSource('appLiveReorder');
+  assert.match(live, /homeReferencePageAtPoint\(x,y\)/, 'transparent Android empty slots must not depend only on elementFromPoint');
   assert.match(live, /homeReferenceSlotAtPoint\(ref,x,y\)/);
   assert.match(live, /homeReferenceMoveToSlot\(ref,d\.item,refSlot\)/);
+  assert.match(functionSource('appDrop'), /appLiveReorder\(x,y\).*?_aDrag=null/, 'the final Android touch coordinate must be committed before drag teardown');
+  const read = functionSource('homeLayoutReadDom');
+  assert.match(read, /beforeSet\.size!==afterSet\.size/);
+  assert.match(read, /some\(k=>!afterSet\.has\(k\)\)/, 'a transient missing app must not replace the stored layout');
 });
 
 test('layout repair never forces overflow or newly discovered apps into the eight-slot first page', () => {

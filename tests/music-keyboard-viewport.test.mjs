@@ -97,6 +97,7 @@ test('keyboard recovery waits for viewport height to rebound', () => {
 test('music input owns the recovery hooks without restoring a global viewport hack', () => {
   assert.match(app, /id="m_chat"[^>]*onfocus="musicChatViewportFocus\(\)"[^>]*onblur="musicChatViewportBlur\(\)"/);
   assert.match(app, /function musicToggleChat\(\)[\s\S]*?input\.blur\(\)[\s\S]*?musicChatViewportBlur\(\)/);
-  assert.doesNotMatch(app, /visualViewport\.addEventListener\(['"](?:resize|scroll)['"]/);
+  const ordinaryApp=app.replace(/function northViewportDiagnosticStart\([^\n]*\n/,'');
+  assert.doesNotMatch(ordinaryApp, /visualViewport\.addEventListener\(['"](?:resize|scroll)['"]/, 'the optional diagnostic observer is not a keyboard layout hook');
   assert.doesNotMatch(app, /--north-app-height/);
 });

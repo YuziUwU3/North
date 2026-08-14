@@ -8,8 +8,8 @@ const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('v929 web and private 1.0.54 releases are aligned', () => {
-  assert.match(app, /APP_VER='v929 · 苹果网页底栏与锁定图标修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='929'/);
+  assert.match(app, /APP_VER='v930 · 网页故障修复与苹果底栏诊断'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='930'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 54;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.54;/g) || []).length, 12);
 });
@@ -52,6 +52,6 @@ test('long-press dragging starts reliably on Android and keeps page scrolling on
   assert.match(app, /p\.scroll\.scrollTop=p\.scrollTop-dy/);
   assert.match(app, /function appTouchMove\(e\)\{if\(!_aDrag\)return;[\s\S]*?e\.preventDefault\(\);appGhostMove\(t\.clientX,t\.clientY\)/);
   assert.match(app, /function appTouchEnd\(e\)\{if\(!_aDrag\)return;[\s\S]*?appDrop\(t\.clientX,t\.clientY\)/);
-  assert.match(app, /function appDrop\(x,y\)\{const d=_aDrag;_aDrag=null;_aPend=null;clearTimeout\(_aTimer\)/);
+  assert.match(app, /function appDrop\(x,y\)\{const d=_aDrag;if\(d&&Number\.isFinite\(x\)&&Number\.isFinite\(y\)\)appLiveReorder\(x,y\);_aDrag=null;_aPend=null;clearTimeout\(_aTimer\)/);
   assert.match(app, /addEventListener\('touchmove',appTouchMove,\{passive:false\}\)/);
 });
