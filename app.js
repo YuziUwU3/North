@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='926'){
+if(window.__NORTH_SHELL_BUILD__!=='927'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -362,7 +362,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v926 · 首屏稳定、线下约会与910屏保恢复';
+const APP_VER='v927 · 苹果首屏文字、安全区与美化导入修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1419,7 +1419,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=926';
+  const url='sw.js?v=927';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2857,7 +2857,7 @@ function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
 function appBeginDrag(){const p=_aPend;if(!p)return;const desktop=$('#homeDesktop'),sw=$('#appswipe');if(!desktop||!sw)return;
   const cell=p.el&&p.el.isConnected?p.el:desktop.querySelector('.home-item[data-token="'+p.k+'"]');if(!cell)return;
   const r=cell.getBoundingClientRect();const g=cell.cloneNode(true);g.classList.add('appghost');
-  g.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;margin:0;z-index:9999;pointer-events:none;opacity:.94;transform:scale(1.14);';
+  g.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;margin:0;z-index:9999;pointer-events:none;opacity:.94;transform:none;';
   document.body.appendChild(g);
   _aDrag={k:p.k,ghost:g,item:cell,offx:p.x-r.left,offy:p.y-r.top};
   cell.style.opacity='.22';cell.style.pointerEvents='none';sw.classList.add('aedit');document.body.classList.add('home-drag-active');homeEditStart();
@@ -2879,9 +2879,11 @@ function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clien
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
   const p=_aPend;_aPend=null;if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
+function appTouchMove(e){if(!_aDrag)return;const t=e.touches&&e.touches[0];if(!t)return;e.preventDefault();appGhostMove(t.clientX,t.clientY);}
+function appTouchEnd(e){if(!_aDrag)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){appCancel();return;}e.preventDefault();appDrop(t.clientX,t.clientY);}
 function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(typeof document!=='undefined'&&document.body)document.body.classList.remove('home-drag-active');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(d){if(typeof render==='function')render();if(typeof requestAnimationFrame==='function')requestAnimationFrame(homeEditStart);return;}if(sw)sw.classList.remove('aedit');}
 function homeLayoutReadDom(){const pageEls=Array.from(document.querySelectorAll('#appswipe .apppage')),pages=pageEls.map(pg=>Array.from(pg.children).map(el=>el.dataset.token).filter(Boolean)),dock=$('#homeDesktop .dock');if(pages.length!==APP_PAGES||!dock)return false;S.me.homeLayout=pages;S.me.appDock=Array.from(dock.children).map(el=>el.dataset.token).filter(k=>APPDEFS[k]).slice(0,4);const ref=pageEls[0],map={};if(ref)ref.querySelectorAll(':scope>.home-item[data-ref-slot]').forEach(el=>{const token=el.dataset.token,n=Number(el.dataset.refSlot);if(APPDEFS[token]&&Number.isInteger(n))map[token]=n;});S.me.homeReferenceAppSlots=map;homeLayoutSyncLegacy();return true;}
-function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');
+function appDrop(x,y){const d=_aDrag;_aDrag=null;_aPend=null;clearTimeout(_aTimer);const sw=$('#appswipe');
   _aNoClick=Date.now()+900;
   if(d.ghost)d.ghost.remove();if(d.item){d.item.style.opacity='';d.item.style.pointerEvents='';}
   document.body.classList.remove('home-drag-active');if(sw)sw.classList.remove('aedit');
@@ -2889,7 +2891,9 @@ function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');
   save();render();requestAnimationFrame(homeEditStart);}
 function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
   document.addEventListener('pointermove',appMove,{passive:false});
-  document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appCancel);document.addEventListener('click',e=>{if(Date.now()<_aNoClick&&e.target.closest('.home-item')){e.preventDefault();e.stopImmediatePropagation();}},true);}
+  document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appCancel);
+  document.addEventListener('touchmove',appTouchMove,{passive:false});document.addEventListener('touchend',appTouchEnd,{passive:false});document.addEventListener('touchcancel',appCancel);
+  document.addEventListener('click',e=>{if(Date.now()<_aNoClick&&e.target.closest('.home-item')){e.preventDefault();e.stopImmediatePropagation();}},true);}
 initAppDrag();
 function homeEditStart(){const h=$('#homeDesktop');if(h)h.classList.add('home-editing');}
 function homeEditFinish(){appCancel();homeWidgetDragCancel();const h=$('#homeDesktop');if(h)h.classList.remove('home-editing');}
@@ -11503,7 +11507,7 @@ async function emergencyRestoreConfirm(){const c=_recoveryCandidate;if(!c)return
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
-    me:pickObj(me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','homeReferenceAppSlots','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
+    me:pickObj(me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
     phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
     phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
     music:pickObj(music,['bg','cover','theme','layout','widgets']),
@@ -11519,7 +11523,7 @@ function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
-  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','homeReferenceAppSlots','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
+  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
   const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
   const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});

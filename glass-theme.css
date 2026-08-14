@@ -121,24 +121,25 @@ html.north-glass-ui #homeDesktop .home-item{touch-action:pan-x pan-y}
 html.north-glass-ui body.home-drag-active #homeDesktop .home-item{touch-action:none}
 html.north-glass-ui .glass-reference-page~.apppage{content-visibility:auto;contain-intrinsic-size:390px 635px}
 html.north-glass-ui .glass-reference-page>.glass-place-dashboard{left:16px!important;right:auto!important;top:8px!important;width:calc(100% - 32px)!important;height:154px!important;min-width:0!important;min-height:0!important;max-width:348px!important;box-sizing:border-box!important;overflow:hidden!important}
-html.north-glass-ui .glass-reference-page>.glass-place-app-a{left:16px;top:178px;width:calc(25% - 13px);height:75px}
-html.north-glass-ui .glass-reference-page>.glass-place-app-b{left:calc(25% + 4px);top:178px;width:calc(25% - 13px);height:75px}
-html.north-glass-ui .glass-reference-page>.glass-place-app-c{left:16px;top:269px;width:calc(25% - 13px);height:75px}
-html.north-glass-ui .glass-reference-page>.glass-place-app-d{left:calc(25% + 4px);top:269px;width:calc(25% - 13px);height:75px}
+html.north-glass-ui .glass-reference-page>.glass-place-app-a{left:16px;top:178px;width:calc(25% - 13px);height:90px}
+html.north-glass-ui .glass-reference-page>.glass-place-app-b{left:calc(25% + 4px);top:178px;width:calc(25% - 13px);height:90px}
+html.north-glass-ui .glass-reference-page>.glass-place-app-c{left:16px;top:269px;width:calc(25% - 13px);height:90px}
+html.north-glass-ui .glass-reference-page>.glass-place-app-d{left:calc(25% + 4px);top:269px;width:calc(25% - 13px);height:90px}
 html.north-glass-ui .glass-reference-page>.glass-place-vinyl{left:calc(50% - 5px)!important;right:auto!important;top:175px!important;width:calc(50% - 21px)!important;height:auto!important;min-width:0!important;min-height:0!important;max-width:none!important;aspect-ratio:1!important;box-sizing:border-box!important;overflow:hidden!important}
 html.north-glass-ui .glass-reference-page>.glass-place-sweetie{left:16px!important;right:auto!important;top:365px!important;width:calc(50% - 21px)!important;height:auto!important;min-width:0!important;min-height:0!important;max-width:none!important;aspect-ratio:1!important;box-sizing:border-box!important;overflow:hidden!important}
-html.north-glass-ui .glass-reference-page>.glass-place-app-e{left:calc(50% + 12px)!important;top:371px!important;width:calc(25% - 27px)!important;height:75px!important;min-width:0!important}
-html.north-glass-ui .glass-reference-page>.glass-place-app-f{left:calc(75% - .5px)!important;top:371px!important;width:calc(25% - 27px)!important;height:75px!important;min-width:0!important}
-html.north-glass-ui .glass-reference-page>.glass-place-app-g{left:calc(50% + 12px)!important;top:462px!important;width:calc(25% - 27px)!important;height:75px!important;min-width:0!important}
-html.north-glass-ui .glass-reference-page>.glass-place-app-h{left:calc(75% - .5px)!important;top:462px!important;width:calc(25% - 27px)!important;height:75px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-e{left:calc(50% + 12px)!important;top:371px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-f{left:calc(75% - .5px)!important;top:371px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-g{left:calc(50% + 12px)!important;top:462px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-h{left:calc(75% - .5px)!important;top:462px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
 html.north-glass-ui .glass-reference-page .app .ic{width:66px!important;height:66px!important;flex:0 0 auto!important;border-radius:20px!important}
-html.north-glass-ui .glass-reference-page .app>span{max-width:74px}
+html.north-glass-ui .glass-reference-page .app>span{max-width:74px;min-height:20px!important;flex:0 0 20px!important;line-height:20px!important}
 html.north-glass-ui .glass-reference-page>.app{min-width:0!important;max-width:none!important;box-sizing:border-box!important;overflow:visible}
 html.north-glass-ui .glass-reference-page+.apppage{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:88px!important;align-content:start!important;gap:12px 8px!important;padding:20px 14px!important;overflow:hidden!important;box-sizing:border-box!important}
 html.north-glass-ui .glass-reference-page+.apppage>.app{align-items:center!important;justify-content:flex-start!important;min-width:0!important;gap:5px!important}
 html.north-glass-ui .glass-reference-page+.apppage>.app .ic{width:62px!important;height:62px!important;flex:0 0 auto!important;border-radius:19px!important}
 html.north-glass-ui .glass-reference-page+.apppage>.app>span{max-width:76px!important;font-size:10px!important;text-align:center!important}
 html.north-glass-ui .home-scroll{overflow-y:auto;padding-top:38px;box-sizing:border-box}
+html.north-glass-ui .home.home-editing .home-scroll{padding-top:38px}
 html.north-glass-ui .appswipe{margin-top:0;align-items:flex-start}
 html.north-glass-ui .home .dock{display:grid!important;width:calc(100% - 32px)!important;max-width:348px!important;margin-left:16px!important;margin-right:auto!important;padding-left:10px!important;padding-right:10px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;column-gap:6px!important;box-sizing:border-box!important;overflow:hidden!important}
 html.north-glass-ui .home .dock>.app{width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important}
