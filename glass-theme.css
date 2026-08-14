@@ -76,18 +76,11 @@ html.north-glass-ui .settings-glass .field textarea,
 html.north-glass-ui .settings-glass .field select,
 html.north-glass-ui .settings-glass .minibtn{border:1px solid var(--ng-line-soft)!important;background:rgba(255,255,255,.075)!important;box-shadow:inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 
-/* 锁屏/屏保、角色消息条与通知中心。 */
-html.north-glass-ui .lockshade{background:linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,.03) 42%,rgba(0,0,0,.42))}
-html.north-glass-ui .locktop{width:calc(100% - 36px);margin:38px auto 0;padding:22px 16px 19px;box-sizing:border-box;border:1px solid rgba(255,255,255,.2);border-radius:32px;background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(27,27,34,.17));box-shadow:0 22px 50px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.24);backdrop-filter:blur(25px) saturate(155%);-webkit-backdrop-filter:blur(25px) saturate(155%)}
-html.north-glass-ui .locknote,
-html.north-glass-ui .lockempty{border-color:rgba(255,255,255,.24);background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(32,32,40,.34));box-shadow:0 16px 38px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.22);backdrop-filter:blur(28px) saturate(165%);-webkit-backdrop-filter:blur(28px) saturate(165%)}
-html.north-glass-ui .lockquick,
-html.north-glass-ui .lockpull{border-color:rgba(255,255,255,.26);background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(28,28,34,.34));box-shadow:0 12px 28px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.25);backdrop-filter:blur(25px) saturate(160%);-webkit-backdrop-filter:blur(25px) saturate(160%)}
+/* 屏保完整沿用 v910 的原始样式，玻璃主题不再覆盖任何 lock* 元素。 */
 html.north-glass-ui .msgbanner{border-color:rgba(255,255,255,.24);background:linear-gradient(145deg,rgba(67,63,72,.68),rgba(30,29,35,.58));box-shadow:0 18px 42px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.18);backdrop-filter:blur(30px) saturate(165%);-webkit-backdrop-filter:blur(30px) saturate(165%)}
 html.north-glass-ui .north-glass-modal{background:rgba(4,4,7,.34);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
 html.north-glass-ui .north-glass-modal .sheet{border:1px solid rgba(255,255,255,.18);background:linear-gradient(145deg,rgba(55,50,59,.82),rgba(26,24,30,.78));box-shadow:0 28px 70px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.14);backdrop-filter:blur(34px) saturate(155%);-webkit-backdrop-filter:blur(34px) saturate(155%)}
 html.north-glass-ui .north-glass-modal.wxmodal-light .sheet{background:linear-gradient(145deg,rgba(255,255,255,.84),rgba(240,231,237,.77));border-color:rgba(255,255,255,.82);box-shadow:0 28px 70px rgba(72,57,67,.24),inset 0 1px #fff}
-@media(max-height:690px){html.north-glass-ui .locktop{margin-top:28px;padding-top:17px;padding-bottom:15px}html.north-glass-ui .locktime{font-size:76px}}
 
 /* 主屏时间本身的玻璃高光；颜色由用户独立选择。 */
 html.north-glass-ui .home-premium-head{display:none!important;height:0!important;padding:0!important}
@@ -127,7 +120,7 @@ html.north-glass-ui .glass-reference-page>.glass-app-drop-slot{position:absolute
 html.north-glass-ui #homeDesktop .home-item{touch-action:pan-x pan-y}
 html.north-glass-ui body.home-drag-active #homeDesktop .home-item{touch-action:none}
 html.north-glass-ui .glass-reference-page~.apppage{content-visibility:auto;contain-intrinsic-size:390px 635px}
-html.north-glass-ui .glass-reference-page>.glass-place-dashboard{left:16px!important;right:auto!important;top:8px!important;width:min(348px,calc(100vw - 32px))!important;height:154px!important;min-width:0!important;min-height:0!important;max-width:none!important;box-sizing:border-box!important;overflow:hidden!important}
+html.north-glass-ui .glass-reference-page>.glass-place-dashboard{left:16px!important;right:auto!important;top:8px!important;width:calc(100% - 32px)!important;height:154px!important;min-width:0!important;min-height:0!important;max-width:348px!important;box-sizing:border-box!important;overflow:hidden!important}
 html.north-glass-ui .glass-reference-page>.glass-place-app-a{left:16px;top:178px;width:calc(25% - 13px);height:75px}
 html.north-glass-ui .glass-reference-page>.glass-place-app-b{left:calc(25% + 4px);top:178px;width:calc(25% - 13px);height:75px}
 html.north-glass-ui .glass-reference-page>.glass-place-app-c{left:16px;top:269px;width:calc(25% - 13px);height:75px}
@@ -138,16 +131,16 @@ html.north-glass-ui .glass-reference-page>.glass-place-app-e{left:calc(50% + 12p
 html.north-glass-ui .glass-reference-page>.glass-place-app-f{left:calc(75% - .5px)!important;top:371px!important;width:calc(25% - 27px)!important;height:75px!important;min-width:0!important}
 html.north-glass-ui .glass-reference-page>.glass-place-app-g{left:calc(50% + 12px)!important;top:462px!important;width:calc(25% - 27px)!important;height:75px!important;min-width:0!important}
 html.north-glass-ui .glass-reference-page>.glass-place-app-h{left:calc(75% - .5px)!important;top:462px!important;width:calc(25% - 27px)!important;height:75px!important;min-width:0!important}
-html.north-glass-ui .glass-reference-page .app .ic{width:66px!important;height:66px!important;border-radius:20px!important}
+html.north-glass-ui .glass-reference-page .app .ic{width:66px!important;height:66px!important;flex:0 0 auto!important;border-radius:20px!important}
 html.north-glass-ui .glass-reference-page .app>span{max-width:74px}
-html.north-glass-ui .glass-reference-page>.app{min-width:0!important;width:auto;overflow:visible}
-html.north-glass-ui .glass-reference-page+\.apppage{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:88px!important;align-content:start!important;gap:12px 8px!important;padding:20px 14px!important;overflow:hidden!important;box-sizing:border-box!important}
-html.north-glass-ui .glass-reference-page+\.apppage>.app{align-items:center!important;justify-content:flex-start!important;min-width:0!important;gap:5px!important}
-html.north-glass-ui .glass-reference-page+\.apppage>.app .ic{width:62px!important;height:62px!important;border-radius:19px!important}
-html.north-glass-ui .glass-reference-page+\.apppage>.app>span{max-width:76px!important;font-size:10px!important;text-align:center!important}
+html.north-glass-ui .glass-reference-page>.app{min-width:0!important;max-width:none!important;box-sizing:border-box!important;overflow:visible}
+html.north-glass-ui .glass-reference-page+.apppage{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:88px!important;align-content:start!important;gap:12px 8px!important;padding:20px 14px!important;overflow:hidden!important;box-sizing:border-box!important}
+html.north-glass-ui .glass-reference-page+.apppage>.app{align-items:center!important;justify-content:flex-start!important;min-width:0!important;gap:5px!important}
+html.north-glass-ui .glass-reference-page+.apppage>.app .ic{width:62px!important;height:62px!important;flex:0 0 auto!important;border-radius:19px!important}
+html.north-glass-ui .glass-reference-page+.apppage>.app>span{max-width:76px!important;font-size:10px!important;text-align:center!important}
 html.north-glass-ui .home-scroll{overflow-y:auto;padding-top:38px;box-sizing:border-box}
 html.north-glass-ui .appswipe{margin-top:0;align-items:flex-start}
-html.north-glass-ui .home .dock{display:grid!important;width:min(348px,calc(100vw - 32px))!important;max-width:none!important;margin-left:16px!important;margin-right:auto!important;padding-left:10px!important;padding-right:10px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;column-gap:6px!important;box-sizing:border-box!important;overflow:hidden!important}
+html.north-glass-ui .home .dock{display:grid!important;width:calc(100% - 32px)!important;max-width:348px!important;margin-left:16px!important;margin-right:auto!important;padding-left:10px!important;padding-right:10px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;column-gap:6px!important;box-sizing:border-box!important;overflow:hidden!important}
 html.north-glass-ui .home .dock>.app{width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important}
 html.north-glass-ui.north-pack-pink .glass-reference-page>.app,html.north-glass-ui.north-pack-blue .glass-reference-page>.app,html.north-glass-ui.north-pack-gray .glass-reference-page>.app,html.north-glass-ui.north-pack-black .glass-reference-page>.app{transform:none!important}
 html.north-glass-ui.north-pack-black .home-dashboard-card,html.north-glass-ui.north-pack-black .home-vinyl-card,html.north-glass-ui.north-pack-black .home-sweetie-card,html.north-glass-ui.north-pack-black .home .dock{background:linear-gradient(145deg,rgba(34,35,40,.18),rgba(5,6,8,.08))!important;border-color:rgba(255,255,255,.24)!important;backdrop-filter:blur(22px) saturate(145%)!important;-webkit-backdrop-filter:blur(22px) saturate(145%)!important}
@@ -160,8 +153,6 @@ html.north-glass-ui.north-pack-gray .home-dashboard-grid>div,html.north-glass-ui
 html.north-glass-ui.north-pack-pink .home-sweetie-card p{background:rgba(255,199,222,.22);border:1px solid rgba(255,220,235,.18)}
 html.north-glass-ui.north-pack-blue .home-sweetie-card p{background:rgba(190,220,255,.21);border:1px solid rgba(220,237,255,.17)}
 html.north-glass-ui.north-pack-gray .home-sweetie-card p{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.16)}
-html.north-glass-ui .lockpull{top:7px}
-html.north-glass-ui .lockpull.show{display:flex!important}
 html.north-glass-ui.north-pack-black .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.1) 0 1px,rgba(0,0,0,.05) 1.5px 3px),conic-gradient(from 14deg,#f1f1ef,#777875,#dededb,#555653,#efefed,#858683,#d5d5d2,#5f605d,#f1f1ef)}
 html.north-glass-ui.north-pack-pink .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.12) 0 1px,rgba(75,24,45,.06) 1.5px 3px),conic-gradient(from 14deg,#ffe1ed,#a96881,#f3bdcf,#805068,#ffdce8,#b87890,#f4c8d7,#8b576d,#ffe1ed)}
 html.north-glass-ui.north-pack-blue .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.12) 0 1px,rgba(17,43,82,.07) 1.5px 3px),conic-gradient(from 14deg,#e1eeff,#6680aa,#bdd2f2,#4e668d,#dceaff,#7892bd,#c6d9f5,#56709a,#e1eeff)}
@@ -182,7 +173,7 @@ html.north-glass-ui .home.glass-widget-custom .hwid.home-dashboard-card,html.nor
 html.north-glass-ui.north-pack-pink .home-dashboard-card,html.north-glass-ui.north-pack-pink .home-vinyl-card,html.north-glass-ui.north-pack-pink .home-sweetie-card{color:#fff7fb!important;text-shadow:0 1px 5px rgba(85,23,50,.72)}
 html.north-glass-ui.north-pack-blue .home-dashboard-card,html.north-glass-ui.north-pack-blue .home-vinyl-card,html.north-glass-ui.north-pack-blue .home-sweetie-card{color:#f5f9ff!important;text-shadow:0 1px 5px rgba(19,46,80,.74)}
 html.north-glass-ui.north-pack-gray .home-dashboard-card,html.north-glass-ui.north-pack-gray .home-vinyl-card,html.north-glass-ui.north-pack-gray .home-sweetie-card{color:#fff!important;text-shadow:0 1px 5px rgba(22,24,29,.78)}
-html.north-glass-ui.north-pack-pink .glass-reference-page .app>span,html.north-glass-ui.north-pack-pink .glass-reference-page+\.apppage .app>span,html.north-glass-ui.north-pack-blue .glass-reference-page .app>span,html.north-glass-ui.north-pack-blue .glass-reference-page+\.apppage .app>span,html.north-glass-ui.north-pack-gray .glass-reference-page .app>span,html.north-glass-ui.north-pack-gray .glass-reference-page+\.apppage .app>span{color:#fff!important;text-shadow:0 1px 5px rgba(0,0,0,.92),0 0 2px rgba(0,0,0,.75)!important;font-weight:650!important}
+html.north-glass-ui.north-pack-pink .glass-reference-page .app>span,html.north-glass-ui.north-pack-pink .glass-reference-page+.apppage .app>span,html.north-glass-ui.north-pack-blue .glass-reference-page .app>span,html.north-glass-ui.north-pack-blue .glass-reference-page+.apppage .app>span,html.north-glass-ui.north-pack-gray .glass-reference-page .app>span,html.north-glass-ui.north-pack-gray .glass-reference-page+.apppage .app>span{color:#fff!important;text-shadow:0 1px 5px rgba(0,0,0,.92),0 0 2px rgba(0,0,0,.75)!important;font-weight:650!important}
 html.north-glass-ui.north-pack-pink .home-dashboard-card svg,html.north-glass-ui.north-pack-blue .home-dashboard-card svg,html.north-glass-ui.north-pack-gray .home-dashboard-card svg{stroke:currentColor!important}
 html.north-glass-ui.north-pack-pink .dash-battery b,html.north-glass-ui.north-pack-blue .dash-battery b,html.north-glass-ui.north-pack-gray .dash-battery b{color:currentColor!important}
 html.north-glass-ui.north-pack-pink .home-dashboard-card,html.north-glass-ui.north-pack-pink .home-vinyl-card,html.north-glass-ui.north-pack-pink .home-sweetie-card,html.north-glass-ui.north-pack-pink .home .dock{box-shadow:0 18px 44px rgba(55,14,34,.34),inset 0 1px rgba(255,220,237,.17)!important}

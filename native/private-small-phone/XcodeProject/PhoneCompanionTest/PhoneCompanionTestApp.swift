@@ -303,7 +303,10 @@ final class CompanionPushAppDelegate: NSObject,
         let route: [String: String] = [
             "roleId": roleID,
             "kind": rolePush["kind"] as? String ?? "message",
-            "callKind": rolePush["callKind"] as? String ?? ""
+            "callKind": rolePush["callKind"] as? String ?? "",
+            "source": "notificationTap",
+            "nonce": UUID().uuidString,
+            "tappedAt": String(Int64(Date().timeIntervalSince1970 * 1000))
         ]
         await MainActor.run {
             UserDefaults.standard.set(

@@ -118,6 +118,47 @@ test('the first glass page persists empty app slots instead of compacting every 
   assert.match(live, /homeReferenceMoveToSlot\(ref,d\.item,refSlot\)/);
 });
 
+test('layout repair never forces overflow or newly discovered apps into the eight-slot first page', () => {
+  const appDefs = Object.fromEntries(Array.from({ length: 14 }, (_, i) => [`app${i}`, {}]));
+  const appCtx = vm.createContext({
+    S: { me: { appLayout: [['app0'], [], []], appDock: [] } },
+    APPDEFS: appDefs,
+    APP_DEFLAYOUT: [[], [], []],
+    APP_PAGES: 3,
+  });
+  vm.runInContext(`${functionSource('appLayoutInit')};appLayoutInit();`, appCtx);
+  assert.deepEqual(Array.from(appCtx.S.me.appLayout[0]), ['app0']);
+  assert.equal(appCtx.S.me.appLayout[1].length, 13);
+
+  const homeCtx = vm.createContext({
+    S: { me: {
+      _glassReferenceLayoutV2: 1,
+      appDock: [],
+      appLayout: [[], [], []],
+      homeLayout: [['w:dashboard', ...Object.keys(appDefs).slice(0, 11)], [], []],
+      widgets: ['dashboard'],
+    } },
+    APPDEFS: appDefs,
+    APP_PAGES: 3,
+    HOME_DOCK_DEFAULT: [],
+    HOME_REFERENCE_APP_SLOTS: Array(8).fill('slot'),
+    HOME_SHORTCUTS: {},
+    WIDS: [['dashboard']],
+    widInit() {},
+    appLayoutInit() {},
+    homeTokenValid(k) { return k === 'w:dashboard' || !!appDefs[k]; },
+    homeLayoutSyncLegacy() {},
+    save() {},
+  });
+  vm.runInContext(`${functionSource('homeLayoutInit')};homeLayoutInit();`, homeCtx);
+  assert.equal(homeCtx.S.me.homeLayout[0].filter(k => appDefs[k]).length, 8);
+  assert.ok(homeCtx.S.me.homeLayout[1].includes('app8'));
+  assert.equal(new Set(homeCtx.S.me.homeLayout.flat()).size, homeCtx.S.me.homeLayout.flat().length);
+
+  const css = fs.readFileSync(path.join(root, 'glass-theme.css'), 'utf8');
+  assert.doesNotMatch(css, /\.glass-reference-page>\.app\{[^}]*width:auto/);
+});
+
 test('preferences adjust all home app icons and labels with portable state', () => {
   assert.match(source, /function homeAppAppearanceVars\(\)/);
   assert.match(source, /id="homeAppIconTone" type="range"/);

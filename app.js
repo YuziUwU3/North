@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='925'){
+if(window.__NORTH_SHELL_BUILD__!=='926'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -362,7 +362,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v925 · 共同生活入口与无操作跳页修复';
+const APP_VER='v926 · 首屏稳定、线下约会与910屏保恢复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -843,6 +843,8 @@ function lastRounds(arr,n){if(!arr||!arr.length)return arr||[];n=Math.max(1,n|0)
 function compress(file,max,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
   r.onload=()=>{const raw=r.result;img.onload=()=>{try{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}
     const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const out=c.toDataURL('image/jpeg',q);res(out&&out.length>30?out:raw);}catch(e){res(raw);}};img.onerror=()=>res(raw);img.src=raw;};r.onerror=rej;r.readAsDataURL(file);});}
+function compressSquare(file,size,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
+  r.onload=()=>{const raw=r.result;img.onload=()=>{try{const side=Math.max(1,Math.min(img.width,img.height)),sx=Math.max(0,(img.width-side)/2),sy=Math.max(0,(img.height-side)/2),c=document.createElement('canvas');c.width=size;c.height=size;c.getContext('2d').drawImage(img,sx,sy,side,side,0,0,size,size);const out=c.toDataURL('image/jpeg',q);res(out&&out.length>30?out:raw);}catch(_){res(raw);}};img.onerror=()=>res(raw);img.src=raw;};r.onerror=rej;r.readAsDataURL(file);});}
 async function compressBackground(file){let out=await compress(file,2048,.88);if(out&&out.length>1800000)out=await compress(file,1800,.82);try{await primeImageForSave(out);}catch(_){}return out;}
 function pickFile(accept,cb){try{if(window._pfEl){window._pfEl.remove();}}catch(_){}
   const i=document.createElement('input');i.type='file';if(accept)i.accept=accept;
@@ -1417,7 +1419,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=925';
+  const url='sw.js?v=926';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2749,7 +2751,7 @@ function applyGlassTheme(){const root=typeof document==='undefined'?null:documen
 function glassThemeSet(){S.me=S.me||{};S.me.uiMaterial='glass';applyGlassTheme();save();render();renderLockScreen(true);toast('已使用透明玻璃材质');}
 const GLASS_ICON_PACKS={blue:'蓝白',pink:'粉白',gray:'灰白',black:'纯黑'};
 function appIconPack(){const pack=S&&S.me&&S.me.appIconPack;return ['blue','pink','gray','black'].includes(pack)?pack:'line';}
-function appIconPackAsset(key){const pack=appIconPack();if(pack==='line')return '';const aliases={contacts:'couple'},asset=aliases[key]||key;if(!APPDEFS[asset])return '';return 'assets/app-icons/glass/'+pack+'/'+asset+'.webp?v=20260814f';}
+function appIconPackAsset(key){const pack=appIconPack();if(pack==='line')return '';const aliases={contacts:'couple'},asset=aliases[key]||key;if(!APPDEFS[asset])return '';return 'assets/app-icons/glass/'+pack+'/'+asset+'.webp?v=20260814g';}
 function appIconPackSet(pack){S.me=S.me||{};const next=['blue','pink','gray','black'].includes(pack)?pack:'line';S.me.appIconPack=next;S.me.uiMaterial='glass';if(next!=='line')S.me.theme='';glassWidgetAppearanceEnsure();applyGlassTheme();save();render();toast(next==='line'?'已切换线条图标，可使用主屏配色':'已切换'+GLASS_ICON_PACKS[next]+'透明玻璃主题');}
 function privateNativeAppOn(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true&&window.SmallPhoneNative&&typeof window.SmallPhoneNative.request==='function';}
 function privateNativeSettingsAction(){return privateNativeAppOn()?`<button type="button" aria-label="真实 iPhone 管理" onclick="privateNativeOpenManagement()" style="width:34px;height:34px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);color:#fff;cursor:pointer">${svgIc('phone',18,'#fff')}</button>`:'';}
@@ -2800,7 +2802,7 @@ function appLayoutInit(){let L=S.me.appLayout;
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
   const seen={};(Array.isArray(S.me.appDock)?S.me.appDock:[]).forEach(k=>{if(APPDEFS[k])seen[k]=1;});const clean=p=>p.filter(k=>APPDEFS[k]&&!seen[k]&&(seen[k]=1));
   L=L.map(clean);
-  Object.keys(APPDEFS).forEach(k=>{if(!seen[k]){L[0].push(k);seen[k]=1;}});
+  Object.keys(APPDEFS).forEach(k=>{if(!seen[k]){L[1].push(k);seen[k]=1;}});
   S.me.appLayout=L;}
 function homeTokenValid(k){return !!(APPDEFS[k]||HOME_SHORTCUTS[k]||(String(k).startsWith('w:')&&WIDS.some(w=>w[0]===String(k).slice(2))));}
 function homeLayoutInit(){
@@ -2815,7 +2817,9 @@ function homeLayoutInit(){
   const enabledWidgets=new Set(S.me.widgets.map(k=>'w:'+k)),seen=new Set(dock),clean=[];
   H.forEach(pg=>clean.push(pg.filter(k=>homeTokenValid(k)&&(!String(k).startsWith('w:')||enabledWidgets.has(k))&&!seen.has(k)&&(seen.add(k),true))));
   S.me.widgets.forEach(k=>{const t='w:'+k;if(!seen.has(t)){clean[0].unshift(t);seen.add(t);}});
-  Object.keys(APPDEFS).forEach(k=>{if(!seen.has(k)){clean[0].push(k);seen.add(k);}});
+  const firstApps=clean[0].filter(k=>APPDEFS[k]),keepFirst=new Set(firstApps.slice(0,HOME_REFERENCE_APP_SLOTS.length)),overflow=firstApps.slice(HOME_REFERENCE_APP_SLOTS.length);
+  if(overflow.length){clean[0]=clean[0].filter(k=>!APPDEFS[k]||keepFirst.has(k));clean[1]=overflow.concat(clean[1]);}
+  Object.keys(APPDEFS).forEach(k=>{if(!seen.has(k)){clean[1].push(k);seen.add(k);}});
   S.me.homeLayout=clean;S.me.appDock=dock;
   homeLayoutSyncLegacy();
 }
@@ -3118,7 +3122,7 @@ const MICO={
   travel:_MI('<path d="M3.5 12.2 20.5 5l-5.1 15.5-3.3-6.4-6.6-1.9z"/><path d="M12.1 14.1 20.5 5"/><path d="M5.5 12.7 3.8 18l4.6-2.8"/>'),
   dread:_MI('<path d="M12 3.2c3.2 4.2 6 7.2 6 10.6a6 6 0 0 1-12 0c0-3.4 2.8-6.4 6-10.6z"/>')
 };
-function aIco(key,emoji,bg,extra){const custom=S.me.appIcons&&S.me.appIcons[key],packed=custom?'':appIconPackAsset(key),ic=custom||packed;const glyph=ic?`<img src="${ic}"${packed?' loading="lazy" decoding="async" fetchpriority="low"':''} draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%">`:(MICO[key]||emoji);
+function aIco(key,emoji,bg,extra){const custom=S.me.appIcons&&S.me.appIcons[key],packed=custom?'':appIconPackAsset(key),ic=custom||packed;const glyph=ic?`<img src="${ic}"${packed?' decoding="async"':''} draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%">`:(MICO[key]||emoji);
   return `<div class="ic${custom?' custom-app-icon':''}${packed?' glass-pack-icon glass-icon-'+key:''}" style="${custom?'background:#222;':packed?'background:transparent;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
 // 通用线条图标（UI 里替代 emoji，可指定颜色/大小，默认跟随文字色）
 const ICONS={
@@ -3198,7 +3202,7 @@ function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
+function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compressSquare(f,256,.84);save();appIconEditor();render();toast('图标已换 🎨');});}
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',cinema:'放映室',travel:'云程'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
@@ -6023,7 +6027,7 @@ async function clClearOld(id){const sc=_clTab==='voice'?'语音':_clTab==='video
   save();render();toast(n?'已删掉'+n+'条一天前的记录':'没有一天前的记录');}
 /* ===== 线下约会（独立空间，与微信隔离）===== */
 let _off=null;
-function offData(id){S.offline=S.offline||{};if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false,daypart:''};return S.offline[id];}
+function offData(id){S.offline=S.offline&&typeof S.offline==='object'&&!Array.isArray(S.offline)?S.offline:{};let o=S.offline[id];if(!o||typeof o!=='object'||Array.isArray(o))o=S.offline[id]={};o.loc=typeof o.loc==='string'?o.loc:'';o.when=typeof o.when==='string'?o.when:'';o.msgs=Array.isArray(o.msgs)?o.msgs:[];o.memory=Array.isArray(o.memory)?o.memory:[];o.history=Array.isArray(o.history)?o.history:[];o.started=!!o.started;o.daypart=typeof o.daypart==='string'?o.daypart:'';return o;}
 function cohabRoot(){S.cohabitation=S.cohabitation&&typeof S.cohabitation==='object'&&!Array.isArray(S.cohabitation)?S.cohabitation:{};const r=S.cohabitation;r.homes=r.homes&&typeof r.homes==='object'&&!Array.isArray(r.homes)?r.homes:{};if(typeof r.enabled!=='boolean')r.enabled=false;if(typeof r.paused!=='boolean')r.paused=!r.enabled;return r;}
 function cohabDefaultCid(){const r=cohabRoot(),valid=id=>id&&getC(id)&&!getC(id).deleted;if(valid(r.cid))return r.cid;const couple=S.couple&&valid(S.couple.cid)&&S.couple.cid,first=(S.contacts||[]).find(c=>c&&!c.deleted&&!c.blocked);r.cid=couple||first&&first.id||'';return r.cid;}
 function cohabData(id){const r=cohabRoot();id=id||cohabDefaultCid();if(!id)return null;let d=r.homes[id];if(!d||typeof d!=='object'||Array.isArray(d))d=r.homes[id]={};d.msgs=Array.isArray(d.msgs)?d.msgs:[];d.summaries=Array.isArray(d.summaries)?d.summaries:[];d.summarySeq=Math.max(0,+d.summarySeq||0);d.summaryRetryAt=Math.max(0,+d.summaryRetryAt||0);d.msgSeq=Math.max(0,+d.msgSeq||0);d.msgs.forEach(m=>{if(!m)return;if(!(+m.cohabSeq>0))m.cohabSeq=++d.msgSeq;else d.msgSeq=Math.max(d.msgSeq,+m.cohabSeq);});d.phase=['home','work','returning','away','together-away'].includes(d.phase)?d.phase:'home';d.activity=cohabActivityClean(d.activity)||cohabPhaseDefaultActivity(d.phase);d.place=cohabPlaceClean(d.place)||(d.phase==='home'&&/^在/.test(d.activity)?cohabPlaceClean(d.activity):'');d.placeAt=Math.max(0,+d.placeAt||0);d.phaseAt=+d.phaseAt||Date.now();d.startedAt=+d.startedAt||Date.now();d.nextAt=+d.nextAt||0;d.nextPhase=['home','work','returning','away','together-away'].includes(d.nextPhase)?d.nextPhase:'';d.unreadReturn=!!d.unreadReturn;d.returnedAt=+d.returnedAt||0;d.phoneInspectDueAt=Math.max(0,+d.phoneInspectDueAt||0);if(d.phoneInspection&&Date.now()-(+d.phoneInspection.at||0)>120000)d.phoneInspection=null;if(d.pendingArrival&&typeof d.pendingArrival!=='object')d.pendingArrival=null;cohabSettings(d);return d;}
@@ -6133,7 +6137,7 @@ function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messag
 function declineDate(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
 function openOfflineMenu(){S.offline=S.offline||{};offlineRepairState();const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
   openModal(`<h3>线下约会</h3>${cohabMenuCard(cs)}<div class="offline-once-label"><span>单次约会</span><small>原功能保持不变</small></div><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
-   ${cs.map(c=>{const o=S.offline[c.id],latest=o&&(o.history||[]).find(h=>h&&h.msgs&&h.msgs.length);return `<div class="section"><div class="it" role="button" tabindex="0" onclick="offlinePickTap(event,'${c.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){offlinePickTap(event,'${c.id}')}">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):offlineCanResume(o)?'上次约会未结束 · 点击继续':(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会重点记忆':'未约过')}</div></div><span class="v">›</span></div>${latest&&!o.started?`<div style="padding:0 12px 11px;display:grid;gap:7px"><button class="btn g" style="margin:0" onclick="event.stopPropagation();offReinjectLatestHandoff('${c.id}')">重新注入最近约会原文</button><button class="btn g" style="margin:0" onclick="event.stopPropagation();offRetryLatestSummary('${c.id}')">重新总结最近一场约会</button></div>`:''}</div>`;}).join('')}
+   ${cs.map(c=>{const o=offData(c.id),latest=(o.history||[]).find(h=>h&&h.msgs&&h.msgs.length);return `<div class="section"><button type="button" class="it offline-role-entry" onclick="offlinePickTap(event,'${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o.started?'约会中 · '+esc(o.loc||''):offlineCanResume(o)?'上次约会未结束 · 点击继续':(o.memory.length?'有'+o.memory.length+'条约会重点记忆':'未约过')}</div></div><span class="v">›</span></button>${latest&&!o.started?`<div style="padding:0 12px 11px;display:grid;gap:7px"><button class="btn g" style="margin:0" onclick="event.stopPropagation();offReinjectLatestHandoff('${c.id}')">重新注入最近约会原文</button><button class="btn g" style="margin:0" onclick="event.stopPropagation();offRetryLatestSummary('${c.id}')">重新总结最近一场约会</button></div>`:''}</div>`;}).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 let _offlinePickAt=0;
 function offlinePickTap(ev,cid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_offlinePickAt<350)return;_offlinePickAt=now;offlineEnter(cid);}
@@ -8904,7 +8908,8 @@ async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||
     if(ack.length)await companionRpc('phone_role_push_ack',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_ids:ack});
     pendingCalls.forEach(({c,callKind})=>setTimeout(()=>{if(incomingCall(c.id,callKind,{serverPush:true})&&_call){_call._pro=true;_call._proReason='隔了一段时间没有联系，想主动听听ta的声音';}},350));return true;
   }catch(_){return false;}finally{_roleServerPushPullBusy=false;}}
-window.__smallPhoneOpenRolePush=async payload=>{payload=payload||{};await roleServerPushPull(true);const c=getC(String(payload.roleId||''));if(!c)return;if(String(payload.kind||'')==='call'){if(_call&&_call.id===c.id)openIncoming();else openChat(c.id);}else openChat(c.id);};
+const _nativeRolePushTaps=new Set();
+window.__smallPhoneOpenRolePush=async payload=>{payload=payload||{};const nonce=String(payload.nonce||''),tappedAt=Number(payload.tappedAt||0);if(payload.source!=='notificationTap'||!nonce||!tappedAt||Math.abs(Date.now()-tappedAt)>120000||_nativeRolePushTaps.has(nonce))return false;_nativeRolePushTaps.add(nonce);await roleServerPushPull(true);const c=getC(String(payload.roleId||''));if(!c)return true;if(String(payload.kind||'')==='call'){if(_call&&_call.id===c.id)openIncoming();else openChat(c.id);}else openChat(c.id);return true;};
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;if(c.proactive.enabled)initiativeArm(c);save();render();if(c.proactive.serverPush)roleServerPushSync(c,true);}
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}

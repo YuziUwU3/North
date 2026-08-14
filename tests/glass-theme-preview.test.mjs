@@ -90,13 +90,11 @@ test('glass home keeps only the dashboard clock',()=>{
   assert.match(css,/\.dash-time b\{[^}]*font-size:24px/);
 });
 
-test('glass home keeps the lock-screen pull arrow visible and reserves its top space',()=>{
+test('glass home keeps the v910 lock-screen pull arrow and reserves its top space',()=>{
   assert.match(app,/function renderLockPull\(\)/);
   assert.match(app,/function lockShow\(drop\)/);
-  assert.match(css,/html\.north-glass-ui \.lockpull\.show\{display:flex!important\}/);
-  assert.doesNotMatch(css,/html\.north-glass-ui \.lockpull\.show\{display:none/);
+  assert.doesNotMatch(css,/html\.north-glass-ui \.lockpull/);
   assert.match(css,/html\.north-glass-ui \.home-scroll\{overflow-y:auto;padding-top:38px;box-sizing:border-box\}/);
-  assert.match(css,/html\.north-glass-ui \.lockpull\{top:7px\}/);
 });
 
 test('final reference widgets keep the photo square and the vinyl controls removed',()=>{
@@ -105,7 +103,7 @@ test('final reference widgets keep the photo square and the vinyl controls remov
   assert.match(css,/\.vinyl-record\{[^}]*repeating-radial-gradient[^}]*radial-gradient/);
   assert.doesNotMatch(app,/class="vinyl-control"/);
   assert.doesNotMatch(app,/class="vinyl-switch"/);
-  assert.match(css,/\.home \.dock\{display:grid!important;width:min\(348px,calc\(100vw - 32px\)\)/);
+  assert.match(css,/\.home \.dock\{display:grid!important;width:calc\(100% - 32px\)!important;max-width:348px!important/);
 });
 
 test('reference vinyl and right app column scale on narrow Android viewports without changing the 390px layout',()=>{

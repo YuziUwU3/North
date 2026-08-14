@@ -10,6 +10,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         let bridge = PhoneNativeBridge()
         private var showingLoadFailure = false
         private var didLoadPhone = false
+        private var openingRolePush = false
 
         override init() {
             super.init()
@@ -47,12 +48,26 @@ struct LocalPhoneWebView: UIViewRepresentable {
             guard didLoadPhone, let webView = bridge.webView,
                   let route = UserDefaults.standard.dictionary(
                     forKey: "smallPhone.pendingRolePushRoute.v1"
-                  ) as? [String: String],
+                  ) as? [String: String] else { return }
+            let now = Int64(Date().timeIntervalSince1970 * 1000)
+            guard route["source"] == "notificationTap",
+                  let nonce = route["nonce"], !nonce.isEmpty,
+                  let tappedAtText = route["tappedAt"],
+                  let tappedAt = Int64(tappedAtText),
+                  abs(now - tappedAt) <= 120_000 else {
+                UserDefaults.standard.removeObject(
+                    forKey: "smallPhone.pendingRolePushRoute.v1"
+                )
+                return
+            }
+            guard !openingRolePush,
                   JSONSerialization.isValidJSONObject(route),
                   let data = try? JSONSerialization.data(withJSONObject: route),
                   let json = String(data: data, encoding: .utf8) else { return }
+            openingRolePush = true
             let script = "window.__smallPhoneOpenRolePush && window.__smallPhoneOpenRolePush(\(json));"
-            webView.evaluateJavaScript(script) { _, error in
+            webView.evaluateJavaScript(script) { [weak self] _, error in
+                self?.openingRolePush = false
                 if error == nil {
                     UserDefaults.standard.removeObject(
                         forKey: "smallPhone.pendingRolePushRoute.v1"
@@ -261,7 +276,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.51 (51)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.52 (52)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
