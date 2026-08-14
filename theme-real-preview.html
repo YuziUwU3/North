@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小手机 · 高级玻璃主题真实页面预览</title>
+<style>
+*{box-sizing:border-box}html{color-scheme:dark}body{margin:0;background:#0a0a0c;color:#f7f7f8;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}.bar{position:sticky;top:0;z-index:3;padding:18px 22px;border-bottom:1px solid #29292e;background:rgba(10,10,12,.88);backdrop-filter:blur(22px)}h1{margin:0 0 4px;font-size:21px}.sub{color:#a5a5ad}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.tabs button,.open{border:1px solid #37373e;border-radius:999px;background:#18181c;color:#eee;padding:8px 13px;cursor:pointer}.tabs button.on{border-color:#eee;background:#eee;color:#111}.main{display:grid;grid-template-columns:minmax(330px,430px) minmax(260px,1fr);gap:24px;max-width:1040px;margin:0 auto;padding:24px}.device{height:min(844px,calc(100vh - 150px));min-height:650px;border:1px solid #303038;border-radius:32px;overflow:hidden;background:#000;box-shadow:0 28px 80px #000}.device.tablet{grid-column:1/-1;width:100%;height:min(940px,calc(100vh - 150px))}.device iframe{display:block;width:100%;height:100%;border:0}.copy{padding:20px 4px}.copy h2{font-size:17px;margin:0 0 8px}.copy p{color:#aaaab3}.legend{display:grid;gap:9px;margin:22px 0}.legend span{padding:11px 13px;border:1px solid #28282e;border-radius:13px;background:#111115}.open{display:inline-block;text-decoration:none}@media(max-width:760px){.main{display:block;padding:12px}.copy{padding:22px 6px}.device{height:760px}.bar{padding:14px}.tabs{flex-wrap:nowrap;overflow:auto;padding-bottom:3px}.tabs button{white-space:nowrap}}
+</style>
+</head>
+<body>
+<header class="bar"><h1>高级玻璃主题 · 真实小手机预览</h1><div class="sub">这里直接载入正式小手机页面；示例数据只存在于预览，不会覆盖你的真实存档。</div><nav class="tabs" id="tabs"></nav></header>
+<main class="main"><div class="device" id="device"><iframe id="phone" title="小手机真实页面预览"></iframe></div><aside class="copy"><h2 id="title"></h2><p id="desc"></p><div class="legend"><span>原来的线条主题仍保留</span><span>内置黑／灰白／粉白／蓝白四套图标</span><span>个人上传图标仍优先显示</span><span>预览模式不写入任何本地存档</span></div><a class="open" id="open" target="_blank">单独打开这个真实页面</a></aside></main>
+<script>
+const views=[
+['black-home','纯黑主屏','黑色图标、信息面板、可上传照片、唱片和双人卡。'],
+['black-apps2','纯黑全部App','第二页展示首屏以外的全部软件图标。'],
+['gray-home','灰白主屏','灰白玻璃图标的实际主屏效果。'],
+['gray-apps2','灰白全部App','灰白主题第二页全部软件图标。'],
+['pink-home','粉白主屏','粉白玻璃图标的实际主屏效果。'],
+['pink-apps2','粉白全部App','粉白主题第二页全部软件图标，用于检查位置与造型。'],
+['blue-home','蓝白主屏','蓝白玻璃图标的实际主屏效果。'],
+['blue-apps2','蓝白全部App','蓝白主题第二页全部软件图标。'],
+['black-wechat-night','微信夜间','透明黑玻璃微信完整列表。'],
+['gray-wechat-day','微信白天','透明白玻璃微信完整列表。'],
+['black-settings','设置','实际设置页的高级玻璃材质。'],
+['black-banner','角色通知','实际主屏上的角色玻璃通知条。'],
+['black-lock','锁屏通知','玻璃时间、角色消息与通知中心。'],
+['black-tablet','平板','平板宽屏下的玻璃主屏布局。']];
+const tabs=document.querySelector('#tabs'),frame=document.querySelector('#phone'),device=document.querySelector('#device'),title=document.querySelector('#title'),desc=document.querySelector('#desc'),open=document.querySelector('#open');
+function show(i){const [mode,name,text]=views[i],url='小手机.html?northPreview='+encodeURIComponent(mode)+'&previewBuild=20260814f';frame.src=url;title.textContent=name;desc.textContent=text;open.href=url;device.classList.toggle('tablet',mode.includes('tablet'));[...tabs.children].forEach((b,n)=>b.classList.toggle('on',n===i));history.replaceState(null,'','#'+mode)}
+async function clearStalePreviewShell(){
+  try{if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(reg=>reg.unregister()));}}catch(_){}
+  try{if('caches'in window){const keys=await caches.keys();await Promise.all(keys.filter(key=>key.startsWith('north-shell-')).map(key=>caches.delete(key)));}}catch(_){}
+}
+views.forEach((v,i)=>{const b=document.createElement('button');b.textContent=v[1];b.onclick=()=>show(i);tabs.appendChild(b)});const at=Math.max(0,views.findIndex(v=>v[0]===location.hash.slice(1)));clearStalePreviewShell().then(()=>show(at));
+</script>
+</body>
+</html>

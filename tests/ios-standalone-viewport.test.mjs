@@ -36,6 +36,7 @@ test('full-screen shell is capped to the current available viewport',()=>{
 test('chat content scrolls inside the shell while the composer keeps its row',()=>{
   assert.match(html,/\.chatbg\{flex:1;overflow-y:auto;/);
   assert.match(html,/\.inputbar\{flex:0 0 auto;/);
+  assert.match(html,/\.inputbar textarea\{[^}]*height:36px;[^}]*overflow-x:hidden;overflow-y:hidden;/,'the iOS caret starts inside an explicit clipped textarea box');
 });
 
 test('no script may substitute physical screen height for the app viewport',()=>{

@@ -202,6 +202,19 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "call.audio.stop":
             CallPictureInPictureController.shared.stopAudio()
             reply(requestID: requestID, result: ["stopped": true])
+        case "music.audio.activate":
+            do {
+                let session = AVAudioSession.sharedInstance()
+                try session.setCategory(
+                    .playback,
+                    mode: .default,
+                    options: [.mixWithOthers]
+                )
+                try session.setActive(true)
+                reply(requestID: requestID, result: ["activated": true])
+            } catch {
+                reply(requestID: requestID, error: "music_audio_unavailable")
+            }
         case "storage.status":
             performStorageStatus(requestID: requestID)
         case "storage.get", "storage.put", "storage.delete":

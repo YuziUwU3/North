@@ -73,10 +73,10 @@ test('Douyin repairs incomplete restored data every time it opens', () => {
   assert.match(functionSource('renderDouyin'), /^function renderDouyin\(\)\{dyInit\(\)/);
 });
 
-test('the four-icon dock and page dots stay fixed above scrollable home content', () => {
+test('the restored four-app dock and page dots stay fixed above scrollable home content', () => {
   assert.match(source, /<div class="home-scroll">[\s\S]*?<div class="appswipe"/);
   assert.match(source, /<div class="dock home-dropzone" data-zone="dock">\$\{homeDockHtml\(\)\}<\/div>/);
-  assert.match(source, /const HOME_DOCK_DEFAULT=\['d:wechat','d:contacts','d:moments','d:me'\]/);
+  assert.match(source, /const HOME_DOCK_DEFAULT=\['calendar','games','mail','settings'\];/);
   assert.match(html, /\.home\{[^}]*overflow:hidden/);
   assert.match(html, /\.home-scroll\{[^}]*flex:1;[^}]*overflow-y:auto/);
   assert.match(html, /\.pgdots\{position:relative;[^}]*flex:none/);

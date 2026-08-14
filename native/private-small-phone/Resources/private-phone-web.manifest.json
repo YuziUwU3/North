@@ -11,10 +11,20 @@
     "pet-game.css",
     "gift-effects.js",
     "thought-card-effects.js",
+    "glass-theme.css",
     "icon.png"
   ],
   "directories": [
-    "assets",
+    "assets/incoming-morning-chime-v1.wav",
+    "assets/incoming-soft-ring-v1.wav",
+    "assets/incoming-warm-night-v1.wav",
+    "assets/incoming-wechat-ding-low-v1.wav",
+    "assets/incoming-wechat-ding-v1.wav",
+    "assets/pet-room-v1.webp",
+    "assets/app-icons/glass/black",
+    "assets/app-icons/glass/gray",
+    "assets/app-icons/glass/pink",
+    "assets/app-icons/glass/blue",
     "pay-assets",
     "vendor",
     "fonts"

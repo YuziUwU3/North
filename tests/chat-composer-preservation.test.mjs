@@ -71,6 +71,16 @@ const replyRefresh = functionSource('replyGenerationRefresh');
 assert.match(replyRefresh, /document\.querySelector\('\.manual-reply-chip'\)/, 'reply state must update its chip in place');
 assert.doesNotMatch(replyRefresh, /render\(\)/, 'reply completion must not repaint and clear a draft');
 
+const afterChat = functionSource('afterChat');
+const reflow = functionSource('chatComposerReflow');
+const viewportBind = functionSource('chatComposerViewportBind');
+assert.match(afterChat, /compositionstart/,'Chinese input composition must be tracked before correcting the caret');
+assert.match(afterChat, /compositionend[\s\S]*chatComposerReflow\(this,true\)/,'the caret must be corrected after Chinese composition finishes');
+assert.match(afterChat, /addEventListener\('focus'[\s\S]*chatComposerReflow\(this,true\)/,'refocusing the composer must correct stale iOS caret geometry');
+assert.match(reflow, /style\.overflowY=full>max\?'auto':'hidden'/,'a one-line caret must remain clipped to the textarea instead of leaking below it');
+assert.match(reflow, /getBoundingClientRect\(\)\.height[\s\S]*setSelectionRange/,'caret repaint must happen only after the new textarea geometry is committed');
+assert.match(viewportBind, /visualViewport[\s\S]*addEventListener\('resize'/,'iOS keyboard viewport changes must refresh only the focused chat composer');
+
 assert.match(source, /\[点外卖\\\|[\s\S]*?refreshChatMessages\(id\);continue;/, 'special role cards must use the safe message-only refresh');
 assert.match(source, /\[表情\\\|[\s\S]*?refreshChatMessages\(id\);/, 'role stickers must use the safe message-only refresh');
 

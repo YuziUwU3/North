@@ -1,5 +1,5 @@
-const BUILD='921';
-const SHELL_CACHE='north-shell-v921';
+const BUILD='923';
+const SHELL_CACHE='north-shell-v923';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -114,6 +114,16 @@ self.addEventListener('fetch',event=>{
   // App Store support/privacy URLs are ordinary public documents. They must
   // never be replaced by the cached small-phone application shell.
   if(request.mode==='navigate'&&/\/north-(?:support|privacy)\.html$/.test(url.pathname))return;
+
+  // Local visual previews must always load the exact requested document.
+  // Otherwise an old cached app shell can replace the preview with the gate.
+  if(request.mode==='navigate'&&(
+    /\/theme-real-preview\.html$/.test(url.pathname)||
+    (/\/小手机\.html$/.test(url.pathname)&&url.searchParams.has('northPreview'))
+  )){
+    event.respondWith(fetch(request,{cache:'no-store'}));
+    return;
+  }
 
   if(request.mode==='navigate'){
     event.respondWith((async()=>{

@@ -1,9 +1,11 @@
-if(window.__NORTH_SHELL_BUILD__!=='921'){
+if(window.__NORTH_SHELL_BUILD__!=='923'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
+const NORTH_PREVIEW_PARAMS=(()=>{try{return new URLSearchParams(location.search).get('northPreview')||'';}catch(_){return'';}})();
+const NORTH_PREVIEW=!!NORTH_PREVIEW_PARAMS;
 /* ☁️ 云同步（Supabase）：云地址+key 在「设置→云同步」里各自填(不写死在公开代码里)，
    你和每个网友各填各的 Supabase，数据各进各的云、互不相干 */
 function cloudUrl(){return (((S.settings&&S.settings.cloudUrl)||'').trim()).replace(/\/+$/,'');}
@@ -180,7 +182,7 @@ function pfGroupRowsHTML(){const p=phoneFriendState(),gs=p.groups||[];if(!gs.len
     return `<div class="row" onclick="openPhoneFriendGroup('${gid}')"><div class="avatar" style="background:linear-gradient(135deg,#ff8fab,#ffc2d8)">${svgIc('users',24,'#fff')}</div><div class="meta"><div class="n">${esc(pfGroupDisplayName(g))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((pfNameById(lm.from)||'成员')+'：'+pfMsgPreview(lm))):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}</div></div>`;}).join('');}
 function phoneFriendEntryHTML(){const n=pfReqs('incoming').length;return `<div class="list"><div class="row" onclick="openPhoneFriends()"><div class="avatar sm" style="background:#6574ff">${svgIc('users',22,'#fff')}</div><div class="meta"><div class="n">小手机好友</div><div class="s">我的小手机ID：${esc(phoneFriendId())}</div></div>${n?pfUnreadDot(n):'<span class="v">›</span>'}</div></div>`;}
 function phoneFriendContactRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
-  return `<div class="list">${fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase();return `<div class="pfswipe" id="pfsw_${id}" onpointerdown="pfSwipeStart(event,'${id}')" onpointermove="pfSwipeMove(event,'${id}')" onpointerup="pfSwipeEnd(event,'${id}')" onpointercancel="pfSwipeEnd(event,'${id}')"><button class="pfdel" onclick="event.stopPropagation();phoneFriendDeleteFriend('${id}')">删除</button><div class="row pfmain" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f,'sm')}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">小手机ID：${esc(id)}</div></div><span class="v">›</span></div></div>`;}).join('')}</div>`;}
+  return `<div class="list">${fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase();return `<div class="row" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f,'sm')}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">小手机ID：${esc(id)}</div></div><span class="v">›</span></div>`;}).join('')}</div>`;}
 let _pfSwipe=null;
 function pfSwipeStart(e,id){_pfSwipe={id,x:e.clientX,y:e.clientY,dx:0};}
 function pfSwipeMove(e,id){if(!_pfSwipe||_pfSwipe.id!==id)return;_pfSwipe.dx=e.clientX-_pfSwipe.x;if(Math.abs(_pfSwipe.dx)>18&&Math.abs(_pfSwipe.dx)>Math.abs(e.clientY-_pfSwipe.y)){try{e.preventDefault();}catch(_){} }}
@@ -356,11 +358,11 @@ function pfGroupAvatarTap(ev,gid,id){try{ev.preventDefault();ev.stopPropagation(
 function pfGroupAvatarDouble(ev,gid,id){try{ev.preventDefault();ev.stopPropagation();}catch(_){}pfAtEnd();_pfTapLast=null;phoneFriendGroupPat(gid,id);}
 /* 一键踢人：SHARE_EPOCH 与 phone-license 云函数一起加 1，旧浏览器和旧通行密钥都会失效。 */
 if(window.NorthLicense)window.NorthLicense.init({baseUrl:GATE_URL,apiKey:GATE_KEY,epoch:SHARE_EPOCH});
-function gateOK(){if(!SHARE_GATE)return true;try{
+function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v921 · 主屏幕通话字幕恢复';
+const APP_VER='v923 · 玻璃主屏拖动与AI图标修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -375,7 +377,7 @@ function defState(){return{
 hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRing:'soft', showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:0, callProb:35, callSilentMin:3, callPace:1, videoVisionIntervalMin:0, videoVisionMaxPerCall:6, screenShareRealtimeVision:false, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
-  me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
+  me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',uiMaterial:'glass',appIconPack:'black',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
   contacts:[],
   messages:{},
@@ -404,7 +406,7 @@ hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRi
 const CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state',RECOVERY_HISTORY_IDB_KEY='__recovery_history_state',CORE_INLINE_LIMIT=3.5*1024*1024;
 let _coreBootRef=null,_coreOverflowMode=false,_coreMirrorWrite=Promise.resolve(true),_coreQueuedSave=null,_coreLogicalBytes=0,_coreSavePending=false,_coreFailureAt=0,_appBootFinished=false,_recoverySnapshotAt=0,_recoverySnapshotWrite=Promise.resolve(true);
 let S=load();
-function normalizeLoadedState(){try{S.me=S.me||{};if(typeof S.me.locked!=='boolean')S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
+function normalizeLoadedState(){try{S.me=S.me||{};S.me.uiMaterial='glass';if(!['line','blue','pink','gray','black'].includes(S.me.appIconPack))S.me.appIconPack='black';if(S.me.appIconPack!=='line')S.me.theme='';if(typeof S.me.locked!=='boolean')S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
   try{S.settings=S.settings||{};if(!Object.prototype.hasOwnProperty.call(S.settings,'videoVisionIntervalMin')){const legacy=Number(S.settings.videoVisionIntervalSec);S.settings.videoVisionIntervalMin=Number.isFinite(legacy)?(legacy<=0?0:Math.max(1,Math.min(60,Math.round(legacy/60)))):0;}delete S.settings.videoVisionIntervalSec;}catch(_){}
   try{S.settings=S.settings||{};if(!S.settings.initiativeSchedulerV2){(S.contacts||[]).forEach(c=>{if(c)delete c._initiative;});S._proactiveCount={};S.settings.initiativeSchedulerV2=1;}}catch(_){}
   try{S.settings=S.settings||{};if(!S.settings.initiativeSchedulerV3){(S.contacts||[]).forEach(c=>{if(c)delete c._initiative;});S._proactiveCount={};S.settings.initiativeSchedulerV3=1;}}catch(_){}
@@ -413,7 +415,7 @@ function normalizeLoadedState(){try{S.me=S.me||{};if(typeof S.me.locked!=='boole
   try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}}
 normalizeLoadedState();
 function mergeStateData(d,opt){const n=Object.assign(defState(),d||{});if(opt&&opt.keepPhoneFriend){const old=S&&S.me&&S.me.phoneFriend,has=d&&d.me&&d.me.phoneFriend&&d.me.phoneFriend.id;if(old&&!has){n.me=n.me||{};n.me.phoneFriend=old;}if(n.messages&&n.messages.__idb==='messages'&&S.messages&&!S.messages.__idb)n.messages=S.messages;}return n;}
-function load(){let raw=null;try{raw=localStorage.getItem(KEY);if(!raw)return seed();const v=JSON.parse(raw);if(v&&v.settings){if(v.__coreIdb){_coreBootRef=v.__coreIdb;_coreOverflowMode=true;}return mergeStateData(v);}}catch(e){}if(raw){_coreBootRef={ver:1,savedAt:0,recovery:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}return seed();}
+function load(){if(NORTH_PREVIEW)return previewSeed(NORTH_PREVIEW_PARAMS);let raw=null;try{raw=localStorage.getItem(KEY);if(!raw)return seed();const v=JSON.parse(raw);if(v&&v.settings){if(v.__coreIdb){_coreBootRef=v.__coreIdb;_coreOverflowMode=true;}return mergeStateData(v);}}catch(e){}if(raw){_coreBootRef={ver:1,savedAt:0,recovery:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}return seed();}
 let _bootImagesPromise=null;
 let _saveTimer=null,_savePending=false,_saveLast=0,_saveOkLast=0;
 const WECHAT_TAIL_KEY='yibei_wechat_tail_v1';
@@ -434,7 +436,7 @@ function saveNow(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&
   if(overflow){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);if(typeof privatePhoneCloudMarkDirty==='function')privatePhoneCloudMarkDirty(savedAt);return true;}
   try{localStorage.setItem(KEY,json);queueRecoverySnapshot(json,savedAt);_saveOkLast=savedAt;if(typeof privatePhoneCloudMarkDirty==='function')privatePhoneCloudMarkDirty(savedAt);return true;}catch(e){if(isQuotaError(e)){_coreOverflowMode=true;queueCoreMirror(json,savedAt,true);if(typeof privatePhoneCloudMarkDirty==='function')privatePhoneCloudMarkDirty(savedAt);if(Date.now()-_coreFailureAt>60000){_coreFailureAt=Date.now();toast('核心存档偏大，正在自动迁入大容量存储');}return true;}storageSaveFailure(e,false);return false;}}
 function saveNowAsync(){const ok=saveNow();return _coreOverflowMode?_coreMirrorWrite.then(Boolean):Promise.resolve(ok);}
-function save(delay){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
+function save(delay){if(NORTH_PREVIEW)return true;_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);const d=delay==null?350:Math.max(0,delay);_saveTimer=setTimeout(saveNow,d);}
 /* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
 let _imgCache={},_imgRev=new Map(),_imgReady=new Set(),_imgSeq=0,_heavy={},_heavyReady=new Set(),_messageArchiveWrite=Promise.resolve();
 const IMG_DB_VERSION=2;
@@ -509,6 +511,13 @@ function seed(){const s=defState();
   s._fresh=true;
   return s;
 }
+function previewSeed(mode){const s=defState(),now=Date.now(),parts=String(mode||'black-home').split('-'),pack=['black','blue','pink','gray'].includes(parts[0])?parts[0]:'black',portrait='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 420"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#f5f5f5"/><stop offset="1" stop-color="#777"/></linearGradient></defs><rect width="360" height="420" fill="#151515"/><circle cx="180" cy="135" r="76" fill="url(#g)"/><path d="M55 420c8-126 54-198 125-198s117 72 125 198" fill="url(#g)"/><path d="M105 126c15-84 135-102 157-13-45-34-101-38-157 13Z" fill="#181818"/><text x="180" y="390" text-anchor="middle" fill="#fff" font-size="20" font-family="sans-serif" letter-spacing="4">PRIVATE PHOTO</text></svg>');s._fresh=false;s.me.uiMaterial='glass';s.me.appIconPack=pack;s.me.locked=!String(mode).includes('lock');s.me.wxTheme=String(mode).includes('day')?'white':'';s.me.name='我';s.me.avatar=portrait;s.me.homeClockColor=pack==='pink'?'#ffd7e5':pack==='blue'?'#dce9ff':pack==='gray'?'#f5f5f5':'#ffffff';s.me.homeDashboard={battery:68,heartRate:72,photo:portrait};s.me.homeSweetie={me:portrait,ta:portrait,meName:'Sweetie',taName:'Cutie',line:'♡ 想你，也想和你认真生活'};s.me.widgets=['dashboard','vinyl','sweetie'];s.settings.homeClock=true;s.contacts=[
+  {id:'preview_1',name:'先生＾＾',remark:'先生＾＾',avatar:portrait,persona:'',signature:'',pinned:true,deleted:false,blocked:false,proactive:{enabled:false}},
+  {id:'preview_2',name:'北',remark:'北',avatar:portrait,persona:'',signature:'',deleted:false,blocked:false,proactive:{enabled:false}},
+  {id:'preview_3',name:'共同生活',remark:'共同生活',avatar:portrait,persona:'',signature:'',deleted:false,blocked:false,proactive:{enabled:false}}
+];s.messages={preview_1:[{id:'pm1',role:'assistant',type:'text',content:'到了告诉我，我去接你。',time:now-2*60000}],preview_2:[{id:'pm2',role:'assistant',type:'voice',content:'别忘了好好吃饭。',time:now-18*60000}],preview_3:[{id:'pm3',role:'assistant',type:'text',content:'今天晚上一起吃饭吗？',time:now-42*60000}]};s.music={songs:[{id:'preview_song',title:'私人收藏',artist:'North',cover:portrait}],lastSongId:'preview_song'};s.me.lockNotes=[{id:'pl1',title:'先生＾＾',body:'到了告诉我，我去接你。',time:now-60000,icon:'chat',target:{type:'chat',id:'preview_1'}},{id:'pl2',title:'北',body:'给你发来一条语音消息',time:now-8*60000,icon:'message',target:{type:'chat',id:'preview_2'}}];return s;}
+function previewHomePage(page){requestAnimationFrame(()=>{const sw=$('#appswipe');if(!sw)return;const viewportWidth=Math.min(window.innerWidth||Infinity,document.documentElement.clientWidth||Infinity,sw.getBoundingClientRect().width||Infinity);const w=Math.max(1,Math.floor(Number.isFinite(viewportWidth)?viewportWidth:(sw.clientWidth||1)));sw.querySelectorAll('.apppage').forEach(pg=>{pg.style.setProperty('width',w+'px','important');pg.style.setProperty('min-width',w+'px','important');pg.style.setProperty('max-width',w+'px','important');pg.style.setProperty('flex','0 0 '+w+'px','important');});_homePage=homePageClamp(page);sw.scrollLeft=_homePage*w;homePageDots(_homePage);});}
+function previewRoute(){if(!NORTH_PREVIEW)return;const mode=String(NORTH_PREVIEW_PARAMS||'black-home'),root=document.documentElement;root.classList.add('north-real-preview');root.classList.toggle('north-preview-tablet',mode.includes('tablet'));S.me.locked=mode.includes('lock');glassReferenceLayout();_homePage=mode.includes('apps2')?1:0;if(mode.includes('wechat')){wxTab='chats';stack=[{p:'wechat'}];}else if(mode.includes('settings'))stack=[{p:'settings'}];else stack=[{p:'home'}];render();previewHomePage(_homePage);if(mode.includes('banner')){const b=$('#msgBanner'),c=S.contacts&&S.contacts[0];if(b&&c){b.innerHTML=`${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">到了告诉我，我去接你。</div></div>`;b.className='msgbanner show';}}}
 function cid(){return 'c'+Math.random().toString(36).slice(2,9);}
 function genWxid(){return 'wx_'+Math.random().toString(36).slice(2,9);}
 function curMonth(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
@@ -1407,8 +1416,8 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 /* ===== 顶部消息通知 ===== */
 let _bannerT;
 let _swReady=null;
-function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=921';
+function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
+  const url='sw.js?v=923';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2023,6 +2032,7 @@ function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;co
 function render(){
   const c=cur();const app=$('#app');
   applyAppleHomeCompat();
+  applyGlassTheme();
   const _force=idleForceState();if(_force&&(c.p!=='chat'||c.id!==_force.id)){stack=stack.filter(s=>s.p!=='chat');stack.push({p:'chat',id:_force.id});return render();}
   const _sb=$('#statusbar');if(_sb)_sb.className='statusbar'+(c.p==='home'?'':' dark');
   const _scrollState=captureRenderScroll(c),_composerState=captureChatComposer(c);
@@ -2085,10 +2095,15 @@ function render(){
   else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
+  const _wxGlassPages=['wechat','chat','contactInfo','newfriends','wxsearch','pffriends','pfchat','pfgroup','group'];
+  const _isWxPage=_wxGlassPages.includes(c.p);
+  const _glass=glassThemeOn()&&!_isWxPage?' glass-app':'';
+  const _wxG='';
+  const _setG=glassThemeOn()&&c.p==='settings'?' settings-glass':'';
   const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'||c.p==='contactInfo'))?' wxlight':'';
   const _wxP=c.p==='wechat'?' wx-premium':'';
   const _wxSection=c.p==='wechat'?' wx-'+String(wxTab||'chats'):'';
-  app.innerHTML='<div class="page'+_wxL+_wxP+_wxSection+'">'+html+'</div>';
+  app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+'">'+html+'</div>';
   chatRouteMount(c);
   if(c.p==='drawguess'){const usage=$('#useBadge');if(usage)usage.style.display='none';}
   renderLockScreen();renderLockPull();
@@ -2581,19 +2596,21 @@ function syncRender(){if(!_sync)return;const cur=_ma?_ma.currentTime:0;const don
 function syncMark(){if(!_sync||!_ma)return;_sync.stamps[_sync.idx]=_ma.currentTime;_sync.idx=Math.min(_sync.lines.length,_sync.idx+1);syncRender();}
 function syncBack(){if(!_sync)return;if(_sync.idx>0){_sync.idx--;_sync.stamps[_sync.idx]=null;}syncRender();}
 function syncSave(){if(!_sync)return;const s=S.music.songs.find(x=>x.id===_sync.id);if(s){s.lyrics=_sync.lines.map((t,i)=>(_sync.stamps[i]!=null?'['+fmtLrc(_sync.stamps[i])+']':'')+t).join('\n');save();}_sync=null;closeModal();render();toast('时间轴已保存🎯');}
+async function musicNativeAudioActivate(){if(!privateNativeAppOn())return true;try{const result=await window.SmallPhoneNative.request('music.audio.activate');return !!(result&&result.activated);}catch(_){return false;}}
 async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return false;const token=++_mPlayToken;_mWantPlay=true;mLyricLoopStop();try{if(_ma&&!_ma.paused)_ma.pause();}catch(_){}
-  if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onloadedmetadata=()=>mLyricTick(true);_ma.ondurationchange=()=>mLyricTick(true);_ma.onseeking=()=>mLyricTick(true);_ma.onseeked=()=>mLyricTick(true);_ma.onplaying=()=>{mLyricTick(true);mLyricLoopStart();};_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();mLyricTick(true);mLyricLoopStart();};_ma.onpause=()=>{_mPlaying=false;mBtns();mLyricLoopStop();mTick();};_ma.onerror=()=>{const current=(S.music&&S.music.songs||[]).find(x=>x.id===_mAudioSongId);if(current&&current.provider==='audius'&&current.providerId&&_mOnlineRetryId!==current.id){_mOnlineRetryId=current.id;_ma.src=musicPublicStreamURL(current.providerId)+'&retry='+Date.now();_ma.load();_ma.play().catch(()=>{});toast('正在为这首在线音乐切换线路…');return;}toast(current&&current.provider==='audius'?'这首在线音乐暂时无法播放，请换一首试试':'这首音乐的格式或文件已损坏，当前浏览器无法播放');};}
+  if(!_ma){_ma=new Audio();_ma.preload='auto';if(_ma.setAttribute){_ma.setAttribute('playsinline','');_ma.setAttribute('webkit-playsinline','');}_ma.volume=Math.max(0,Math.min(1,typeof volMul==='function'?volMul():1));_ma.ontimeupdate=mTick;_ma.onloadedmetadata=()=>mLyricTick(true);_ma.ondurationchange=()=>mLyricTick(true);_ma.onseeking=()=>mLyricTick(true);_ma.onseeked=()=>mLyricTick(true);_ma.onplaying=()=>{mLyricTick(true);mLyricLoopStart();};_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();mLyricTick(true);mLyricLoopStart();};_ma.onpause=()=>{_mPlaying=false;mBtns();mLyricLoopStop();mTick();};_ma.onerror=()=>{const current=(S.music&&S.music.songs||[]).find(x=>x.id===_mAudioSongId);if(current&&current.provider==='audius'&&current.providerId&&_mOnlineRetryId!==current.id){_mOnlineRetryId=current.id;_ma.src=musicPublicStreamURL(current.providerId)+'&retry='+Date.now();_ma.load();_ma.play().catch(()=>{});toast('正在为这首在线音乐切换线路…');return;}toast(current&&current.provider==='audius'?'这首在线音乐暂时无法播放，请换一首试试':'这首音乐的格式或文件已损坏，当前浏览器无法播放');};}
+  const nativeAudioReady=typeof musicNativeAudioActivate==='function'?musicNativeAudioActivate():Promise.resolve(true);
   let url,ownedUrl=null;
   if(s.src&&s.src.t==='url')url=s.src.url;
   else{const b=await mGet(id);if(token!==_mPlayToken)return false;if(!b){toast('音频文件没有完整导入，请删掉后重新添加');return false;}ownedUrl=URL.createObjectURL(b);url=ownedUrl;}
-  if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}const oldUrl=_mUrl;_mUrl=ownedUrl;_mCur=id;_mAudioSongId=id;_mOnlineRetryId=null;S.music.lastSongId=id;_mLyricIndex=-2;_mLyricManualUntil=0;_mLyricFollowPending=true;_mLyricPaintAt=0;_ma.src=url;_ma.loop=!!S.music.loop;if(oldUrl&&oldUrl!==ownedUrl)try{URL.revokeObjectURL(oldUrl);}catch(_){}try{await _ma.play();}catch(e){if(token===_mPlayToken)toast('点一下▶播放');}
+  if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}await nativeAudioReady;if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}const oldUrl=_mUrl;_mUrl=ownedUrl;_mCur=id;_mAudioSongId=id;_mOnlineRetryId=null;S.music.lastSongId=id;_mLyricIndex=-2;_mLyricManualUntil=0;_mLyricFollowPending=true;_mLyricPaintAt=0;_ma.src=url;_ma.loop=!!S.music.loop;if(oldUrl&&oldUrl!==ownedUrl)try{URL.revokeObjectURL(oldUrl);}catch(_){}try{await _ma.play();}catch(e){if(token===_mPlayToken)toast('点一下▶播放');}
   if(token!==_mPlayToken)return false;save(300);render();setTimeout(()=>{if(token===_mPlayToken){mTick();mLyricTick(true);}},0);return true;}
-function musicToggle(){if(!_ma||!_mCur||_mAudioSongId!==_mCur){const songs=S.music&&S.music.songs||[],s=songs.find(x=>x.id===_mCur)||songs[0];if(s)musicPlay(s.id);return;}if(_ma.paused){_mWantPlay=true;_ma.play().catch(()=>{});}else{_mWantPlay=false;_ma.pause();}}
+async function musicToggle(){if(!_ma||!_mCur||_mAudioSongId!==_mCur){const songs=S.music&&S.music.songs||[],s=songs.find(x=>x.id===_mCur)||songs[0];if(s)await musicPlay(s.id);else toast('先在音乐里选择或添加一首歌');return;}if(_ma.paused){_mWantPlay=true;await musicNativeAudioActivate();_ma.volume=Math.max(0,Math.min(1,volMul()));try{await _ma.play();}catch(_){toast('音乐没有成功播放，请重新选择这首歌');}}else{_mWantPlay=false;_ma.pause();}}
 function musicNext(){const songs=S.music.songs;if(!songs.length)return;let i=songs.findIndex(s=>s.id===_mCur);i=(i+1)%songs.length;musicPlay(songs[i].id);}
 function musicLoop(){musicInit();S.music.loop=!S.music.loop;if(_ma)_ma.loop=!!S.music.loop;save();render();}
 function mEnded(){if(S.music&&S.music.loop){if(_ma){_ma.currentTime=0;_ma.play().catch(()=>{});}}else musicNext();}
 function mFmt(s){s=Math.floor(s||0);if(!isFinite(s))s=0;return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
-function mBtns(){const b=$('#m_play');if(b)b.innerHTML=_mPlaying?SVG_PAUSE:SVG_PLAY;const mini=$('#m_mini_play');if(mini)mini.innerHTML=_mPlaying?SVG_PAUSE:SVG_PLAY;const d=$('#m_disk');if(d)d.style.animationPlayState=_mPlaying?'running':'paused';}
+function mBtns(){const b=$('#m_play');if(b)b.innerHTML=_mPlaying?SVG_PAUSE:SVG_PLAY;const mini=$('#m_mini_play');if(mini)mini.innerHTML=_mPlaying?SVG_PAUSE:SVG_PLAY;const d=$('#m_disk');if(d)d.style.animationPlayState=_mPlaying?'running':'paused';document.querySelectorAll('.home-vinyl-card .vinyl-record').forEach(x=>{x.classList.toggle('wdisc',_mPlaying);x.setAttribute('aria-label',_mPlaying?'暂停音乐':'播放音乐');x.setAttribute('aria-pressed',_mPlaying?'true':'false');});}
 function mTick(){if(!_ma||_mAudioSongId!==_mCur)return;const pb=$('#m_prog');if(pb)pb.style.width=(_ma.duration?(_ma.currentTime/_ma.duration*100):0)+'%';const elapsed=mFmt(_ma.currentTime),duration=mFmt(_ma.duration||0),tt=$('#m_time'),a=$('#m_elapsed'),b=$('#m_duration');if(tt)tt.textContent=elapsed+' / '+duration;if(a)a.textContent=elapsed;if(b)b.textContent=duration;mLyricTick();}
 function musicSeek(ev){if(!_ma||!_ma.duration)return;const r=ev.currentTarget.getBoundingClientRect();const p=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width));_ma.currentTime=p*_ma.duration;}
 function parseLyrics(l){if(!l)return[];const out=[];const re=/\[(\d{1,3}):(\d{1,2})(?:[.:,](\d{1,3}))?\]/g;
@@ -2719,24 +2736,34 @@ async function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur)
 let _homePage=0,_homeSnapTimer=null;
 function homeClockVisible(){return !(S.settings&&S.settings.homeClock===false);}
 function homeClockToggle(){S.settings=S.settings||{};S.settings.homeClock=!homeClockVisible();save();render();toast(S.settings.homeClock?'主屏幕时间和日期已显示':'主屏幕时间和日期已隐藏');}
+function homeClockColor(){return widgetHex(S.me&&S.me.homeClockColor,S.me&&S.me.theme==='pink'?'#a25e78':S.me&&S.me.theme==='white'?'#555a66':'#f4f0f3');}
+function homeClockColorSet(value){S.me=S.me||{};S.me.homeClockColor=widgetHex(value,'#f4f0f3');save(250);const el=document.querySelector('.home-premium-head');if(el)el.style.color=S.me.homeClockColor;}
 function appleHomeCompatNative(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true;}
 function appleHomeCompatBrowserEnvironment(){const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
 function appleHomeCompatEnvironment(){return appleHomeCompatNative()||appleHomeCompatBrowserEnvironment();}
 function appleHomeCompatOn(){return !!(S.settings&&S.settings.appleHomeCompat);}
 function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,on=appleHomeCompatEnvironment()&&appleHomeCompatOn(),browser=appleHomeCompatBrowserEnvironment()&&on;if(root&&root.classList){root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',on);}return on;}
 function appleHomeCompatToggle(){S.settings=S.settings||{};S.settings.appleHomeCompat=!appleHomeCompatOn();applyAppleHomeCompat();save();render();toast(S.settings.appleHomeCompat?(appleHomeCompatEnvironment()?'苹果兼容适配已开启':'设置已保存；只会在苹果主屏幕或私人 App 生效'):'苹果兼容适配已关闭，已恢复原位置');}
+function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
+function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}return on;}
+function glassThemeSet(){S.me=S.me||{};S.me.uiMaterial='glass';applyGlassTheme();save();render();renderLockScreen(true);toast('已使用透明玻璃材质');}
+const GLASS_ICON_PACKS={blue:'蓝白',pink:'粉白',gray:'灰白',black:'纯黑'};
+function appIconPack(){const pack=S&&S.me&&S.me.appIconPack;return ['blue','pink','gray','black'].includes(pack)?pack:'line';}
+function appIconPackAsset(key){const pack=appIconPack();if(pack==='line')return '';const aliases={contacts:'couple'},asset=aliases[key]||key;if(!APPDEFS[asset])return '';return 'assets/app-icons/glass/'+pack+'/'+asset+'.webp?v=20260814f';}
+function appIconPackSet(pack){S.me=S.me||{};const next=['blue','pink','gray','black'].includes(pack)?pack:'line';S.me.appIconPack=next;S.me.uiMaterial='glass';if(next!=='line')S.me.theme='';glassWidgetAppearanceEnsure();applyGlassTheme();save();render();toast(next==='line'?'已切换线条图标，可使用主屏配色':'已切换'+GLASS_ICON_PACKS[next]+'透明玻璃主题');}
 function privateNativeAppOn(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true&&window.SmallPhoneNative&&typeof window.SmallPhoneNative.request==='function';}
 function privateNativeSettingsAction(){return privateNativeAppOn()?`<button type="button" aria-label="真实 iPhone 管理" onclick="privateNativeOpenManagement()" style="width:34px;height:34px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);color:#fff;cursor:pointer">${svgIc('phone',18,'#fff')}</button>`:'';}
 async function privateNativeOpenManagement(){if(!privateNativeAppOn()){toast('真实 iPhone 管理只在私人小手机 App 内可用');return;}try{await window.SmallPhoneNative.request('native.management.open');}catch(e){toast('真实 iPhone 管理页暂时打不开');}}
 function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
+  applyGlassTheme();
   homeLayoutInit();
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const clockOn=homeClockVisible();
-  return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" id="homeDesktop" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}">
+  return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}${glassWidgetCustomOn()?' glass-widget-custom':''}" id="homeDesktop" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}${homeAppAppearanceVars()}${glassWidgetStyleVars()}">
     <div class="home-editbar"><span>长按拖动 App 或小组件</span><button onclick="homeEditFinish()">完成</button></div>
-    <header class="home-premium-head${clockOn?'':' home-clock-hidden'}" aria-hidden="${clockOn?'false':'true'}" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>
+    <header class="home-premium-head${clockOn?'':' home-clock-hidden'}" style="color:${homeClockColor()};--home-clock-glass:${homeClockColor()}" aria-hidden="${clockOn?'false':'true'}" onclick="openApp('calendar')"><div class="home-premium-clock"><time id="homeLiveTime">${hm()}</time><small>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${week.replace('周','星期')}</small></div></header>
     <div class="home-scroll">
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)" onscrollend="homeSnapPage(this)">${homeAppsHtml()}</div></div>
     <div class="pgdots">${S.me.homeLayout.map((_,i)=>'<span class="pgdot'+(i===_homePage?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
@@ -2755,7 +2782,7 @@ function homeAppAppearanceReset(){S.me.appIconTone=100;S.me.appTextTone=100;save
 // ===== 主屏 App（数据驱动 + 长按拖拽换位/换页）=====
 const APPDEFS={
   wechat:{e:'💬',c:'#07c160',t:'微信'},phoneapp:{e:'',c:'#0a84ff',t:'电话',icon:'phoneapp',lk:1},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
-  browser:{e:'🌐',c:'#3a7bd5',t:'浏览器',lk:1},moments:{e:'🌸',c:'#ee5a6f',t:'朋友圈',lk:1},spy:{e:'🔍',c:'#5b6b9c',t:'查他手机',lk:1},
+  browser:{e:'🌐',c:'#3a7bd5',t:'浏览器',lk:1},spy:{e:'🔍',c:'#5b6b9c',t:'查他手机',lk:1},
   shop:{e:'🛒',c:'#ff6b6b',t:'购物',lk:1},calendar:{e:'📅',c:'#4ecdc4',t:'日历',lk:1},x:{e:'𝕏',c:'#1a1a1f',t:'X',lk:1},
   douyin:{e:'🎵',c:'#1a1a1f',t:'抖音',lk:1},food:{e:'🍔',c:'#ffb83b',t:'外卖',lk:1},couple:{e:'💞',c:'#ff8fab',t:'情侣空间'},
   tasks:{e:'📋',c:'#f59e0b',t:'任务便签'},games:{e:'🎮',c:'#6c5ce7',t:'游戏大厅',lk:1},mail:{e:'',c:'#3a3a3f',t:'信箱',lk:1,badge:1},
@@ -2763,16 +2790,11 @@ const APPDEFS={
   tale:{e:'🕯️',c:'linear-gradient(135deg,#3a0010,#1a1a1f)',t:'规则怪谈',lk:1},dread:{e:'🩸',c:'linear-gradient(135deg,#5a0012,#23000a)',t:'惊悚抉择',lk:1},
   travel:{e:'✈',c:'linear-gradient(135deg,#26324a,#5a6b8c)',t:'云程',lk:1},cinema:{e:'',c:'linear-gradient(145deg,#17131d,#75546a)',t:'放映室',icon:'cinema',lk:1},
   aiaccount:{e:'AI',c:'linear-gradient(135deg,#1e293b,#4f46e5)',t:'AI账户',icon:'aiaccount'}};
-const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openApp('music'),cinema:()=>openApp('cinema'),roleplay:()=>openApp('roleplay'),tale:()=>openApp('tale'),dread:()=>openApp('dread'),travel:()=>openApp('travel'),aiaccount:()=>openAIAccount()};
+const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openApp('music'),cinema:()=>openApp('cinema'),roleplay:()=>openApp('roleplay'),tale:()=>openApp('tale'),dread:()=>openApp('dread'),travel:()=>openApp('travel'),aiaccount:()=>openAIAccount()};
 const APP_PAGES=3;
-const APP_DEFLAYOUT=[['wechat','phoneapp','settings','aiaccount','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','cinema','tale','dread'],[]];
-const HOME_DOCK_DEFAULT=['d:wechat','d:contacts','d:moments','d:me'];
-const HOME_SHORTCUTS={
-  'd:wechat':{e:'💬',c:'#07c160',t:'微信',icon:'wechat',run:()=>openWeChat()},
-  'd:contacts':{e:'👤',c:'#54a0ff',t:'通讯录',icon:'contacts',run:()=>openWeChat('contacts')},
-  'd:moments':{e:'🌸',c:'#ee5a6f',t:'朋友圈',icon:'moments',lk:'moments',run:()=>openWeChat('moments')},
-  'd:me':{e:'☺',c:'#feca57',t:'我',icon:'me',run:()=>openWeChat('me')}
-};
+const APP_DEFLAYOUT=[['wechat','phoneapp','settings','aiaccount','worldbook','browser','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','cinema','tale','dread'],[]];
+const HOME_DOCK_DEFAULT=['calendar','games','mail','settings'];
+const HOME_SHORTCUTS={};
 function appLayoutInit(){let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
   L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
@@ -2784,18 +2806,16 @@ function homeTokenValid(k){return !!(APPDEFS[k]||HOME_SHORTCUTS[k]||(String(k).s
 function homeLayoutInit(){
   widInit();
   let dock=Array.isArray(S.me.appDock)?S.me.appDock.slice():HOME_DOCK_DEFAULT.slice();
-  S.me.appDock=dock;
   appLayoutInit();
   let H=S.me.homeLayout;
   if(!Array.isArray(H)||!Array.isArray(H[0]))H=S.me.appLayout.map((pg,i)=>(i===0?S.me.widgets.map(k=>'w:'+k):[]).concat(pg));
+  if(!S.me._glassReferenceLayoutV2){const first=['w:dashboard','douyin','wechat','cinema','x','w:vinyl','w:sweetie','worldbook','phoneapp','music','spy'],reserved=new Set(first.concat(HOME_DOCK_DEFAULT)),rest=[];(Array.isArray(H)?H.flat():[]).concat(Object.keys(APPDEFS)).forEach(k=>{if(APPDEFS[k]&&!reserved.has(k)){reserved.add(k);rest.push(k);}});H=[first,rest,[]];dock=HOME_DOCK_DEFAULT.slice();S.me._glassReferenceLayoutV2=1;save(250);}
+  const dockSeen=new Set();dock=dock.filter(k=>APPDEFS[k]&&!dockSeen.has(k)&&(dockSeen.add(k),true)).slice(0,4);HOME_DOCK_DEFAULT.forEach(k=>{if(dock.length<4&&APPDEFS[k]&&!dockSeen.has(k)){dockSeen.add(k);dock.push(k);}});
   H=H.map(p=>Array.isArray(p)?p.slice():[]);while(H.length<APP_PAGES)H.push([]);H=H.slice(0,APP_PAGES);
-  const enabledWidgets=new Set(S.me.widgets.map(k=>'w:'+k)),seen=new Set(),clean=[];
+  const enabledWidgets=new Set(S.me.widgets.map(k=>'w:'+k)),seen=new Set(dock),clean=[];
   H.forEach(pg=>clean.push(pg.filter(k=>homeTokenValid(k)&&(!String(k).startsWith('w:')||enabledWidgets.has(k))&&!seen.has(k)&&(seen.add(k),true))));
-  dock=dock.filter(k=>homeTokenValid(k)&&!String(k).startsWith('w:')&&!seen.has(k)&&(seen.add(k),true)).slice(0,4);
   S.me.widgets.forEach(k=>{const t='w:'+k;if(!seen.has(t)){clean[0].unshift(t);seen.add(t);}});
   Object.keys(APPDEFS).forEach(k=>{if(!seen.has(k)){clean[0].push(k);seen.add(k);}});
-  HOME_DOCK_DEFAULT.forEach(k=>{if(!seen.has(k)){if(dock.length<4)dock.push(k);else clean[0].push(k);seen.add(k);}});
-  while(dock.length<4){const candidate=clean[0].find(k=>!String(k).startsWith('w:'));if(!candidate)break;clean[0].splice(clean[0].indexOf(candidate),1);dock.push(candidate);}
   S.me.homeLayout=clean;S.me.appDock=dock;
   homeLayoutSyncLegacy();
 }
@@ -2808,7 +2828,9 @@ function appCell(k){const a=APPDEFS[k];if(!a)return '';
   const lockLayer=locked?'<span class="app-lock-line" aria-hidden="true">'+svgIc('lock',22,'#e3e4e8',1.55)+'</span>':'';
   return '<div class="app home-item'+(locked?' app-locked':'')+'" data-k="'+k+'" data-token="'+k+'" aria-disabled="'+(locked?'true':'false')+'" onclick="appTap(event,\''+k+'\')" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge+lockLayer)+'<span>'+a.t+'</span></div>';}
 function homeTokenCell(k){if(String(k).startsWith('w:'))return homeWidgetItem(String(k).slice(2),true);if(HOME_SHORTCUTS[k])return homeShortcutCell(k);return appCell(k);}
-function homeAppsHtml(){homeLayoutInit();return S.me.homeLayout.map((pg,pi)=>'<div class="apppage home-dropzone" data-zone="page" data-pg="'+pi+'">'+pg.map(homeTokenCell).join('')+'</div>').join('');}
+function homeReferenceSlot(k,i){if(k==='w:dashboard')return'glass-place-dashboard';if(k==='w:vinyl')return'glass-place-vinyl';if(k==='w:sweetie')return'glass-place-sweetie';const apps=['glass-place-app-a','glass-place-app-b','glass-place-app-c','glass-place-app-d','glass-place-app-e','glass-place-app-f','glass-place-app-g','glass-place-app-h'];return apps[i]||'';}
+function homeReferencePageHtml(pg){let ai=0;return pg.map(k=>{const slot=String(k).startsWith('w:')?homeReferenceSlot(k,-1):homeReferenceSlot(k,ai++),raw=homeTokenCell(k);return slot?raw.replace('class="','class="'+slot+' '):raw;}).join('');}
+function homeAppsHtml(){homeLayoutInit();return S.me.homeLayout.map((pg,pi)=>'<div class="apppage home-dropzone'+(pi===0?' glass-reference-page':'')+'" data-zone="page" data-pg="'+pi+'">'+(pi===0?homeReferencePageHtml(pg):pg.map(homeTokenCell).join(''))+'</div>').join('');}
 function homeDockHtml(){homeLayoutInit();return S.me.appDock.map(homeTokenCell).join('');}
 const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620;
 let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0,_aNoClick=0;
@@ -2818,6 +2840,8 @@ function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
   const f=APPRUN[k];if(f)f();}
 function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}const f=APPRUN[k];if(f)setTimeout(f,0);}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
+  if(e.cancelable)e.preventDefault();
+  try{if(e.currentTarget&&e.currentTarget.setPointerCapture)e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
   _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
 function appBeginDrag(){const p=_aPend;if(!p)return;const desktop=$('#homeDesktop'),sw=$('#appswipe');if(!desktop||!sw)return;
@@ -2841,12 +2865,12 @@ function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
 function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}
-  if(_aPend){if(Math.abs(e.clientX-_aPend.x)>APP_TAP_MOVE||Math.abs(e.clientY-_aPend.y)>APP_TAP_MOVE){clearTimeout(_aTimer);_aPend=null;_aNoClick=Date.now()+450;}}}
+  if(_aPend){const dx=e.clientX-_aPend.x,dy=e.clientY-_aPend.y;if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.15){clearTimeout(_aTimer);_aPend=null;return;}if(Math.abs(dx)>APP_TAP_MOVE||Math.abs(dy)>APP_TAP_MOVE){clearTimeout(_aTimer);_aPend=null;_aNoClick=Date.now()+450;}}}
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
   const p=_aPend;_aPend=null;if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
 function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(typeof document!=='undefined'&&document.body)document.body.classList.remove('home-drag-active');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(d){if(typeof render==='function')render();if(typeof requestAnimationFrame==='function')requestAnimationFrame(homeEditStart);return;}if(sw)sw.classList.remove('aedit');}
-function homeLayoutReadDom(){const pages=Array.from(document.querySelectorAll('#appswipe .apppage')).map(pg=>Array.from(pg.children).map(el=>el.dataset.token).filter(Boolean)),dock=$('#homeDesktop .dock');if(pages.length!==APP_PAGES||!dock)return false;const dockItems=Array.from(dock.children).map(el=>el.dataset.token).filter(Boolean);if(dockItems.length!==4)return false;S.me.homeLayout=pages;S.me.appDock=dockItems;homeLayoutSyncLegacy();return true;}
+function homeLayoutReadDom(){const pages=Array.from(document.querySelectorAll('#appswipe .apppage')).map(pg=>Array.from(pg.children).map(el=>el.dataset.token).filter(Boolean)),dock=$('#homeDesktop .dock');if(pages.length!==APP_PAGES||!dock)return false;S.me.homeLayout=pages;S.me.appDock=Array.from(dock.children).map(el=>el.dataset.token).filter(k=>APPDEFS[k]).slice(0,4);homeLayoutSyncLegacy();return true;}
 function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');
   _aNoClick=Date.now()+900;
   if(d.ghost)d.ghost.remove();if(d.item){d.item.style.opacity='';d.item.style.pointerEvents='';}
@@ -2874,25 +2898,11 @@ function appLayoutEditor(){homeLayoutInit();const L=S.me.homeLayout.map(pg=>pg.f
 function appMoveOrder(k,dir){homeLayoutInit();for(const pg of S.me.homeLayout){const j=pg.indexOf(k);if(j<0)continue;const apps=pg.map((v,i)=>APPDEFS[v]?i:-1).filter(i=>i>=0),pos=apps.indexOf(j),np=pos+dir;if(np<0||np>=apps.length)return;const ni=apps[np],tmp=pg[ni];pg[ni]=k;pg[j]=tmp;homeLayoutSyncLegacy();save();appLayoutEditor();return;}}
 function appMovePage(k,tp){homeLayoutInit();S.me.homeLayout.forEach(pg=>{const i=pg.indexOf(k);if(i>=0)pg.splice(i,1);});if(!S.me.homeLayout[tp])tp=0;S.me.homeLayout[tp].push(k);homeLayoutSyncLegacy();save();appLayoutEditor();}
 // ===== 主屏小组件 =====
-function widInit(){const m=S.me;
-  if(!Array.isArray(m.widgets))m.widgets=['clock','couple2','mood','disc','pet'];
-  if(!m.note||typeof m.note!=='object')m.note={text:'',paper:'#fff7d6',ink:'#5b4a2f'};
-  if(!m.mood||typeof m.mood!=='object')m.mood={k:'',date:''};
-  if(!m.wColor)m.wColor='#ffffff';
-  // v237 迁移：把双头像、时钟卡补进来一次（不打乱已有顺序）
-  if(!m._wmig237){if(m.widgets.indexOf('couple2')<0)m.widgets.unshift('couple2');if(m.widgets.indexOf('clock')<0)m.widgets.splice(Math.min(1,m.widgets.length),0,'clock');m._wmig237=1;}
-  // v241：组件固定第一页（不分页）。把 v240 的两页数据合并回单列表
-  if(Array.isArray(m.widgetPages)){const a=Array.isArray(m.widgetPages[0])?m.widgetPages[0]:[],b=Array.isArray(m.widgetPages[1])?m.widgetPages[1]:[];m.widgets=a.concat(b.filter(k=>a.indexOf(k)<0));delete m.widgetPages;}
-  const valid=k=>WIDS.some(w=>w[0]===k);const seen={};
-  m.widgets=(m.widgets||[]).filter(k=>valid(k)&&!seen[k]&&(seen[k]=1));
-  // v245：桌面小猫补进来一次
-  if(!m._wmigPet){if(m.widgets.indexOf('pet')<0)m.widgets.push('pet');m._wmigPet=1;}
-  // 时钟卡默认在最顶；用户长按调整后保留自己的顺序
-  if(m.widgets.indexOf('clock')<0)m.widgets.unshift('clock');
-  // 只迁移从未整理过的旧默认顺序，接近已确认的 v829 预览；用户自己的排序不覆盖
-  if(!m._wmigPremiumPreview){const legacy=m.widgets.join('|')==='clock|couple2|mood|disc|pet';if(legacy){const usedPet=!!(m.petPats||m.petColor);m.widgets=['clock','disc','mood','couple2'].concat(usedPet?['pet']:[]);}m._wmigPremiumPreview=1;}}
+function widInit(){const m=S.me,allowed=['dashboard','vinyl','sweetie'],seen={};
+  if(!m._glassWidgetsOnlyV1){const kept=(Array.isArray(m.widgets)?m.widgets:[]).filter(k=>allowed.includes(k)&&!seen[k]&&(seen[k]=1));m.widgets=kept.length?kept:allowed.slice();m._glassWidgetsOnlyV1=1;delete m.widgetPages;}
+  else m.widgets=(Array.isArray(m.widgets)?m.widgets:[]).filter(k=>allowed.includes(k)&&!seen[k]&&(seen[k]=1));}
 function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-const WIDS=[['clock','时间·天气','显示主屏时间、地点和实时天气图案'],['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌'],['pet','桌面小猫','会动的电子小猫·白天精神晚上睡·点一下摸摸头']];
+const WIDS=[['dashboard','综合信息组件','心率、日期、电量、天气、真实存储和自定义照片'],['vinyl','音乐唱片组件','点唱片播放或暂停当前歌曲'],['sweetie','双人头像组件','两个圆头像、双方称呼和一句可编辑的话']];
 const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>'],
   neutral:['平淡','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.8 14.7h6.4"/>'],
   distress:['烦躁','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.2l2.4 1.3M16 9.2l-2.4 1.3M9.2 15.4c.9-1.4 4.7-1.4 5.6 0"/>'],
@@ -2912,6 +2922,16 @@ function widgetRgba(hex,alpha){hex=widgetHex(hex,'#ffffff');const n=parseInt(hex
 function widgetStyleVars(){if(!S.me.wCardColor&&S.me.wOpacity==null){if(S.me.theme==='pink')return '--widget-bg:rgba(255,248,251,.82);--widget-border:rgba(255,255,255,.65);--widget-icon-bg:rgba(255,182,201,.5)';if(S.me.theme==='white')return '--widget-bg:rgba(255,255,255,.92);--widget-border:rgba(0,0,0,.05);--widget-icon-bg:rgba(120,128,150,.12)';return '--widget-bg:rgba(34,30,36,.74);--widget-border:rgba(255,255,255,.09);--widget-icon-bg:rgba(255,255,255,.08)';}const col=widgetCardColor(),a=widgetOpacityValue()/100;return '--widget-bg:'+widgetRgba(col,a)+';--widget-border:'+widgetRgba(col,Math.min(.72,a*.72+.04))+';--widget-icon-bg:'+widgetRgba(col,Math.min(.5,a*.42+.1));}
 function petcol(){return widgetHex(S.me.petColor,wcol());}
 function widgetAppearanceSet(key,value){widInit();if(key==='wOpacity'){S.me.wOpacity=Math.max(0,Math.min(100,Math.round(+value||0)));const n=$('#wopacityVal');if(n)n.textContent=S.me.wOpacity+'%';}else if(key==='wCardColor')S.me.wCardColor=widgetHex(value,'#ffffff');else if(key==='wColor')S.me.wColor=widgetHex(value,'#ffffff');else if(key==='petColor')S.me.petColor=widgetHex(value,'#ffffff');save(350);render();}
+function glassWidgetDefaultTint(){return appIconPack()==='pink'?'#ffdbe9':appIconPack()==='blue'?'#dcecff':appIconPack()==='gray'?'#ffffff':'#16171b';}
+function glassWidgetDefaultOpacity(){return appIconPack()==='black'?18:14;}
+function glassWidgetAppearanceEnsure(){S.me=S.me||{};if(S.me._glassAppearanceSchema!==3){delete S.me.glassWidgetTint;delete S.me.glassWidgetOpacity;S.me.glassWidgetAppearances={};S.me._glassAppearanceSchema=3;}if(!S.me.glassWidgetAppearances||typeof S.me.glassWidgetAppearances!=='object'||Array.isArray(S.me.glassWidgetAppearances))S.me.glassWidgetAppearances={};return S.me.glassWidgetAppearances;}
+function glassWidgetAppearance(){const map=glassWidgetAppearanceEnsure(),pack=appIconPack();return map[pack]&&typeof map[pack]==='object'?map[pack]:{};}
+function glassWidgetTint(){return widgetHex(glassWidgetAppearance().tint,glassWidgetDefaultTint());}
+function glassWidgetOpacity(){const n=Number(glassWidgetAppearance().opacity);return Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):glassWidgetDefaultOpacity();}
+function glassWidgetCustomOn(){const a=glassWidgetAppearance();return !!(a.tint||Number.isFinite(Number(a.opacity)));}
+function glassWidgetStyleVars(){const h=glassWidgetTint(),n=parseInt(h.slice(1),16),rgb=((n>>16)&255)+','+((n>>8)&255)+','+(n&255),a=glassWidgetOpacity()/100;return `--ng-widget-rgb:${rgb};--ng-widget-alpha:${a.toFixed(2)};--ng-widget-alpha-soft:${Math.max(0,a*.55).toFixed(2)};`;}
+function glassWidgetAppearanceSet(key,value){const map=glassWidgetAppearanceEnsure(),pack=appIconPack(),a=map[pack]&&typeof map[pack]==='object'?map[pack]:(map[pack]={});if(key==='tint')a.tint=widgetHex(value,glassWidgetDefaultTint());else if(key==='opacity'){a.opacity=Math.max(0,Math.min(100,Math.round(+value||0)));const n=$('#glassWidgetOpacityVal');if(n)n.textContent=a.opacity+'%';}save(250);render();}
+function glassWidgetAppearanceReset(){const map=glassWidgetAppearanceEnsure();delete map[appIconPack()];save();render();widgetManager();toast('已恢复当前玻璃主题的默认透明度和色调');}
 function widgetAppearanceReset(){delete S.me.wCardColor;delete S.me.wOpacity;delete S.me.petColor;S.me.wColor='#ffffff';save();render();widgetManager();toast('已恢复当前主题的组件默认样式');}
 function _wCard(ic,top,main,onclick){const col=wcol();return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
 function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
@@ -2931,6 +2951,26 @@ function wDisc(){const col=wcol(),songs=S.music&&Array.isArray(S.music.songs)?S.
   const disc=`<span class="home-record${s&&_mPlaying?' wdisc':''}" aria-hidden="true">${cover}<i class="home-record-hole"></i></span>`;
   const main=s?'<b>'+esc(s.title)+'</b><span>'+esc(s.artist||'私人收藏')+'</span>':'<b>音乐</b><span>还没在听 · 去挑一首</span>';
   return `<div class="hwid home-music-card" style="color:${col}" onclick="openMusic()"><div class="wic">${disc}</div><div class="home-music-meta">${main}</div><button class="home-music-play" onclick="event.stopPropagation();musicToggle()" aria-label="播放或暂停">${_mPlaying?'Ⅱ':'▶'}</button></div>`;}
+function dashboardPrefs(){S.me.homeDashboard=S.me.homeDashboard&&typeof S.me.homeDashboard==='object'?S.me.homeDashboard:{};const p=S.me.homeDashboard;if(!Number.isFinite(+p.battery))p.battery=88;if(!Number.isFinite(+p.heartRate))p.heartRate=72;return p;}
+function dashboardRealBattery(){try{const st=typeof companionState==='function'&&S.couple?companionState():null,b=st&&st.linked&&!st.demo&&st.battery;if(b&&Number.isFinite(+b.level))return Math.round(+b.level*100);}catch(_){}return null;}
+function dashboardBattery(){const real=dashboardRealBattery();return real==null?Math.max(0,Math.min(100,Math.round(+dashboardPrefs().battery||0))):real;}
+function dashboardHeartRate(){try{const st=typeof companionState==='function'&&S.couple?companionState():null,h=st&&st.linked&&!st.demo&&st.health,n=h&&+h.heartRateBpm;if(Number.isFinite(n)&&n>0)return Math.round(n);}catch(_){}return Math.max(30,Math.min(240,Math.round(+dashboardPrefs().heartRate||72)));}
+function dashboardStorage(){refreshStorageEstimate();const s=storageInfo(),webUsed=s.hasDevice?s.deviceMb*1048576:0,used=s.native?Math.max(0,s.nativeBytes)+webUsed:webUsed||s.logicalBytes,total=s.native&&s.nativeTotal?s.nativeTotal:s.hasDevice?s.deviceCapMb*1048576:0,pct=total?Math.max(1,Math.min(100,Math.round(used/total*100))):Math.max(1,Math.min(100,s.pct||0));return {pct,label:storageSizeLabel(used)};}
+function dashboardPhoto(){return dashboardPrefs().photo||'';}
+function dashboardWeatherIcon(desc){desc=String(desc||'');let body;if(/雷|电/.test(desc))body='<path d="M6.5 15.5h10.7a3.3 3.3 0 0 0 .4-6.5 5.8 5.8 0 0 0-10.8 1.7 2.4 2.4 0 0 0-.3 4.8z"/><path d="m12.8 15-2.7 4h2.2l-1.2 3 4-5h-2.3z"/>';else if(/雪|冰|冻/.test(desc))body='<path d="M6.5 14.5h10.7a3.3 3.3 0 0 0 .4-6.5 5.8 5.8 0 0 0-10.8 1.7 2.4 2.4 0 0 0-.3 4.8z"/><path d="M8 18h.01M12 20h.01M16 18h.01"/>';else if(/雨|阵雨/.test(desc))body='<path d="M6.5 14.5h10.7a3.3 3.3 0 0 0 .4-6.5 5.8 5.8 0 0 0-10.8 1.7 2.4 2.4 0 0 0-.3 4.8z"/><path d="m8.5 17-1 2M12.5 17l-1 2M16.5 17l-1 2"/>';else if(/雾|霾|沙|尘/.test(desc))body='<path d="M5 9h14M3.5 13h13M7 17h13"/>';else if(/云|阴/.test(desc))body='<circle cx="8" cy="8" r="3"/><path d="M8 2.5v1.4M2.5 8h1.4M4.1 4.1l1 1"/><path d="M6.5 18h10.7a3.3 3.3 0 0 0 .4-6.5 5.8 5.8 0 0 0-10.8 1.7A2.4 2.4 0 0 0 6.5 18z"/>';else body='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"/>';return `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-label="${esc(desc||'天气')}">${body}</svg>`;}
+function dashboardWeatherLabel(desc){desc=String(desc||'');if(/雷|电/.test(desc))return'雷雨';if(/雪|冰|冻/.test(desc))return'雪天';if(/雨/.test(desc))return'雨天';if(/雾|霾|沙|尘/.test(desc))return'雾天';if(/多云/.test(desc))return'多云';if(/阴/.test(desc))return'阴天';if(/晴/.test(desc))return'晴天';return'天气';}
+function wDashboard(){const p=dashboardPrefs(),d=new Date(),bat=dashboardBattery(),heart=dashboardHeartRate(),store=dashboardStorage(),photo=dashboardPhoto(),weather=S.weather&&S.weather.desc?S.weather:null,weatherLabel=dashboardWeatherLabel(weather&&weather.desc),pic=photo?`<img src="${photo}" alt="自定义照片">`:`<div class="home-dashboard-photo-empty">${svgIc('image',34,'#aaa')}<small>点按上传照片</small></div>`,batteryIcon='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="16" height="12" rx="3"></rect><path d="M21 10v4"></path></svg>';return `<div class="hwid home-dashboard-card" onclick="dashboardEdit()"><div class="home-dashboard-grid"><div class="dash-heart">${svgIc('heart',24,'#fff',1.7)}<small>${heart}<i>BPM</i></small></div><div class="dash-time"><b>${hm()}</b><small>${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</small></div><div class="dash-battery">${batteryIcon}<b>${bat}%</b></div><div class="dash-device dash-weather" onclick="event.stopPropagation();fetchWeather(true)">${dashboardWeatherIcon(weather&&weather.desc)}<b>${esc(weatherLabel)}</b></div><div class="dash-storage"><i style="--dash-store:${store.pct}%"><em>存储</em></i><small>${store.label}</small></div></div><div class="home-dashboard-photo" role="button" tabindex="0" onclick="event.stopPropagation();dashboardPickPhotoHome()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();dashboardPickPhotoHome()}">${pic}</div></div>`;}
+function dashboardEdit(){const p=dashboardPrefs(),real=dashboardRealBattery()!=null;openModal(`<h3>黑色信息面板</h3><div class="hint">私人版取得真机数据时优先显示真实电量和心率；网页版使用下面的虚拟数值。存储始终读取小手机当前实际占用。</div><div class="field"><label>虚拟电量（0-100）</label><input id="dash_battery" type="number" min="0" max="100" value="${Math.round(+p.battery||0)}" ${real?'disabled':''}></div><div class="field"><label>虚拟心率 BPM（30-240）</label><input id="dash_heart" type="number" min="30" max="240" value="${Math.round(+p.heartRate||72)}"></div><div class="it"><span>右侧大图</span><span class="v"><button class="minibtn" onclick="dashboardPickPhoto()">${p.photo?'更换':'上传'}</button>${p.photo?'<button class="minibtn" style="margin-left:5px" onclick="dashboardRemovePhoto()">恢复默认</button>':''}</span></div><div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dashboardSave()">保存</button></div>`);}
+function dashboardSave(){const p=dashboardPrefs(),b=$('#dash_battery'),h=$('#dash_heart');if(b&&!b.disabled)p.battery=Math.max(0,Math.min(100,Math.round(+b.value||0)));p.heartRate=Math.max(30,Math.min(240,Math.round(+h.value||72)));save();closeModal();render();toast('信息面板已更新');}
+function dashboardPickPhoto(){pickFile('image/*',async f=>{dashboardPrefs().photo=await compress(f,900,.86);save();closeModal();render();setTimeout(dashboardEdit,40);toast('右侧照片已更换');});}
+function dashboardPickPhotoHome(){pickFile('image/*',async f=>{dashboardPrefs().photo=await compress(f,900,.86);save();render();toast('右侧照片已更换');});}
+function dashboardRemovePhoto(){delete dashboardPrefs().photo;save();closeModal();render();setTimeout(dashboardEdit,40);}
+function wVinyl(){const songs=S.music&&Array.isArray(S.music.songs)?S.music.songs:[],wanted=_mCur||(S.music&&S.music.lastSongId),s=songs.find(x=>x.id===wanted)||songs[0]||null,cover=s&&s.cover?`<img class="vinyl-cover" src="${s.cover}" alt="当前音乐封面">`:`<i class="vinyl-cover empty">♪</i>`,toggle=s?`event.stopPropagation();musicToggle()`:`event.stopPropagation();openMusic()`;return `<div class="hwid home-vinyl-card" onclick="openMusic()"><span class="vinyl-label">Vinyl</span><div class="vinyl-record${s&&_mPlaying?' wdisc':''}" role="button" tabindex="0" aria-label="${s&&_mPlaying?'暂停音乐':s?'播放音乐':'选择音乐'}" aria-pressed="${s&&_mPlaying?'true':'false'}" onclick="${toggle}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${toggle}}">${cover}<b></b></div><svg class="vinyl-arm" viewBox="0 0 62 172" aria-hidden="true"><circle cx="45" cy="17" r="12"></circle><path d="M45 30 C47 65 45 91 35 120 C31 132 27 142 21 151"></path><rect x="14" y="146" width="15" height="24" rx="5"></rect></svg></div>`;}
+function sweetiePrefs(){S.me.homeSweetie=S.me.homeSweetie&&typeof S.me.homeSweetie==='object'?S.me.homeSweetie:{};return S.me.homeSweetie;}
+function wSweetie(){const p=sweetiePrefs(),c=S.couple&&S.couple.cid?getC(S.couple.cid):null,me=p.me||S.me.homeAvMe||S.me.avatar,ta=p.ta||S.me.homeAvTa||(c&&c.avatar),meName=p.meName||S.me.name||'Sweetie',taName=p.taName||(c&&(c.remark||c.name))||'Cutie',line=p.line||'♡ 想你，也想和你认真生活';const av=(src,which,label)=>`<span class="sweetie-avatar-picker" role="button" tabindex="0" aria-label="更换${label}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();sweetiePickAvatar('${which}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();sweetiePickAvatar('${which}')}" title="点头像可更换">${src?`<img src="${src}">`:svgIc('user',24,'#fff')}</span>`;return `<div class="hwid home-sweetie-card" onclick="sweetieEdit()"><div class="sweetie-people"><div>${av(me,'me','左边头像')}<b>${esc(meName)}</b></div><div>${av(ta,'ta','右边头像')}<b>${esc(taName)}</b></div></div><p>${esc(line)}</p></div>`;}
+function sweetiePickAvatar(which){pickFile('image/*',async f=>{const p=sweetiePrefs();p[which==='ta'?'ta':'me']=await compress(f,420,.84);save();render();toast(which==='ta'?'右边头像已更换':'左边头像已更换');});}
+function sweetieEdit(){const p=sweetiePrefs(),c=S.couple&&S.couple.cid?getC(S.couple.cid):null;openModal(`<h3>双人头像卡</h3><div class="btns"><button class="btn g" onclick="sweetiePickAvatar('me');closeModal()">更换左边头像</button><button class="btn g" onclick="sweetiePickAvatar('ta');closeModal()">更换右边头像</button></div><div class="field"><label>左边称呼</label><input id="sweet_me" value="${esc(p.meName||S.me.name||'Sweetie')}"></div><div class="field"><label>右边称呼</label><input id="sweet_ta" value="${esc(p.taName||(c&&(c.remark||c.name))||'Cutie')}"></div><div class="field"><label>下面的一句话</label><input id="sweet_line" value="${esc(p.line||'♡ 想你，也想和你认真生活')}"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="sweetieSave()">保存</button></div>`);}
+function sweetieSave(){const p=sweetiePrefs();p.meName=$('#sweet_me').value.trim();p.taName=$('#sweet_ta').value.trim();p.line=$('#sweet_line').value.trim();save();closeModal();render();}
 function wMood(){const col=wcol();const md=S.me.mood;const has=md.k&&md.date===wToday();
   const ic=has?moodIc(md.k,34,col):moodIc('happy',34,col);
   const main=has?(MOODS[md.k]?MOODS[md.k][0]:''):'点一下记录今天';
@@ -2959,7 +2999,7 @@ function wClock(){const col=wcol();const d=new Date();const week=['周日','周�
   const pic=homeWeatherIcon(weather&&weather.desc,col);
   const hint=weather?desc+' · '+(/雨/.test(weather.desc||'')?'记得带伞':/晴/.test(weather.desc||'')?'适合出门走走':'很适合散步'):'点击获取当前位置天气';
   return `<div class="hwid home-weather-card" style="color:${col}" onclick="fetchWeather(true)"><span class="home-weather-eyebrow">TODAY · ${place}</span><div class="home-weather-art">${pic}</div><strong>${temp}</strong><div class="home-weather-copy">${hint}</div><div class="home-weather-foot">${weather?'实时天气':'点这里更新'}</div></div>`;}
-const WIDR={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc,pet:wPet};
+const WIDR={dashboard:wDashboard,vinyl:wVinyl,sweetie:wSweetie};
 function petCatDay(col){return `<svg class="petcat petday" viewBox="0 0 76 64" width="76" height="62" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
   <path class="ptail" d="M56 52 q15 1 9 -17"/>
   <path d="M22 54 q-6 -23 16 -23 q22 0 16 23 z" fill="${col}" fill-opacity=".08"/>
@@ -3014,6 +3054,7 @@ function wMoodPick(){widInit();openModal(`<h3>今天心情如何</h3><div style=
 function wMoodSet(k){widInit();S.me.mood={k,date:wToday()};save();closeModal();render();toast('记下啦');}
 // 组件管理（开关 + 拖动排序）
 function widgetManager(){widInit();const meta={};WIDS.forEach(w=>meta[w[0]]=w);
+  if(glassThemeOn()){const fixed=['dashboard','vinyl','sweetie'];openModal(`<h3>透明玻璃主屏组件</h3><div class="hint">旧组件已经移除，只保留以下三个组件。回到主屏后长按任意 App 或组件，就能互相穿插、自由安排位置，松手后会保存。</div><div class="wlist">${fixed.map(k=>`<div class="wrow"><div class="wnm">${meta[k][1]}<small>${meta[k][2]}</small></div><span style="color:#8fd6aa;font-size:12px">已保留</span></div>`).join('')}</div><div class="wapbox"><div class="waprow"><span>组件玻璃色调<small style="display:block;color:#777">只改变非常浅的玻璃着色</small></span><input type="color" value="${glassWidgetTint()}" oninput="glassWidgetAppearanceSet('tint',this.value)"></div><div class="waprow"><span>组件透明度<small style="display:block;color:#777">默认已降低；0 完全透明 · 100 接近实色</small></span><input type="range" min="0" max="100" step="1" value="${glassWidgetOpacity()}" oninput="glassWidgetAppearanceSet('opacity',this.value)"><b id="glassWidgetOpacityVal">${glassWidgetOpacity()}%</b></div></div><button class="minibtn" style="margin-top:10px" onclick="glassWidgetAppearanceReset()">恢复当前主题默认</button><div class="btns" style="margin-top:12px"><button class="btn p" onclick="closeModal()">完成</button></div>`);return;}
   const en=S.me.widgets.filter(k=>meta[k]);const off=WIDS.map(w=>w[0]).filter(k=>!S.me.widgets.includes(k));
   openModal(`<h3>主屏组件</h3><div class="hint">拖左边手柄排序，点开关增减。组件固定在主屏第一页；颜色和透明度修改后会立即预览。</div>
    <div style="color:#aaa;font-size:13px;margin:12px 0 2px">已显示（拖动排序）</div>
@@ -3071,8 +3112,8 @@ const MICO={
   travel:_MI('<path d="M3.5 12.2 20.5 5l-5.1 15.5-3.3-6.4-6.6-1.9z"/><path d="M12.1 14.1 20.5 5"/><path d="M5.5 12.7 3.8 18l4.6-2.8"/>'),
   dread:_MI('<path d="M12 3.2c3.2 4.2 6 7.2 6 10.6a6 6 0 0 1-12 0c0-3.4 2.8-6.4 6-10.6z"/>')
 };
-function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];const glyph=ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:(MICO[key]||emoji);
-  return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
+function aIco(key,emoji,bg,extra){const custom=S.me.appIcons&&S.me.appIcons[key],packed=custom?'':appIconPackAsset(key),ic=custom||packed;const glyph=ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:(MICO[key]||emoji);
+  return `<div class="ic${packed?' glass-pack-icon glass-icon-'+key:''}" style="${custom?'background:#222;':packed?'background:transparent;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
 // 通用线条图标（UI 里替代 emoji，可指定颜色/大小，默认跟随文字色）
 const ICONS={
   chat:'<path d="M21 11.4a8.3 8.3 0 0 1-12 7.4L4 20.5l1.4-4A8.3 8.3 0 1 1 21 11.4z"/><path d="M8.6 11.3h.01M12 11.3h.01M15.4 11.3h.01"/>',
@@ -3471,12 +3512,14 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>${svgIc('image',15,'#bbb')} 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it"><span>${svgIc('lock',15,'#bbb')} 锁屏壁纸</span><span class="v"><button class="minibtn" onclick="setLockBg()">${S.me.lockBg?'换':'上传'}</button>${S.me.lockBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.lockBg=\'\';save();renderLockScreen(true);render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="appIconEditor()"><span>${svgIc('image',15,'#bbb')} App 图标美化</span><span class="v">自定义主屏图标 ›</span></div>
+      <div class="it" style="align-items:flex-start;gap:10px"><span>${svgIc('star',15,'#bbb')} App 图标主题<br><small style="color:#888">默认透明玻璃·纯黑；线条主题才使用下方配色</small></span><span class="v" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px;max-width:205px"><button class="minibtn" style="${appIconPack()==='line'?'background:#ff8fab;color:#fff':''}" onclick="appIconPackSet('line')">线条</button>${Object.entries(GLASS_ICON_PACKS).map(([k,n])=>`<button class="minibtn" style="${appIconPack()===k?'background:#ff8fab;color:#fff':''}" onclick="appIconPackSet('${k}')">${n}</button>`).join('')}</span></div>
       <div class="it" style="flex-wrap:wrap"><span>App 图标颜色深浅 <b id="homeAppIconToneVal" style="color:#ff8fab">${homeAppIconTone()}%</b><small style="display:block;color:#888">一键调整主屏全部 App，包括底部四个固定图标；数值低更暗，数值高更亮</small></span><input id="homeAppIconTone" type="range" min="45" max="135" step="5" value="${homeAppIconTone()}" style="width:100%;margin-top:7px" oninput="homeAppAppearanceSet('icon',this.value)"></div>
       <div class="it" style="flex-wrap:wrap"><span>App 名称文字深浅 <b id="homeAppTextToneVal" style="color:#ff8fab">${homeAppTextTone()}%</b><small style="display:block;color:#888">一键调整主屏所有软件名称；数值低更浅，100% 最清晰</small></span><input id="homeAppTextTone" type="range" min="30" max="100" step="5" value="${homeAppTextTone()}" style="width:100%;margin-top:7px" oninput="homeAppAppearanceSet('text',this.value)"></div>
       <div class="it"><span>App 图标与文字深浅</span><button class="minibtn" onclick="homeAppAppearanceReset()">恢复默认</button></div>
       <div class="it" onclick="widgetManager()"><span>${svgIc('star',15,'#bbb')} 主屏组件</span><span class="v">${(()=>{widInit();return S.me.widgets.length;})()}个 · 排序/开关 ›</span></div>
-      <div class="it"><span>${svgIc('heart',15,'#bbb')} 主屏主题</span><span class="v"><button class="minibtn" style="${(!S.me.theme)?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='';save();render()">暗黑</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='pink'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='pink';save();render();toast('换成淡粉色啦 🌸')">淡粉</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='white';save();render();toast('换成白色啦 🤍')">白色</button></span></div>
-      <div class="it"><span>${svgIc('chat',15,'#bbb')} 微信主题</span><span class="v"><button class="minibtn" style="${S.me.wxTheme!=='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='';save();render();toast('微信换成黑色')">黑色</button><button class="minibtn" style="margin-left:6px;${S.me.wxTheme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='white';save();render();toast('微信换成白色 🤍')">白色</button></span></div>
+      ${appIconPack()==='line'?`<div class="it"><span>${svgIc('heart',15,'#bbb')} 线条主题配色<br><small style="color:#888">只有线条图标使用这里的颜色</small></span><span class="v"><button class="minibtn" style="${(!S.me.theme)?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='';save();render()">暗黑</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='pink'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='pink';save();render();toast('线条配色已换成淡粉色')">淡粉</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='white';save();render();toast('线条配色已换成白色')">白色</button></span></div>`:`<div class="it"><span>${svgIc('heart',15,'#bbb')} 主题配色</span><span class="v">当前玻璃图标自带配色</span></div>`}
+      <div class="it"><span>${svgIc('clock',15,'#bbb')} 主屏时间颜色<br><small style="color:#888">高级玻璃材质开启时，时间本身也有玻璃高光</small></span><input type="color" value="${homeClockColor()}" oninput="homeClockColorSet(this.value)"></div>
+      <div class="it"><span>${svgIc('chat',15,'#bbb')} 微信显示模式<br><small style="color:#888">两种模式都使用高级玻璃材质</small></span><span class="v"><button class="minibtn" style="${S.me.wxTheme!=='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='';save();render();toast('微信已切换夜间模式')">夜间</button><button class="minibtn" style="margin-left:6px;${S.me.wxTheme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='white';save();render();toast('微信已切换白天模式 🤍')">白天</button></span></div>
       <div class="it"><span>${svgIc('phone',15,'#bbb')} 通话背景</span><span class="v"><button class="minibtn" onclick="setCallBg()">${S.me.callBg?'换':'上传'}</button>${S.me.callBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.callBg=\'\';save();render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>${svgIc('weather',15,'#bbb')} 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
@@ -3521,7 +3564,7 @@ async function clearAllData(){
   fresh.settings=old.settings;// 保留 API 设置
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
-  ['widgets','theme','wxTheme','homeBg','lockBg','callBg','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
+  ['widgets','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
   const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
@@ -9094,11 +9137,17 @@ function lastTransferAmt(id){const m=[...msgs(id)].reverse().find(x=>x.role==='u
 function markTransfer(id,mode){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&(x.type==='transfer'||x.type==='redpacket')&&!x.received&&!x.declined);if(m){if(mode==='reject')m.declined=true;else m.received=true;}return m||null;}
 function markPay(id,mode){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='paycard'&&!x._paid&&!x._rejected);if(m){if(mode==='reject')m._rejected=true;else m._paid=true;}return m||null;}
 
+function chatComposerReflow(ta,refreshCaret){if(!ta)return;const min=36,max=84,oldScroll=ta.scrollTop||0;ta.style.height='auto';const full=Math.max(min,ta.scrollHeight||min);ta.style.height=Math.min(full,max)+'px';ta.style.overflowY=full>max?'auto':'hidden';ta.scrollTop=full>max?oldScroll:0;if(refreshCaret&&document.activeElement===ta&&!ta._chatComposing){const token=ta._chatCaretToken=(ta._chatCaretToken||0)+1;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(ta._chatCaretToken!==token||document.activeElement!==ta||ta._chatComposing)return;try{void ta.getBoundingClientRect().height;const s=ta.selectionStart,e=ta.selectionEnd;ta.setSelectionRange(s,e==null?s:e);}catch(_){}}));}}
+function chatComposerViewportBind(){const vv=window.visualViewport;if(!vv||vv._northChatCaretBound)return;vv._northChatCaretBound=1;let timer=0;const sync=()=>{clearTimeout(timer);timer=setTimeout(()=>{const ta=$('#cinput');if(ta&&document.activeElement===ta)chatComposerReflow(ta,true);},80);};vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync);}
 function afterChat(id){
   const ta=$('#cinput');if(ta&&!ta._chatBound){ta._chatBound=1;ta._chatId=id;let raf=0;
-    ta.addEventListener('input',function(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;this.style.height='auto';this.style.height=Math.min(this.scrollHeight,84)+'px';});});
+    ta.addEventListener('compositionstart',function(){this._chatComposing=true;});
+    ta.addEventListener('compositionend',function(){this._chatComposing=false;chatComposerReflow(this,true);});
+    ta.addEventListener('focus',function(){chatComposerReflow(this,true);});
+    ta.addEventListener('input',function(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;chatComposerReflow(this,true);});});
     ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(ta._chatId||id);}});}
   if(ta)ta._chatId=id;
+  chatComposerViewportBind();
   maybeProactive(id);maybeSpyIdle(id);}
 
 function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);if(!wechatNaturalOn())suspicionOnUserMsg(id,m);}msgs(id).push(m);save();if(m.role==='user'&&m.type!=='sys'){roleServerPushTouchActivity(id,m.time,true);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||'')});}
@@ -11388,7 +11437,7 @@ async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.b
     save();if(cur().p==='wechat'&&wxTab==='moments')render();}catch(e){toast('生成失败：'+e.message);}}}
 
 /* ---------- 通用弹窗 ---------- */
-function openModal(html){const m=$('#modal'),p=cur().p,host=document.fullscreenElement;if(!m._home)m._home=m.parentNode;if(document.body.classList.contains('cin-theater-open')&&host&&!host.contains(m))host.appendChild(m);m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&(p==='wechat'||p==='chat'||p==='contactInfo'));$('#modalSheet').innerHTML=html;m.classList.add('show');}
+function openModal(html){const m=$('#modal'),p=cur().p,host=document.fullscreenElement;if(!m._home)m._home=m.parentNode;if(document.body.classList.contains('cin-theater-open')&&host&&!host.contains(m))host.appendChild(m);m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&(p==='wechat'||p==='chat'||p==='contactInfo'));m.classList.toggle('north-glass-modal',glassThemeOn());$('#modalSheet').innerHTML=html;m.classList.add('show');}
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}
 function closeModal(){const m=$('#modal');m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */
@@ -11443,7 +11492,7 @@ async function emergencyRestoreConfirm(){const c=_recoveryCandidate;if(!c)return
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
-    me:pickObj(me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
+    me:pickObj(me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
     phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
     phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
     music:pickObj(music,['bg','cover','theme','layout','widgets']),
@@ -11459,7 +11508,7 @@ function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
-  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
+  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','widgets','appLayout','homeLayout','appDock','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
   const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
   const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});
@@ -11598,17 +11647,17 @@ window.addEventListener('pageshow',e=>{lockResumeFromAway();setTimeout(sleepAuto
 document.addEventListener('visibilitychange',()=>{if(document.hidden){roleBackgroundFlush();audioMarkWakeRequired();if(_callHF&&!callHFMayStayInNativeBackground()){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();idleOpenHeartbeatStop();idleForceMarkHidden();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}}else{lockResumeFromAway();sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}try{if(window.SmallPhoneNativeSpeech&&window.SmallPhoneNativeSpeech.flushPending)window.SmallPhoneNativeSpeech.flushPending().catch(()=>{});}catch(e){}audioProbeMicPermission();callResumeHold();setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(idleForceReturnCheck,500);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);setTimeout(idleOpenHeartbeatStart,1800);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();const homeClock=$('#homeLiveTime');if(homeClock)homeClock.textContent=hm();const cohabClock=$('#cohabLiveTime');if(cohabClock)cohabClock.textContent=cohabClockText();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',()=>{routeHash();setTimeout(idleOpenHeartbeatStart,1600);});window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(suspicionTick,100);setTimeout(()=>{idleConsumeLocalPending();routeHash();},120);setTimeout(()=>pollExternalEvents(true),900);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);setTimeout(idleOpenHeartbeatStart,1800);});document.addEventListener('fullscreenchange',cinemaFullscreenChanged);document.addEventListener('webkitfullscreenchange',cinemaFullscreenChanged);
-function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{S.me=S.me||{};S.me.locked=true;sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;restoreActiveCall();idleConsumeLocalPending();routeHash();initBattery();audioProbeMicPermission();requestPersistentStorage();if(privateNativeCoreStorageKey(CORE_IDB_KEY)&&!_coreOverflowMode)save(0);if(S._summaryRepairPendingV848){delete S._summaryRepairPendingV848;save(0);}}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}
+function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{S.me=S.me||{};S.me.locked=NORTH_PREVIEW?NORTH_PREVIEW_PARAMS.includes('lock'):true;sleepAutoEndOnOpen();initLockGestures();render();window.__northBootReady=true;if(NORTH_PREVIEW){previewRoute();return;}restoreActiveCall();idleConsumeLocalPending();routeHash();initBattery();audioProbeMicPermission();requestPersistentStorage();if(privateNativeCoreStorageKey(CORE_IDB_KEY)&&!_coreOverflowMode)save(0);if(S._summaryRepairPendingV848){delete S._summaryRepairPendingV848;save(0);}}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}
 if(!_coreBootRef)finishAppBoot();else{try{S.me=S.me||{};S.me.locked=true;render();}catch(_){const host=document.getElementById('app');if(host)host.innerHTML='';}}
 _bootImagesPromise=bootImages().then(()=>{if(!_appBootFinished)finishAppBoot();else refreshHydratedUI();window.__northBootReady=true;try{const savedAt=Date.now(),json=JSON.stringify(S,_imgReplacer);queueRecoverySnapshot(json,savedAt);}catch(_){}}).catch(e=>{window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'存档数据载入失败');});/* 大容量核心、聊天和图片从 IndexedDB 回填好后再渲染 */
-setTimeout(()=>pollExternalEvents(true),2600);
+if(!NORTH_PREVIEW){setTimeout(()=>pollExternalEvents(true),2600);
 setTimeout(()=>companionPollSnapshot(true),3200);
 setTimeout(()=>roleServerPushPull(true),3600);
 setTimeout(idleOpenHeartbeatStart,3800);
 setInterval(()=>pollExternalEvents(false),30000);
 setInterval(()=>companionPollSnapshot(false),8000);
 setInterval(()=>roleServerPushPull(false),60000);
-setInterval(()=>phoneFriendMaybeSync(false),2500);
+setInterval(()=>phoneFriendMaybeSync(false),2500);}
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
 cinemaExtractAudioSubtitles=cinemaExtractAudioSubtitlesProgressive;
