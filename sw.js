@@ -1,5 +1,5 @@
 const BUILD='950';
-const HOTFIX='apple-auto-1';
+const HOTFIX='top-blend-test-1';
 const SHELL_CACHE='north-shell-v950';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
@@ -138,6 +138,19 @@ self.addEventListener('fetch',event=>{
     (/\/小手机\.html$/.test(url.pathname)&&url.searchParams.has('northPreview'))
   )){
     event.respondWith(fetch(request,{cache:'no-store'}));
+    return;
+  }
+
+  // The iOS top-blend trial must receive the current document instead of an
+  // older cached shell. Its network failure fallback is still the verified
+  // v950 shell, and the URL parameter keeps the experiment isolated.
+  if(request.mode==='navigate'&&/\/小手机\.html$/.test(url.pathname)&&url.searchParams.get('northTopBlend')==='1'){
+    event.respondWith((async()=>{
+      try{return await fetch(request,{cache:'no-store'});}catch(_){
+        const cache=await caches.open(SHELL_CACHE),cached=await currentCore(cache,'html');
+        return cached||Response.error();
+      }
+    })());
     return;
   }
 

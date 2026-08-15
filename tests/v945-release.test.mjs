@@ -14,7 +14,7 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v950 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v950 · 底部外壳回退与电话布局'/);
-  assert.match(app,/const url='sw\.js\?v=950&r=apple-auto-1'/);
+  assert.match(app,/const url='sw\.js\?v=950&r=top-blend-test-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='950'/);
   assert.match(html,/app\.js\?v=950/);
   assert.match(sw,/const BUILD='950'/);

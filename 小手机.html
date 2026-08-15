@@ -11,6 +11,21 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <meta name="apple-mobile-web-app-title" content="North" />
 <meta name="theme-color" content="#ff8fab" />
+<script>
+/* 顶部融合真机试验：只响应带参数的苹果设备。正式入口、安卓和私人 App 保持原样。 */
+(function(){try{
+  var n=navigator||{},ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1);
+  var requested=new URLSearchParams(location.search).get('northTopBlend')==='1';
+  var active=!!(ios&&requested&&window.__SMALL_PHONE_PRIVATE__!==true);
+  window.__NORTH_TOP_BLEND_EXPERIMENT__=active;
+  if(!active)return;
+  document.documentElement.classList.add('north-top-blend-experiment');
+  var status=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  var theme=document.querySelector('meta[name="theme-color"]');
+  if(status)status.setAttribute('content','black-translucent');
+  if(theme)theme.setAttribute('content','#000000');
+}catch(e){window.__NORTH_TOP_BLEND_EXPERIMENT__=false;}})();
+</script>
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
@@ -19,9 +34,11 @@
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
   var base=location.href.replace(/[?#].*$/,'');var dir=base.replace(/[^\/]*$/,'');
+  var topBlend=window.__NORTH_TOP_BLEND_EXPERIMENT__===true;
+  var launch=topBlend?base+'?northTopBlend=1':base;
   var icon=dir+'icon.png?v=336';
   var al=document.getElementById('pwaAppleIcon');if(al)al.href=icon;
-  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+  var man={id:launch,name:topBlend?'North 顶部融合测试':'North',short_name:topBlend?'North 顶部测试':'North',start_url:launch,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:topBlend?'#000000':'#ff8fab',icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
   var b=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});var ml=document.getElementById('pwaManifest');if(ml)ml.href=URL.createObjectURL(b);
 }catch(e){}})();
 </script>
@@ -33,7 +50,7 @@
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=950&r=apple-auto-1';
+  var url='sw.js?v=950&r=top-blend-test-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
