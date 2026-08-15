@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v943 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v943 · 伴生日常与低电提醒修复'/);
-  assert.match(app,/const url='sw\.js\?v=943'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='943'/);
-  assert.match(html,/app\.js\?v=943/);
-  assert.match(sw,/const BUILD='943'/);
-  assert.match(sw,/north-shell-v943/);
-  assert.match(index,/小手机\.html\?v=943/);
-  assert.match(repair,/小手机\.html\?v=943/);
+test('v944 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v944 · 云端授权与音色止损修复'/);
+  assert.match(app,/const url='sw\.js\?v=944'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='944'/);
+  assert.match(html,/app\.js\?v=944/);
+  assert.match(sw,/const BUILD='944'/);
+  assert.match(sw,/north-shell-v944/);
+  assert.match(index,/小手机\.html\?v=944/);
+  assert.match(repair,/小手机\.html\?v=944/);
 });
 
-test('the private iOS package is aligned with the shared v943 core',()=>{
-  assert.match(privateBundle,/<string>943<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.67;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 67;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.67 \(67\)'/);
+test('the private iOS package is aligned with the shared v944 core',()=>{
+  assert.match(privateBundle,/<string>944<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.68;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 68;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.68 \(68\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

@@ -1028,8 +1028,18 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 from: response.body,
                 fallbackPhone: current.phone
               ) else {
-            deletePrivateAccountSession()
-            throw NSError(domain: "PrivatePhoneAccount", code: 401)
+            // A gateway outage can return a temporary 401 while the refresh
+            // token is still valid. Never destroy the only local recovery
+            // credential because a remote refresh attempt failed. Explicit
+            // sign-out remains the sole path that removes this Keychain item.
+            throw NSError(
+                domain: "PrivatePhoneAccount",
+                code: response.status,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "云端暂时无法验证，手机号登录已保留，请稍后重试"
+                ]
+            )
         }
         try savePrivateAccountSession(refreshed)
         return refreshed

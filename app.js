@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='943'){
+if(window.__NORTH_SHELL_BUILD__!=='944'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -363,7 +363,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v943 · 伴生日常与低电提醒修复';
+const APP_VER='v944 · 云端授权与音色止损修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1424,7 +1424,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=943';
+  const url='sw.js?v=944';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3717,7 +3717,7 @@ function fishVoiceItems(d){const raw=Array.isArray(d)?d:(Array.isArray(d&&d.item
   return raw.map(v=>{const id=v&&String(v.id||v._id||v.reference_id||v.model_id||'').trim(),name=v&&String(v.title||v.name||v.display_name||v.description||id||'Fish 音色').trim();return id?{id,name,clone:true}:null;}).filter(Boolean);}
 async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
   toast('正在拉取音色…');
-  try{if(ttsUseRelay()){const d=await aiRelay('tts_voices',{});_voiceList=mergeVoicePresets((d&&d.voices)||[]);_voiceQ='';showVoicePicker();return;}
+  try{if(ttsUseRelay()){const d=await aiRelay('tts_voices',{});_voiceList=mergeVoicePresets((d&&d.voices)||[]);if(typeof aiRememberVoiceList==='function')aiRememberVoiceList(_voiceList);_voiceQ='';showVoicePicker();return;}
     if(!key){toast('先填上面的 API Key，或打开 AI账户里的“使用内置AI”');return;}
     const provider=ttsProviderKind({provider:($('#s_tprovider')?$('#s_tprovider').value:''),base});
     if(provider==='mossland'){let rows=[];if(aiCoreUrl()){const d=await aiRelay('external_tts',{provider:'mossland',operation:'list_voices',base,key});rows=d&&d.data&&d.data.voices||[];}else{let root=base.replace(/\/+$/,'').replace(/\/audio\/(?:speech|voices)$/i,'');if(!/\/v1$/i.test(root))root+='/v1';const endpoint=root+'/audio/voices?limit=200',r=await fetch(endpoint,{headers:{'Authorization':'Bearer '+key}}),d=await r.json().catch(()=>null);if(!r.ok)throw new Error((d&&d.error&&d.error.message)||('HTTP '+r.status));rows=(d&&d.data)||[];}_voiceList=rows.map(v=>({id:String(v&&v.id||''),name:String(v&&v.name||v&&v.id||'Mossland 音色'),clone:true})).filter(v=>v.id);_voiceQ='';if(!_voiceList.length){toast('Mossland账号里没有可用音色');return;}showVoicePicker();return;}
@@ -3733,7 +3733,7 @@ async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim()
     const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
     const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
     _voiceList=mergeVoicePresets(clones.concat(sys));_voiceQ='';showVoicePicker();
-  }catch(e){toast('拉取失败，检查地址/Key/网络');}}
+  }catch(e){if(ttsUseRelay()&&typeof aiCachedVoiceList==='function'){const cached=aiCachedVoiceList();if(cached.length){_voiceList=mergeVoicePresets(cached);_voiceQ='';toast('云端暂时不可用，显示上次成功读取的音色');showVoicePicker();return;}}toast('拉取失败，检查地址/Key/网络');}}
 function showVoicePicker(){const q=(_voiceQ||'').toLowerCase();
   const list=_voiceList.filter(v=>!q||(''+v.id).toLowerCase().indexOf(q)>=0||(''+v.name).toLowerCase().indexOf(q)>=0);
   openModal(`<h3>选个音色（共${_voiceList.length}个）</h3>
@@ -5312,10 +5312,10 @@ function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   btn.onclick=tryIn;restore.onclick=tryRestore;
   inp.onkeydown=e=>{if(e.key==='Enter')tryIn();};
   setTimeout(()=>{if(document.getElementById('gate'))inp.focus();},120);}
-let _licenseCheckBusy=false,_licenseTransientNoticeAt=0;
-async function licenseCheckSession(){if(_licenseCheckBusy||!window.NorthLicense||!NorthLicense.isManaged()||!NorthLicense.session())return;_licenseCheckBusy=true;
-  try{await NorthLicense.check();await licenseSyncAiIdentity();try{await licenseSyncPhoneFriendIdentity();}catch(_){}}
-  catch(e){if(e&&e.server&&e.permanent===true){NorthLicense.clearSession();try{localStorage.removeItem('yibei_unlocked');}catch(_){}showGate();toast(e.code==='license-admin-blocked'?'该授权已被管理员移出':'这个浏览器授权已退出，请重新恢复');}else if((e&&e.server||e&&e.network)&&Date.now()-_licenseTransientNoticeAt>10*60000){_licenseTransientNoticeAt=Date.now();toast('授权检查暂时未连通，当前登录不受影响，稍后会自动重试');}}
+let _licenseCheckBusy=false,_licenseCheckFailures=0,_licenseCheckNextAt=0;
+async function licenseCheckSession(){const now=Date.now();if(_licenseCheckBusy||now<_licenseCheckNextAt||!window.NorthLicense||!NorthLicense.isManaged()||!NorthLicense.session())return;_licenseCheckBusy=true;
+  try{await NorthLicense.check();_licenseCheckFailures=0;_licenseCheckNextAt=0;await licenseSyncAiIdentity();try{await licenseSyncPhoneFriendIdentity();}catch(_){}}
+  catch(e){if(e&&e.server&&e.permanent===true){_licenseCheckFailures=0;_licenseCheckNextAt=0;NorthLicense.clearSession();try{localStorage.removeItem('yibei_unlocked');}catch(_){}showGate();toast(e.code==='license-admin-blocked'?'该授权已被管理员移出':'这个浏览器授权已退出，请重新恢复');}else if(e&&e.server||e&&e.network){_licenseCheckFailures=Math.min(8,_licenseCheckFailures+1);_licenseCheckNextAt=Date.now()+Math.min(30*60000,60000*Math.pow(2,_licenseCheckFailures-1));}}
   finally{_licenseCheckBusy=false;}}
 async function licenseBindCurrent(){if(!window.NorthLicense){toast('授权组件没有加载，请刷新页面');return;}try{
   toast('正在准备手机授权…');if(!NorthLicense.isManaged()||!NorthLicense.session())await NorthLicense.legacyActivate();licenseMarkUnlocked();await licenseSyncAiIdentity(true);await NorthLicense.bindPasskey();toast('绑定成功，以后换浏览器或添加到主屏幕可直接恢复');if(cur().p==='settings')render();

@@ -29,7 +29,13 @@ function aiHiddenPurchases(){const ac=aiCoreInit();if(!Array.isArray(ac.hiddenPu
 function aiVisiblePurchases(){const hidden=new Set(aiHiddenPurchases().map(String));return (_aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases:[]).filter(x=>!hidden.has(String(x&&x.id||'')));}
 function aiHidePurchase(id){if(!id)return;const arr=aiHiddenPurchases(),sid=String(id);if(!arr.map(String).includes(sid))arr.unshift(sid);aiCoreInit().hiddenPurchases=arr.slice(0,80);save();aiRenderStable();toast('订单已从本机列表移除');}
 function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
-function aiPrivateVoices(){return _aiAcct&&Array.isArray(_aiAcct.private_voices)?_aiAcct.private_voices.filter(v=>v&&v.voice_id):[];}
+function aiPrivateVoiceCacheKey(){return'yibei_ai_private_voices_v1_'+aiUserId();}
+function aiCachedPrivateVoices(){try{const d=JSON.parse(localStorage.getItem(aiPrivateVoiceCacheKey())||'null'),rows=Array.isArray(d)?d:Array.isArray(d&&d.rows)?d.rows:[];return rows.filter(v=>v&&v.voice_id).slice(0,80);}catch(_){return[];}}
+function aiRememberPrivateVoices(rows){const safe=(Array.isArray(rows)?rows:[]).filter(v=>v&&v.voice_id).slice(0,80).map(v=>({voice_id:String(v.voice_id),display_name:String(v.display_name||'我的专属音色').slice(0,80),purchase_id:v.purchase_id||null,created_at:v.created_at||null}));try{localStorage.setItem(aiPrivateVoiceCacheKey(),JSON.stringify({savedAt:Date.now(),rows:safe}));}catch(_){}return safe;}
+function aiPrivateVoices(){if(_aiAcct&&Array.isArray(_aiAcct.private_voices))return _aiAcct.private_voices.filter(v=>v&&v.voice_id);return aiCachedPrivateVoices();}
+function aiVoiceListCacheKey(){return'yibei_ai_voice_list_v1_'+aiUserId();}
+function aiCachedVoiceList(){try{const d=JSON.parse(localStorage.getItem(aiVoiceListCacheKey())||'null'),rows=Array.isArray(d)?d:Array.isArray(d&&d.rows)?d.rows:[];return rows.filter(v=>v&&v.id).slice(0,240);}catch(_){return[];}}
+function aiRememberVoiceList(rows){const safe=(Array.isArray(rows)?rows:[]).filter(v=>v&&v.id).slice(0,240).map(v=>({id:String(v.id),name:String(v.name||v.id).slice(0,100),clone:!!v.clone,private:!!v.private,unbound:!!v.unbound,preset:!!v.preset}));try{localStorage.setItem(aiVoiceListCacheKey(),JSON.stringify({savedAt:Date.now(),rows:safe}));}catch(_){}return safe;}
 function aiVoiceLabel(id){id=String(id||'');if(!id)return'系统默认';const own=aiPrivateVoices().find(v=>String(v.voice_id)===id);if(own)return own.display_name||'我的专属音色';const preset=AI_VOICE_PRESETS.find(v=>v.id===id);return preset?preset.name:'已设置音色';}
 function aiRelayVoiceAudio(d){const rows=[d&&d.data,d&&d.data&&d.data.data,d&&d.data&&d.data.raw&&d.data.raw.data,d];for(const row of rows){if(!row)continue;const audio=row.audio||row.audio_file||row.audio_url;if(audio)return audio;}return'';}
 function aiPrivateVoiceRows(){const current=String((S.settings.tts||{}).voice||''),voices=aiPrivateVoices();return voices.length?voices.map(v=>`<div class="it"><span><b style="color:#ffb7d2">${esc(v.display_name||'我的专属音色')}</b><small>仅当前AI账户可用 · 云端已绑定</small></span><span class="v"><button class="minibtn" ${current===String(v.voice_id)?'disabled':''} onclick="aiUsePrivateVoice('${esc(v.voice_id)}')">${current===String(v.voice_id)?'使用中':'使用'}</button></span></div>`).join(''):'<div class="hint" style="padding:0 14px 10px">还没有专属音色。购买克隆服务并办理完成后，管理员会直接绑定到这里，不需要拉取或填写 ID。</div>';}
@@ -225,10 +231,10 @@ function aiSetVoiceLanguage(lang){S.settings.tts=S.settings.tts||{};S.settings.t
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
 async function aiPullVoices(){toast('正在拉取可用音色…');
-  try{const d=await aiRelay('tts_voices',{});_aiVoiceList=Array.isArray(d&&d.voices)?d.voices:[];_aiVoiceQ='';
+  try{const d=await aiRelay('tts_voices',{});_aiVoiceList=Array.isArray(d&&d.voices)?d.voices:[];aiRememberVoiceList(_aiVoiceList);_aiVoiceQ='';
     if(!_aiVoiceList.length){toast('暂时没有可用音色，请稍后重试');return;}
     aiShowVoicePicker();
-  }catch(e){toast('拉取失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}}
+  }catch(e){const cached=aiCachedVoiceList();if(cached.length){_aiVoiceList=cached;_aiVoiceQ='';toast('云端暂时不可用，显示上次成功读取的音色');aiShowVoicePicker();return;}toast('拉取失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}}
 function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.settings.tts||{}).voice)||'';
   const list=_aiVoiceList.filter(v=>!q||String(v.id||'').toLowerCase().includes(q)||String(v.name||'').toLowerCase().includes(q));
   openModal(`<h3>选择默认语音</h3>
@@ -262,7 +268,7 @@ async function aiTestVoice(){const text=aiVoiceTestText();
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId()},pricing:null,plans:null,ledger:[]};
   if(action==='account')_aiAcctFetchedAt=Date.now();
-  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(Array.isArray(d.private_voices)){_aiAcct.private_voices=d.private_voices;const first=d.private_voices.find(v=>v&&v.voice_id),core=aiCoreInit();if(first&&!(S.settings.tts||{}).voice&&core.privateVoiceAutoSet!==first.voice_id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=first.voice_id;core.privateVoiceAutoSet=first.voice_id;save();}}if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
+  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(Array.isArray(d.private_voices)){_aiAcct.private_voices=aiRememberPrivateVoices(d.private_voices);const first=d.private_voices.find(v=>v&&v.voice_id),core=aiCoreInit();if(first&&!(S.settings.tts||{}).voice&&core.privateVoiceAutoSet!==first.voice_id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=first.voice_id;core.privateVoiceAutoSet=first.voice_id;save();}}if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
   if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;aiRememberBalance(d.balance);}
   if(d.charged){const feature=action||'chat';_aiAcct.ledger=_aiAcct.ledger||[];_aiAcct.ledger.unshift({kind:'charge',feature,points:-d.charged,balance_after:d.balance,status:d.ok===false?'failed':'done',billed:!!d.billed,note:d.note||d.error||'',created_at:new Date().toISOString()});_aiAcct.ledger=_aiAcct.ledger.slice(0,80);}
   if(_aiAcct.account&&_aiAcct.account.points!=null)aiCheckLowBalance(Number(_aiAcct.account.points));if(d.purchases)aiDetectPointsArrival(d);

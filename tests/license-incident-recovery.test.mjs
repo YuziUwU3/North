@@ -20,13 +20,17 @@ assert.match(licenseBackend, /biometric-required/);
 assert.match(licenseBackend, /permanent: error\.permanent/);
 
 assert.match(gate, /out\.code = String\(payload && payload\.code/);
-assert.match(gate, /out\.permanent = !!\(payload && payload\.permanent\)/);
+assert.match(gate, /const permanentCodes = new Set\(/);
+assert.match(gate, /out\.permanent = !!\(payload && payload\.permanent\) && permanentCodes\.has\(out\.code\)/);
+assert.match(gate, /license-admin-blocked/);
+assert.match(gate, /license-not-found/);
 assert.doesNotMatch(gate, /async function restoreLocalIdentity/);
 
 assert.match(app, /e&&e\.server&&e\.permanent===true/);
 assert.doesNotMatch(app, /e&&e\.server&&e\.status===400/);
-assert.match(app, /_licenseTransientNoticeAt>10\*60000/);
-assert.match(app, /授权检查暂时未连通，当前登录不受影响，稍后会自动重试/);
+assert.match(app, /_licenseCheckFailures=0,_licenseCheckNextAt=0/);
+assert.match(app, /Math\.min\(30\*60000,60000\*Math\.pow\(2,_licenseCheckFailures-1\)\)/);
+assert.doesNotMatch(app, /授权检查暂时未连通，当前登录不受影响，稍后会自动重试/);
 assert.doesNotMatch(app, /licenseTryIncidentRecovery/);
 
 assert.match(migration, /create table if not exists public\.phone_license_incident_recovery/);

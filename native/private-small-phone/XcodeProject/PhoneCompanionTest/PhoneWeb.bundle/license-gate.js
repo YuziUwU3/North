@@ -192,7 +192,16 @@
       out.status = status;
       out.server = true;
       out.code = String(payload && payload.code || '');
-      out.permanent = !!(payload && payload.permanent);
+      const permanentCodes = new Set([
+        'license-session-invalid',
+        'license-admin-blocked',
+        'license-not-found',
+        'license-local-identity-invalid',
+      ]);
+      // API gateways may emit a bare or synthetic 401 during an outage. Only
+      // a signed license response with one of our explicit terminal codes may
+      // remove a local session.
+      out.permanent = !!(payload && payload.permanent) && permanentCodes.has(out.code);
       throw out;
     }
     return payload;
