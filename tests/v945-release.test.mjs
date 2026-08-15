@@ -14,7 +14,7 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v953 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v953 · 微信统一自然系统'/);
-  assert.match(app,/const url='sw\.js\?v=953&r=ios-top-cover-1'/);
+  assert.match(app,/const url='sw\.js\?v=953&r=v950-shell-restore-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='953'/);
   assert.match(html,/app\.js\?v=953/);
   assert.match(sw,/const BUILD='953'/);

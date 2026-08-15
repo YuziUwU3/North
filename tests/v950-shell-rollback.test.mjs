@@ -24,9 +24,11 @@ test('private shells retain the pre-repair v600 viewport and manifest contract',
   }
 });
 
-test('the public iOS home-screen shell uses the independently verified top safe area contract',()=>{
-  assert.match(webHtml,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no, viewport-fit=cover"/);
-  assert.match(webHtml,/apple-mobile-web-app-status-bar-style" content="black-translucent"/);
+test('the public web shell restores the successful v950 viewport contract',()=>{
+  assert.match(webHtml,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no"/);
+  assert.doesNotMatch(webHtml,/viewport-fit=cover/);
+  assert.match(webHtml,/apple-mobile-web-app-status-bar-style" content="black"/);
+  assert.doesNotMatch(webHtml,/black-translucent/);
   assert.match(webHtml,/name="theme-color" content="#ff8fab"/);
   assert.match(webHtml,/--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\)/);
   assert.match(webHtml,/--north-ios-home-safe-bottom:0px/);

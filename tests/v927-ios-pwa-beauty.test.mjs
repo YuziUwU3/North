@@ -22,14 +22,14 @@ test('first glass page reserves a non-shrinking line box for every app name', ()
   assert.match(css, /\.glass-reference-page \.app>span\{[^}]*min-height:20px!important;[^}]*flex:0 0 20px!important/);
 });
 
-test('iOS home-screen shell keeps top compatibility but drops bottom-bar paint repairs', () => {
+test('restored v950 web shell drops automatic safe-area and bottom-bar paint repairs', () => {
   assert.doesNotMatch(html, /html\.north-ios-pwa-shell \.phone/);
   assert.doesNotMatch(html, /系统底栏位于网页层外/);
   assert.match(html, /--north-ios-home-safe-bottom:0px/);
   assert.match(html, /html\.north-ios-home-safe \.tabbar\{[^}]*padding-bottom:var\(--north-ios-home-safe-bottom\)/);
   assert.doesNotMatch(app, /north-ios-pwa-shell/);
-  assert.match(app, /root\.classList\.toggle\('north-ios-home-safe',browser\)/);
-  assert.match(app, /root\.classList\.toggle\('north-apple-remote-safe',browser\)/);
+  assert.match(app, /classList\.remove\('north-ios-home-safe'\)/);
+  assert.match(app, /classList\.remove\('north-apple-remote-safe'\)/);
   assert.doesNotMatch(app, /苹果兼容适配<br>|appleHomeCompatToggle/);
 });
 

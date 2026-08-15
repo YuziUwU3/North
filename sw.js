@@ -1,5 +1,5 @@
 const BUILD='953';
-const HOTFIX='ios-top-cover-1';
+const HOTFIX='v950-shell-restore-1';
 const SHELL_CACHE='north-shell-v953';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];

@@ -1425,7 +1425,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-const url='sw.js?v=953&r=ios-top-cover-1';
+const url='sw.js?v=953&r=v950-shell-restore-1';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2786,7 +2786,7 @@ function homeClockColorSet(value){S.me=S.me||{};S.me.homeClockColor=widgetHex(va
 function appleHomeCompatNative(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true;}
 function appleHomeCompatBrowserEnvironment(){const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
 function appleHomeCompatEnvironment(){return appleHomeCompatBrowserEnvironment();}
-function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,browser=appleHomeCompatBrowserEnvironment();if(root&&root.classList){root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',browser);}return browser;}
+function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement;if(root&&root.classList){root.classList.remove('north-ios-home-safe');root.classList.remove('north-apple-remote-safe');}return false;}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
 function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}return on;}
 function glassThemeSet(){S.me=S.me||{};S.me.uiMaterial='glass';applyGlassTheme();save();render();renderLockScreen(true);toast('已使用透明玻璃材质');}

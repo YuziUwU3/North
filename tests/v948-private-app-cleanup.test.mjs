@@ -22,7 +22,7 @@ test('private App version, bundled core and native status area are current',()=>
 test('private App does not expose the web Apple compatibility switch',()=>{
   assert.match(app,/function appleHomeCompatEnvironment\(\)\{return appleHomeCompatBrowserEnvironment\(\);\}/);
   assert.doesNotMatch(app,/苹果兼容适配|appleHomeCompatToggle|appleHomeCompatOn/);
-  assert.match(app,/root\.classList\.toggle\('north-ios-home-safe',browser\)/);
+  assert.match(app,/classList\.remove\('north-ios-home-safe'\)/);
 });
 
 test('private App authorization view omits browser management while keeping biometric recovery',()=>{

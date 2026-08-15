@@ -21,8 +21,8 @@ function compatEnvironment(navigator,standaloneMedia=false,privateApp=false){
 }
 
 test('full-screen shell is capped to the current available viewport',()=>{
-  assert.match(html,/viewport-fit=cover/);
-  assert.match(html,/apple-mobile-web-app-status-bar-style" content="black-translucent"/);
+  assert.doesNotMatch(html,/viewport-fit=cover/);
+  assert.match(html,/apple-mobile-web-app-status-bar-style" content="black"/);
   assert.match(html,/html,body,.phone,.screen\{height:100%;min-height:0;max-height:100%;overflow:hidden\}/);
   assert.match(html,/#app\{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;\}/);
   assert.match(html,/\.page\{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\}/);
@@ -41,7 +41,7 @@ test('no script may substitute physical screen height for the app viewport',()=>
   assert.doesNotMatch(app,/function syncAppViewport|--north-app-height/,'do not restore the keyboard-sensitive global viewport script');
 });
 
-test('automatic safe-area mode stays on Apple home-screen web and excludes the private App',()=>{
+test('Apple home-screen environment detection stays isolated from Android and the private App',()=>{
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:true}),true);
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:false}),false,'ordinary iPhone Safari must keep its existing layout');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Linux; Android 15)',platform:'Linux armv8l',maxTouchPoints:5,standalone:false},true),false,'Android standalone must never receive the Apple workaround');
@@ -49,12 +49,13 @@ test('automatic safe-area mode stays on Apple home-screen web and excludes the p
   assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),false,'the private iOS App must not apply the web compatibility switch');
 });
 
-test('iOS home-screen compatibility is automatic and has no settings button or bottom repair geometry',()=>{
+test('restored v950 shell keeps automatic Apple safe-area offsets disabled',()=>{
   assert.doesNotMatch(functionSource('renderSettings'),/苹果兼容适配|appleHomeCompatToggle|appleHomeCompatOn/);
   assert.doesNotMatch(app,/function appleHomeCompat(?:On|Toggle)\(/);
   assert.doesNotMatch(functionSource('applyAppleHomeCompat'),/north-ios-pwa-shell/);
-  assert.match(functionSource('applyAppleHomeCompat'),/north-ios-home-safe',browser/);
-  assert.match(functionSource('applyAppleHomeCompat'),/north-apple-remote-safe',browser/);
+  assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-ios-home-safe'\)/);
+  assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-apple-remote-safe'\)/);
+  assert.match(functionSource('applyAppleHomeCompat'),/return false/);
   assert.doesNotMatch(html,/html\.north-ios-pwa-shell \.phone/);
   assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:0px\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');
