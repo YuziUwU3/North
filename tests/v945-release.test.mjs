@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v950 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v950 · 底部外壳回退与电话布局'/);
-  assert.match(app,/const url='sw\.js\?v=950&r=top-blend-test-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='950'/);
-  assert.match(html,/app\.js\?v=950/);
-  assert.match(sw,/const BUILD='950'/);
-  assert.match(sw,/north-shell-v950/);
-  assert.match(index,/小手机\.html\?v=950/);
-  assert.match(repair,/小手机\.html\?v=950/);
+test('v951 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v951 · 顶部试验回退与小号忠诚修复'/);
+  assert.match(app,/const url='sw\.js\?v=951&r=apple-auto-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='951'/);
+  assert.match(html,/app\.js\?v=951/);
+  assert.match(sw,/const BUILD='951'/);
+  assert.match(sw,/north-shell-v951/);
+  assert.match(index,/小手机\.html\?v=951/);
+  assert.match(repair,/小手机\.html\?v=951/);
 });
 
-test('the private iOS package advances to v950 and 1.0.71 delivery',()=>{
-  assert.match(privateBundle,/<string>950<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.71;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 71;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.71 \(71\)'/);
+test('the private iOS package advances to v951 and 1.0.72 delivery',()=>{
+  assert.match(privateBundle,/<string>951<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.72;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 72;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.72 \(72\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

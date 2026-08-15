@@ -3,6 +3,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const privateSource = fs.readFileSync(new URL("../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js", import.meta.url), "utf8");
 
 assert.match(source, /function accountMessageKey\(cid,aid\)/);
 assert.match(source, /function msgsForAccount\(id,aid\)/);
@@ -15,14 +16,24 @@ assert.match(source, /_accountSummaries/);
 assert.match(source, /_accountSummaryState/);
 assert.match(source, /# 当前联系人的独立身份（最高优先级）/);
 assert.match(source, /严禁猜测、暗示或声称ta是任何其他联系人换号、切换身份、同一个人/);
+assert.match(source, /你仍完整记得自己已有一位稳定伴侣/);
+assert.match(source, /无论“微信自然模式”是否开启，这条忠诚边界都不能被关闭/);
+assert.match(privateSource, /无论“微信自然模式”是否开启，这条忠诚边界都不能被关闭/);
+assert.match(privateSource, /【小号最高优先级覆盖】[\s\S]*?“微信自然模式”也不能关闭这条边界/);
+assert.match(source, /function altAccountReportNote\(note\)/);
+assert.match(source, /_naturalOn=wechatNaturalOn\(\)&&!altAccountReportNote\(note\)/);
+assert.match(privateSource, /_naturalOn=wechatNaturalOn\(\)&&!altAccountReportNote\(note\)/);
+assert.match(source, /持续纠缠或严重越界时可以单独输出 \[拉黑\]/);
 assert.doesNotMatch(source, /# 当前聊天身份（小号与大号严格分开）/);
 assert.doesNotMatch(source, /现在跟你聊天的是小号身份/);
 assert.match(source, /if\(_main\)\{if\(!_natural\)\{const av=affNow\(c\)/);
 assert.match(source, /if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=powerDynamicPrompt/);
 assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
-assert.match(source, /resumeAccountReplies\(aid\);if\(aid==='main'\)setTimeout\(triggerAltReports,1500\)/);
+assert.match(source, /if\(aid==='main'\)\{if\(!triggerAltReports\(\)\)resumeAccountReplies\(aid\);\}else resumeAccountReplies\(aid\)/);
 assert.match(source, /scheduleReply\(c\.id,note,ok=>/);
 assert.match(source, /if\(ok\)\{cc\._altIntroDone=true;cc\._altReportAt=/);
+assert.match(source, /replyAccount!=='main'&&!c\.blocked/);
+assert.match(source, /content:'你被'\+\(c\.remark\|\|c\.name\)\+'拉黑了'/);
 assert.match(source, /_natural\|\|!_main\?'':suspicionPrompt\(c\)\+extremeLovePrompt\(c\)/);
 assert.match(source, /s\+=_main\?memoryResetPrompt\(c\):''/);
 assert.match(source, /s\+=_main\?friendOriginPrompt\(c\):''/);
@@ -139,15 +150,17 @@ const reportSandbox = {
   },
   isMain: () => true,
   msgToText: m => m.content || "",
+  msgsForAccount: (id, aid) => reportMessages[aid === "main" ? id : `${id}#${aid}`] || [],
   getC: id => id === reportRole.id ? reportRole : null,
   _altReportInFlight: Object.create(null),
   _altReportRetried: Object.create(null),
   setTimeout: fn => { fn(); return 1; },
   save() {},
+  replyTouch() {},
   scheduleReply: (id, note, onDone) => { reportCalls.push({ id, note, onDone }); return true; },
 };
 vm.runInNewContext(
-  ["altReportSnapshot", "lastAltMsgTime", "triggerAltReports"]
+  ["altReportSnapshot", "lastAltMsgTime", "altReportVisibleEvidence", "repairLegacyAltReportCursor", "triggerAltReports"]
     .map(extractFunction)
     .join("\n") +
     ";globalThis.runReports=triggerAltReports;globalThis.lastTime=lastAltMsgTime;",
@@ -157,6 +170,8 @@ assert.equal(reportSandbox.lastTime("role_report"), 101);
 reportSandbox.runReports();
 assert.equal(reportCalls.length, 1, "first alt conversation must be reported once after returning to main");
 assert.match(reportCalls[0].note, /独立联系人/);
+assert.match(reportCalls[0].note, /最近内容/);
+assert.match(reportCalls[0].note, /不能否认、不能说不记得、不能联网查/);
 assert.match(reportCalls[0].note, /不要猜测两个账号是同一个人/);
 assert.equal(reportRole._altReportAt, 0, "alt activity must not be consumed before a visible report succeeds");
 reportSandbox.runReports();
@@ -174,8 +189,19 @@ assert.equal(reportRole._altReportAt, 101, "a failed report must leave the new a
 assert.equal(reportCalls.length, 3, "a failed report gets one immediate automatic retry");
 reportCalls[2].onDone(true);
 assert.equal(reportRole._altReportAt, 202);
+assert.equal(reportRole._altReportDeliveredAt, 202);
 reportSandbox.runReports();
 assert.equal(reportCalls.length, 3, "the successful follow-up report must remain one-time");
+
+reportRole._altReportAt = 999;
+reportRole._altReportDeliveredAt = 0;
+reportRole._altIntroDone = true;
+reportMessages["role_report#alt_1"].push({ role: "user", type: "text", content: "旧存档里漏掉的消息", time: 303 });
+reportSandbox.runReports();
+assert.equal(reportCalls.length, 4, "a legacy pre-delivery cursor must be repaired and retried");
+assert.equal(reportRole._altReportAt, 0, "legacy cursor is reset until the repaired report is visible");
+reportCalls[3].onDone(true);
+assert.equal(reportRole._altReportAt, 303);
 
 let summaryActive = "main";
 const summarySandbox = {

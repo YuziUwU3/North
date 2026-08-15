@@ -15,17 +15,13 @@ test('web and private shells restore the pre-repair v600 viewport and manifest c
     assert.match(html,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no"/);
     assert.doesNotMatch(html,/viewport-fit=cover/);
     assert.match(html,/apple-mobile-web-app-status-bar-style" content="black"/);
+    assert.doesNotMatch(html,/black-translucent/);
     assert.match(html,/name="theme-color" content="#ff8fab"/);
+    assert.match(html,/background_color:'#111111',theme_color:'#ff8fab'/);
     assert.match(html,/--north-ios-home-safe-bottom:0px/);
     assert.doesNotMatch(html,/north-ios-pwa-bottom|north-system-bar-color|north_pwa_system_bar_color/);
     assert.doesNotMatch(html,/bottom:calc\(0px -/);
   }
-  for(const html of [privateHtml,privateAlias]){
-    assert.doesNotMatch(html,/black-translucent/);
-    assert.match(html,/background_color:'#111111',theme_color:'#ff8fab'/);
-  }
-  assert.match(webHtml,/var active=!!\(ios&&requested&&window\.__SMALL_PHONE_PRIVATE__!==true\)/);
-  assert.match(webHtml,/theme_color:topBlend\?'#000000':'#ff8fab'/);
 });
 
 test('all dynamic system-bar repair code is gone while private App still covers the bottom inset',()=>{

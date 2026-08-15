@@ -66,7 +66,7 @@ assert.match(sandbox.fixed, /真正事实会保留/);
 assert.doesNotMatch(html, /viewport-fit=cover/);
 assert.match(html, /apple-mobile-web-app-status-bar-style" content="black"/);
 assert.match(html, /name="theme-color" content="#ff8fab"/);
-assert.match(html, /background_color:'#111111',theme_color:topBlend\?'#000000':'#ff8fab'/);
+assert.match(html, /background_color:'#111111',theme_color:'#ff8fab'/);
 assert.match(app, /music-app\$\{bg\?' has-bg':''\}/);
 assert.match(html, /\.music-app\.has-bg:after/);
 assert.match(app, /if\(musicEnsureCurrent\(\)\)_mView='player'/);
