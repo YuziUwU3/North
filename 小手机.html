@@ -33,7 +33,7 @@
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=950';
+  var url='sw.js?v=950&r=apple-auto-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1215,8 +1215,7 @@ html.north-ios-home-safe .msgbanner{top:calc(8px + var(--north-ios-home-safe-top
 html.north-ios-home-safe .spybanner{top:calc(42px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .callscreen.mini{top:calc(44px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .callscreen .cav{margin-top:calc(88px + var(--north-ios-home-safe-top))}
-/* v906：只在“苹果兼容适配”开启并实际生效时，下移全屏通话的角色备注与时间；
-   关闭开关、安卓和普通浏览器继续保持原坐标。 */
+/* 苹果主屏幕 Web App 自动下移全屏通话的角色备注与时间；安卓和普通浏览器保持原坐标。 */
 html.north-apple-remote-safe .callscreen:not(.mini) .cname,
 html.north-apple-remote-safe .callscreen:not(.mini) .cstat{transform:translateY(8px)}
 /* 微信共同生活顶栏本身用 !important 固定为 56px；必须在同一优先级下把安全区
@@ -1226,16 +1225,16 @@ html.north-ios-home-safe .nav.cohab-wx-nav{height:calc(56px + var(--north-ios-ho
 html.north-ios-home-safe .callscreen.mini{height:58px!important;max-height:58px!important;box-sizing:border-box}
 html.north-ios-home-safe .callscreen.mini .cav{margin:0!important}
 html.north-ios-home-safe .callscreen.video.active .cav{top:calc(54px + var(--north-ios-home-safe-top));margin-top:0}
-/* v904：远程操控最上方 LIVE 横幅只随“苹果兼容适配”下移；关闭开关和安卓仍使用原来的 0px 位置。 */
+/* 远程操控最上方 LIVE 横幅只在苹果主屏幕 Web App 自动下移；安卓仍使用原来的 0px 位置。 */
 html.north-apple-remote-safe{--north-apple-remote-offset:var(--north-ios-home-safe-top,14px)}
 html.north-apple-remote-safe .remote-control-top{transform:translateY(var(--north-apple-remote-offset))}
 html.north-apple-remote-safe .remote-control-layer:before{inset:calc(56px + var(--north-apple-remote-offset)) 0 0}
 html.north-native-app.north-apple-remote-safe{--north-apple-remote-offset:14px}
 html.north-native-app.north-apple-remote-safe .spybanner{top:calc(42px + var(--north-apple-remote-offset))}
-/* 苹果兼容适配单独把“回到屏保”箭头移出系统状态栏；安卓不命中这些 class。 */
+/* 苹果主屏幕 Web App 自动把“回到屏保”箭头移出系统状态栏；安卓不命中这些 class。 */
 html.north-ios-home-safe .lockpull{top:calc(7px + var(--north-ios-home-safe-top))}
 html.north-native-app.north-apple-remote-safe .lockpull{top:calc(7px + var(--north-native-safe-top,0px))}
-/* 只在用户明确开启苹果兼容时，下移宠物页返回键与微信登录锁屏顶部栏；关闭和安卓保持原位。 */
+/* 只在苹果主屏幕 Web App 下移宠物页返回键与微信登录锁屏顶部栏；安卓保持原位。 */
 html.north-apple-remote-safe .pet-world-top{padding-top:var(--north-apple-remote-offset);height:calc(60px + var(--north-apple-remote-offset))}
 html.north-apple-remote-safe .wxlogin-topbar{padding-top:var(--north-apple-remote-offset);height:calc(50px + var(--north-apple-remote-offset));box-sizing:border-box}
 html.north-ios-home-safe .lmhead{top:calc(14px + var(--north-ios-home-safe-top))}
@@ -1264,13 +1263,13 @@ html.north-ios-home-safe .dynav{flex-basis:calc(48px + var(--north-ios-home-safe
 .phcallgrid{max-width:304px;gap:10px 18px;margin-top:2px}
 .phcallctl{gap:5px;font-size:12px}.phcallctl svg{width:60px;height:60px;padding:17px}
 .phendbtn{width:66px;height:66px}
-/* v950：苹果兼容仅负责电话应用顶栏避让；通话内容的位置与尺寸已在公共网页版规则中统一。 */
+/* 苹果主屏幕 Web App 自动负责电话应用顶栏避让；通话内容的位置与尺寸使用公共网页版规则。 */
 html.north-ios-home-safe .phoneui .phtop{padding-top:calc(12px + var(--north-ios-home-safe-top));padding-bottom:4px}
 html.north-ios-home-safe .phoneui .phbtn{min-width:46px;min-height:46px}
-/* 微信视频通话：iPhone 主屏幕版开启兼容后，标题和计时完整避开系统状态栏。 */
+/* 微信视频通话：iPhone 主屏幕 Web App 自动让标题和计时避开系统状态栏。 */
 html.north-ios-home-safe .callscreen.video:not(.mini) .cname,
 html.north-ios-home-safe .callscreen.video:not(.mini) .cstat{transform:translateY(var(--north-ios-home-safe-top))}
-/* 电子宠物：网页苹果兼容开启时，顶部导航与其下方状态组件整体避开状态栏。
+/* 电子宠物：苹果主屏幕 Web App 自动让顶部导航与其下方状态组件避开状态栏。
    安卓、Safari 普通标签页和私人 App 不进入 north-ios-home-safe。 */
 html.north-ios-home-safe .pet-nav{height:calc(58px + var(--north-ios-home-safe-top));padding-top:var(--north-ios-home-safe-top)}
 html.north-ios-home-safe .pet-world-switch,

@@ -29,8 +29,8 @@ test('iOS home-screen shell keeps top compatibility but drops bottom-bar paint r
   assert.match(html, /html\.north-ios-home-safe \.tabbar\{[^}]*padding-bottom:var\(--north-ios-home-safe-bottom\)/);
   assert.doesNotMatch(app, /north-ios-pwa-shell/);
   assert.match(app, /root\.classList\.toggle\('north-ios-home-safe',browser\)/);
-  assert.match(app, /root\.classList\.toggle\('north-apple-remote-safe',on\)/);
-  assert.match(app, /苹果兼容适配<br>/);
+  assert.match(app, /root\.classList\.toggle\('north-apple-remote-safe',browser\)/);
+  assert.doesNotMatch(app, /苹果兼容适配<br>|appleHomeCompatToggle/);
 });
 
 test('beauty packs never overwrite page, widget, or Dock placement', () => {

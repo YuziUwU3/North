@@ -1,13 +1,14 @@
 const BUILD='950';
+const HOTFIX='apple-auto-1';
 const SHELL_CACHE='north-shell-v950';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
 const GLASS_ICON_FILES=GLASS_ICON_PACKS.flatMap(pack=>GLASS_ICON_KEYS.map(key=>'./assets/app-icons/glass/'+pack+'/'+key+'.webp'));
 const CORE_FILES=[
-  {url:'./小手机.html?v='+BUILD,kind:'html'},
+  {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
-  {url:'./app.js?v='+BUILD,kind:'app'},
+  {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'}
 ];
 const OPTIONAL_FILES=[

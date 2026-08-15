@@ -1424,7 +1424,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-const url='sw.js?v=950';
+const url='sw.js?v=950&r=apple-auto-1';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2775,9 +2775,7 @@ function homeClockColorSet(value){S.me=S.me||{};S.me.homeClockColor=widgetHex(va
 function appleHomeCompatNative(){return typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true;}
 function appleHomeCompatBrowserEnvironment(){const n=typeof navigator==='undefined'?{}:navigator,ua=String(n.userAgent||''),ios=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1),standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);return !!(ios&&standalone);}
 function appleHomeCompatEnvironment(){return appleHomeCompatBrowserEnvironment();}
-function appleHomeCompatOn(){return !!(S.settings&&S.settings.appleHomeCompat);}
-function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,pwa=appleHomeCompatBrowserEnvironment(),on=appleHomeCompatEnvironment()&&appleHomeCompatOn(),browser=pwa&&on;if(root&&root.classList){root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',on);}return on;}
-function appleHomeCompatToggle(){S.settings=S.settings||{};S.settings.appleHomeCompat=!appleHomeCompatOn();applyAppleHomeCompat();save();render();toast(S.settings.appleHomeCompat?(appleHomeCompatEnvironment()?'苹果兼容适配已开启':'设置已保存；只会在苹果主屏幕版生效'):'苹果兼容适配已关闭，已恢复原位置');}
+function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,browser=appleHomeCompatBrowserEnvironment();if(root&&root.classList){root.classList.toggle('north-ios-home-safe',browser);root.classList.toggle('north-apple-remote-safe',browser);}return browser;}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
 function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}return on;}
 function glassThemeSet(){S.me=S.me||{};S.me.uiMaterial='glass';applyGlassTheme();save();render();renderLockScreen(true);toast('已使用透明玻璃材质');}
@@ -3546,7 +3544,6 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       ${screenShareAvailable()?`<div class="it"><span>说一句，看一次共享画面<br><small style="color:#888">开启：你每说完一句话就识别当时的共享画面一次；关闭：完全恢复上面的按需、定时或实时共享逻辑</small></span><span class="sw ${screenShareSpeechVisionOn()?'on':''}" role="switch" aria-checked="${screenShareSpeechVisionOn()?'true':'false'}" onclick="screenShareSpeechVisionToggle(this)"></span></div>`:''}
       <div class="it"><span>语音逐句生成<br><small style="color:#888">关闭：沿用整轮预生成；开启：聊天语音、语音通话和视频通话按顺序一条条生成，首句更早开始且降低并发异常</small></span><span class="sw ${voiceProgressiveOn()?'on':''}" onclick="S.settings.voiceProgressive=!voiceProgressiveOn();save();render()"></span></div>
       <div class="it"><span>主屏幕时间和日期<br><small style="color:#888">关闭后仅隐藏文字并保留原位置，主屏布局、其他 App、组件和锁屏时间都不移动</small></span><span class="sw ${homeClockVisible()?'on':''}" onclick="homeClockToggle()"></span></div>
-      ${appleHomeCompatNative()?'':`<div class="it"><span>苹果兼容适配<br><small style="color:#888">只在 iPhone / iPad 主屏幕版内避让顶部、底部控件，并把屏保入口箭头移出状态栏；不再拉长页面。Safari 普通标签页和安卓不受影响</small></span><span class="sw ${appleHomeCompatOn()?'on':''}" onclick="appleHomeCompatToggle()"></span></div>`}
       <div style="padding:11px 14px 5px;font-weight:700;color:#ffafc9">手动回复场景（可多选）</div>
       <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
