@@ -42,6 +42,9 @@ struct SmallPhonePrivateRootView: View {
                 showsDeviceManagement = true
             }
         }
+        // The private WKWebView must continue beneath the home-indicator area.
+        // The top status area remains system-owned and pure black above.
+        .ignoresSafeArea(.container, edges: .bottom)
         // Keep the WKWebView frame fixed when the software keyboard appears.
         // Otherwise SwiftUI first shrinks the representable and WebKit then
         // scrolls the focused field, producing the visible down/up bounce.

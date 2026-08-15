@@ -24,11 +24,10 @@ test('web and private shells restore the pre-repair v600 viewport and manifest c
   }
 });
 
-test('all dynamic system-bar repair code is gone and App returns bottom inset ownership to iOS',()=>{
+test('all dynamic system-bar repair code is gone while private App still covers the bottom inset',()=>{
   for(const app of [webApp,privateApp]){
     assert.doesNotMatch(app,/pwaSystemBarColorApply|pwaWallpaperBottomColor|pwaSystemBarSync|north-ios-pwa-shell|north-ios-pwa-bottom/);
   }
-  assert.doesNotMatch(privateRoot,/ignoresSafeArea\(\.container, edges: \.bottom\)/);
+  assert.match(privateRoot,/ignoresSafeArea\(\.container, edges: \.bottom\)/);
   assert.match(privateRoot,/ignoresSafeArea\(\.keyboard, edges: \.bottom\)/);
 });
-

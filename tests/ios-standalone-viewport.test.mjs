@@ -96,7 +96,7 @@ test('iOS home-screen compatibility remains available without bottom-bar repair 
   assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
   assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of browser-wide offsets');
-  assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container returns bottom inset ownership to iOS');
+  assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the private native container keeps the web surface behind the home indicator');
   assert.match(nativeRoot,/Color\.black[\s\S]*?\.ignoresSafeArea\(\.container, edges: \.top\)/,'the private app paints the reserved status-bar lane pure black');
   assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\)/,'the web view must never extend under the iPhone status bar');
 });
