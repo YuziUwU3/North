@@ -42,9 +42,9 @@ assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep ac
 assert.match(maybeSource, /extremeLoveOn\(c\)/, 'extreme-love escalation may suppress ordinary initiative only while the mode is active');
 assert.match(maybeSource, /lm&&lm\.role===['"]user['"]/,'an unanswered user message must outrank proactive contact');
 assert.match(maybeSource, /initiativeQueueNote\(c,plan,plan\.note\)/,'queued initiative must carry a freshness baseline');
-assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]&&plan\.kind!==['"]conflict['"]/, 'the enabled proactive-call probability must remain available in natural mode');
-assert.match(maybeSource, /plan=natural\?wechatNaturalInitiativePlan/, 'natural mode must let the role choose the proactive action');
-assert.match(maybeSource, /a=natural\?null:currentRoleActivity/, 'natural mode must not receive a system-invented current activity');
+assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]&&plan\.kind!==['"]conflict['"]/, 'the enabled proactive-call probability must remain available');
+assert.match(maybeSource, /const a=currentRoleActivity\(c,now\)/, 'the unified system must keep a stable current activity');
+assert.match(maybeSource, /const plan=initiativePlan\(c,a,st\)/, 'the unified system must use the guarded proactive planner');
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);

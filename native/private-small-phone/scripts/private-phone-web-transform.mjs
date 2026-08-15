@@ -14,7 +14,7 @@ export async function applyPrivatePhoneWebTransforms(outputRoot, entry) {
     .replace('text-align:center;transform:translateY(18px)', 'text-align:center')
     .replace(/\.phcallidentity\{[^}]*\}/, '')
     .replace(/\.phcallsub\{[^}]*\}/, '.phcallsub{font-size:16px;color:#e5e5e8;line-height:1.5;margin:18px auto 0;width:100%;max-width:320px;min-height:60px;overflow:hidden;display:flex;align-items:center;justify-content:center}')
-    .replace(/\/\* v952[^\n]*\*\/[\s\S]*?(?=\/\* 苹果主屏幕 Web App)/, '');
+    .replace(/\/\* v953[^\n]*\*\/[\s\S]*?(?=\/\* 苹果主屏幕 Web App)/, '');
   await writeFile(bundledEntry, privateHtml, 'utf8');
 
   const bundledAppPath = path.join(outputRoot, 'app.js');

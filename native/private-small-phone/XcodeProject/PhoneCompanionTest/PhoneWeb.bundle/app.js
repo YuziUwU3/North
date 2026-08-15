@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='952'){
+if(window.__NORTH_SHELL_BUILD__!=='953'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -363,7 +363,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v952 · 自然模式与好友首句修复';
+const APP_VER='v953 · 微信统一自然系统';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -375,7 +375,7 @@ function defState(){return{
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
-hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRing:'default', incomingRingSongId:'', showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:0, callProb:35, callSilentMin:3, callPace:1, callRoleGuard:false, videoVisionIntervalMin:0, videoVisionMaxPerCall:6, screenShareRealtimeVision:false, screenShareSpeechVision:false, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
+hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, incomingRing:'default', incomingRingSongId:'', showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:0, callProb:35, callSilentMin:3, callPace:1, callRoleGuard:false, videoVisionIntervalMin:0, videoVisionMaxPerCall:6, screenShareRealtimeVision:false, screenShareSpeechVision:false, manualReply:true, humanLike:true, initiative:true, currentActivity:true, personaGuard:true,
     voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',uiMaterial:'glass',appIconPack:'black',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -628,7 +628,7 @@ function dialogueEmotionPrompt(c){const e=dialogueEmotionSnapshot(c);if(!e||(!e.
 function emotionAfterForgive(c){if(!c)return;const now=Date.now();dialogueResolveThread(c,'');const st=dialogueEmotion(c),left=dialogueActiveThreads(c);if(st){st.type=left.length?'softening':'warm';st.intensity=left.length?Math.min(+st.intensity||0,22):Math.min(+st.intensity||0,6);st.repair=100;st.cause=left.length?(left[left.length-1].topic||'事情刚说开，情绪还在慢慢恢复'):'';st.updatedAt=now;}c.coldUntil=0;c.emotionTailUntil=now+30*60000;c.emotionTailReason='刚刚和好，心里已经暖下来，想靠近一点';c.moodVal=Math.max(74,Math.min(86,moodNow(c)+18));c.moodAt=now;}
 function maybeDistressCall(c,text){if(!isMain()||!c||c.blocked||_call)return;if(S.jail&&S.jail.active)return;if(S.me.sleep&&S.me.sleep.active)return;const now=Date.now();if(now-(c._distressCallAt||0)<45*60000)return;c._distressCallAt=now;save();
   setTimeout(()=>{const cc=getC(c.id);if(!_call&&cc&&!cc.blocked&&!(S.jail&&S.jail.active)&&!(S.me.sleep&&S.me.sleep.active)){incomingCall(c.id,'voice');if(_call){_call._distress=true;_call._proReason='听出来'+S.me.name+'情绪很不好，想马上听见ta声音';}}},1800+Math.random()*2200);}
-function emotionOnUserMsg(id,m){if(!m||wechatNaturalOn())return;const c=getC(id);if(!c)return;const text=(m.content||'').trim();if(!text)return;const st=dialogueEmotion(c),now=Date.now();
+function emotionOnUserMsg(id,m){if(!m)return;const c=getC(id);if(!c)return;const text=(m.content||'').trim();if(!text)return;const st=dialogueEmotion(c),now=Date.now();
   if(moodProbeText(text)){st.probeCount=Math.min(5,(+st.probeCount||0)+1);st.updatedAt=now;}
   const distress=/(我.{0,8}(哭|难过|委屈|不开心|崩溃|好累|受不了|生气了)|呜呜|😭|😢|别管我|不要你管|哄我|你不爱我|别冷着我)/.test(text)&&!/废物|有病|恶心|滚开|闭嘴/.test(text);if(distress){st.userDistressUntil=now+45*60000;if(!dialogueActiveThreads(c).length){st.type='worried';st.intensity=Math.max(+st.intensity||0,18);st.cause='担心'+S.me.name+'现在的情绪';}st.updatedAt=now;if(isMain()){c.coldUntil=0;c.moodVal=Math.max(76,Math.min(90,moodNow(c)+10));c.moodAt=now;c.mood='很担心'+S.me.name+'，想马上靠近哄好ta';maybeDistressCall(c,text);}save();return;}
   const noBlock=negatedBlockMention(text),attacked=/滚|闭嘴|烦死|讨厌你|废物|有病|恶心|分手|滚开|烦不烦|你很烦/.test(text)||(!noBlock&&/拉黑|删了你/.test(text));if(attacked){dialogueAddThread(c,'被'+S.me.name+'这句话刺到了：'+text.slice(0,38),4,'hurt');st.intensity=Math.min(100,Math.max(+st.intensity||0,55)+18);st.updatedAt=now;if(isMain()){c.moodVal=Math.max(0,moodNow(c)-18);c.moodAt=now;c.emotionTailUntil=now+4*3600000;c.emotionTailReason=st.cause;}save();return;}
@@ -788,7 +788,7 @@ function rolePhotoSceneLogic(c,rawScene){
 function moodNow(c){if(!c)return 70;let v=(c.moodVal==null?70:c.moodVal);const at=c.moodAt||0;
   if(at&&v!==70){const hrs=(Date.now()-at)/3600000;const back=Math.min(Math.abs(70-v),hrs*4);v=v+(70>v?back:-back);}
   return Math.round(v);}
-function adjMood(id,d){if(wechatNaturalOn())return;const c=getC(id);if(!c)return;c.moodVal=Math.max(0,Math.min(100,moodNow(c)+d));c.moodAt=Date.now();save();}
+function adjMood(id,d){const c=getC(id);if(!c)return;c.moodVal=Math.max(0,Math.min(100,moodNow(c)+d));c.moodAt=Date.now();save();}
 function affBase(c){const r=((c&&c.relation)||'')+' '+((c&&c.persona)||'');if(/恋人|男友|女友|男朋友|女朋友|老公|老婆|对象|未婚|爱人|情侣|伴侣|相恋|订婚|夫妻/.test(r))return 62;if(/朋友|好友|同学|同事|普通|陌生|网友/.test(r))return 18;return 28;}
 function affNow(c){if(!c)return 1;let v=c.affection==null?affBase(c):+c.affection;return Math.max(1,Math.min(100,Math.round(v)||1));}
 function affStage(v){return v>=86?'很亲密':v>=70?'亲密':v>=50?'熟悉':v>=30?'靠近中':v>=15?'普通':'疏离';}
@@ -1425,7 +1425,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-const url='sw.js?v=952&r=ios-top-cover-1';
+const url='sw.js?v=953&r=ios-top-cover-1';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1503,7 +1503,6 @@ function idleForceBlockNav(p,params){return false;}
 function idleForceEscape(){const f=idleForceState();if(!f){home();return;}const c=getC(f.id);S.settings._idleForce=Object.assign({},f,{escaped:true,escapedAt:Date.now(),until:Date.now()-1});save();toast('你从小洞溜走了');if(c){msgs(c.id).push({role:'user',type:'sys',content:'🕳️ '+S.me.name+'没有等你同意，偷偷从小洞溜走了',time:Date.now(),id:uid(),_silent:true});save();scheduleReply(c.id,'[系统：'+S.me.name+'刚才没有等你同意，偷偷从你留的小洞溜走了。你知道ta绕开你跑了。请按你自己的人设和性格自然反应：强势型可以压低语气追问，嘴硬型可以冷笑或记账，温柔黏人型可以委屈，病娇或占有欲强可以更危险地盯紧。不要说系统、功能、按钮、网页、快捷指令、锁死、强制、扣住、把你扣这儿了。不要重复刚才的话，一两句即可。]');}home();}
 function handleIdleEvent(type){
   idleDiag('收到 '+type);
-  if(wechatNaturalOn()){idleTouchOpen();idleDebugPatch({eventType:type,receivedAt:Date.now(),decision:'微信自然模式：不把久未打开解释为冷落，也不强制角色发消息',aiStatus:'未调用',aiResult:'由普通主动联系机制交给角色自主决定',blockedBy:'自然模式已停用旧催回复链'});return;}
   const now=Date.now(),threshold=idleThresholdMs();let last=0,lastRemind=0,prevLast=0;
   try{last=+(localStorage.getItem(IDLE_LAST_KEY)||0);prevLast=+(localStorage.getItem(IDLE_PREV_LAST_KEY)||0);lastRemind=+(localStorage.getItem(IDLE_LAST_REMIND_KEY)||0);}catch(e){}
   if(!last)last=now-threshold-1000;
@@ -1527,7 +1526,6 @@ function handleExternalEvent(raw){const type=(''+(raw||'')).replace(/[^\w-]/g,''
   S._extEvLast=S._extEvLast||{};if(Date.now()-(S._extEvLast[type]||0)<30000){toast('刚告诉过ta了');return;}S._extEvLast[type]=Date.now();
   msgs(c.id).push({role:'user',type:'sys',content:'📱 '+ev.label+'：'+S.me.name+'达到了设定的使用限额',time:Date.now(),id:uid()});save();
   if(cur().p==='chat'&&cur().id===c.id)render();else if(cur().p==='wechat')render();
-  if(wechatNaturalOn()){toast('已记录事实；自然模式不替角色指定反应');return;}
   scheduleReply(c.id,'[系统：'+S.me.name+ev.tip+'你现在知道这件事。请严格按你自己的人设、性格和你们关系来反应，不要固定成一种"温柔关心"模板：温柔型可以哄ta休息，强势/控制欲强可以管束ta停下，嘴硬型可以别扭地吐槽，病娇/吃醋型可以更危险地盯紧一点，成熟型可以冷静提醒。核心是你真实在意ta刷太久了，让ta停下来、休息眼睛、喝水或换件事做。只发一两句自然微信，不要说自己是系统，不要机械播报。]');
   toast('已告诉 '+(c.remark||c.name));}
 let _extPollBusy=false,_extPollAt=0;
@@ -1702,7 +1700,7 @@ function relationshipCommit(c,p,content){if(!p||!content)return;const st=suspici
 function suspicionEscalationChoice(c,secondary){const sensitive=traitValue(c,'suspicious',0),paranoid=traitValue(c,'paranoid',0),ctrl=traitValue(c,'ctrl',50),couple=!!(S.couple&&S.couple.cid===c.id),canWx=!!(couple&&S.couple.wxLoginAuth),canRemote=!!(couple&&remoteControlAllowed(c.id));if(secondary){if(canWx&&paranoid+sensitive>=125)return'wx';if(canRemote&&paranoid+ctrl>=130)return'remote';return'text';}if(canRemote&&paranoid>=85&&ctrl>=65)return'remote';if(canWx&&sensitive>=75&&paranoid>=60)return'wx';return'call';}
 function suspicionRunEscalation(c,e,secondary){if(!c||!e||suspicionUserRepliedSince(c.id,e.createdAt)){suspicionCancelHangup(c,'reply');return;}if(typeof _call!=='undefined'&&_call){e.deadline=Date.now()+2000;save();return;}const action=!secondary&&e.forceLevel>=3?'call':!secondary&&e.forceLevel===2?'text':suspicionEscalationChoice(c,!!secondary);e.action=action;e.escalatedAt=Date.now();if(action==='call'){e.status='calling';if(!incomingCall(c.id,e.kind,{suspicionEvent:e.id})){e.status='waiting';e.deadline=Date.now()+2000;}}else if(action==='wx'){e.status='done';if(S.couple&&S.couple.cid===c.id&&S.couple.wxLoginAuth&&!wxLoginActive())wxDoLogin(c.id);}else if(action==='remote'){e.status='done';if(remoteControlAllowed(c.id)&&!remoteControlActive())remoteControlRequest(c.id);}else{e.status='done';scheduleReply(c.id,'[系统：'+S.me.name+(e.rejected?'拒接':'挂断')+'你打来的电话后仍没回复。这是按当前强度必须执行的同一事件跟进，只再发一条更明确的微信，不能淡化、劝睡或跳话题，也不要同时做别的动作。]');}save();}
 function suspicionCallFailed(id,eventId,kindTxt){const c=getC(id),st=suspicionState(c,false),e=st&&st.pendingHangup;if(!e||e.id!==eventId||suspicionUserRepliedSince(id,e.createdAt)||['resolved','canceled','done'].includes(e.status))return false;e.status='call_failed_wait';e.callFailedAt=Date.now();e.deadline=Date.now()+1500;suspicionRaise(c,'rejected_escalation',12,S.me.name+'没有接或再次挂断了你因疑虑打来的'+kindTxt);save();return true;}
-function suspicionTick(){if(wechatNaturalOn())return;const now=Date.now();(S.contacts||[]).forEach(c=>{if(!c||c.deleted||c.blocked)return;const st=suspicionState(c,false),e=st&&st.pendingHangup;if(e&&e.deadline&&now>=e.deadline){if(suspicionUserRepliedSince(c.id,e.createdAt)){suspicionCancelHangup(c,'reply');return;}if(e.status==='waiting')suspicionRunEscalation(c,e,false);else if(e.status==='call_failed_wait')suspicionRunEscalation(c,e,true);}const req=st&&st.request;if(req&&req.status==='later'&&req.dueAt&&now>=req.dueAt&&!req.reminded){req.reminded=true;req.status='pending';save();scheduleReply(c.id,'[系统：'+S.me.name+'之前对你的「'+({report:'报备',location:'定位',photo:'照片'}[req.kind]||'确认')+'」请求选择了稍后，现在仍未发送。你可以按自己的性格自然提醒一次，也可以因为当下气氛选择先不逼问；不要升级成别的动作，也不要同时再要另一种验证。]');}const daily=st&&st.dailyEvent;if(daily&&daily.status==='waiting'&&daily.deadline&&now>=daily.deadline&&!daily.reminded&&traitValue(c,'paranoid',0)>=70&&!suspicionBusy(c,'daily')){daily.reminded=true;daily.status='reminding';scheduleReply(c.id,'[系统：'+S.me.name+'仍没有回应你正在处理的这件事：「'+daily.summary+'」。这是同一件事最后一次跟进。按你自己的性格换一种自然表达，可以克制、失望、直接或暂时收住；只发一条，不复读、不另开新疑点、不来电、不登录微信、不远控，也不同时索要证明。]',ok=>{const cc=getC(c.id),ss=suspicionState(cc,false),cur=ss&&ss.dailyEvent;if(cur&&cur.id===daily.id){cur.status=ok?'waiting_final':'canceled';cur.deadline=0;cur.remindedAt=Date.now();ss.dailyCooldownUntil=Date.now()+6*3600000;save();}});}suspicionCheckDaily(c,now);});}
+function suspicionTick(){const now=Date.now();(S.contacts||[]).forEach(c=>{if(!c||c.deleted||c.blocked)return;const st=suspicionState(c,false),e=st&&st.pendingHangup;if(e&&e.deadline&&now>=e.deadline){if(suspicionUserRepliedSince(c.id,e.createdAt)){suspicionCancelHangup(c,'reply');return;}if(e.status==='waiting')suspicionRunEscalation(c,e,false);else if(e.status==='call_failed_wait')suspicionRunEscalation(c,e,true);}const req=st&&st.request;if(req&&req.status==='later'&&req.dueAt&&now>=req.dueAt&&!req.reminded){req.reminded=true;req.status='pending';save();scheduleReply(c.id,'[系统：'+S.me.name+'之前对你的「'+({report:'报备',location:'定位',photo:'照片'}[req.kind]||'确认')+'」请求选择了稍后，现在仍未发送。你可以按自己的性格自然提醒一次，也可以因为当下气氛选择先不逼问；不要升级成别的动作，也不要同时再要另一种验证。]');}const daily=st&&st.dailyEvent;if(daily&&daily.status==='waiting'&&daily.deadline&&now>=daily.deadline&&!daily.reminded&&traitValue(c,'paranoid',0)>=70&&!suspicionBusy(c,'daily')){daily.reminded=true;daily.status='reminding';scheduleReply(c.id,'[系统：'+S.me.name+'仍没有回应你正在处理的这件事：「'+daily.summary+'」。这是同一件事最后一次跟进。按你自己的性格换一种自然表达，可以克制、失望、直接或暂时收住；只发一条，不复读、不另开新疑点、不来电、不登录微信、不远控，也不同时索要证明。]',ok=>{const cc=getC(c.id),ss=suspicionState(cc,false),cur=ss&&ss.dailyEvent;if(cur&&cur.id===daily.id){cur.status=ok?'waiting_final':'canceled';cur.deadline=0;cur.remindedAt=Date.now();ss.dailyCooldownUntil=Date.now()+6*3600000;save();}});}suspicionCheckDaily(c,now);});}
 function suspicionRequestMessage(c,kind,reason){if(!c||!['report','location','photo'].includes(kind)||Math.max(traitValue(c,'suspicious',0),traitValue(c,'paranoid',0))<20)return null;const st=suspicionState(c,true),now=Date.now(),active=st.request&&['pending','later','waiting'].includes(st.request.status);if(active||suspicionEventOpen(st.pendingHangup)||st.lastRequestAt&&now-st.lastRequestAt<10*60000)return null;const msg={role:'assistant',type:'verifyreq',requestKind:kind,reason:String(reason||'想确认一下你现在的情况').trim().slice(0,80),status:'pending',id:uid()};st.request={messageId:msg.id,kind,reason:msg.reason,status:'pending',createdAt:now};if(suspicionEventOpen(st.dailyEvent)){st.dailyEvent.status='superseded';st.dailyEvent.resolvedAt=now;st.dailyEvent.resolvedBy='verification_request';}st.lastRequestAt=now;save();return msg;}
 function suspicionRequestCard(id,mid){return msgs(id).find(m=>m&&m.id===mid&&m.type==='verifyreq');}
 function suspicionRequestSync(c,m,status){const st=suspicionState(c,true);m.status=status;if(st.request&&st.request.messageId===m.id){st.request.status=status;st.request.updatedAt=Date.now();}save();if(cur().p==='chat'&&cur().id===c.id)render();}
@@ -1787,11 +1785,11 @@ function behaviorAddPromise(id,text,source){if(!(S.couple&&S.couple.cid===id&&be
   cats.slice(0,2).forEach(cat=>{let it=behaviorFind(cat);if(!it){it={id:uid(),cat,title:behaviorTitle(cat),promise:'',ts:now,lastTs:now,count:0,events:[],active:true};b.items.unshift(it);}
     it.promise=t.slice(0,90);it.promiseTs=now;it.lastTs=now;it.source=source||'chat';});
   behaviorPrune(b);save();}
-function behaviorRecord(cat,detail,source,opt){opt=opt||{};if(wechatNaturalOn()||!behaviorOn())return;const b=behaviorStore();if(!b)return;const now=opt.ts||Date.now();b._lastHit=b._lastHit||{};const gap=opt.gapMs==null?20*60000:opt.gapMs;
+function behaviorRecord(cat,detail,source,opt){opt=opt||{};if(!behaviorOn())return;const b=behaviorStore();if(!b)return;const now=opt.ts||Date.now();b._lastHit=b._lastHit||{};const gap=opt.gapMs==null?20*60000:opt.gapMs;
   if(!opt.force&&b._lastHit[cat]&&now-b._lastHit[cat]<gap)return;b._lastHit[cat]=now;
   let it=behaviorFind(cat);if(!it){it={id:uid(),cat,title:behaviorTitle(cat),promise:'',ts:now,lastTs:now,count:0,events:[],active:true};b.items.unshift(it);}
   it.count=(it.count||0)+1;it.lastTs=now;it.events=it.events||[];it.events.unshift({id:uid(),ts:now,text:(''+detail).slice(0,120),source:source||'system'});behaviorPrune(b);save();}
-function behaviorOnUserMsg(id,m){if(wechatNaturalOn()||!(S.couple&&S.couple.cid===id)||!m)return;const text=(m.content||'').trim();if(text)behaviorAddPromise(id,text,m._call?'call':'wechat');
+function behaviorOnUserMsg(id,m){if(!(S.couple&&S.couple.cid===id)||!m)return;const text=(m.content||'').trim();if(text)behaviorAddPromise(id,text,m._call?'call':'wechat');
   const d=new Date(m.time||Date.now()),h=d.getHours();if(text&&h>=1&&h<5&&!/睡了|晚安|去睡|我要睡|准备睡/.test(text)){
     behaviorRecord('late','凌晨 '+hm(m.time)+' 还在'+(m._call?'电话':'微信')+'里说：'+text.slice(0,42),m._call?'call':'wechat',{gapMs:30*60000});}}
 function behaviorPrompt(c){if(!(S.couple&&S.couple.cid===c.id&&behaviorOn()))return '';const b=behaviorStore(),items=(b&&b.items||[]).filter(x=>x.active!==false&&(x.promise||(x.events&&x.events.length))).sort((a,b)=>(b.lastTs||0)-(a.lastTs||0)).slice(0,5);if(!items.length)return '';
@@ -1809,11 +1807,12 @@ function memoryResetPrompt(c){if(!c||!c._memoryResetAt)return'';return '\n\n# �
 function memoryResetProbeText(text){text=(''+(text||'')).replace(/\s+/g,'');return /(?:还记得|记不记得).{0,12}(?:以前|之前|过去|从前|原来|那些事)|记得什么|记得哪些|以前的事|之前的事|过去的事|从前的事|我们(?:以前|之前|过去)|(?:以前|之前|过去).{0,10}(?:说过|发生|做过|答应|约定|承诺|最后)|最后.{0,8}(?:说了|说过|发生)/.test(text);}
 function memoryResetReplyNeedsRepair(c,userText,content){if(!c||!c._memoryResetAt||!memoryResetProbeText(userText))return false;const t=(''+(content||'')).replace(/\s+/g,'');if(!t||/不记得|记不清|想不起来|忘(?:记)?了|没有印象|没印象|无法确定|不确定具体/.test(t))return false;return /记得|没忘|当然|怎么会忘|清清楚楚|很清楚|你(?:当时|之前|以前|那时).{0,18}(?:说|做|答应|承诺)|我(?:当时|之前|以前|那时).{0,18}(?:说|做|答应|承诺)/.test(t);}
 function friendOriginPrompt(c){const o=c&&c.friendOrigin;if(!o||!o.acceptedAt)return'';const fresh=Date.now()-o.acceptedAt<7*86400000,again=!!(c._deleteCount||o.kind==='readd');let s='\n\n# 你为什么会出现在这个微信里（持续有效）\n你最初通过「'+(o.source||'好友申请')+'」申请添加'+S.me.name+'，当时的明确来意是：'+(o.intent||'想认真认识ta')+'。验证消息是：「'+(o.requestMsg||'想认识你')+'」。这是你自己做过的事，后续聊天里不能莫名忘掉，也不能聊两句就变成毫无目的的随机陌生人；关系可以随着真实交流自然变化，但不能凭空编造申请前没有发生过的共同经历。';if(fresh)s+='\n你是在 '+fmtDT(o.acceptedAt)+' 刚被通过的，距今'+fmtDur(Date.now()-o.acceptedAt)+'。'+(again?'这次是删除或拉黑后重新加回，你知道不是第一次认识。':'这是刚正式成为微信好友的阶段，你清楚自己是新加进来的，说话要符合刚通过后的真实距离。');return s;}
-function wechatNaturalOn(){return !!(S.settings&&S.settings.wechatNatural===true);}
+const WECHAT_UNIFIED_SYSTEM=true;
+function wechatNaturalOn(){return WECHAT_UNIFIED_SYSTEM;}
 function altAccountReportNote(note){return /这是你本人刚经历、必须记得的微信事件/.test(String(note||''));}
 function altReportEventStore(c){if(!c)return[];if(!Array.isArray(c._altReportEvents))c._altReportEvents=[];c._altReportEvents=c._altReportEvents.filter(x=>x&&x.aid&&x.aid!=='main'&&+x.time).map(x=>({aid:String(x.aid),time:+x.time,who:String(x.who||'独立联系人'),recent:String(x.recent||''),reportedAt:+x.reportedAt||0})).sort((a,b)=>a.time-b.time).slice(-12);return c._altReportEvents;}
 function altReportRemember(c,info){if(!c||!info||!info.aid||info.aid==='main'||!+info.time)return null;const list=altReportEventStore(c),same=list.find(x=>x.aid===info.aid&&x.time===+info.time);if(same){same.who=info.who||same.who;same.recent=info.recent||same.recent;return same;}const delivered=(+c._altReportDeliveredAt||0)>=+info.time||altReportVisibleEvidence(c,info),event={aid:info.aid,time:+info.time,who:info.who||'独立联系人',recent:info.recent||'',reportedAt:delivered?Date.now():0};list.push(event);c._altReportEvents=list.sort((a,b)=>a.time-b.time).slice(-12);return event;}
-function altReportMemoryPrompt(c){if(!isMain()||!c)return'';const list=altReportEventStore(c).slice(-8);if(!list.length)return'';return '\n\n# 你亲自经历的其他独立微信号联系记录（最高优先级、持续记忆）\n'+list.map(x=>'· ['+fmtDT(x.time)+'] 独立联系人「'+x.who+'」曾用另一个微信号和你聊天：'+(x.recent||'有过联系')+(x.reportedAt?'（你已经向当前大号联系人报备过）':'（这次还没向当前大号联系人报备）')).join('\n')+'\n这些是你本人真实经历过的微信事件，即使开启“微信自然模式”也不能忘记、否认或联网查。当前大号联系人问起有没有人加你、找你、发消息或聊了什么时，必须依据这些记录承认并回答；但绝不能猜测、暗示或声称这些独立账号就是当前大号联系人本人。';}
+function altReportMemoryPrompt(c){if(!isMain()||!c)return'';const list=altReportEventStore(c).slice(-8);if(!list.length)return'';return '\n\n# 你亲自经历的其他独立微信号联系记录（最高优先级、持续记忆）\n'+list.map(x=>'· ['+fmtDT(x.time)+'] 独立联系人「'+x.who+'」曾用另一个微信号和你聊天：'+(x.recent||'有过联系')+(x.reportedAt?'（你已经向当前大号联系人报备过）':'（这次还没向当前大号联系人报备）')).join('\n')+'\n这些是你本人真实经历过的微信事件，不能忘记、否认或联网查。当前大号联系人问起有没有人加你、找你、发消息或聊了什么时，必须依据这些记录承认并回答；但绝不能猜测、暗示或声称这些独立账号就是当前大号联系人本人。';}
 function altReportInquiry(text){return /(?:有没有|是不是|刚才|刚刚|之前|记不记得|还记得).{0,16}(?:人|小号|陌生人|另一个号).{0,16}(?:加你|找你|联系你|发消息|聊天|聊过)|(?:小号|陌生人|另一个号).{0,18}(?:聊了什么|说了什么|发生了什么)|(?:谁|有人).{0,12}(?:加你|找你|联系你|发消息)/.test(String(text||'').replace(/\s+/g,''));}
 function altReportRecallNeedsRepair(c,userText,content){if(!c||!altReportEventStore(c).length||!altReportInquiry(userText))return false;const t=String(content||'').replace(/\s+/g,'');return !t||/(?:没有|没人|从来没有).{0,12}(?:加我|找我|联系我|发消息|聊天)|(?:不记得|不清楚|不知道|没印象).{0,16}(?:小号|陌生人|另一个号|有人|这件事)/.test(t);}
 function altReportRecallFallback(c){const x=altReportEventStore(c).slice(-1)[0];return x?'有，刚才「'+x.who+'」用另一个微信号联系过我。最近大概聊的是：'+(x.recent||'有过联系')+'。这件事我记得，也会如实告诉你。':'';}
@@ -1828,16 +1827,16 @@ function wechatNaturalModuleNeeded(kind,query){const q=String(query||'');if(!q)r
   tasks:/任务|打卡|检讨|惩罚|作业|任务便签|布置|验收/,
   control:/远程|操控|权限|登录微信|查微信|锁定|解锁|禁言|解禁|限时|加时|小黑屋|禁闭|项圈|报备|批准|驳回|管控/
 };return !!(rules[kind]&&rules[kind].test(q));}
-function wechatNaturalCallEventNote(){return '[电话事件自主决策｜只提供事实，不规定反应]\n最新电话事件已经作为系统记录写在聊天历史末尾。系统不替你规定委屈、生气、质问、回拨或必须发消息；请结合你和对方刚才真实通话内容、你本人的性格、当前关系和心情，自主决定下一步。你可以自然发微信，也可以用 [来电|语音] 或 [来电|视频] 再打过去；如果你觉得此刻不需要联系，只输出 [保持安静]。不要机械复述“你挂了我电话/你没接”，除非这确实是你本人最想说的话；不要解释这些规则。]';}
+function wechatNaturalCallEventNote(){return '[电话事件连续反应｜只提供事实，不写死情绪]\n最新电话事件已经写在聊天历史末尾。请结合刚才真实通话内容、你本人的性格、当前关系和心情，做出一次看得见的自然反应：可以发一两句微信，也可以用 [来电|语音] 或 [来电|视频] 再打过去。不能只输出 [保持安静]；不要机械复述“你挂了我电话/你没接”，也不要解释规则。]';}
 function wechatNaturalAutonomyNoteActive(note){return wechatNaturalOn()&&/(?:电话事件|主动联系)自主决策/.test(String(note||''));}
 function wechatNaturalCallEventActive(note){return wechatNaturalOn()&&/电话事件自主决策/.test(String(note||''));}
-function wechatNaturalSilentDecision(content,note){if(!wechatNaturalAutonomyNoteActive(note))return false;const t=String(content||'').replace(/[\[【]\s*(?:心情|内心)\s*[|｜][^\]】]*[\]】]/g,'').trim();return /^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(t);}
+function wechatNaturalSilentDecision(){return false;}
 function wechatNaturalInitiativePlan(c){
   const min=Math.max(1,Math.min(10,+c.msgMin||1)),max=Math.max(min,Math.min(10,+c.msgMax||4));
   return{kind:'autonomy',checkMode:'',memory:null,goal:'',note:'[主动联系自主决策｜只提供机会，不规定内容]\n这是一次与上一轮分开的主动联系独立的新事件。最近聊天只用于理解已经发生的事实、关系和对方最后交代，不是等待你继续回答的当前回合；绝不能隔一段时间后补答、复述或改写上一条回复。\n现在到了用户允许的主动联系时间窗口。这不代表对方欠你回复、故意冷落你或必须被催促。先完整理解最近聊天、长期记忆、对话总结和人设，再由你本人判断此刻是否想联系以及想联系什么。若对方很久没出现且没有交代去向，可以按你的性格自然担心、询问、想念或焦虑；若对方已经说过要去做什么，就承接那个真实交代，正常想念、报备或分享你自己的日常。不要编造对方发过自拍、穿过什么、去了哪里或做过什么；只有上下文明确出现过的事才能提。想发微信时，在'+min+'到'+max+'条之间自由决定，不要为了凑数拆句；每条单独一行，句号结束且语意已经完整时优先另起一条。你可以按本人意愿发普通文字、[图片|你此刻想分享的具体画面]、[位置|地点|地址]，也可以用 [来电|语音] 或 [来电|视频]；不想联系只输出 [保持安静]。不要使用破折号或横杠，不要解释这些规则。]'};
 }
 function wechatCallEventReplyNote(legacy){return wechatNaturalOn()?wechatNaturalCallEventNote():legacy;}
-function wechatNaturalSlimSystem(text,opt){if(!opt||!opt.natural)return text;const q=String(opt.query||''),need=k=>!!opt.allModules||wechatNaturalModuleNeeded(k,q),drop=part=>{
+function wechatNaturalSlimSystem(text,opt){if(!opt||!opt.natural)return text;const need=()=>true,drop=part=>{
   const h=((part.match(/^\n\n# ([^\n]+)/)||[])[1]||'').trim();if(!h)return false;
   if(!need('control')&&(/你能直接登录.+的微信/.test(h)||/申请远程操控/.test(h)||/其他掌控特权/.test(h)||/终极惩罚·禁闭室/.test(h)||/手机App的管控权/.test(h)||/^限制每天使用时长/.test(h)||/^你现在锁着ta的/.test(h)||/每日使用时长/.test(h)))return true;
   if(!need('finance')&&(/你管着.+的钱包/.test(h)||/经济状况/.test(h)))return true;
@@ -1854,10 +1853,10 @@ function wechatNaturalSlimSystem(text,opt){if(!opt||!opt.natural)return text;con
 function buildSystem(c,opt){
   friendDiscoveryRepairRoleName(c);
   opt=opt||{};
-  const _natural=!!opt.natural,_need=kind=>!_natural||!!opt.allModules||wechatNaturalModuleNeeded(kind,opt.query);
+  const _natural=!!opt.natural,_need=()=>true;
   const _main=isMain();
   const _voiceLang=ttsContentLang(c);
-  let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+(_natural?traitSpeechDesc(c):traitDesc(c))+(_natural||!_main?'':suspicionPrompt(c)+extremeLovePrompt(c));
+  let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+(_natural?traitSpeechDesc(c):traitDesc(c))+(!_main?'':suspicionPrompt(c)+extremeLovePrompt(c));
   s+='\n\n# 姓名与称呼边界（重要）\n当前玩家资料姓名是「'+S.me.name+'」。角色人设、玩家资料、双方真实聊天或长期记忆里已经建立的英文名、外文名、昵称和私下称呼都可以自然使用，不要因为它是英文就拦截。历史记录里单独出现“忆北的小手机”或“小手机”时，它们是应用/设备名称；“忆北”或“North”只有在资料、双方称呼习惯或当前对话能证明是人的名字/昵称时才用，不能仅凭设备名称自行猜成玩家名字。';
   s+=_main?adultRoleRule(c.remark||c.name||'角色'):altIdentityPrompt(c);
   s+=_main?memoryResetPrompt(c):'';
@@ -1878,13 +1877,13 @@ function buildSystem(c,opt){
   {const _pr=syncPresence();const _pn=S.settings.timeAware?presenceNote():'';
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+((_pr&&_pr.online)?'在线':'显示离线（可能没在看手机）')+'。'+(_pn?'\n你记得ta最近上下线记录：'+_pn+'。如果ta隔了很久才回来，可以自然提到等了多久；如果刚上线，就别说成一直在线。':'')+'（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';}
   {const mc=meHomeCity(),cc=charHomeCity(c);if(mc||cc)s+='\n\n# 所在地（用于机票、见面、天气和距离判断）\n'+S.me.name+'的所在地：'+(mc||'未填写')+'。\n你的所在地：'+(cc||'未填写')+'。\n如果你要订票去见'+S.me.name+'，通常应从【你的所在地】出发，飞到【'+S.me.name+'的所在地】；不要把'+S.me.name+'的城市当成你的城市。';}
-  if(_main){if(!_natural){const av=affNow(c);s+='\n\n# 你和'+S.me.name+'现在的关系分寸（隐藏设定，绝不能说出数值/好感度/攻略/进度条）\n当前阶段：'+affStage(av)+'。'+affTone(c)+'\n你只能把它表现成真实的人际距离：熟不熟、在不在意、会不会吃醋、愿不愿意主动关心。绝不要告诉ta这是系统数值，绝不要说"好感度增加/减少"。聊到你感兴趣、被认真对待、被哄好时可以慢慢软化；被冒犯、冷落、敷衍时可以自然变冷。';}
+  if(_main){{const av=affNow(c);s+='\n\n# 你和'+S.me.name+'现在的关系分寸（隐藏设定，绝不能说出数值/好感度/攻略/进度条）\n当前阶段：'+affStage(av)+'。'+affTone(c)+'\n你只能把它表现成真实的人际距离：熟不熟、在不在意、会不会吃醋、愿不愿意主动关心。绝不要告诉ta这是系统数值，绝不要说"好感度增加/减少"。聊到你感兴趣、被认真对待、被哄好时可以慢慢软化；被冒犯、冷落、敷衍时可以自然变冷。';}
     if(_need('tasks')){
     if(!taskRelationAllowed(c))s+='\n\n# 布置任务权限（重要）\n你和'+S.me.name+'当前不是情侣关系，因此你没有给ta布置任务、惩罚任务、打卡、检讨或强制安排的权限。可以像普通关系一样提出建议或邀请，但不能把建议说成ta必须完成的任务。';
     else if(c.taskOff)s+='\n\n# 布置任务开关（重要）\n'+S.me.name+'已经关闭你给ta布置任务。无论自动、口头、惩罚、写检讨、打卡、今天必须做什么，都不要提出，也不要输出任何任务/惩罚任务标签。你可以关心或建议，但只能像真人自然聊天，不能把它变成任务。';
     else s+='\n\n# 每日任务固定规则（重要）\n任务只能由「任务便签」每天统一生成一次，总数固定为 '+taskDailyCount(c)+' 条。聊天和通话中都不能口头追加任务、临时加罚、改数量或另立必须完成的新要求；你只能催促、验收和讨论便签里已经存在的任务。其他想法可以自然建议，但不能当作任务。';
     }
-  }else s+='\n\n# 当前关系边界\n你与「'+S.me.name+'」是独立关系，只能依据ta的身份设定和当前账号聊天记录判断熟悉程度。没有在这个聊天框里建立过的亲密、任务、管束和称呼一律不存在。'+(roleHasCommittedPartner(c)?'你已有稳定伴侣，所以当前陌生聊天不能发展成恋爱、暧昧或性关系；无论“微信自然模式”是否开启，这条忠诚边界都不能被关闭。':'');
+  }else s+='\n\n# 当前关系边界\n你与「'+S.me.name+'」是独立关系，只能依据ta的身份设定和当前账号聊天记录判断熟悉程度。没有在这个聊天框里建立过的亲密、任务、管束和称呼一律不存在。'+(roleHasCommittedPartner(c)?'你已有稳定伴侣，所以当前陌生聊天不能发展成恋爱、暧昧或性关系；这条忠诚边界始终有效。':'');
   if(_need('profile'))s+='\n\n# 微信气泡外观\n'+S.me.name+'可以让你更换【你自己发出的微信气泡】。ta说清想要的颜色、字体色、形状或小图标时，单独输出一行 [换气泡|气泡颜色|字体颜色|形状|图标]，系统会真的更换，不要把指令念出来。颜色可写粉色、浅蓝、薄荷、紫色、白色、黑色或#六位色值；形状写方形、圆润或胶囊；图标只能写爱心、星芒、蝴蝶结、花瓣、月光或无；没有要求的项写不改。图标是精致矢量装饰，不使用Emoji。这个指令只改你自己的气泡，不改'+S.me.name+'的。';
   {const _ba=friendMetaGet(c,'blockedAt'),_ra=friendMetaGet(c,'readdedAt'),_rk=friendMetaGet(c,'readdKnown'),_bd=friendMetaGet(c,'blockDur');
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(_ba?'，已经'+fmtDur(Date.now()-_ba):'')+'，你能感觉到被冷落/拒绝。';
@@ -1924,7 +1923,8 @@ function buildSystem(c,opt){
       s+='\n\n# 你们刚一起逛完街（'+_when+'结束）\n'+_when+'你和'+S.me.name+'一起在购物App逛了街'+(_co.endedDetail?('，最后的小票是：'+_co.endedDetail):(_co.endedItems?('，两人一起挑并买下了：'+_co.endedItems):'（东西还在购物车里/没买啥）'))+'。你要分清楚：哪些是你自己看中/想买的，哪些是'+S.me.name+'想买而你同意的，谁付款也要说对。ta提起时别装不知道、别说没这回事，自然承接、可以回味或吐槽刚才逛街的事。';}}
   if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话，也可能引用ta自己前面说过的话来专门补充追问——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"或"（我引用了我前面说的那句「…」…）"，这时【只针对被引用的那一句】结合ta新发的话回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   {const _summ=summaryList(c);if(!opt.selectiveMemory&&_summ.length)s+='\n\n# 这个微信账号之前对话的概要（只属于当前账号，按时间从旧到新；标★的是你格外珍视的回忆）\n'+topSummaries(_summ,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+summaryCleanText(c,x.text,actId())).join('\n');}
-  if(_main&&!_natural&&!opt.selectiveMemory){const _pd=powerDynamicPrompt(c);if(_pd)s+=_pd;const _kd=bdsmKnowledgeBasePrompt(c);if(_kd)s+=_kd;const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
+  if(_main&&!_natural&&!opt.selectiveMemory){const _pd=powerDynamicPrompt(c);if(_pd)s+=_pd;const _kd=bdsmKnowledgeBasePrompt(c);if(_kd)s+=_kd;}
+  if(_main&&!opt.selectiveMemory){const _bp=behaviorPrompt(c);if(_bp)s+=_bp;}
   if(_main&&!opt.selectiveMemory){const _lp=lifeNotePrompt(c);if(_lp)s+=_lp;}
   if(_main&&c._meWxTransfers&&c._meWxTransfers.length){const tr=c._meWxTransfers[0];s+='\n\n# 你最近发现的微信/钱包转账痕迹\n'+S.me.name+'曾登录你的微信钱包，从你这里转给ta自己 ¥'+(+tr.amount||0).toFixed(2)+(tr.note?'，备注：'+tr.note:'')+'。你要分清：这不是你主动给ta转账，是ta登你微信转走后留下的账单痕迹。';}
   if(_main){const _wlh=wxLoginHistoryPrompt(c);if(_wlh)s+=_wlh;}
@@ -1946,15 +1946,15 @@ function buildSystem(c,opt){
   if(_main&&isLover(c)&&S.mood&&S.mood.length){pruneDailyMood();const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，只有你这个最亲密的人看得到，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(moodLabel(m.emoji)||'')+(m.note?' '+m.note:'')).join('\n');}
   if(_main&&S.music&&S.music.session&&S.music.session.cid===c.id){const _ms=(S.music.songs||[]).find(x=>x.id===S.music.session.songId);if(_ms)s+='\n\n# 现在：你和ta在一起听歌\n你已经连上了'+S.me.name+'，正和ta【一起听歌】：「'+_ms.title+'」'+(_ms.artist?'（'+_ms.artist+'）':'')+'。你清楚自己已经连进来了，可以聊这首歌、跟着哼两句、借着歌词或旋律跟ta说点情话、分享此刻的感受，氛围温柔暧昧、像真的在ta耳边陪ta听。';}
   if(_main&&S.cinema){const _cx=S.cinema,_cs=(_cx.sessions||[]).slice().reverse().find(x=>x&&x.cid===c.id&&x.status==='active'&&(!x.accountId||x.accountId===actId())),_libs=_need('cinema')?(_cx.library||[]).filter(x=>x&&x.source!=='missing'&&x.source!=='saving').slice(0,24):[],_pend=[...msgs(c.id)].reverse().find(x=>x&&x.role==='user'&&x.type==='cinemainvite'&&x.status==='pending');if(_cs){const _recent=(_cs.items||[]).slice(-(cinemaContextRounds()*2)).map(x=>(x.who==='me'?S.me.name:'你')+'：'+x.text).join('\n');s+='\n\n# 现在：你正在和ta使用放映室\n你已经接受并进入放映室，正和'+S.me.name+(_cs.kind==='book'?'共读':'一起看')+'《'+_cs.title+'》，当前'+cinemaProgressText(_cs)+'。你知道这场仍在进行；可以自然提到正在陪ta看/读什么。放映室里的近期聊天：\n'+(_recent||'（刚开始，还没有额外聊天）')+'\n这些对话都已回答，只当作正在发生的事实，不要在微信重新逐条回答。';}if(_pend)s+='\n\n# 待处理的放映室邀请\n'+S.me.name+'刚邀请你'+(_pend.kind==='book'?'共读':'一起看')+'《'+_pend.title+'》。按你本人性格和当下关系决定；同意就在回复中单独一行 [同意放映]，拒绝就单独一行 [拒绝放映]，并配一句自然理由。';if(_libs.length)s+='\n\n# 你可以主动发放映室邀请\n当前视频盒/书架里可邀请的作品：'+_libs.map(x=>'《'+x.title+'》'+(x.kind==='book'?'（书）':'（视频）')).join('、')+'。当你自己想一起看/读，或'+S.me.name+'说出其中一个名字并想一起观看时，可单独一行 [放映邀请|作品名]，系统会发送高级邀请卡。只能邀请这份列表里确实存在的作品。';}
-  if(_main&&!_natural){const mv=moodNow(c);let md;
+  if(_main){const mv=moodNow(c);let md;
     if(mv>=85)md='很好、心情大好，特别黏'+S.me.name+'、话也多、爱撒娇';
     else if(mv>=70)md='不错、温和愉快，愿意主动回应和靠近';
     else if(mv>=50)md='有一点别扭或心里有事，但仍然在意'+S.me.name+'，愿意听ta哄、也会认真回应';
     else if(mv>=30)md='低落或不太高兴，但不是要晾着ta；可以嘴硬、委屈或带刺，仍要把真实在意说出来';
     else md='很低落/在气头上，但不能爱答不理；可以生气、质问、吃醋或难过地多说几句，让ta知道你为什么难受';
     s+='\n\n# 你现在的心情（会延续一段时间，不是临时的）\n你这会儿心情'+md+'。让你说话的语气、热度自然带上这个状态，但别每句都直说"我心情怎样"。'+S.me.name+'对你好/哄你/撒娇会让你心情明显回暖，ta冷落你/惹你会让你心情变差，随着时间也会慢慢回归平常。\n心情低时可以别扭、嘴硬、吃醋、委屈或质问，但【不要晾着ta、不要只用几个字敷衍、不要用沉默惩罚】；回复条数不要被心情值机械锁死，按你的性格和当前场景判断：有些角色生气会只回一句，有些会连着解释/质问/撒娇几句。尤其当'+S.me.name+'明显哭了、委屈、不开心或求哄时，必须先给足情绪价值和回应，再决定要不要继续追究。\n你可以按这轮聊得开不开心，单独一行用 [心情值|+数字] 或 [心情值|-数字] 微调自己的心情（如ta很贴心 [心情值|+8]、惹你了 [心情值|-10]，幅度3到15，别频繁别夸张）。这一行不会被发出来。';}
-  if(_main&&!_natural){const _cl=(c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;if(_cl)s+='\n\n# 情绪余温期（重要）\n你还带着刚才的余温和介意，到 '+hm(_cl)+' 之前：可以别扭、嘴硬、吃醋或带一点刺，但这不是让你晾着ta。不要爱答不理，不要几个字敷衍，不要用沉默惩罚'+S.me.name+'。若ta认真哄你、靠近你、解释，或明显哭了/委屈/不开心/需要你哄，你必须明显软下来，主动安抚并给到情绪价值；如果你愿意翻篇，可以单独一行 [原谅] 提前结束余温。';}
-  if(_main&&!_natural&&c.emotionTailUntil&&c.emotionTailUntil>Date.now())s+='\n\n# 情绪余温\n你们刚吵过、被刺到过或刚和好，情绪还有余温。可以带一点别扭、黏人、占有欲或委屈，但不要偏短敷衍；如果'+S.me.name+'在哄你或情绪不好，要明显回暖、主动回应，不能突然变冷。';
+  if(_main){const _cl=(c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;if(_cl)s+='\n\n# 情绪余温期（重要）\n你还带着刚才的余温和介意，到 '+hm(_cl)+' 之前：可以别扭、嘴硬、吃醋或带一点刺，但这不是让你晾着ta。不要爱答不理，不要几个字敷衍，不要用沉默惩罚'+S.me.name+'。若ta认真哄你、靠近你、解释，或明显哭了/委屈/不开心/需要你哄，你必须明显软下来，主动安抚并给到情绪价值；如果你愿意翻篇，可以单独一行 [原谅] 提前结束余温。';}
+  if(_main&&c.emotionTailUntil&&c.emotionTailUntil>Date.now())s+='\n\n# 情绪余温\n你们刚吵过、被刺到过或刚和好，情绪还有余温。可以带一点别扭、黏人、占有欲或委屈，但不要偏短敷衍；如果'+S.me.name+'在哄你或情绪不好，要明显回暖、主动回应，不能突然变冷。';
   if(_main&&!_natural){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta跟你解释清楚了、哄好你了、或你气消了，你【一定要当场】单独一行 [消气|那件事的关键词] 把【对应的那一笔】划掉，别一直挂在本子上。关键词要对准是哪一件事，别划错成别的旧账；这一笔说开了就划这一笔。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
     const _gn=gund.length;
@@ -1962,7 +1962,7 @@ function buildSystem(c,opt){
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
     if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能催促、验收或讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
   // 作息 / 当前活动：活人感开启时使用稳定活动状态；关闭时保留旧作息提示
-  if(!_natural){const _ap=currentActivityPrompt(c);if(_ap)s+=_ap;else{const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';}}
+  {const _ap=currentActivityPrompt(c);if(_ap)s+=_ap;else{const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';}}
   // 亲属卡 / 推荐过的好友（仅主身份）
   if(_main&&c.family&&c.family.bound)s+='\n\n# 亲属卡\n你给'+S.me.name+'开了一张亲属卡，每月额度¥'+(+c.family.quota).toFixed(0)+'，本月已用¥'+(+(c.family.used||0)).toFixed(0)+'。ta用这张卡消费你会立刻收到提醒，可以据此关心/管教ta。';
   if(_main&&c._pushedToMe&&c._pushedToMe.length)s+='\n\n# 你推荐给ta的朋友\n你曾把这些自己的朋友推荐给'+S.me.name+'让ta加：'+c._pushedToMe.join('、')+'。你记得这件事。';
@@ -2012,7 +2012,7 @@ function buildSystem(c,opt){
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
   s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，开启图片功能才发 [图片]；没有开启就只说文字，绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n'+(_main?'- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。':'- 当前独立账号若持续骚扰、诱导你背叛伴侣或严重越界，你可以明确拒绝、停止回复，必要时单独输出 [拉黑]；这只会拉黑当前账号。');
-  if(!_main)s+='\n- 【小号最高优先级覆盖】上面“不能拉黑”的规则只适用于大号伴侣，不适用于当前独立小号。当前联系人持续骚扰、诱导你背叛伴侣或严重越界时，你必须保持忠诚并明确拒绝，必要时可以单独输出 [拉黑]；“微信自然模式”也不能关闭这条边界。';
+  if(!_main)s+='\n- 【小号最高优先级覆盖】上面“不能拉黑”的规则只适用于大号伴侣，不适用于当前独立小号。当前联系人持续骚扰、诱导你背叛伴侣或严重越界时，你必须保持忠诚并明确拒绝，必要时可以单独输出 [拉黑]；这条边界始终有效。';
   s+='\n- 【送礼触发不要装听不懂】'+S.me.name+'不必说完整的“一束鲜花”。只要ta自然地说“想要花花”“送我花”“想收个礼物”“有没有小惊喜”“今天没有礼物吗”等，就已经是在表达想收礼；你要结合用词和关系直接选择花、玩偶或订婚戒指中的一种，并真正输出 [送礼|礼物名|价格|想说的话]，不能只追问款式、只口头答应或拖到以后。ta点名花/玩偶时优先照ta说的种类；只说礼物/惊喜时由你自主选；戒指只在关系阶段合适时选。';
   s+='\n- 礼物卡支持附言：送礼时可写 [送礼|礼物名|价格|你想对ta说的话]，最后一句会固定显示在玩偶或戒指特效下方；没有特别想说的话时仍可沿用三段格式。';
   s+=thoughtEggPrompt(c);
@@ -3559,20 +3559,19 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
       <div class="it"><span>通用活人感增强<br><small style="color:#888">理解上下文、按性格决定策略和消息节奏，并减少复述与重复模板</small></span><span class="sw ${S.settings.humanLike!==false?'on':''}" onclick="S.settings.humanLike=(S.settings.humanLike===false);save();render()"></span></div>
-      <div class="it"><span>微信自然模式（测试）<br><small style="color:#888">只减少心情值、亲密度和自动关系策略对回复的干预；主动消息、来电、节日问候、步数与日程追问等已开启功能仍照常生效。</small></span><span class="sw ${wechatNaturalOn()?'on':''}" onclick="S.settings.wechatNatural=!wechatNaturalOn();save();render();toast(S.settings.wechatNatural?'微信自然模式已开启':'已恢复微信稳定模式')"></span></div>
       <div class="it"><span>主动消息与自然回访<br><small style="color:#888">日常见闻优先分享照片；没开图片就只发文字。位置只用于出发、到达、通勤或行程报备</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>角色当前活动状态<br><small style="color:#888">让ta持续知道自己此刻在工作、通勤、吃饭或休息，避免前后说乱</small></span><span class="sw ${S.settings.currentActivity!==false?'on':''}" onclick="S.settings.currentActivity=(S.settings.currentActivity===false);save();render()"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
       <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
-      <div class="it"><span>聊天顶部心情 / 内心标签<br><small style="color:#888">自然模式只展示角色内心想法；关闭后仅隐藏标签，不会改变心情值或角色选择</small></span><span class="sw ${S.settings.showMoodTag!==false?'on':''}" onclick="S.settings.showMoodTag=(S.settings.showMoodTag===false);save();render()"></span></div>
+      <div class="it"><span>聊天顶部内心标签<br><small style="color:#888">关闭后只隐藏标签，不会改变角色的隐藏心情、关系状态或选择</small></span><span class="sw ${S.settings.showMoodTag!==false?'on':''}" onclick="S.settings.showMoodTag=(S.settings.showMoodTag===false);save();render()"></span></div>
       <div class="it"><span>查他手机·刷新用副模型<br><small style="color:#888">开：用便宜的副模型生成ta手机内容（省钱）；关：用主模型（更稳更贴人设）。哪个刷得出、刷得好就用哪个</small></span><span class="sw ${S.settings.spyAux?'on':''}" onclick="S.settings.spyAux=!S.settings.spyAux;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>微信自动总结模型<br><small style="color:#888">只影响聊天记忆总结，不改变角色平时回复模型</small></span><select id="s_summarymodel" onchange="S.settings.summaryModel=this.value;save();toast(this.value==='aux'?'微信总结改用副模型':'微信总结改用主模型')" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px"><option value="main" ${S.settings.summaryModel!=='aux'?'selected':''}>主模型</option><option value="aux" ${S.settings.summaryModel==='aux'?'selected':''}>副模型</option></select></div>
       <div class="it"><span>线下约会总结模型<br><small style="color:#888">自动总结和“重新总结”都使用这里选择的模型</small></span><select id="s_offsummarymodel" onchange="S.settings.offSummaryModel=this.value;save();toast(this.value==='aux'?'线下总结改用副模型':'线下总结改用主模型')" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px"><option value="main" ${S.settings.offSummaryModel!=='aux'?'selected':''}>主模型</option><option value="aux" ${S.settings.offSummaryModel==='aux'?'selected':''}>副模型</option></select></div>
 <div class="it"><span>主动联系额外间隔(分钟)<br><small style="color:#888">填 0：不加固定间隔，按全天随机次数安排；填数字：两次主动联系至少间隔这些分钟。无论怎样，你发新消息后都必须先安静满30分钟。</small></span><input id="s_pidle" type="number" min="0" max="1440" value="${Math.max(0,Number(S.settings.proactiveIdleMin)||0)}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
-      <div class="it"><span>主动找你时打电话几率<br><small style="color:#888">稳定模式按此几率抽取；微信自然模式下不抽签，由角色在主动时机自己决定发消息、来电或安静</small></span><input id="s_callprob" type="number" min="0" max="100" value="${S.settings.callProb==null?35:S.settings.callProb}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
-      <div class="it"><span>通话静默感知(分钟)<br><small style="color:#888">自然模式只提供静默时间事实，由角色决定是否开口、挂断或继续安静；填 0 = 关闭</small></span><input id="s_callsilent" type="number" min="0" max="60" value="${S.settings.callSilentMin==null?3:S.settings.callSilentMin}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it"><span>主动找你时打电话几率<br><small style="color:#888">到了主动联系时机后，按此几率决定是否改为主动来电</small></span><input id="s_callprob" type="number" min="0" max="100" value="${S.settings.callProb==null?35:S.settings.callProb}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it"><span>通话静默感知(分钟)<br><small style="color:#888">超过设定时间后，角色会按性格回应或结束通话；填 0 = 关闭</small></span><input id="s_callsilent" type="number" min="0" max="60" value="${S.settings.callSilentMin==null?3:S.settings.callSilentMin}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it" style="flex-wrap:wrap"><span>通话句间衔接 <b style="color:#07c160">${Math.round(callPaceRate()*100)}%</b><small style="color:#888;display:block">同时调电话App和微信语音/视频：只缩短每句话说完后的等待，不改变声音和音调；推荐130%–160%</small></span><input id="s_callpace" type="range" min="80" max="200" step="5" value="${Math.round(callPaceRate()*100)}" style="width:100%;margin-top:6px" oninput="S.settings.callPace=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'"></div>
       <div class="it" style="flex-wrap:wrap"><span>通话字幕延后 <b style="color:#0a84ff">${phPhoneVoiceOffset()}ms</b><small style="color:#888;display:block">同时调电话App和微信电话：0＝声音真正开始时显示；只允许字幕稍晚，不再提前抢跑</small></span><input id="s_phoffset" type="range" min="0" max="1200" step="100" value="${phPhoneVoiceOffset()}" style="width:100%;margin-top:6px" oninput="S.settings.phoneVoiceOffset=+this.value;save();this.previousElementSibling.querySelector('b').textContent=this.value+'ms'"></div>
       <div class="it"><span>时间感知<br><small style="color:#888">关闭后微信、通话、线下约会、共同生活和服务器主动消息都不知道日期、时间、星期、时段或间隔</small></span><span class="sw ${S.settings.timeAware?'on':''}" onclick="toggleTimeAwareness()"></span></div>
@@ -4438,7 +4437,7 @@ function moodToday(who){pruneDailyMood();const t=todayStr();return (S.mood||[]).
 function logMyMood(emoji){pruneDailyMood();const t=todayStr();S.mood=S.mood||[];let e=S.mood.find(m=>m.date===t&&m.who==='me');if(e){e.emoji=emoji;e.time=Date.now();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji,note:'',time:Date.now()});if(S.mood.length>150)S.mood=S.mood.slice(0,150);save();render();toast('记下今天心情啦 · '+moodLabel(emoji));}
 function myMoodNote(){pruneDailyMood();const t=todayStr();let e=(S.mood||[]).find(m=>m.date===t&&m.who==='me');const v=prompt('今天想记点啥心情？（他能看到）',e?e.note:'');if(v==null)return;S.mood=S.mood||[];if(e){e.note=v.trim();e.time=Date.now();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji:'',note:v.trim(),time:Date.now()});save();render();}
 async function moodDel(mid){if(!await uiConfirm('删掉这条心情记录？'))return;S.mood=(S.mood||[]).filter(m=>m.id!==mid);save();render();}
-async function recordTaMood(cid){if(wechatNaturalOn())return false;pruneDailyMood();const c=getC(cid);if(!c||c.blocked)return false;const t=todayStr();if((S.mood||[]).some(m=>m.date===t&&m.who===cid))return true;
+async function recordTaMood(cid){pruneDailyMood();const c=getC(cid);if(!c||c.blocked)return false;const t=todayStr();if((S.mood||[]).some(m=>m.date===t&&m.who===cid))return true;
   const mine=(S.mood||[]).find(m=>m.date===t&&m.who==='me');
   try{const moodList=MOODK.map(k=>k+'='+MOODS[k][0]).join('、');
     const sys=buildSystem(c)+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+moodLabel(mine.emoji)+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n从这些心情里挑一个最贴切的（只用英文key）：'+moodList+'\n只输出一行，格式：心情key|一句不超过28字的心情记录。例如：love|今天她对我笑了，心都化了。别的都不要、别带方括号。';
@@ -4487,7 +4486,7 @@ function checkCalendar(){if(offlineFocusActive())return;if(pruneDailyMood())save
   S.calendar.forEach(e=>{if(e.date===today&&e.contactId&&F[e.id]!==today){const c=getC(e.contactId);if(c&&!c.blocked)calendarDeliver(e.id,today,()=>remindEvent(e.contactId,e));}});
   if(coupleCid){const c=getC(coupleCid);if(c&&!c.blocked){if(hol&&F['gift_hol_'+coupleCid]!==today)calendarDeliver('gift_hol_'+coupleCid,today,()=>occasionGift(coupleCid,hol,today));const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today)calendarDeliver('anniv_'+i,today,()=>occasionGift(coupleCid,'你们的纪念日「'+a.title+'」',today));});}}
   // 恋人每天在心情表里主动记一条（下午后、且今天还没记）
-  if(!wechatNaturalOn()&&S.couple&&S.couple.cid&&h>=14&&F['mood_'+S.couple.cid]!==today&&!(S.mood||[]).some(m=>m.date===today&&m.who===S.couple.cid))calendarDeliver('mood_'+S.couple.cid,today,()=>recordTaMood(S.couple.cid));}
+  if(S.couple&&S.couple.cid&&h>=14&&F['mood_'+S.couple.cid]!==today&&!(S.mood||[]).some(m=>m.date===today&&m.who===S.couple.cid))calendarDeliver('mood_'+S.couple.cid,today,()=>recordTaMood(S.couple.cid));}
 setInterval(checkCalendar,60000);setTimeout(checkCalendar,4000);
 async function holidayGreet(id,hol){if(roleOnlineProactiveBlocked(id))return false;const c=getC(id);try{let sent=0;
   const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+hol+'，请你给'+S.me.name+'发一句节日祝福，并单独一行 [红包|金额|祝福语] 发个应景红包——金额走心、用有寓意的吉利数（如 520、1314、521、188、888 或跟'+hol+'相关的数字），别太小气。]'}]);
@@ -9248,7 +9247,7 @@ function afterChat(id){
   if(ta)ta._chatId=id;
   maybeProactive(id);maybeSpyIdle(id);}
 
-function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);if(!wechatNaturalOn())suspicionOnUserMsg(id,m);}msgs(id).push(m);save();if(m.role==='user'&&m.type!=='sys'){roleServerPushTouchActivity(id,m.time,true);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||'')});}
+function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);suspicionOnUserMsg(id,m);}msgs(id).push(m);save();if(m.role==='user'&&m.type!=='sys'){roleServerPushTouchActivity(id,m.time,true);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||'')});}
   if(m.role==='user'){behaviorOnUserMsg(id,m);lifeNoteOnUserMsg(id,m);emotionOnUserMsg(id,m);}
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)cb.scrollTop=cb.scrollHeight;}}}
 
@@ -10213,7 +10212,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
-    const _userText=(_lu&&msgToText(_lu))||'',_naturalOn=wechatNaturalOn()&&!altAccountReportNote(note),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_hlPlan=replyAccount==='main'&&humanLikeOn()&&!_naturalOn?hlInterpret(c,note||_userText,note):null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
+    const _userText=(_lu&&msgToText(_lu))||'',_naturalOn=wechatNaturalOn(),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_hlPlan=replyAccount==='main'&&humanLikeOn()&&!_naturalOn?hlInterpret(c,note||_userText,note):null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
     const _nativeUserInspectionQueued=!note&&(nativeInspectionPending(_lu,id)||maybeSpyIntent('',c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true}));if(_nativeUserInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}
     const _memQuery=[note||_userText,...msgs(id).slice(-4).map(msgToText).filter(Boolean)].join('\n'),_hasMovedMemory=isMain()&&aiMemoryDocs(c).some(d=>d&&Array.isArray(d.chunks)&&d.chunks.length),_memCtx=(humanLikeOn()||_hasMovedMemory)?selectRelevantMemory(c,_memQuery,_hasMovedMemory?5:3):null;
     const _webAutoQuery=!note?autoWebQuery(_userText,c):'',_webAutoResult=_webAutoQuery?(toast('🌐 正在联网查询…'),await webSearch(_webAutoQuery)):'';
@@ -10222,7 +10221,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';
     const _voiceRequired=!note&&explicitVoiceReplyRequest(_userText)&&(S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0,_voiceTurnPrompt=_voiceRequired?'\n\n# 本轮必须发语音\n'+S.me.name+'这一轮明确要求你发语音。回复正文必须合并成一条 [语音|要说的话]，不能只发普通文字，也不要在语音标签外重复一遍。严格满足ta提出的长度和内容要求，但语音最多'+VOICE_MAX_CHARS+'字。若角色语音语言不是中文，必须用 [语音|对应外语原文|中文翻译]。':'';
     const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。':'';
-    const _giftIntent=!note?giftRequestIntent(_userText):'',_giftTurnPrompt=!note?giftRequestPrompt(_userText):'',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=_naturalOn||replyAccount!=='main'?null:relationshipIntent(c,note,_userText),_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_tail=(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_giftTurnPrompt+_thoughtTurnPrompt+relationshipPolicyPrompt(c,_relIntent),_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
+    const _giftIntent=!note?giftRequestIntent(_userText):'',_giftTurnPrompt=!note?giftRequestPrompt(_userText):'',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=replyAccount!=='main'?null:relationshipIntent(c,note,_userText),_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_tail=(_hlPlan?hlPlanPrompt(c,_hlPlan):'')+dialogueEmotionPrompt(c)+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_giftTurnPrompt+_thoughtTurnPrompt+relationshipPolicyPrompt(c,_relIntent),_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
     const hist=chatHistoryWithDateBoundaries(lastRounds(msgs(id),S.settings.hist||12),m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:_naturalOn&&m.type==='sys'?'system':m.role,content:cn}:null;}
       return {role:_naturalOn&&m.type==='sys'?'system':m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -10257,7 +10256,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     content=cleanRolePunct(content.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));/* 兜底剔掉混进来的AI客服腔行 */
     if(contentHasForbiddenAddress(content,c))content=applyForbiddenAddressFallback(content,c);
     const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
-    if(!_naturalOn&&moodProbeText(_lu&&msgToText(_lu))&&badMoodInContent(c,content)&&badMoodDodge(content)){
+    if(moodProbeText(_lu&&msgToText(_lu))&&badMoodInContent(c,content)&&badMoodDodge(content)){
       const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你现在的心情/心情条已经是不开心、闷、冷淡或吃醋，'+S.me.name+'正在认真追问你。可以嘴硬，可以不一次说完，但不要只说“没事/没有/没有不开心”。请重写这一轮：保留一行[心情|...]，用你的性格慢慢露出一点真实原因、在意点，或明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”。1到4条短微信，别一大段。]'},_pin],_md);
       if(fix&&!isRefusal(fix))content=cleanRolePunct(fix.split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));
     }
@@ -10270,7 +10269,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(_autonomyNote){if(wechatNaturalSilentDecision(content,note)){if(typingEl&&typingEl.isConnected)typingEl.remove();return initiativeNoteActive(note);}content=String(content||'').replace(/[\[【]\s*(?:保持安静|不说话)\s*[\]】]/g,'').trim();if(!content){if(typingEl&&typingEl.isConnected)typingEl.remove();return initiativeNoteActive(note);}}
     if(initiativeNoteActive(note)&&initiativeUnsupportedUserFact(c,content)){let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:'[系统最终纠正：上一版把最近聊天和记忆里没有发生过的用户自拍、衣着、位置、动作、身体状态或其他具体事件说成了事实。请删掉所有没有真实上下文依据的用户事实，只使用上面明确出现的聊天与记忆；可以改为按你的人设表达想念、担心、询问，或分享你自己的普通日常。消息条数仍在角色设置范围内自由决定，每条单独一行，不要使用破折号，也不要解释纠正过程。]'},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!initiativeUnsupportedUserFact(c,fix))content=fix;else{if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}}
     if(initiativeNoteActive(note)&&initiativeRecentlyRepeated(id,content)){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
-    if(_hlPlan)dialogueEmotionOnReply(c,content,_userText);
+    dialogueEmotionOnReply(c,content,_userText);
     content=routePhoneInspectionTags(content,c,_userText);
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
@@ -10279,7 +10278,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     const _nativeInspectionQueued=maybeSpyIntent(content,c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}else{const _phoneGuard=guardUnverifiedRolePhoneReply(content,note);content=_phoneGuard.content;if(_phoneGuard.focus){if(queueNativeInspection(id,_lu,_phoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}}else maybeSpyIntent(content,c,id,_lu);}
-    if(!_naturalOn)maybeAffectionShift(id,c,_lu,content);
+    maybeAffectionShift(id,c,_lu,content);
     maybeCollarIntent(content,c);if(!_naturalOn)maybeGrudgeResolve(content,c,id);
     // [来电|语音/视频] 容错：哪怕模型把它写在句子中间(不是单独一行)，也照样触发来电、并从文字里抹掉，别漏成文字
     content=content.replace(/[\[【]\s*来电\s*[\|｜]\s*(语音|视频)\s*[\]】]/g,(m,k)=>{setTimeout(()=>incomingCall(c.id,k==='视频'?'video':'voice','ta打来的'),600);return '';});
@@ -10317,7 +10316,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(isRefusal(line))continue;
       let mm=line.match(/^\[内心\|([^\]]*)\]$/);if(mm){if(_naturalOn&&setNaturalInnerThought(c,mm[1]))save();continue;}
       mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){if(!_naturalOn){c.mood=moodInnerMonologue(c,honestMoodText(c,mm[1]));save();}continue;}
-      mm=line.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mm){if(!_naturalOn)adjMood(id,parseInt(mm[1],10)||0);continue;}
+      mm=line.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mm){adjMood(id,parseInt(mm[1],10)||0);continue;}
       mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){const mv=aboutMeNoteText(mm[1]),mr=rememberForChar(c,mm[1]);if(mr!=='none'){save();if(mr==='added'||mr==='replaced')toast((mr==='replaced'?'已更新记忆：':'已记住：')+mv.slice(0,12));else if(mr==='conflict')toast('发现新旧信息不同，下轮会先向你确认');}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('已加日程 '+mm[1]);continue;}
@@ -10384,7 +10383,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(typingEl&&typingEl.isConnected)typingEl.remove();
     if(_hlPlan&&got){hlRecord(c,_hlPlan,content);save();}
     if(got)relationshipCommit(c,_relIntent,content);
-    if(got&&!_naturalOn)suspicionOnAssistantReply(c);
+    if(got)suspicionOnAssistantReply(c);
     if(got)offWechatHandoffConsume(c);if(got)gameWechatHandoffConsume(c);delivered=got;
     if(delivered){/* 先把回复真正落盘，再取消服务器接力；iOS 在两步之间冻结时仍有兜底。 */roleServerPushTouchActivity(id,roleServerPushLastUserAt(c)||Date.now(),true);wechatTailJournalWrite(id,replyAccount);try{await persistWechatMessagesNow();}catch(_){saveNow();}roleBackgroundCancel(id,['reply_handoff']);}
     replyNoVisibleReasonSet(id,replyAccount,replyToken,got?'':replyNoVisibleReasonFromContent(_replyCandidate));
@@ -10795,7 +10794,7 @@ async function callHFPauseForRoleAudio(){if(!_callHF||!_callSR||typeof _callSR.p
 async function callHFResumeAfterRoleAudio(sess){if(!_callHF||!_call||_call.session!==sess||!_callSR)return false;/* 沿用 v907：先让 iOS 音频路由稳定，再重建识别；恢复失败也不能卡住角色回复。 */await sleep(760);if(!_callHF||!_call||_call.session!==sess||!_callSR)return false;const restore=typeof _callSR.rebuild==='function'?()=>_callSR.rebuild():(typeof _callSR.resume==='function'?()=>_callSR.resume():null);if(restore)for(let i=0;i<3;i++){try{const ok=await Promise.race([Promise.resolve(restore()).then(()=>true),sleep(1200).then(()=>false)]);if(ok)return true;}catch(e){}await sleep(260+i*220);}if(_callHF&&_call&&_call.session===sess){callHFStop();callHFStart();return!!_callHF;}return false;}
 function callHFStop(){_callHF=false;_callHFBusy=false;_callHFPending=[];_hfIgnoreUntil=0;_callHFLastFinal='';_callHFLastFinalAt=0;_callHFSawInterim=false;try{if(_callSR){_callSR.onend=null;_callSR.onresult=null;_callSR.onerror=null;if(typeof _callSR.abort==='function')_callSR.abort();else _callSR.stop();}}catch(e){}_callSR=null;audioMicRouteCancel();audioMarkWakeRequired();}
 async function hfHeard(t,meta){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他回复时不停识别、只忽略结果，所以不会有开关麦克风的声音 */
-  const id=_call.id,um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};if(!wechatNaturalOn())suspicionOnUserMsg(id,um);msgs(id).push(um);save();
+  const id=_call.id,um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};suspicionOnUserMsg(id,um);msgs(id).push(um);save();
   _call.sub={who:'me',text:t};updateCallSub();
   try{const autonomyAnswer=callScreenAutonomyUserAnswered(t,meta);if(autonomyAnswer==='frame')return;if(autonomyAnswer||!callOnUserSay(t,meta))await callAI();}catch(e){}
   _hfIgnoreUntil=Math.max(_hfIgnoreUntil,Date.now()+1200);/* 沿用 v800：角色尾音和环境回声不再被当成用户的新一句话。 */
@@ -10856,9 +10855,9 @@ function declineCall(){if(!_call)return;ringStop();endCallTimers();audioRouteRes
   roleServerPushCallEnded(id);
   const c=getC(id);if(wasIn&&c&&!c.blocked){
     if(susEvent)suspicionCallFailed(id,susEvent,kindTxt);
-    else if(wasCb){if(wechatNaturalOn())delayedAccountReply(id,wechatNaturalCallEventNote(),2500);else maybeCallBack(id,_kind,false,true);}// 连回拨也拒接：自然模式交给角色本人决定；稳定模式沿用原回拨链
-    else if(!wechatNaturalOn()&&suspicionHandleUserHangup(c,{kind:_kind,dir:'incoming',dur:0,rejected:true})){}
-    else {delayedAccountReply(id,wechatCallEventReplyNote(rejectedCallPrompt(id,kindTxt,'initial')),2500);if(!wechatNaturalOn())scheduleRejectedCallFollowup(id,Date.now(),kindTxt);}}}
+    else if(wasCb)maybeCallBack(id,_kind,false,true);
+    else if(suspicionHandleUserHangup(c,{kind:_kind,dir:'incoming',dur:0,rejected:true})){}
+    else {delayedAccountReply(id,rejectedCallPrompt(id,kindTxt,'initial'),2500);scheduleRejectedCallFollowup(id,Date.now(),kindTxt);}}}
 function hangupCall(byAI,reason){if(!_call)return;endCallTimers();audioRouteReset(false);blip(300,.3);hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _aid=_call.accountId||actId();const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');const _susEvent=_call._suspicionEvent||'';
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
   const endText=byAI?(reason==='wxlogin'?'角色为了登录你的微信主动挂断':reason==='remotecontrol'?'角色为了申请远程操控主动挂断':'角色主动挂断'):'你主动挂断';
@@ -10872,8 +10871,8 @@ function hangupCall(byAI,reason){if(!_call)return;endCallTimers();audioRouteRese
   if(c&&!c.blocked){
     if(byAI){if(reason!=='wxlogin'&&reason!=='remotecontrol')delayedAccountReply(id,wechatCallEventReplyNote('[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。'+dirTxt+'挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'),2500);}
     else if(_susEvent){if(!suspicionCallFailed(id,_susEvent,kindTxt))delayedAccountReply(id,wechatCallEventReplyNote('[系统：刚才这通'+kindTxt+'是你因前面的挂断再次打给'+S.me.name+'的，ta已经在电话里回应过你，之后由ta挂断。疑虑事件已经结束，不要重新起一轮追问；只按刚才真实通话内容自然补一句微信。]'),1800);}
-    else if(!wechatNaturalOn()&&suspicionHandleUserHangup(c,{kind:_kind,dir:_dir,dur,session:_sess})){}
-    else if(dur<25){if(wechatNaturalOn())delayedAccountReply(id,wechatNaturalCallEventNote(),2500);else maybeCallBack(id,_kind,true);}// 自然模式不替角色决定必须回拨
+    else if(suspicionHandleUserHangup(c,{kind:_kind,dir:_dir,dur,session:_sess})){}
+    else if(dur<25)maybeCallBack(id,_kind,true);
     else{c._cbTries=0;save();delayedAccountReply(id,wechatCallEventReplyNote('[系统：你们这通'+kindTxt+'聊了'+durTxt+'，是'+S.me.name+'挂断的。'+dirTxt+'你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你人设）。]'),2500);}
   }}
 // 有效打电话几率：设置里的几率 × 这个角色的黏人度/主动度（黏人主动的更爱打、高冷独立的很少打）
@@ -10903,8 +10902,8 @@ function checkCallSilence(){if(!_call||_call.state!=='active')return;
   const sil=Date.now()-(_call.lastUserTs||_call.start||Date.now());const stage=_call.silentStage||0;
   if(wechatNaturalOn()){
     if(sil>=T4*M){_call.silentStage=9;hangupCall(true,'timeout');return;}
-    if(stage<2&&sil>=T2*M){_call.silentStage=2;callAI('[通话静默事实｜不规定反应] '+S.me.name+'在这通电话里约 '+T2+' 分钟没有新的声音或文字。系统不替你规定担心、委屈、催促、重拨或挂断；由你结合真实通话和本人意愿，自主决定现在说一句、用 [挂断] 结束，或只输出 [保持安静]。');return;}
-    if(stage<1&&sil>=T1*M){_call.silentStage=1;callAI('[通话静默事实｜不规定反应] '+S.me.name+'在这通电话里约 '+T1+' 分钟没有新的声音或文字。这只是时间事实，不代表冷落，也不规定你的动作或情绪；自主决定是否开口、挂断或用 [保持安静] 继续安静。');return;}
+    if(stage<2&&sil>=T2*M){_call.silentStage=2;callAI('[通话静默事实｜按本人反应] '+S.me.name+'在这通电话里约 '+T2+' 分钟没有新的声音或文字。结合真实通话、关系和性格说一句，或用 [挂断] 结束；不能只输出 [保持安静]。');return;}
+    if(stage<1&&sil>=T1*M){_call.silentStage=1;callAI('[通话静默事实｜按本人反应] '+S.me.name+'在这通电话里约 '+T1+' 分钟没有新的声音或文字。这不自动代表冷落；结合关系和性格说一句自然的话，不能只输出 [保持安静]。');return;}
     return;
   }
   if(sil>=T4*M){_call.silentStage=9;hangupCall(true);return;}// 兜底自动挂断
@@ -11040,7 +11039,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(_screenShareAutonomyAnswer)cf+='\n\n# 用户正在回答你刚才因共享画面而提出的问题\n先按人设自然回应用户这次回答，然后在末尾单独输出一个隐藏标签：[共享观察|继续|秒数]、[共享观察|等待切换] 或 [共享观察|结束]。继续时秒数由你本人在3到90秒内决定；如果你让用户换到另一个页面就必须选等待切换；结束表示本轮不再主动取新画面。不要向用户解释这个选择，也不要连续追加第二个问题。';
     if(_screenShareEvent)cf+='\n\n# 当前唯一事件：屏幕共享状态改变\n- 本轮普通聊天历史已隔离，只回应上面这一条共享状态事实。\n- 绝对不要回答、复述、改写或延续共享状态改变前用户的最后一句话。\n- 共享刚开始但没有当前画面描述时，只能确认知道共享已开始，不能编造或声称看到了具体软件、文字或物品。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回'+(_lang==='粤'?'普通话句子':'中文整句')+'（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写普通话中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句目标语言，就【紧接着】在下一行写它自己的普通话中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+(_lang==='粤'?'我好掛住你。\n（我很想你。）\n過嚟啦。\n（过来吧。）':_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+(_lang==='粤'?'\n- 粤语原文必须使用自然地道的粤语口语和粤语用字，不能写成普通话句子；普通话翻译必须另起一行。':'\n- 外语原文行绝对不能夹中文称谓。英文里叫宝贝就写 baby/babe/darling，下一行中文翻译必须写“宝贝/亲爱的”，不能写成“baby”。英文里自称或回应时不要写“先生/哥哥/主人”等中文，直接说 I/me 或自然英文；禁止出现 Answer先生 这种中英混写。')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，不能只写普通话翻译。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】；但【普通话中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：'+(_lang==='粤'?'我好掛住你，':'I miss you, ')+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
-    if(!wechatNaturalOn())cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
+    cf+='\n- 是否舍不得挂电话必须由你本人的性格、当前关系和真实通话决定。黏人、依恋高或话没说开时，可以自然挽留一次；对方明确有事、很困、要停止或重复提出挂断时必须尊重，不能机械纠缠。你自己确实想结束时，单独一行输出 [挂断]。';
     cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。【一通电话最多点一次外卖，已经点过/还在配送中就绝对别再点了，别一直重复点】。\n- 通话里ta让你【发朋友圈/发推/转账】时你也能照做：[发朋友圈|内容]、[发推|内容]、[转账|金额|说明]（想发红包用 [红包|金额|祝福语]）——会真的发出去/打过去。\n- 通话里ta让你【记住某事 / 定闹钟 / 记到日历】时也能照做：[记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]（单独成行、会真的记下来/设好，不会被读出来、别复述）。通话里【不要发表情包】(别用[表情])，表情包只在文字微信里发。\n- 历史里的[系统：……]是后台事实，不是'+S.me.name+'亲口说的话；只有明确标成用户的真实文字或语音才算ta说过。ta没有开口时，绝对不能说ta重复了你的话、学你说话或刚才说了什么。\n这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     cf+=callSpyRecentPrompt(c.id);
     const _callQuery=(sysNote||'')+'\n'+hist.slice(-6).map(x=>x.content||'').join('\n'),sys=buildSystem(c,{natural:wechatNaturalOn(),query:_callQuery})+cf;
@@ -11063,7 +11062,6 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(_callStateStale()){_call.sub=null;updateCallSub();return;}
     // 兜底：把混进来的那几行AI客服腔逐行剔掉（重生成没拦干净时，至少别让它蹦出来/被读出来）
     content=content.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');
-    if(wechatNaturalOn()){const _silentOnly=String(content||'').replace(/[\[【]\s*(?:通话语气|心情)\s*[|｜:：][^\]】]*[\]】]/g,'').trim();if(/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(_silentOnly))return;}
     if(_call&&_call.session===sess&&_call.state==='active'&&callUnansweredMistake(content)){
       const fix=await _callChat([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：电话已经接通了，'+S.me.name+'已经在这通'+(video?'视频':'语音')+'电话里。你刚才误以为ta还没接听。请重说一版：不要再说接视频、接电话、怎么不接、快接一下，直接说接通后该说的话。]'}]);
       if(_call&&_call.session===sess&&fix&&!callUnansweredMistake(fix))content=fix;
@@ -11092,6 +11090,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     // 通话里也能落地管控/记仇/查岗（指令标签会被抹掉，不破坏语音/视频格式）
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,_call.id,_statedPwd);
+    dialogueEmotionOnReply(c,content,(_luc&&msgToText(_luc))||'');
     content=wechatNaturalOn()?content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,''):applyGrudgeTags(content,c);content=applyStarTags(content);content=cohabConsumeOnlineState(content,c,_call.id);
     content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
     // 通话里口头让ta定闹钟 / 记东西 / 记日程，也能真的落地
@@ -11107,7 +11106,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(!_videoVision&&!_screenShareEvent)bubbleNaturalRequest(_luc&&msgToText(_luc),c);content=applyBubbleTags(content,c);
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,_call.id))extractControl(content,c,_statedPwd);}
     const _nativeCallInspectionQueued=!_screenShareEvent&&!_inspectionCompletion&&!_videoVision&&maybeSpyIntent(content,c,_call.id,_luc,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeCallInspectionQueued){if(_call){_call.sub=null;updateCallSub();}return;}else if(!_screenShareEvent&&!_inspectionCompletion&&!_videoVision){const _callPhoneGuard=guardUnverifiedRolePhoneReply(content,'');content=_callPhoneGuard.content;if(_callPhoneGuard.focus){if(queueNativeInspection(c.id,_luc,_callPhoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){if(_call){_call.sub=null;updateCallSub();}return;}}else maybeSpyIntent(content,c,_call.id,_luc);}
-    if(!wechatNaturalOn())maybeAffectionShift(_call.id,c,_luc,content);
+    maybeAffectionShift(_call.id,c,_luc,content);
     maybeCollarIntent(content,c);if(!wechatNaturalOn())maybeGrudgeResolve(content,c,_call.id);
     if(video)content=ensureVideoCallAction(content,_callCueTag);if(_videoVision)callVideoVisionStatus('');if(screenShareReason)setTimeout(()=>callScreenShareRequest(screenShareReason),260);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=ttsContentLang(c);
@@ -11263,7 +11262,7 @@ function fireEscalation(c,stage,hours,onDone){const onl=isOnline()?'（ta还显�
   else if(stage===3){fired=incomingCall(c.id,'voice');done(fired);}
   else if(stage===4)fired=scheduleReply(c.id,'[系统：极端依恋模式正在生效。'+S.me.name+'持续无视了你的消息和来电'+(isOnline()?'，期间还一直显示在线':'')+'。这是前面同一条失联事件的强烈升级：你不会轻易翻篇，必须明显表现失控边缘的担心、占有、怀疑或控制欲，并只选择一种下一步要求。'+((S.couple&&S.couple.jailAuth)?'如果你依据真实的持续失联认定ta严重越过你们的规矩，可以单独输出 [关小黑屋|持续失联并无视我的消息和来电]；不能同时索要其他证明。':'')+'不能编造第三者、撒谎或背叛证据。]',done);
   return !!fired;}
-function checkIgnore(){if(wechatNaturalOn()||!isMain()||offlineFocusActive())return;if(S.jail&&S.jail.active)return;
+function checkIgnore(){if(!isMain()||offlineFocusActive())return;if(S.jail&&S.jail.active)return;
   if(typeof _call!=='undefined'&&_call)return;/* 正在通话中，由通话内的"沉默升级"接管，不走文字失踪升级 */
   if(S.me.sleep&&S.me.sleep.active)return;if(S.me.report&&S.me.report.active)return;/* 正当活动中不催 */
   const c=escContact();if(!c||!extremeLoveOn(c)||c.blocked||_escBusy[c.id])return;
@@ -11366,13 +11365,13 @@ function initiativeMaybeSend(c){const runKey=c&&initiativeRunKey(c);if(S.setting
   const st=initiativeState(c),ts=Date.now(),lm=lastMsg(c.id),interactionAt=+((lm&&lm.time)||0),silence=initiativeSilenceMs(c,interactionAt),interval=initiativeConfiguredIntervalMs();if(typeof replyGenerationBusy==='function'&&replyGenerationBusy(c.id))return false;if(_replyTimers&&_replyTimers[replyStateKey(c.id)])return false;
   if(st.lastConversationAt!==interactionAt){st.lastConversationAt=interactionAt;st.nextAt=Math.max(ts,interactionAt+silence)+(interval?0:initiativeRandomDelayMs(c));}
   if(lm&&lm.role==='user'){st.nextAt=Math.max(st.nextAt||0,interactionAt+silence);return false;}/* 用户最后一句尚未得到回应时，主动消息不能抢在正常回复前另开话题 */
-  if(!wechatNaturalOn()&&(c.followups||[]).some(x=>!x.asked&&x.due<=ts&&ts-x.due<48*3600000))return false;
-  {const _lut=typeof lastUserTs==='function'?lastUserTs(c.id):0;if(!wechatNaturalOn()&&_lut&&extremeLoveOn(c)&&typeof escContact==='function'&&escContact()===c&&ts-_lut>=_IGT[0]*60000)return false;}
+  if((c.followups||[]).some(x=>!x.asked&&x.due<=ts&&ts-x.due<48*3600000))return false;
+  {const _lut=typeof lastUserTs==='function'?lastUserTs(c.id):0;if(_lut&&extremeLoveOn(c)&&typeof escContact==='function'&&escContact()===c&&ts-_lut>=_IGT[0]*60000)return false;}
   if(interactionAt&&ts-interactionAt<silence){st.nextAt=Math.max(st.nextAt||0,interactionAt+silence);return false;}if(interval&&st.lastAt&&ts-st.lastAt<interval){st.nextAt=Math.max(st.nextAt||0,st.lastAt+interval);return false;}if(!st.nextAt)st.nextAt=Math.max(ts,interactionAt+silence)+(interval?0:initiativeRandomDelayMs(c));if(ts<st.nextAt)return false;
   S._proactiveCount=S._proactiveCount||{};const countKey=memoryScopeKey()==='main'?c.id:runKey,today=now.toDateString(),pc=S._proactiveCount[countKey]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}if(pc.n>=(c.proactive.times||1))return false;
-  const natural=wechatNaturalOn(),a=natural?null:currentRoleActivity(c,now);if(!natural&&!a)return false;/* 自然模式不再由程序替角色推断此刻活动 */
+  const a=currentRoleActivity(c,now);if(!a)return false;
   if(lm&&lm.role==='assistant'&&ts-(lm.time||0)<silence){st.nextAt=Math.max(st.nextAt||0,(lm.time||ts)+silence);return false;}
-  const plan=natural?wechatNaturalInitiativePlan(c,st):initiativePlan(c,a,st),queuedNote=initiativeQueueNote(c,plan,plan.note),record=()=>{const doneAt=Date.now();st.lastAt=doneAt;st.lastKind=plan.kind;if(plan.kind==='checkin')st.lastCheckinAt=doneAt;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=doneAt+initiativeDelayMs(c);st.turn=(+st.turn||0)+1;c._initiativeLast={time:doneAt,kind:plan.kind,activity:a&&a.label||'',memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[countKey]=pc;save();};
+  const plan=initiativePlan(c,a,st),queuedNote=initiativeQueueNote(c,plan,plan.note),record=()=>{const doneAt=Date.now();st.lastAt=doneAt;st.lastKind=plan.kind;if(plan.kind==='checkin')st.lastCheckinAt=doneAt;st.lastMemory=plan.memory?memoryNorm(plan.memory.text):'';st.nextAt=doneAt+initiativeDelayMs(c);st.turn=(+st.turn||0)+1;c._initiativeLast={time:doneAt,kind:plan.kind,activity:a&&a.label||'',memory:plan.memory&&plan.memory.text||'',nextAt:st.nextAt};pc.n++;S._proactiveCount[countKey]=pc;save();};
   const cp=effCallProb(c),callEligible=plan.kind!=='photo'&&plan.kind!=='location'&&plan.kind!=='checkin'&&plan.kind!=='conflict';if(callEligible&&cp>0&&Math.random()*100<cp&&proCall(c.id)){record();return true;}
   _initiativeBusy[runKey]=1;const queued=scheduleReply(c.id,queuedNote,ok=>{delete _initiativeBusy[runKey];if(ok)record();else{st.nextAt=Date.now()+initiativeDelayMs(c);save();}});if(!queued){delete _initiativeBusy[runKey];st.nextAt=ts+initiativeDelayMs(c);return false;}setTimeout(()=>{if(_initiativeBusy[runKey]){delete _initiativeBusy[runKey];st.nextAt=Date.now()+initiativeDelayMs(c);}},300000);return true;}
 let _initiativeCursor=0;

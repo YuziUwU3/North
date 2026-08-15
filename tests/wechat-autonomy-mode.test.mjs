@@ -19,91 +19,46 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-const context=vm.createContext({S:{settings:{wechatNatural:true}},String});
+const context=vm.createContext({WECHAT_UNIFIED_SYSTEM:true,String});
 vm.runInContext([
   functionSource('wechatNaturalOn'),
-  functionSource('setNaturalInnerThought'),
-  functionSource('wechatNaturalModuleNeeded'),
   functionSource('wechatNaturalCallEventNote'),
-  functionSource('wechatNaturalAutonomyNoteActive'),
-  functionSource('wechatNaturalCallEventActive'),
   functionSource('wechatNaturalSilentDecision'),
-  functionSource('wechatNaturalInitiativePlan'),
   functionSource('wechatNaturalSlimSystem'),
-  ';globalThis.need=wechatNaturalModuleNeeded;globalThis.note=wechatNaturalCallEventNote;globalThis.silent=wechatNaturalSilentDecision;globalThis.slim=wechatNaturalSlimSystem;',
+  ';globalThis.enabled=wechatNaturalOn;globalThis.note=wechatNaturalCallEventNote;globalThis.silent=wechatNaturalSilentDecision;globalThis.slim=wechatNaturalSlimSystem;',
 ].join('\n'),context);
 
-assert.equal(context.need('control','把游戏锁定'),true,'explicit lock requests must restore control capability rules');
-assert.equal(context.need('control','早上好'),false);
-assert.equal(context.need('finance','给我转账'),true);
-assert.equal(context.need('social','看看朋友圈'),true);
-assert.equal(context.need('tasks','看看今天的任务便签'),true);
-assert.equal(context.need('tasks','普通聊天'),false);
-
+assert.equal(context.enabled(),true,'the unified system must be the only default');
 const sample='基础人设\n\n# 申请远程操控小手机\n远控规则\n\n# 你对玩家手机App的管控权\n锁软件规则\n\n# 微信聊天规则\n基本格式';
-assert.doesNotMatch(context.slim(sample,{natural:true,query:'早上好'}),/远控规则|锁软件规则/);
-assert.match(context.slim(sample,{natural:true,query:'把游戏锁定'}),/锁软件规则/,'lock rules must remain available when requested');
-const forcedMood='基础\n\n# 微信聊天规则\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：必须更新。\n- 记忆：保留真实记忆。\n- 情绪被追问时：必须透露原因，不能一直说没事。\n- 表情包：按自己意愿。';
-const naturalMood=context.slim(forcedMood,{natural:true,query:'早上好'});
-assert.doesNotMatch(naturalMood,/每次回复都要更新|情绪被追问时/);
-assert.match(naturalMood,/记忆：保留真实记忆|表情包：按自己意愿/);
-assert.doesNotMatch(context.slim(forcedMood,{natural:true,allModules:true,query:'早上好'}),/每次回复都要更新|情绪被追问时/,'fallback may restore capabilities but never the mood controller');
-assert.match(context.note(),/自主决定下一步/);
-assert.match(context.note(),/\[保持安静\]/);
-assert.equal(context.silent('[心情|有点闷]\n[保持安静]',context.note()),true);
-assert.equal(context.silent('[内心|想先安静陪着ta]\n[保持安静]',context.note()),true);
+assert.match(context.slim(sample,{natural:true,query:'早上好'}),/远控规则|锁软件规则/,'capabilities must not disappear from ordinary turns');
+assert.match(context.note(),/做出一次看得见的自然反应/);
+assert.match(context.note(),/不能只输出 \[保持安静\]/);
+assert.equal(context.silent('[保持安静]',context.note()),false,'call events may no longer vanish silently');
 
-const thoughtContact={moodVal:41,mood:'旧心情'};
-assert.equal(vm.runInContext('setNaturalInnerThought',context)(thoughtContact,' 想先听完 ta 的话 '),true);
-assert.equal(thoughtContact.innerThought,'想先听完 ta 的话');
-assert.equal(thoughtContact.moodVal,41,'display-only inner thought must not change mood value');
-assert.equal(thoughtContact.mood,'旧心情','display-only inner thought must not overwrite stable-mode mood');
-context.S.settings.wechatNatural=false;
-assert.equal(vm.runInContext('setNaturalInnerThought',context)(thoughtContact,'不应写入'),false);
-assert.equal(thoughtContact.innerThought,'想先听完 ta 的话');
-context.S.settings.wechatNatural=true;
-
-const initiativePlan=vm.runInContext("wechatNaturalInitiativePlan({msgMin:1,msgMax:10})",context);
-assert.equal(initiativePlan.kind,'autonomy');
-assert.match(initiativePlan.note,/主动联系自主决策/);
-assert.match(initiativePlan.note,/\[保持安静\]/);
-assert.match(initiativePlan.note,/1到10条之间自由决定/);
-assert.match(initiativePlan.note,/不要编造对方发过自拍/);
-
-assert.match(source,/_hlPlan=replyAccount==='main'&&humanLikeOn\(\)&&!_naturalOn\?/,'behavior planner must not decide natural-mode or alternate-account replies');
-assert.match(source,/_relIntent=_naturalOn\|\|replyAccount!=='main'\?null:relationshipIntent/,'numeric relationship policy must be absent in natural mode and alternate accounts');
-assert.match(source,/if\(!_naturalOn\)maybeAffectionShift/,'affection must not auto-shift in natural mode');
-assert.match(source,/if\(!_naturalOn\)syncVisibleMood/,'mood must not auto-normalize in natural mode');
-assert.match(source,/if\(!_naturalOn&&moodProbeText/,'mood-driven rewrite must be disabled in natural mode');
-assert.match(source,/if\(_main&&!_natural\)\{const mv=moodNow/,'current mood prompt must stay out of natural mode');
-assert.match(source,/if\(_main&&!_natural&&c\.emotionTailUntil/,'emotion tail must stay out of natural mode');
-assert.match(source,/if\(_main&&!_natural\)\{const gd=\(c\.grudges/,'grudge and task pressure must stay out of natural mode');
-assert.match(source,/if\(_main&&!_natural&&!opt\.selectiveMemory\)/,'power and behavior prompts must stay out of natural mode');
-assert.match(source,/if\(!_natural\)\{const _ap=currentActivityPrompt/,'system-selected activities must stay out of natural mode');
-assert.match(source,/# 日常自主性/,'natural mode should explicitly leave daily state to the role');
+assert.match(source,/function adjMood\(id,d\)\{const c=getC/,'mood updates must stay active');
+assert.match(source,/if\(moodProbeText\(_lu&&msgToText\(_lu\)\)/,'mood follow-up repair must stay active');
+assert.match(source,/mm=line\.match\(\/\^\\\[心情值[\s\S]{0,120}\{adjMood\(id/,'mood delta tags must be consumed');
+assert.match(source,/_relIntent=replyAccount!=='main'\?null:relationshipIntent/,'relationship policy is restored only for the main account');
+assert.match(source,/maybeAffectionShift\(id,c,_lu,content\);/,'relationship progression must stay active');
+assert.match(source,/dialogueEmotionOnReply\(c,content,_userText\);/,'dialogue emotion continuity must stay active');
+assert.match(source,/if\(_main\)\{const mv=moodNow\(c\);/,'current mood context must be present');
+assert.match(source,/if\(_main\)\{const _cl=/,'emotion cooldown must be present');
+assert.match(source,/if\(_main&&c\.emotionTailUntil/,'emotion tail must be present');
+assert.match(source,/\{const _ap=currentActivityPrompt\(c\);/,'stable current activity must be present');
+assert.match(source,/function checkIgnore\(\)\{if\(/);
+assert.doesNotMatch(functionSource('checkIgnore'),/wechatNaturalOn/,'no-reply checks must not be disabled by the retired mode');
+assert.doesNotMatch(functionSource('handleIdleEvent'),/wechatNaturalOn/,'idle events must not be discarded');
+assert.doesNotMatch(functionSource('handleExternalEvent'),/wechatNaturalOn/,'external events must not be discarded');
+assert.doesNotMatch(functionSource('recordTaMood'),/wechatNaturalOn/,'daily mood records must remain available');
+assert.doesNotMatch(functionSource('suspicionTick'),/wechatNaturalOn/,'suspicion follow-through must remain available');
+assert.doesNotMatch(functionSource('behaviorRecord'),/wechatNaturalOn/,'behavior evidence must remain available');
+assert.match(source,/if\(_main&&!_natural\)\{const gd=/,'the unselected grudge ledger remains excluded from the fused behavior');
+assert.match(source,/if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=powerDynamicPrompt/,'the unselected power\/BDSM controller remains excluded');
+assert.match(source,/# 角色内心想法（仅展示，不控制角色）/);
+assert.match(source,/不是心情值，不改变任何数值、亲密度、行为权限或自主决定/);
 assert.match(source,/role:_naturalOn&&m\.type==='sys'\?'system':m\.role/,'system events must not masquerade as user speech');
-assert.match(source,/role:_naturalOn\?'system':'user'/,'all natural-mode event notes must be system facts, never fake user speech');
-assert.match(source,/\(_natural\?traitSpeechDesc\(c\):traitDesc\(c\)\)/,'numeric personality sliders must stay out of natural mode');
-assert.match(source,/function adjMood\(id,d\)\{if\(wechatNaturalOn\(\)\)return;/,'mood value changes must be inert in natural mode');
-assert.match(source,/function setNaturalInnerThought\(c,value\)\{if\(!c\|\|!wechatNaturalOn\(\)\)return false;/,'inner thought text must have a natural-mode-only storage path');
-assert.match(source,/# 角色内心想法（仅展示，不控制角色）/,'natural mode should request a display-only inner thought');
-assert.match(source,/不是心情值，不改变任何数值、亲密度、行为权限或自主决定/,'the inner-thought prompt must explicitly preserve autonomy');
-assert.match(source,/\[内心\|你此刻真实、简短的内心想法\]/,'inner thought must use a tag independent from mood value');
-assert.match(source,/let mm=line\.match\(\/\^\\\[内心/,'WeChat replies should consume inner-thought tags without exposing them as messages');
-assert.match(source,/function checkIgnore\(\)\{if\(wechatNaturalOn\(\)\|\|/,'legacy no-reply escalation must be disabled in natural mode');
-assert.doesNotMatch(source,/function checkFollowups\(\)\{if\(wechatNaturalOn\(\)\|\|/,'explicit future-event follow-ups must remain available in natural mode');
-assert.match(source,/async function recordTaMood\(cid\)\{if\(wechatNaturalOn\(\)\)return false;/,'the system must not invent a daily mood for the role in natural mode');
-assert.match(source,/if\(hol&&F\['hol_'\+c\.id\]/,'enabled holiday greetings must remain available in natural mode');
-assert.match(source,/if\(!wechatNaturalOn\(\)&&S\.couple&&S\.couple\.cid&&h>=14/,'the daily mood scheduler must be disabled in natural mode');
-assert.match(source,/微信自然模式：不把久未打开解释为冷落/,'phone-idle events must not force a natural-mode reply');
-assert.match(source,/if\(!wechatNaturalOn\(\)\)cf\+='\\n- 【你很黏ta、舍不得挂电话】/,'the fixed clingy call policy must be stable-mode only');
-assert.match(source,/if\(!wechatNaturalOn\(\)\)maybeAffectionShift\(_call\.id/,'calls must not shift affection in natural mode');
-assert.match(source,/content=_naturalOn\?content\.replace\([^\n]+\):applyGrudgeTags\(content,c\)/,'natural-mode WeChat replies must not write to the grudge ledger');
-assert.match(source,/if\(!_naturalOn\)maybeGrudgeResolve\(content,c,id\)/,'natural-mode WeChat replies must not auto-resolve grudges');
-assert.match(source,/if\(!wechatNaturalOn\(\)\)maybeGrudgeResolve\(content,c,_call\.id\)/,'natural-mode calls must not auto-resolve grudges');
-assert.match(source,/if\(c&&!wechatNaturalOn\(\)\)\{const mood=honestMoodText/,'inline call mood tags must not write visible mood in natural mode');
-assert.match(source,/wechatCallEventReplyNote\(/,'call lifecycle must route through the autonomous test-mode note');
-assert.match(source,/content=applyControlTags\(content,c,id,_statedPwd\)/,'lock/control execution must remain connected');
-assert.match(source,/extractControl\(content,c,_statedPwd\)/,'natural-language lock execution must remain connected');
+assert.match(source,/是否舍不得挂电话必须由你本人的性格、当前关系和真实通话决定/,'call clinginess must be character-led');
+assert.match(source,/对方明确有事、很困、要停止或重复提出挂断时必须尊重/,'clinginess must have a hard stop boundary');
+assert.match(source,/content=applyControlTags\(content,c,id,_statedPwd\)/,'lock and control execution remains connected');
 
-console.log('WeChat autonomy mode tests passed');
+console.log('WeChat unified autonomy tests passed');
