@@ -178,6 +178,9 @@ final class CompanionPushAppDelegate: NSObject,
     UIApplicationDelegate,
     UNUserNotificationCenterDelegate {
 
+    private var urgentBatteryObserver: NSObjectProtocol?
+    private var urgentBatterySyncTask: Task<Void, Never>?
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions:
@@ -185,6 +188,19 @@ final class CompanionPushAppDelegate: NSObject,
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
+            urgentBatteryObserver = NotificationCenter.default.addObserver(
+                forName: .companionUrgentBatterySnapshotRequested,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.synchronizeUrgentBatterySnapshot()
+                }
+            }
+            // Construct the observer-backed reader only after the global
+            // upload listener is ready, including when the management sheet
+            // has never been opened.
+            _ = CompanionWellnessService.shared
             ScreenShareCoordinator.shared.setHostForeground(true)
             await clearAppBadge()
             CompanionPushCoordinator.shared.setBackgroundWakeHandler {
@@ -212,6 +228,7 @@ final class CompanionPushAppDelegate: NSObject,
         Task { @MainActor in
             ScreenShareCoordinator.shared.setHostForeground(true)
             await clearAppBadge()
+            await synchronizeCurrentSnapshotIfPaired()
         }
     }
 
@@ -230,6 +247,30 @@ final class CompanionPushAppDelegate: NSObject,
                 forKey: "screenShare.hostForeground.v1"
             )
         }
+    }
+
+    @MainActor
+    private func synchronizeUrgentBatterySnapshot() {
+        urgentBatterySyncTask?.cancel()
+        urgentBatterySyncTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard !Task.isCancelled else { return }
+            await self.synchronizeCurrentSnapshotIfPaired()
+        }
+    }
+
+    @MainActor
+    private func synchronizeCurrentSnapshotIfPaired() async {
+        let service = CompanionSyncService.shared
+        guard service.isPaired else { return }
+        await CompanionWellnessService.shared.refresh()
+        _ = await service.synchronize(
+            locationManager: LocationManager.shared,
+            wellnessService: CompanionWellnessService.shared,
+            quiet: true,
+            refreshUsage: false
+        )
     }
 
     @MainActor

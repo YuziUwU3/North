@@ -1,0 +1,251 @@
+/* 高级玻璃材质预览：原配色由既有主题决定，这里只替换容器材质与层级。 */
+html.north-glass-ui{--ng-blur:28px;--ng-sat:155%;--ng-line:rgba(255,255,255,.22);--ng-line-soft:rgba(255,255,255,.11);--ng-shadow:0 18px 44px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.18);--ng-dark:rgba(30,27,34,.57);--ng-dark-strong:rgba(25,22,29,.72);--ng-light:rgba(255,255,255,.56);--ng-light-strong:rgba(255,255,255,.7)}
+html.north-glass-ui .glass-app{isolation:isolate}
+html.north-glass-ui .home .app .ic.glass-pack-icon,
+html.north-glass-ui .home:not(.tpink):not(.twhite) .app .ic.glass-pack-icon{background:transparent!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
+html.north-glass-ui .home .app .ic.glass-pack-icon>img{inset:0!important;width:100%!important;height:100%!important;max-width:100%!important;object-fit:contain!important;object-position:50% 50%!important;border-radius:inherit;filter:none;transform:none}
+html.north-glass-ui .glass-app>.nav,
+html.north-glass-ui .glass-app>.tabbar,
+html.north-glass-ui .glass-app .inputbar,
+html.north-glass-ui .glass-app .panel,
+html.north-glass-ui .glass-app>.scroll>.section,
+html.north-glass-ui .glass-app>.scroll>.list,
+html.north-glass-ui .glass-app>.scroll>.bill{border-color:var(--ng-line-soft);box-shadow:inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(var(--ng-blur)) saturate(var(--ng-sat));-webkit-backdrop-filter:blur(var(--ng-blur)) saturate(var(--ng-sat))}
+
+/* 主屏：不改 App 图案，只让承载层变成玻璃，并整体轻微放大。 */
+html.north-glass-ui .home .hwid:not(.wpet),
+html.north-glass-ui .home .dock,
+html.north-glass-ui .home .home-editbar{overflow:hidden;border:1px solid var(--ng-line)!important;box-shadow:var(--ng-shadow)!important;backdrop-filter:blur(22px) saturate(150%)!important;-webkit-backdrop-filter:blur(22px) saturate(150%)!important}
+html.north-glass-ui .home:not([style*="background:url"]){background:radial-gradient(circle at 74% 18%,rgba(255,255,255,.055),transparent 28%),radial-gradient(circle at 20% 56%,rgba(255,255,255,.035),transparent 32%),linear-gradient(160deg,#101114,#030405 58%,#0a0b0d)!important;color:#f3f3f4}
+html.north-glass-ui .home:not([style*="background:url"]):before{background:radial-gradient(circle,rgba(255,255,255,.055),transparent 70%);opacity:.7}
+html.north-glass-ui .home:not([style*="background:url"]):after{background:radial-gradient(circle,rgba(148,154,166,.09),transparent 70%);opacity:.6}
+html.north-glass-ui .home[style*="background:url"]:before,html.north-glass-ui .home[style*="background:url"]:after{display:none!important;content:none!important}
+html.north-glass-ui .home:not(.tpink):not(.twhite) .hwid:not(.wpet){background:linear-gradient(145deg,rgba(24,25,29,.2),rgba(8,9,12,.09))!important}
+html.north-glass-ui .home:not(.tpink):not(.twhite) .dock{background:linear-gradient(145deg,rgba(25,27,31,.18),rgba(7,8,10,.08))!important}
+html.north-glass-ui .home.tpink .hwid:not(.wpet),html.north-glass-ui .home.tpink .dock{background:linear-gradient(145deg,rgba(255,219,233,.18),rgba(247,180,207,.08))!important}
+html.north-glass-ui .home.twhite .hwid:not(.wpet),html.north-glass-ui .home.twhite .dock{background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(229,231,239,.09))!important}
+html.north-glass-ui .home .hwid:not(.wpet):before,
+html.north-glass-ui .home .dock:before{content:"";position:absolute;left:8%;right:8%;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.82),transparent);pointer-events:none}
+html.north-glass-ui .home .app .ic{width:64px;height:64px;border-radius:20px}
+html.north-glass-ui .home .dock .app .ic{width:64px;height:64px}
+html.north-glass-ui .home .app>span{font-size:10.5px;color:#f5f5f6;text-shadow:0 1px 4px rgba(0,0,0,.9);font-weight:560}
+
+/* 微信夜间/白天共用同一套高级玻璃，只保留原有明暗差异。 */
+html.north-glass-ui .wx-glass{position:relative;background:radial-gradient(circle at 88% -8%,rgba(167,110,151,.19),transparent 36%),linear-gradient(180deg,#18151b,#211b21 58%,#151419)!important}
+html.north-glass-ui .wx-glass.wxlight{background:radial-gradient(circle at 88% -8%,rgba(255,190,218,.34),transparent 34%),linear-gradient(180deg,#f7f0f4,#eee8ed 62%,#f6f3f5)!important}
+html.north-glass-ui .wx-glass>.nav,
+html.north-glass-ui .wx-glass>.tabbar,
+html.north-glass-ui .wx-glass .inputbar,
+html.north-glass-ui .wx-glass .panel,
+html.north-glass-ui .wx-glass .moodbar,
+html.north-glass-ui .wx-glass .manual-reply-row{background:var(--ng-dark-strong)!important;border-color:var(--ng-line-soft)!important;box-shadow:inset 0 1px rgba(255,255,255,.1);backdrop-filter:blur(30px) saturate(160%);-webkit-backdrop-filter:blur(30px) saturate(160%)}
+html.north-glass-ui .wx-glass.wxlight>.nav,
+html.north-glass-ui .wx-glass.wxlight>.tabbar,
+html.north-glass-ui .wx-glass.wxlight .inputbar,
+html.north-glass-ui .wx-glass.wxlight .panel,
+html.north-glass-ui .wx-glass.wxlight .moodbar,
+html.north-glass-ui .wx-glass.wxlight .manual-reply-row{background:var(--ng-light-strong)!important;border-color:rgba(255,255,255,.76)!important}
+html.north-glass-ui .wx-glass>.scroll,
+html.north-glass-ui .wx-glass .chatbg{background:transparent!important}
+html.north-glass-ui .wx-glass .list .row,
+html.north-glass-ui .wx-glass .section,
+html.north-glass-ui .wx-glass .bill,
+html.north-glass-ui .wx-glass .mpost{background:linear-gradient(145deg,rgba(54,48,56,.55),rgba(31,28,34,.45))!important;border-color:var(--ng-line-soft)!important;box-shadow:inset 0 1px rgba(255,255,255,.07);backdrop-filter:blur(24px) saturate(145%);-webkit-backdrop-filter:blur(24px) saturate(145%)}
+html.north-glass-ui .wx-glass.wxlight .list .row,
+html.north-glass-ui .wx-glass.wxlight .section,
+html.north-glass-ui .wx-glass.wxlight .bill,
+html.north-glass-ui .wx-glass.wxlight .mpost{background:linear-gradient(145deg,rgba(255,255,255,.69),rgba(247,235,242,.53))!important;border-color:rgba(255,255,255,.72)!important;box-shadow:inset 0 1px rgba(255,255,255,.86)}
+html.north-glass-ui .wx-glass .msg.them .bubble{background:linear-gradient(145deg,rgba(66,60,69,.76),rgba(39,36,43,.72))!important;border:1px solid var(--ng-line-soft);box-shadow:0 7px 18px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.09);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+html.north-glass-ui .wx-glass.wxlight .msg.them .bubble{background:linear-gradient(145deg,rgba(255,255,255,.82),rgba(247,240,244,.72))!important;border-color:rgba(255,255,255,.78);box-shadow:0 7px 18px rgba(85,68,80,.1),inset 0 1px #fff}
+html.north-glass-ui .wx-glass .msg.me .bubble{background:linear-gradient(145deg,rgba(75,196,113,.82),rgba(44,146,86,.72))!important;border:1px solid rgba(185,255,207,.34);box-shadow:0 7px 18px rgba(17,91,52,.18),inset 0 1px rgba(255,255,255,.26);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+html.north-glass-ui .wx-glass textarea,
+html.north-glass-ui .wx-glass input,
+html.north-glass-ui .wx-glass select{border-color:var(--ng-line-soft)!important;background:rgba(255,255,255,.08)!important;box-shadow:inset 0 1px rgba(255,255,255,.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+html.north-glass-ui .wx-glass.wxlight textarea,
+html.north-glass-ui .wx-glass.wxlight input,
+html.north-glass-ui .wx-glass.wxlight select{border-color:rgba(255,255,255,.8)!important;background:rgba(255,255,255,.59)!important;box-shadow:inset 0 1px #fff}
+
+/* 设置页同样使用完整玻璃层，而不是只改一张设置卡。 */
+html.north-glass-ui .settings-glass{background:radial-gradient(circle at 88% 0,rgba(130,101,177,.25),transparent 34%),linear-gradient(180deg,#151419,#211c23)!important}
+html.north-glass-ui .settings-glass>.nav{background:rgba(31,28,35,.68)!important;border-color:var(--ng-line-soft)!important;box-shadow:inset 0 1px rgba(255,255,255,.1);backdrop-filter:blur(30px) saturate(160%);-webkit-backdrop-filter:blur(30px) saturate(160%)}
+html.north-glass-ui .settings-glass>#settingsscroll{background:transparent!important}
+html.north-glass-ui .settings-glass .section{overflow:hidden;border:1px solid var(--ng-line-soft)!important;border-radius:18px!important;background:linear-gradient(145deg,rgba(53,47,57,.58),rgba(30,27,34,.5))!important;box-shadow:0 15px 35px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.09)!important;backdrop-filter:blur(25px) saturate(145%);-webkit-backdrop-filter:blur(25px) saturate(145%)}
+html.north-glass-ui .settings-glass .section .it{min-height:48px;border-color:rgba(255,255,255,.065)!important;background:transparent!important}
+html.north-glass-ui .settings-glass .field input,
+html.north-glass-ui .settings-glass .field textarea,
+html.north-glass-ui .settings-glass .field select,
+html.north-glass-ui .settings-glass .minibtn{border:1px solid var(--ng-line-soft)!important;background:rgba(255,255,255,.075)!important;box-shadow:inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+
+/* 屏保完整沿用 v910 的原始样式，玻璃主题不再覆盖任何 lock* 元素。 */
+html.north-glass-ui .msgbanner{border-color:rgba(255,255,255,.24);background:linear-gradient(145deg,rgba(67,63,72,.68),rgba(30,29,35,.58));box-shadow:0 18px 42px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.18);backdrop-filter:blur(30px) saturate(165%);-webkit-backdrop-filter:blur(30px) saturate(165%)}
+html.north-glass-ui .north-glass-modal{background:rgba(4,4,7,.34);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
+html.north-glass-ui .north-glass-modal .sheet{border:1px solid rgba(255,255,255,.18);background:linear-gradient(145deg,rgba(55,50,59,.82),rgba(26,24,30,.78));box-shadow:0 28px 70px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.14);backdrop-filter:blur(34px) saturate(155%);-webkit-backdrop-filter:blur(34px) saturate(155%)}
+html.north-glass-ui .north-glass-modal.wxmodal-light .sheet{background:linear-gradient(145deg,rgba(255,255,255,.84),rgba(240,231,237,.77));border-color:rgba(255,255,255,.82);box-shadow:0 28px 70px rgba(72,57,67,.24),inset 0 1px #fff}
+
+/* 主屏时间本身的玻璃高光；颜色由用户独立选择。 */
+html.north-glass-ui .home-premium-head{display:none!important;height:0!important;padding:0!important}
+
+/* 可拖动黑色组件：沿用主屏既有 home-item/data-token 拖动机制。 */
+.hwwrap .home-widget-dashboard,.apppage .home-widget-dashboard{grid-column:1/-1;grid-row:span 2;min-height:164px}
+.home-dashboard-card{display:grid!important;grid-template-columns:minmax(0,1fr) 128px;gap:8px;padding:9px!important;background:linear-gradient(145deg,rgba(28,29,33,.18),rgba(7,8,10,.08))!important;border-color:rgba(255,255,255,.24)!important;border-radius:25px!important;color:#fff!important}
+.home-dashboard-card:after,.home-vinyl-card:after,.home-sweetie-card:after{display:none}
+.home-dashboard-grid{display:grid;grid-template-columns:.72fr 1fr 1fr;grid-template-rows:.72fr 1fr;gap:7px;min-width:0;height:128px;align-self:center}
+.home-dashboard-grid>div,.home-dashboard-photo{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:linear-gradient(145deg,rgba(70,71,76,.18),rgba(16,17,20,.08));box-shadow:inset 0 1px rgba(255,255,255,.08)}
+.dash-heart{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.dash-heart small{font-size:12px;font-weight:750}.dash-heart small i{display:block;font-size:6px;font-style:normal;letter-spacing:.1em;opacity:.55;text-align:center}
+.dash-time{grid-column:span 2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;text-align:center;padding:1px 0 2px;box-sizing:border-box}.dash-time b{display:block;font-size:24px;line-height:.94;letter-spacing:-.04em}.dash-time small{display:block;margin-top:2px;font-size:7px;line-height:1;opacity:.82;white-space:nowrap}
+.home-dashboard-grid>.dash-battery{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.dash-battery svg{width:19px;height:19px}.dash-battery b{font-size:9px;color:#fff}
+.dash-device{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.dash-device b{font-size:8px;opacity:.8}
+.dash-storage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.dash-storage i{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#f3f3f3 var(--dash-store),#555 0);font-style:normal}.dash-storage i:after{content:"";position:absolute;inset:6px;border-radius:50%;background:#242424}.dash-storage em{position:relative;z-index:1;font-style:normal;font-size:7px;font-weight:650}.dash-storage small{max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7px;font-weight:600;opacity:.86}
+.home-dashboard-card,.home-dashboard-grid,.home-dashboard-photo{min-width:0;max-width:100%;box-sizing:border-box;overflow:hidden}.home-dashboard-photo{width:128px;height:128px;align-self:center;justify-self:end;background:linear-gradient(145deg,rgba(55,57,63,.18),rgba(8,9,12,.08))!important}.home-dashboard-photo img{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-width:100%!important;max-width:none!important;margin:0!important;padding:0!important;object-fit:cover!important;object-position:50% 50%!important;border:0!important;border-radius:inherit!important}.home-dashboard-photo-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#aaa}.home-dashboard-photo-empty small{font-size:8px}
+.apppage .home-widget-vinyl{grid-column:span 2;grid-row:span 2;min-height:164px;aspect-ratio:1}.home-vinyl-card{display:block!important;padding:10px!important;background:linear-gradient(145deg,rgba(28,29,33,.18),rgba(7,8,10,.08))!important;border-color:rgba(255,255,255,.22)!important;border-radius:25px!important;color:#fff!important}.vinyl-label{position:absolute;left:11px;top:8px;z-index:3;font:italic 10px Georgia,serif;opacity:.78}.vinyl-record{position:absolute;left:15px;right:15px;top:15px;aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(circle,rgba(255,255,255,.08) 0 1px,transparent 1.7px 3.3px),radial-gradient(circle at 36% 31%,#f4f4f3 0,#b9b9b7 18%,#686967 43%,#d8d8d6 61%,#525351 78%,#a9aaa8 100%);box-shadow:0 7px 18px rgba(0,0,0,.55),inset 0 0 0 1px #e6e6e3,inset 0 0 18px rgba(255,255,255,.35)}.vinyl-cover{position:absolute!important;inset:25%!important;width:50%!important;height:50%!important;display:grid;place-items:center;border-radius:50%!important;object-fit:cover!important;background:#24262b;color:#fff;font-size:13px;font-style:normal}.vinyl-record>b{position:absolute;z-index:2;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:#f1f1f1;transform:translate(-50%,-50%)}.vinyl-arm{position:absolute;z-index:2;right:4px;top:14px;width:45px;height:131px;overflow:visible;filter:drop-shadow(0 2px 2px #000)}.vinyl-arm circle{fill:#777;stroke:#eee;stroke-width:6}.vinyl-arm path{fill:none;stroke:#e7e7ea;stroke-width:6;stroke-linecap:round}.vinyl-arm rect{fill:#bfc0c5;stroke:#eee;stroke-width:2}
+.vinyl-cover{inset:25%!important;width:50%!important;height:50%!important;max-width:none!important;object-position:50% 50%!important;box-shadow:0 0 0 4px rgba(0,0,0,.78),inset 0 0 10px rgba(0,0,0,.28)!important}
+.home-vinyl-card .vinyl-cover{inset:20%!important;width:60%!important;height:60%!important}
+.apppage .home-widget-sweetie{grid-column:span 2;grid-row:span 2;min-height:164px;aspect-ratio:1}.home-sweetie-card{display:block!important;padding:14px!important;background:linear-gradient(145deg,rgba(28,29,33,.18),rgba(7,8,10,.08))!important;border-color:rgba(255,255,255,.22)!important;border-radius:25px!important;color:#fff!important}.sweetie-people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:9px;width:100%;margin-top:2px}.sweetie-people>div{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}.sweetie-avatar-picker{width:60px;height:60px;display:grid;place-items:center;flex:0 0 60px;overflow:hidden;border:1px solid rgba(255,255,255,.28);border-radius:50%;background:#333;cursor:pointer;box-sizing:border-box}.sweetie-people img,.sweetie-people svg{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:50% 50%;background:#333}.sweetie-people b{display:block;width:100%;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;line-height:12px;font-weight:550;text-align:center}.home-sweetie-card p{position:absolute;left:12px;right:12px;bottom:13px;margin:0;padding:8px 9px;border-radius:14px;background:rgba(255,255,255,.07);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.35;text-align:center;opacity:.96}
+.sweetie-days{position:absolute;left:12px;right:12px;top:98px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit;font:inherit;font-size:9px;line-height:12px;font-weight:550;text-align:center}
+
+/* 参考图固定首屏结构：4x2 信息条；左侧四应用+右侧唱片；左侧双人卡+右侧四应用。 */
+html.north-glass-ui .home .apppage{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-flow:dense;grid-auto-rows:82px;gap:10px 7px;padding:9px 14px 13px}
+html.north-glass-ui .home .apppage>.home-widget-dashboard{grid-column:span 4;grid-row:span 2}
+html.north-glass-ui .home .apppage>.home-widget-vinyl{grid-column:span 2;grid-row:span 2}
+html.north-glass-ui .home .apppage>.home-widget-sweetie{grid-column:span 2;grid-row:span 2}
+html.north-glass-ui .home .apppage>.app{align-self:start;justify-content:flex-start;gap:4px}
+html.north-glass-ui .home .dock{height:80px;min-height:80px;margin-left:16px;margin-right:16px;padding:10px 52px;border-radius:25px;grid-template-columns:repeat(2,minmax(0,1fr));gap:34px}
+html.north-glass-ui .home .dock:empty{display:none!important}
+html.north-glass-ui .home .dock .app{min-width:0;width:100%;align-items:center}
+html.north-glass-ui .home .dock .app .ic{width:64px!important;height:64px!important;border-radius:20px!important}
+
+/* Explicit reference layout. It does not depend on free-grid auto placement. */
+html.north-glass-ui .glass-reference-page{position:relative;display:block!important;min-height:635px;padding:8px 16px 16px!important}
+html.north-glass-ui .glass-reference-page>.home-item{position:absolute!important;margin:0!important}
+html.north-glass-ui .glass-reference-page>.glass-app-drop-slot{position:absolute!important;display:block;pointer-events:none;visibility:hidden}
+/* 长按拖拽必须从触点落下时就接管手势；横向翻页和纵向滚动由 appMove 保留，避免 Android 在长按完成前发出 pointercancel。 */
+html.north-glass-ui #homeDesktop .home-item{touch-action:none}
+html.north-glass-ui body.home-drag-active #homeDesktop .home-item{touch-action:none}
+html.north-glass-ui .glass-reference-page~.apppage{content-visibility:auto;contain-intrinsic-size:390px 635px}
+html.north-glass-ui .glass-reference-page>.glass-place-dashboard{left:16px!important;right:auto!important;top:8px!important;width:calc(100% - 32px)!important;height:154px!important;min-width:0!important;min-height:0!important;max-width:348px!important;box-sizing:border-box!important;overflow:hidden!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-a{left:16px;top:178px;width:calc(25% - 13px);height:90px}
+html.north-glass-ui .glass-reference-page>.glass-place-app-b{left:calc(25% + 4px);top:178px;width:calc(25% - 13px);height:90px}
+html.north-glass-ui .glass-reference-page>.glass-place-app-c{left:16px;top:269px;width:calc(25% - 13px);height:90px}
+html.north-glass-ui .glass-reference-page>.glass-place-app-d{left:calc(25% + 4px);top:269px;width:calc(25% - 13px);height:90px}
+html.north-glass-ui .glass-reference-page>.glass-place-vinyl{left:calc(50% - 5px)!important;right:auto!important;top:175px!important;width:calc(50% - 21px)!important;height:auto!important;min-width:0!important;min-height:0!important;max-width:none!important;aspect-ratio:1!important;box-sizing:border-box!important;overflow:hidden!important}
+html.north-glass-ui .glass-reference-page>.glass-place-sweetie{left:16px!important;right:auto!important;top:365px!important;width:calc(50% - 21px)!important;height:auto!important;min-width:0!important;min-height:0!important;max-width:none!important;aspect-ratio:1!important;box-sizing:border-box!important;overflow:hidden!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-e{left:calc(50% + 12px)!important;top:371px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-f{left:calc(75% - .5px)!important;top:371px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-g{left:calc(50% + 12px)!important;top:462px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page>.glass-place-app-h{left:calc(75% - .5px)!important;top:462px!important;width:calc(25% - 27px)!important;height:90px!important;min-width:0!important}
+html.north-glass-ui .glass-reference-page .app .ic{width:66px!important;height:66px!important;flex:0 0 auto!important;border-radius:20px!important}
+html.north-glass-ui .glass-reference-page .app>span{max-width:74px;min-height:20px!important;flex:0 0 20px!important;line-height:20px!important}
+html.north-glass-ui .glass-reference-page>.app{min-width:0!important;max-width:none!important;box-sizing:border-box!important;overflow:visible}
+/* 第二页严格按参考图分区：左上 2×2 App + 右上竖向人物；横向三照片；两排各 4 个 App。 */
+html.north-glass-ui .glass-second-page{position:relative;display:block!important;min-height:635px;padding:8px 16px 16px!important;overflow:hidden!important;box-sizing:border-box!important;content-visibility:auto;contain-intrinsic-size:390px 635px}
+html.north-glass-ui .glass-second-page>.home-item{position:absolute!important;margin:0!important;width:calc(25% - 17px)!important;height:88px!important;min-width:0!important;max-width:none!important;box-sizing:border-box!important;overflow:visible}
+html.north-glass-ui .glass-second-page>.app{align-items:center!important;justify-content:flex-start!important;gap:5px!important}
+html.north-glass-ui .glass-second-page>.app .ic{width:62px!important;height:62px!important;flex:0 0 auto!important;border-radius:19px!important}
+html.north-glass-ui .glass-second-page>.app>span{max-width:76px!important;min-height:19px!important;flex:0 0 19px!important;font-size:10px!important;line-height:19px!important;text-align:center!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-0{left:16px!important;top:8px!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-1{left:calc(25% + 11px)!important;top:8px!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-2{left:16px!important;top:96px!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-3{left:calc(25% + 11px)!important;top:96px!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-4,html.north-glass-ui .glass-second-page>.glass-second-slot-8{left:16px!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-5,html.north-glass-ui .glass-second-page>.glass-second-slot-9{left:calc(25% + 11px)!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-6,html.north-glass-ui .glass-second-page>.glass-second-slot-10{left:calc(50% + 6px)!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-7,html.north-glass-ui .glass-second-page>.glass-second-slot-11{left:calc(75% + 1px)!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-4,html.north-glass-ui .glass-second-page>.glass-second-slot-5,html.north-glass-ui .glass-second-page>.glass-second-slot-6,html.north-glass-ui .glass-second-page>.glass-second-slot-7{top:359px!important}
+html.north-glass-ui .glass-second-page>.glass-second-slot-8,html.north-glass-ui .glass-second-page>.glass-second-slot-9,html.north-glass-ui .glass-second-page>.glass-second-slot-10,html.north-glass-ui .glass-second-page>.glass-second-slot-11{top:451px!important}
+html.north-glass-ui .glass-second-portrait,html.north-glass-ui .glass-second-photos{position:absolute;display:block;border:1px solid rgba(255,255,255,.24);background:linear-gradient(145deg,rgba(34,35,40,.18),rgba(5,6,8,.08));box-shadow:0 16px 38px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.14);backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%);box-sizing:border-box;overflow:hidden;-webkit-tap-highlight-color:transparent}
+html.north-glass-ui .glass-second-portrait:before,html.north-glass-ui .glass-second-photos:before{content:"";position:absolute;z-index:4;left:10%;right:10%;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);pointer-events:none}
+html.north-glass-ui .glass-second-portrait{left:calc(50% + 6px);right:16px;top:8px;height:176px;border-radius:24px;padding:12px 10px 9px;display:flex;flex-direction:column;align-items:center}
+html.north-glass-ui .glass-second-avatar-picker{position:relative;z-index:2;display:grid;place-items:center;width:84px;height:84px;flex:0 0 84px;border:1px solid rgba(255,255,255,.35);border-radius:50%;overflow:hidden;background:rgba(12,13,16,.42);box-shadow:0 8px 20px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.17);cursor:pointer}
+html.north-glass-ui .glass-second-avatar-picker img,html.north-glass-ui .glass-second-avatar-picker .glass-second-photo-empty{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:50%;filter:saturate(.88) contrast(1.03)}
+html.north-glass-ui .glass-second-photo-empty{width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
+html.north-glass-ui .glass-second-portrait-copy{position:absolute;left:9px;right:9px;bottom:9px;padding:8px 9px 7px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(5,6,8,.46);color:#fff;text-align:center;box-shadow:inset 0 1px rgba(255,255,255,.1);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);cursor:text}
+html.north-glass-ui .glass-second-portrait-copy b,html.north-glass-ui .glass-second-portrait-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.north-glass-ui .glass-second-portrait-copy b{font:600 15px/1.25 Georgia,"Times New Roman",serif;letter-spacing:.7px}
+html.north-glass-ui .glass-second-portrait-copy span{margin-top:3px;font-size:11px;line-height:1.3;opacity:.88}
+html.north-glass-ui .second-page-text-input{font-size:16px!important;line-height:1.45!important;min-height:44px!important}
+html.north-glass-ui .glass-second-photos{left:16px;right:16px;top:195px;height:150px;border-radius:25px;padding:13px 12px}
+html.north-glass-ui .glass-second-polaroids{position:relative;width:100%;height:100%}
+html.north-glass-ui .glass-second-polaroid{position:absolute;width:37%;height:112px;margin:0;padding:6px 6px 17px;border-radius:4px;background:rgba(247,247,245,.94);box-sizing:border-box;transform-origin:center center;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent}
+html.north-glass-ui .glass-second-polaroid img,html.north-glass-ui .glass-second-polaroid .glass-second-photo-empty{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:1px;background:#17181b}
+html.north-glass-ui .glass-second-polaroid i{position:absolute;left:31%;right:31%;bottom:7px;height:1px;border-radius:1px;background:rgba(20,20,23,.18)}
+html.north-glass-ui .glass-second-polaroid.p1{z-index:1;left:1.5%;top:0;transform:rotate(-7deg);box-shadow:0 7px 15px rgba(0,0,0,.3)}
+html.north-glass-ui .glass-second-polaroid.p2{z-index:3;left:30.5%;top:7px;transform:rotate(2deg);box-shadow:0 11px 22px rgba(0,0,0,.42)}
+html.north-glass-ui .glass-second-polaroid.p3{z-index:2;right:1.5%;top:3px;transform:rotate(6deg);box-shadow:0 8px 17px rgba(0,0,0,.34)}
+html.north-glass-ui.north-pack-pink .glass-second-portrait,html.north-glass-ui.north-pack-pink .glass-second-photos{background:linear-gradient(145deg,rgba(255,202,224,.18),rgba(239,156,190,.08));border-color:rgba(255,224,238,.58);box-shadow:0 18px 44px rgba(55,14,34,.34),inset 0 1px rgba(255,220,237,.17)}
+html.north-glass-ui.north-pack-blue .glass-second-portrait,html.north-glass-ui.north-pack-blue .glass-second-photos{background:linear-gradient(145deg,rgba(205,228,255,.18),rgba(143,188,241,.08));border-color:rgba(225,239,255,.56);box-shadow:0 18px 44px rgba(8,24,51,.36),inset 0 1px rgba(218,235,255,.17)}
+html.north-glass-ui.north-pack-gray .glass-second-portrait,html.north-glass-ui.north-pack-gray .glass-second-photos{background:linear-gradient(145deg,rgba(250,251,253,.2),rgba(218,222,229,.09));border-color:rgba(255,255,255,.66);box-shadow:0 18px 44px rgba(16,17,20,.31),inset 0 1px rgba(255,255,255,.18)}
+html.north-glass-ui .home.tpink .glass-second-portrait,html.north-glass-ui .home.tpink .glass-second-photos{background:linear-gradient(145deg,rgba(255,219,233,.18),rgba(247,180,207,.08));border-color:rgba(255,236,245,.58)}
+html.north-glass-ui .home.twhite .glass-second-portrait,html.north-glass-ui .home.twhite .glass-second-photos{background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(237,241,247,.09));border-color:rgba(255,255,255,.66)}
+html.north-glass-ui .home.glass-widget-custom .glass-second-portrait,html.north-glass-ui .home.glass-widget-custom .glass-second-photos{background:linear-gradient(145deg,rgba(var(--ng-widget-rgb),var(--ng-widget-alpha)),rgba(var(--ng-widget-rgb),var(--ng-widget-alpha-soft)));border-color:rgba(var(--ng-widget-rgb),calc(var(--ng-widget-alpha) + .22))}
+html.north-glass-ui .home-scroll{overflow-y:auto;padding-top:38px;box-sizing:border-box}
+html.north-glass-ui .home.home-editing .home-scroll{padding-top:38px}
+/* 苹果主屏幕兼容开启时，只下移网页版第一页/第二页共用的主内容区，为屏保箭头留下独立位置；私人 App 与安卓不命中。 */
+html.north-ios-home-safe.north-glass-ui .home .home-scroll{padding-top:calc(var(--north-ios-home-safe-top) + 25px)}
+html.north-glass-ui .appswipe{margin-top:0;align-items:flex-start}
+html.north-glass-ui .home .dock{display:grid!important;width:calc(100% - 32px)!important;max-width:348px!important;margin-left:16px!important;margin-right:auto!important;padding-left:10px!important;padding-right:10px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;column-gap:6px!important;box-sizing:border-box!important;overflow:hidden!important}
+html.north-glass-ui .home .dock>.app{width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important}
+html.north-glass-ui.north-pack-pink .glass-reference-page>.app,html.north-glass-ui.north-pack-blue .glass-reference-page>.app,html.north-glass-ui.north-pack-gray .glass-reference-page>.app,html.north-glass-ui.north-pack-black .glass-reference-page>.app{transform:none!important}
+html.north-glass-ui.north-pack-black .home-dashboard-card,html.north-glass-ui.north-pack-black .home-vinyl-card,html.north-glass-ui.north-pack-black .home-sweetie-card,html.north-glass-ui.north-pack-black .home .dock{background:linear-gradient(145deg,rgba(34,35,40,.18),rgba(5,6,8,.08))!important;border-color:rgba(255,255,255,.24)!important;backdrop-filter:blur(22px) saturate(145%)!important;-webkit-backdrop-filter:blur(22px) saturate(145%)!important}
+html.north-glass-ui.north-pack-pink .home-dashboard-card,html.north-glass-ui.north-pack-pink .home-vinyl-card,html.north-glass-ui.north-pack-pink .home-sweetie-card,html.north-glass-ui.north-pack-pink .home .dock{background:linear-gradient(145deg,rgba(255,202,224,.18),rgba(239,156,190,.08))!important;border-color:rgba(255,224,238,.58)!important}
+html.north-glass-ui.north-pack-blue .home-dashboard-card,html.north-glass-ui.north-pack-blue .home-vinyl-card,html.north-glass-ui.north-pack-blue .home-sweetie-card,html.north-glass-ui.north-pack-blue .home .dock{background:linear-gradient(145deg,rgba(205,228,255,.18),rgba(143,188,241,.08))!important;border-color:rgba(225,239,255,.56)!important}
+html.north-glass-ui.north-pack-gray .home-dashboard-card,html.north-glass-ui.north-pack-gray .home-vinyl-card,html.north-glass-ui.north-pack-gray .home-sweetie-card,html.north-glass-ui.north-pack-gray .home .dock{background:linear-gradient(145deg,rgba(250,251,253,.2),rgba(218,222,229,.09))!important;border-color:rgba(255,255,255,.66)!important}
+html.north-glass-ui.north-pack-pink .home-dashboard-grid>div,html.north-glass-ui.north-pack-pink .home-dashboard-photo{background:linear-gradient(145deg,rgba(255,232,241,.22),rgba(250,184,211,.10))!important}
+html.north-glass-ui.north-pack-blue .home-dashboard-grid>div,html.north-glass-ui.north-pack-blue .home-dashboard-photo{background:linear-gradient(145deg,rgba(232,243,255,.22),rgba(177,210,249,.10))!important}
+html.north-glass-ui.north-pack-gray .home-dashboard-grid>div,html.north-glass-ui.north-pack-gray .home-dashboard-photo{background:linear-gradient(145deg,rgba(255,255,255,.24),rgba(232,235,240,.11))!important}
+html.north-glass-ui.north-pack-pink .home-sweetie-card p{background:rgba(255,199,222,.22);border:1px solid rgba(255,220,235,.18)}
+html.north-glass-ui.north-pack-blue .home-sweetie-card p{background:rgba(190,220,255,.21);border:1px solid rgba(220,237,255,.17)}
+html.north-glass-ui.north-pack-gray .home-sweetie-card p{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.16)}
+html.north-glass-ui.north-pack-black .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.1) 0 1px,rgba(0,0,0,.05) 1.5px 3px),conic-gradient(from 14deg,#f1f1ef,#777875,#dededb,#555653,#efefed,#858683,#d5d5d2,#5f605d,#f1f1ef)}
+html.north-glass-ui.north-pack-pink .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.12) 0 1px,rgba(75,24,45,.06) 1.5px 3px),conic-gradient(from 14deg,#ffe1ed,#a96881,#f3bdcf,#805068,#ffdce8,#b87890,#f4c8d7,#8b576d,#ffe1ed)}
+html.north-glass-ui.north-pack-blue .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.12) 0 1px,rgba(17,43,82,.07) 1.5px 3px),conic-gradient(from 14deg,#e1eeff,#6680aa,#bdd2f2,#4e668d,#dceaff,#7892bd,#c6d9f5,#56709a,#e1eeff)}
+html.north-glass-ui.north-pack-gray .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.13) 0 1px,rgba(0,0,0,.04) 1.5px 3px),conic-gradient(from 14deg,#fff,#aaa,#f5f5f3,#8a8b88,#fff,#b7b8b5,#f7f7f5,#979895,#fff)}
+html.north-glass-ui.north-pack-pink .dash-storage i{background:conic-gradient(rgba(255,255,255,.92) var(--dash-store),rgba(255,190,216,.34) 0)}
+html.north-glass-ui.north-pack-blue .dash-storage i{background:conic-gradient(rgba(255,255,255,.92) var(--dash-store),rgba(185,215,255,.34) 0)}
+html.north-glass-ui.north-pack-gray .dash-storage i{background:conic-gradient(rgba(255,255,255,.94) var(--dash-store),rgba(215,216,222,.38) 0)}
+html.north-glass-ui.north-pack-pink .dash-storage i:after{background:rgba(255,232,241,.24)}
+html.north-glass-ui.north-pack-blue .dash-storage i:after{background:rgba(232,243,255,.24)}
+html.north-glass-ui.north-pack-gray .dash-storage i:after{background:rgba(255,255,255,.28)}
+html.north-glass-ui.north-pack-pink .home-dashboard-grid>div,html.north-glass-ui.north-pack-pink .home-dashboard-photo,html.north-glass-ui.north-pack-pink .sweetie-people img,html.north-glass-ui.north-pack-pink .sweetie-people svg,html.north-glass-ui.north-pack-pink .vinyl-cover{border-color:rgba(255,226,239,.58)!important;background-color:rgba(246,176,205,.34)!important;box-shadow:inset 0 1px rgba(255,245,250,.42)}
+html.north-glass-ui.north-pack-blue .home-dashboard-grid>div,html.north-glass-ui.north-pack-blue .home-dashboard-photo,html.north-glass-ui.north-pack-blue .sweetie-people img,html.north-glass-ui.north-pack-blue .sweetie-people svg,html.north-glass-ui.north-pack-blue .vinyl-cover{border-color:rgba(225,240,255,.56)!important;background-color:rgba(165,202,246,.32)!important;box-shadow:inset 0 1px rgba(246,251,255,.42)}
+html.north-glass-ui.north-pack-gray .home-dashboard-grid>div,html.north-glass-ui.north-pack-gray .home-dashboard-photo,html.north-glass-ui.north-pack-gray .sweetie-people img,html.north-glass-ui.north-pack-gray .sweetie-people svg,html.north-glass-ui.north-pack-gray .vinyl-cover{border-color:rgba(255,255,255,.66)!important;background-color:rgba(238,241,246,.48)!important;box-shadow:inset 0 1px rgba(255,255,255,.55)}
+html.north-glass-ui.north-pack-pink .home:not(.tpink):not(.twhite) .hwid.home-dashboard-card:not(.wpet),html.north-glass-ui.north-pack-pink .home:not(.tpink):not(.twhite) .hwid.home-vinyl-card:not(.wpet),html.north-glass-ui.north-pack-pink .home:not(.tpink):not(.twhite) .hwid.home-sweetie-card:not(.wpet),html.north-glass-ui.north-pack-pink .home:not(.tpink):not(.twhite) .dock{background:linear-gradient(145deg,rgba(255,219,233,.18),rgba(247,180,207,.08))!important;border-color:rgba(255,236,245,.58)!important}
+html.north-glass-ui.north-pack-blue .home:not(.tpink):not(.twhite) .hwid.home-dashboard-card:not(.wpet),html.north-glass-ui.north-pack-blue .home:not(.tpink):not(.twhite) .hwid.home-vinyl-card:not(.wpet),html.north-glass-ui.north-pack-blue .home:not(.tpink):not(.twhite) .hwid.home-sweetie-card:not(.wpet),html.north-glass-ui.north-pack-blue .home:not(.tpink):not(.twhite) .dock{background:linear-gradient(145deg,rgba(217,236,255,.18),rgba(157,199,246,.08))!important;border-color:rgba(233,245,255,.56)!important}
+html.north-glass-ui.north-pack-gray .home:not(.tpink):not(.twhite) .hwid.home-dashboard-card:not(.wpet),html.north-glass-ui.north-pack-gray .home:not(.tpink):not(.twhite) .hwid.home-vinyl-card:not(.wpet),html.north-glass-ui.north-pack-gray .home:not(.tpink):not(.twhite) .hwid.home-sweetie-card:not(.wpet),html.north-glass-ui.north-pack-gray .home:not(.tpink):not(.twhite) .dock{background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(237,241,247,.09))!important;border-color:rgba(255,255,255,.62)!important}
+html.north-glass-ui .home.glass-widget-custom .hwid.home-dashboard-card,html.north-glass-ui .home.glass-widget-custom .hwid.home-vinyl-card,html.north-glass-ui .home.glass-widget-custom .hwid.home-sweetie-card,html.north-glass-ui .home.glass-widget-custom .dock{background:linear-gradient(145deg,rgba(var(--ng-widget-rgb),var(--ng-widget-alpha)),rgba(var(--ng-widget-rgb),var(--ng-widget-alpha-soft)))!important;border-color:rgba(var(--ng-widget-rgb),calc(var(--ng-widget-alpha) + .22))!important}
+html.north-glass-ui.north-pack-pink .home-dashboard-card,html.north-glass-ui.north-pack-pink .home-vinyl-card,html.north-glass-ui.north-pack-pink .home-sweetie-card{color:#fff7fb!important;text-shadow:0 1px 5px rgba(85,23,50,.72)}
+html.north-glass-ui.north-pack-blue .home-dashboard-card,html.north-glass-ui.north-pack-blue .home-vinyl-card,html.north-glass-ui.north-pack-blue .home-sweetie-card{color:#f5f9ff!important;text-shadow:0 1px 5px rgba(19,46,80,.74)}
+html.north-glass-ui.north-pack-gray .home-dashboard-card,html.north-glass-ui.north-pack-gray .home-vinyl-card,html.north-glass-ui.north-pack-gray .home-sweetie-card{color:#fff!important;text-shadow:0 1px 5px rgba(22,24,29,.78)}
+html.north-glass-ui.north-pack-pink .glass-reference-page .app>span,html.north-glass-ui.north-pack-pink .glass-reference-page+.apppage .app>span,html.north-glass-ui.north-pack-blue .glass-reference-page .app>span,html.north-glass-ui.north-pack-blue .glass-reference-page+.apppage .app>span,html.north-glass-ui.north-pack-gray .glass-reference-page .app>span,html.north-glass-ui.north-pack-gray .glass-reference-page+.apppage .app>span{color:#fff!important;text-shadow:0 1px 5px rgba(0,0,0,.92),0 0 2px rgba(0,0,0,.75)!important;font-weight:650!important}
+html.north-glass-ui.north-pack-pink .home-dashboard-card svg,html.north-glass-ui.north-pack-blue .home-dashboard-card svg,html.north-glass-ui.north-pack-gray .home-dashboard-card svg{stroke:currentColor!important}
+html.north-glass-ui.north-pack-pink .dash-battery b,html.north-glass-ui.north-pack-blue .dash-battery b,html.north-glass-ui.north-pack-gray .dash-battery b{color:currentColor!important}
+html.north-glass-ui.north-pack-pink .home-dashboard-card,html.north-glass-ui.north-pack-pink .home-vinyl-card,html.north-glass-ui.north-pack-pink .home-sweetie-card,html.north-glass-ui.north-pack-pink .home .dock{box-shadow:0 18px 44px rgba(55,14,34,.34),inset 0 1px rgba(255,220,237,.17)!important}
+html.north-glass-ui.north-pack-blue .home-dashboard-card,html.north-glass-ui.north-pack-blue .home-vinyl-card,html.north-glass-ui.north-pack-blue .home-sweetie-card,html.north-glass-ui.north-pack-blue .home .dock{box-shadow:0 18px 44px rgba(8,24,51,.36),inset 0 1px rgba(218,235,255,.17)!important}
+html.north-glass-ui.north-pack-gray .home-dashboard-card,html.north-glass-ui.north-pack-gray .home-vinyl-card,html.north-glass-ui.north-pack-gray .home-sweetie-card,html.north-glass-ui.north-pack-gray .home .dock{box-shadow:0 18px 44px rgba(16,17,20,.31),inset 0 1px rgba(255,255,255,.18)!important}
+.vinyl-record[role="button"]{cursor:pointer;touch-action:manipulation}
+.music-headphone-pair>svg{display:none!important}
+html.north-glass-ui.north-pack-pink .vinyl-arm circle{fill:#8e5a70;stroke:#ffd5e6}html.north-glass-ui.north-pack-pink .vinyl-arm path{stroke:#efb7cf}html.north-glass-ui.north-pack-pink .vinyl-arm rect{fill:#b87994;stroke:#ffd5e6}
+html.north-glass-ui.north-pack-blue .vinyl-arm circle{fill:#617ba7;stroke:#d8e9ff}html.north-glass-ui.north-pack-blue .vinyl-arm path{stroke:#b8d3f5}html.north-glass-ui.north-pack-blue .vinyl-arm rect{fill:#7993bd;stroke:#d8e9ff}
+html.north-glass-ui.north-pack-gray .vinyl-arm circle{fill:#949597;stroke:#fff}html.north-glass-ui.north-pack-gray .vinyl-arm path{stroke:#ececea}html.north-glass-ui.north-pack-gray .vinyl-arm rect{fill:#b8b9bb;stroke:#fff}
+html.north-glass-ui.north-pack-black .home-vinyl-card .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.1) 0 1px,rgba(0,0,0,.05) 1.5px 3px),conic-gradient(from 14deg,#bfc1c3,#3e4042,#a8abad,#303234,#d3d4d5,#55585a,#b9bbbd,#3a3c3e,#bfc1c3)!important}
+html.north-glass-ui.north-pack-pink .home-vinyl-card .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.15) 0 1px,rgba(75,24,45,.06) 1.5px 3px),conic-gradient(from 14deg,#ffe5f0,#b36d89,#f6c5d7,#8c5670,#ffe0ec,#c07d98,#f8cfdd,#985f77,#ffe5f0)!important}
+html.north-glass-ui.north-pack-blue .home-vinyl-card .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.15) 0 1px,rgba(17,43,82,.07) 1.5px 3px),conic-gradient(from 14deg,#e5f1ff,#6d87b2,#c6d9f6,#536b94,#e0edff,#829bc4,#cfdef7,#5d77a1,#e5f1ff)!important}
+html.north-glass-ui.north-pack-gray .home-vinyl-card .vinyl-record{background:repeating-radial-gradient(circle,rgba(255,255,255,.16) 0 1px,rgba(0,0,0,.04) 1.5px 3px),conic-gradient(from 14deg,#fff,#b4b5b7,#f7f7f6,#929395,#fff,#c0c1c2,#fafafa,#a0a1a3,#fff)!important}
+/* 播放页只复用主屏唱片的金属纹理；不接管唱片尺寸、封面尺寸或外层布局。 */
+html.north-glass-ui .music-vinyl{background:repeating-radial-gradient(circle,rgba(255,255,255,.16) 0 1px,rgba(61,63,66,.06) 1.6px 3.4px),conic-gradient(from 14deg,#f5f5f3,#8b8d8f,#dedfdf,#66686a,#fafaf8,#9ea0a2,#e8e8e6,#747678,#f5f5f3)!important;box-shadow:0 9px 22px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.5),inset 0 0 22px rgba(255,255,255,.22)!important}
+/* 主屏组件与播放页使用同一档慢速；播放/暂停状态仍由原有逻辑控制。 */
+html.north-glass-ui .home-vinyl-card .vinyl-record.wdisc,html.north-glass-ui .music-vinyl{animation-duration:24s!important}
+html.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-dashboard-card:not(.wpet),html.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-vinyl-card:not(.wpet),html.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-sweetie-card:not(.wpet),html.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .dock{background:linear-gradient(145deg,rgba(34,35,40,.18),rgba(5,6,8,.08))!important;border-color:rgba(255,255,255,.24)!important;backdrop-filter:blur(22px) saturate(145%)!important;-webkit-backdrop-filter:blur(22px) saturate(145%)!important}
+html.north-glass-ui.north-pack-pink .home-dashboard-grid>div,html.north-glass-ui.north-pack-blue .home-dashboard-grid>div,html.north-glass-ui.north-pack-gray .home-dashboard-grid>div{box-shadow:inset 0 1px rgba(255,255,255,.2),0 6px 16px rgba(0,0,0,.08)!important}
+@media(max-width:360px){html.north-glass-ui .home .app .ic{width:60px!important;height:60px!important}html.north-glass-ui .home .dock .app .ic{width:60px!important;height:60px!important}}
+
+/* 真页面预览模式只隔离示例数据，不另画一套界面。 */
+html.north-real-preview,html.north-real-preview body{background:#09090b}
+html.north-real-preview .msgbanner.show{animation:none!important}
+@media(min-width:650px){html.north-preview-tablet .phone{width:760px!important;max-width:96vw!important;height:940px!important;border-radius:38px!important;padding:10px!important}html.north-preview-tablet .screen{border-radius:30px!important}html.north-preview-tablet .home .apppage{grid-template-columns:repeat(6,minmax(0,1fr))!important}html.north-preview-tablet .home .dock{max-width:560px;margin-left:auto;margin-right:auto}}
+
+/* 微信本体透明，明暗只由玻璃层切换；不把原来的主题配色改掉。 */
+html.north-glass-ui .wx-glass{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:100%!important;display:flex!important;background:linear-gradient(180deg,rgba(13,12,16,.92),rgba(24,20,26,.94))!important}
+html.north-glass-ui .wx-glass>.scroll{flex:1 1 auto!important;min-height:0!important}
+html.north-glass-ui .wx-glass.wxlight{background:linear-gradient(180deg,rgba(250,247,249,.94),rgba(237,234,238,.96))!important}
+html.north-glass-ui .wx-glass:not(.wxlight)>.nav,html.north-glass-ui .wx-glass:not(.wxlight)>.tabbar,html.north-glass-ui .wx-glass:not(.wxlight) .list .row{background:rgba(25,23,29,.48)!important}
+html.north-glass-ui .wx-glass.wxlight>.nav,html.north-glass-ui .wx-glass.wxlight>.tabbar,html.north-glass-ui .wx-glass.wxlight .list .row{background:rgba(255,255,255,.5)!important}

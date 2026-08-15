@@ -3,6 +3,11 @@ import Foundation
 import HealthKit
 import UIKit
 
+extension Notification.Name {
+    static let companionUrgentBatterySnapshotRequested =
+        Notification.Name("phone.companion.urgent-battery-snapshot-requested.v1")
+}
+
 @MainActor
 final class CompanionWellnessService: ObservableObject {
     static let shared = CompanionWellnessService()
@@ -118,6 +123,8 @@ final class CompanionWellnessService: ObservableObject {
     private func refreshBattery() {
         let device = UIDevice.current
         let level = device.batteryLevel
+        let previousLevel = batteryLevelPercent
+        let previousState = batteryStateText
         batteryLevelPercent = level >= 0
             ? min(100, max(0, Int((level * 100).rounded())))
             : nil
@@ -134,6 +141,21 @@ final class CompanionWellnessService: ObservableObject {
             batteryStateText = "未知"
         @unknown default:
             batteryStateText = "未知"
+        }
+
+        let enteredCritical = batteryLevelPercent.map { current in
+            current <= 5 && (previousLevel.map { $0 > 5 } ?? true)
+        } ?? false
+        let recoveredFromCritical = batteryLevelPercent.map { current in
+            current >= 10 && (previousLevel ?? 101) <= 5
+        } ?? false
+        let chargingChanged = previousState != batteryStateText &&
+            (batteryStateText == "充电中" || batteryStateText == "已充满")
+        if enteredCritical || recoveredFromCritical || chargingChanged {
+            NotificationCenter.default.post(
+                name: .companionUrgentBatterySnapshotRequested,
+                object: self
+            )
         }
     }
 

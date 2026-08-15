@@ -619,6 +619,53 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
   return "";
 }
 
+function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
+  const config = (profile.automation_config && typeof profile.automation_config === "object"
+    ? profile.automation_config : {}) as Record<string, unknown>;
+  const permissions = (config.permissions && typeof config.permissions === "object"
+    ? config.permissions : {}) as Record<string, unknown>;
+  const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object"
+    ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
+  const health = (snapshot.health && typeof snapshot.health === "object"
+    ? snapshot.health : {}) as Record<string, unknown>;
+  const screen = (snapshot.screenTime && typeof snapshot.screenTime === "object"
+    ? snapshot.screenTime : {}) as Record<string, unknown>;
+  const location = (snapshot.location && typeof snapshot.location === "object"
+    ? snapshot.location : {}) as Record<string, unknown>;
+  const fresh = (value: unknown, maxAge: number) => {
+    const at = snapshotTime(value);
+    return at > 0 && Date.now() - at >= 0 && Date.now() - at <= maxAge;
+  };
+  const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+  const facts: string[] = [];
+  if (permissions.battery === true && fresh(telemetry.generatedAt, 20 * 60_000)) {
+    const raw = Number(telemetry.batteryLevel);
+    const level = raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
+    const state = String(telemetry.batteryState || "");
+    if (Number.isFinite(level) && level <= 20 && !/充电中|已充满|charging|full/i.test(state)) {
+      facts.push(`当前电量${level}%${telemetry.lowPowerMode === true ? "，已开低电量模式" : ""}`);
+    }
+  }
+  if (permissions.health === true && fresh(health.generatedAt, 30 * 60_000)) {
+    if (clock.hour >= 5 && clock.hour < 13 && Number(health.sleepSeconds) > 0) {
+      facts.push(`最近睡眠${Math.round(Number(health.sleepSeconds) / 60)}分钟`);
+    }
+    if (clock.hour >= 12 && clock.hour < 23 && Number(health.steps) >= 1000) {
+      facts.push(`今天已走${Math.round(Number(health.steps))}步`);
+    }
+  }
+  if (permissions.screenTime === true && clock.hour >= 18 && screen.reportFresh === true &&
+      fresh(screen.generatedAt, 30 * 60_000) && Number(screen.totalSeconds) > 0) {
+    facts.push(`今天屏幕总使用${Math.round(Number(screen.totalSeconds) / 60)}分钟`);
+  }
+  const recent = String(profile.recent_context || "").split(/\r?\n/).slice(-4).join("\n");
+  if (permissions.location === true && /出门|到了|到家|在路上|回家|上班|下班|通勤/.test(recent) &&
+      fresh(location.ts || location.generatedAt, 30 * 60_000) && String(location.place || "").trim()) {
+    facts.push(`最近位置${String(location.place).trim().slice(0, 120)}`);
+  }
+  return facts.slice(0, 3).join("；");
+}
+
 function automationCandidate(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
   const config = (profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config : {}) as Record<string, unknown>;
   if (config.suspended === true) return null;
@@ -1030,7 +1077,16 @@ Deno.serve(async (request) => {
         .order("created_at", { ascending: false }).limit(6);
       const recentBodies = (Array.isArray(recentRows) ? recentRows : [])
         .map((row) => String(row?.body || "").trim()).filter(Boolean);
-      const decision = await roleMessage(profile, recentBodies);
+      const ambientLink = (await client.from("phone_companion_links").select("snapshot")
+        .eq("target", profile.target).maybeSingle()).data;
+      const ambientFacts = snapshotAmbientFacts(
+        profile,
+        (ambientLink?.snapshot || {}) as Record<string, unknown>,
+      );
+      const ambientInstruction = ambientFacts
+        ? "最近真实聊天、用户情绪和正在发生的事情永远优先。本次伴生数据只是可选日常背景：只有其中某一项与本轮联系自然相关时，才带入最多一项；否则完全忽略。禁止逐项汇报、硬转话题、反复提醒，也不提系统、监控、读取或后台。"
+        : "";
+      const decision = await roleMessage(profile, recentBodies, ambientInstruction, ambientFacts);
       const { data: latestProfile } = await client.from("phone_role_push_profiles")
         .select("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context")
         .eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
