@@ -21,6 +21,8 @@ assert.match(source, /if\(_main\)\{if\(!_natural\)\{const av=affNow\(c\)/);
 assert.match(source, /if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=powerDynamicPrompt/);
 assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
 assert.match(source, /resumeAccountReplies\(aid\);if\(aid==='main'\)setTimeout\(triggerAltReports,1500\)/);
+assert.match(source, /scheduleReply\(c\.id,note,ok=>/);
+assert.match(source, /if\(ok\)\{cc\._altIntroDone=true;cc\._altReportAt=/);
 assert.match(source, /_natural\|\|!_main\?'':suspicionPrompt\(c\)\+extremeLovePrompt\(c\)/);
 assert.match(source, /s\+=_main\?memoryResetPrompt\(c\):''/);
 assert.match(source, /s\+=_main\?friendOriginPrompt\(c\):''/);
@@ -137,8 +139,12 @@ const reportSandbox = {
   },
   isMain: () => true,
   msgToText: m => m.content || "",
+  getC: id => id === reportRole.id ? reportRole : null,
+  _altReportInFlight: Object.create(null),
+  _altReportRetried: Object.create(null),
+  setTimeout: fn => { fn(); return 1; },
   save() {},
-  scheduleReply: (id, note) => reportCalls.push({ id, note }),
+  scheduleReply: (id, note, onDone) => { reportCalls.push({ id, note, onDone }); return true; },
 };
 vm.runInNewContext(
   ["altReportSnapshot", "lastAltMsgTime", "triggerAltReports"]
@@ -152,6 +158,10 @@ reportSandbox.runReports();
 assert.equal(reportCalls.length, 1, "first alt conversation must be reported once after returning to main");
 assert.match(reportCalls[0].note, /独立联系人/);
 assert.match(reportCalls[0].note, /不要猜测两个账号是同一个人/);
+assert.equal(reportRole._altReportAt, 0, "alt activity must not be consumed before a visible report succeeds");
+reportSandbox.runReports();
+assert.equal(reportCalls.length, 1, "an in-flight report must not be queued twice");
+reportCalls[0].onDone(true);
 assert.equal(reportRole._altReportAt, 101);
 reportSandbox.runReports();
 assert.equal(reportCalls.length, 1, "the same alt activity must not be reported twice");
@@ -159,8 +169,13 @@ reportMessages["role_report#alt_1"].push({ role: "user", type: "image", content:
 reportSandbox.runReports();
 assert.equal(reportCalls.length, 2, "new alt activity must allow exactly one new report");
 assert.match(reportCalls[1].note, /这次的新情况/);
+reportCalls[1].onDone(false);
+assert.equal(reportRole._altReportAt, 101, "a failed report must leave the new alt activity pending");
+assert.equal(reportCalls.length, 3, "a failed report gets one immediate automatic retry");
+reportCalls[2].onDone(true);
+assert.equal(reportRole._altReportAt, 202);
 reportSandbox.runReports();
-assert.equal(reportCalls.length, 2, "the follow-up report must also remain one-time");
+assert.equal(reportCalls.length, 3, "the successful follow-up report must remain one-time");
 
 let summaryActive = "main";
 const summarySandbox = {

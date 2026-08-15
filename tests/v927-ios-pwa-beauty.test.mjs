@@ -7,9 +7,9 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v946 web and private 1.0.69 releases are aligned', () => {
-  assert.match(app, /APP_VER='v946 · 关闭内置AI新购买'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='946'/);
+test('v947 web keeps private 1.0.69 compatibility', () => {
+  assert.match(app, /APP_VER='v947 · 苹果电话排版修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='947'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 69;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.69;/g) || []).length, 12);
 });

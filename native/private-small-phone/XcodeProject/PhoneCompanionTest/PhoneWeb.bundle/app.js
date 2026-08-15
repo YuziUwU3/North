@@ -1569,7 +1569,7 @@ function applyLockTimeMaterial(el,value){if(!el)return;el.style.setProperty('--l
 function renderLockClock(){const e=$('#lockScreen');if(!e)return;const t=e.querySelector('.locktime'),d=e.querySelector('.lockdate'),v=hm();if(t){t.textContent=v;t.dataset.time=v;applyLockTimeMaterial(t,v);}if(d)d.textContent=lockDateText();}
 function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=S.me.lockBg||S.me.homeBg||'',notes=lockNotes().slice(0,4);
   applyLockAppearance(el);const clock=hm();el.innerHTML=`<div class="lockbg" style="${bg?'background-image:url('+bg+');':''}"></div><div class="lockshade"></div><div class="locktop"><div class="lockdate">${lockDateText()}</div><div class="locktime" data-time="${clock}">${clock}</div></div><div class="locknotes">${notes.length?notes.map(lockNoteHTML).join(''):'<div class="lockempty">暂无新通知</div>'}</div><div class="lockbottom"><button class="lockquick" onclick="lockQuickTorch(event)" title="手电筒">${svgIc('flashlight',24,'#fff',1.75)}</button><div class="lockhint" onclick="lockOpen()"><div class="lockup"></div><div>上滑进入小手机</div><div class="lockhandle"></div></div><button class="lockquick" onclick="lockQuickCamera(event)" title="相机">${svgIc('camera',24,'#fff',1.75)}</button></div>`;applyLockTimeMaterial(el.querySelector('.locktime'),clock);_lockFreshId='';}
-function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return false;let on=false;try{on=S.me.locked===false&&cur().p==='home'&&homePageClamp(_homePage)===0&&!_call;}catch(_){}e.classList.toggle('show',!!on);return !!on;}
+function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return false;let on=false;try{on=S.me.locked===false&&cur().p==='home'&&homePageClamp(_homePage)===0&&!_call;}catch(_){}e.classList.toggle('show',!!on);e.style.display=on?'':'none';e.setAttribute('aria-hidden',on?'false':'true');e.tabIndex=on?0:-1;return !!on;}
 let _lockPullRefreshTimer=0;
 function lockPullRefresh(){clearTimeout(_lockPullRefreshTimer);renderLockPull();_lockPullRefreshTimer=setTimeout(renderLockPull,90);setTimeout(renderLockPull,360);}
 window.addEventListener('pageshow',lockPullRefresh,{passive:true});
@@ -3547,7 +3547,6 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
       <div class="it"><span>语音逐句生成<br><small style="color:#888">关闭：沿用整轮预生成；开启：聊天语音、语音通话和视频通话按顺序一条条生成，首句更早开始且降低并发异常</small></span><span class="sw ${voiceProgressiveOn()?'on':''}" onclick="S.settings.voiceProgressive=!voiceProgressiveOn();save();render()"></span></div>
       <div class="it"><span>主屏幕时间和日期<br><small style="color:#888">关闭后仅隐藏文字并保留原位置，主屏布局、其他 App、组件和锁屏时间都不移动</small></span><span class="sw ${homeClockVisible()?'on':''}" onclick="homeClockToggle()"></span></div>
       <div class="it"><span>苹果兼容适配<br><small style="color:#888">只在 iPhone / iPad 主屏幕版和私人 App 内避让顶部、底部控件，并把屏保入口箭头移出状态栏；不再拉长页面。Safari 浏览器和安卓不受影响</small></span><span class="sw ${appleHomeCompatOn()?'on':''}" onclick="appleHomeCompatToggle()"></span></div>
-      ${appleHomeCompatBrowserEnvironment()?`<div class="it"><span>苹果底栏诊断<br><small style="color:#888">只读取当前屏幕与安全区尺寸，不会上传内容。点开后复制结果发给开发者</small></span><button type="button" class="minibtn" onclick="northViewportDiagnosticStart(true)">采集数据</button></div>`:''}
       <div style="padding:11px 14px 5px;font-weight:700;color:#ffafc9">手动回复场景（可多选）</div>
       <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
@@ -7955,6 +7954,7 @@ function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.callName=($('
   syncActiveAccount();save();try{pfEnsure(true).catch(()=>{});}catch(_){}closeModal();render();}
 function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.city=S.me.city||'';a.age=S.me.age||18;a.adultConsent=S.me.adultConsent!==false;a.balance=S.me.balance;a.bills=S.me.bills;}}
 let _accountTapAt=0,_accountCreateBusy=false,_accountSaveBusy=false,_accountDeleteBusy=false;
+const _altReportInFlight=Object.create(null),_altReportRetried=Object.create(null);
 function accountSwitchTap(ev,aid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}
   const now=Date.now();if(now-_accountTapAt<350)return;_accountTapAt=now;switchAccount(aid);}
 function accountCreateTap(ev){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}if(_accountCreateBusy)return false;_accountCreateBusy=true;setTimeout(()=>{try{editAccount();}catch(e){toast('小号页面打开失败：'+String((e&&e.message)||'未知错误').slice(0,46));}finally{_accountCreateBusy=false;}},0);return false;}
@@ -7974,13 +7974,13 @@ function switchAccount(aid){initAccounts();if(aid===actId()){closeModal();return
   resumeAccountReplies(aid);if(aid==='main')setTimeout(triggerAltReports,1500);}
 function altReportSnapshot(cid){let latest=null;Object.keys(S.messages).forEach(k=>{if(k.indexOf(cid+'#')!==0)return;const aid=k.slice((cid+'#').length),acc=(S.me.accounts||[]).find(a=>a.id===aid);if(!acc)return;const arr=(S.messages[k]||[]).filter(m=>m&&m.type!=='sys'&&(m.role==='user'||m.role==='assistant')&&m.time);if(!arr.length)return;const lm=arr[arr.length-1];if(latest&&latest.time>=lm.time)return;latest={time:lm.time,who:acc.name,recent:arr.slice(-5).map(m=>(m.role==='user'?acc.name:'我')+'：'+((m.content||msgToText(m))||'').replace(/\n/g,' ').slice(0,28)).join('；')};});return latest;}
 function lastAltMsgTime(cid){const info=altReportSnapshot(cid);return info?info.time:0;}
-function triggerAltReports(){if(!isMain())return;for(const c of S.contacts){if(c.deleted||c.blocked)continue;const info=altReportSnapshot(c.id),t=info&&info.time;if(t&&t>(c._altReportAt||0)){
+function triggerAltReports(){if(!isMain())return;for(const c of S.contacts){if(c.deleted||c.blocked)continue;const info=altReportSnapshot(c.id),t=info&&info.time,key=c.id+':'+t;if(t&&t>(c._altReportAt||0)&&!_altReportInFlight[key]){
     const who=info.who,recent=info.recent;
-    const first=!c._altIntroDone;c._altIntroDone=true;c._altReportAt=t;save();
+    const first=!c._altIntroDone;_altReportInFlight[key]=true;
     const note=first
       ?'[系统：有个独立联系人「'+who+'」用另一个微信号加了你，并和你聊过。现在你已经回到与大号联系人「'+S.me.name+'」的聊天，请用你自己的口吻简短报备一次：谁加了你、你是什么态度。不要猜测两个账号是同一个人，不要逐句复述。]'
       :'[系统：你以前已经向大号联系人「'+S.me.name+'」报备过「'+who+'」。这次对方又和你发生了新聊天：'+recent+'。请只简短报备这次的新情况和你的态度，不要重复首次报备，不要猜测两个账号是同一个人。]';
-    scheduleReply(c.id,note);break;}}}
+    const queued=scheduleReply(c.id,note,ok=>{delete _altReportInFlight[key];const cc=getC(c.id)||c;if(ok){cc._altIntroDone=true;cc._altReportAt=Math.max(+cc._altReportAt||0,t);delete _altReportRetried[key];save();return;}if(!_altReportRetried[key]){_altReportRetried[key]=true;setTimeout(()=>{if(isMain())triggerAltReports();},1200);}});if(queued===false)delete _altReportInFlight[key];break;}}}
 function editAccount(aid){initAccounts();const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',city:'',_new:true};if(!a)return;
   openModal(`<h3>${aid&&!a._new?'编辑身份':'新建小号'}</h3>
    <div class="field"><label>头像</label><div class="avline">${av(a.avatar,'sm')}<input id="ac_av" value="${esc(a.avatar)}"><button class="minibtn" onclick="pickFile('image/*',async f=>{$('#ac_av').value=await compress(f,256,.8)})">📷</button></div></div>

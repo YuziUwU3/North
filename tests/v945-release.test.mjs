@@ -12,18 +12,18 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v946 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v946 · 关闭内置AI新购买'/);
-  assert.match(app,/const url='sw\.js\?v=946'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='946'/);
-  assert.match(html,/app\.js\?v=946/);
-  assert.match(sw,/const BUILD='946'/);
-  assert.match(sw,/north-shell-v946/);
-  assert.match(index,/小手机\.html\?v=946/);
-  assert.match(repair,/小手机\.html\?v=946/);
+test('v947 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v947 · 苹果电话排版修复'/);
+  assert.match(app,/const url='sw\.js\?v=947'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='947'/);
+  assert.match(html,/app\.js\?v=947/);
+  assert.match(sw,/const BUILD='947'/);
+  assert.match(sw,/north-shell-v947/);
+  assert.match(index,/小手机\.html\?v=947/);
+  assert.match(repair,/小手机\.html\?v=947/);
 });
 
-test('the private iOS package is aligned with the shared v946 core',()=>{
+test('the existing private iOS package remains on the packaged v946 core',()=>{
   assert.match(privateBundle,/<string>946<\/string>/);
   assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.69;/g)||[]).length,12);
   assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 69;/g)||[]).length,12);
