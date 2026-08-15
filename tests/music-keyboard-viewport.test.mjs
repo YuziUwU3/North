@@ -15,7 +15,8 @@ function viewportSource() {
 
 function harness() {
   const queued = [];
-  const root = { scrollTop: 61, scrollLeft: 7 };
+  const root = { scrollTop: 61, scrollLeft: 7, scrollHeight: 1600 };
+  const dock = { scrollIntoView: options => { dock.lastScrollOptions = options; } };
   const documentElement = { scrollTop: 62, clientHeight: 800 };
   const body = { scrollTop: 63, scrollLeft: 9 };
   let playerPresent = true;
@@ -26,6 +27,7 @@ function harness() {
       scrollingElement: root,
       documentElement,
       body,
+      getElementById: id => id === 'musicChatDock' && playerPresent ? dock : null,
       querySelector: selector => selector === '.music-premium' && playerPresent ? {} : null,
     },
     window: {
@@ -40,6 +42,7 @@ function harness() {
   vm.createContext(sandbox);
   vm.runInContext(`let _mView='player';${viewportSource()};globalThis.api={
     reset:musicViewportReset,
+    dockToKeyboard:musicChatDockToKeyboard,
     focus:musicChatViewportFocus,
     blur:musicChatViewportBlur,
     resize:musicChatViewportResize,
@@ -47,7 +50,7 @@ function harness() {
     focused:()=>_mChatViewportFocused,
     baseline:()=>_mChatViewportHeight
   };`, sandbox);
-  return { sandbox, root, documentElement, body, listeners, queued, setPlayerPresent: value => { playerPresent = value; }, setAppleSafe: value => { appleSafe = value; } };
+  return { sandbox, root, documentElement, body, dock, listeners, queued, setPlayerPresent: value => { playerPresent = value; }, setAppleSafe: value => { appleSafe = value; } };
 }
 
 test('music player resets only its residual document pan', () => {
@@ -96,16 +99,24 @@ test('keyboard recovery waits for viewport height to rebound', () => {
   assert.equal(h.root.scrollTop, 0);
 });
 
-test('apple compatibility uses the same natural keyboard push as WeChat', () => {
+test('apple compatibility places the music input against the keyboard without old snap-back passes', () => {
   const h = harness();
   h.setAppleSafe(true);
   h.root.scrollTop = 47;
   h.sandbox.api.focus();
-  assert.equal(h.sandbox.api.focused(), false, 'Apple flow must not arm the old forced reset');
-  assert.equal(h.sandbox.api.baseline(), 0);
+  assert.equal(h.sandbox.api.focused(), true, 'Apple flow tracks the focused music input');
+  assert.equal(h.sandbox.api.baseline(), 800);
+  assert.equal(h.root.scrollTop, h.root.scrollHeight, 'focus must jump to the end of the music player');
+  assert.equal(h.dock.lastScrollOptions.block, 'end');
+  assert.equal(h.dock.lastScrollOptions.inline, 'nearest');
+  assert.equal(h.dock.lastScrollOptions.behavior, 'auto');
+  assert.equal(h.queued.length, 1, 'only one bounded keyboard-settling pass is scheduled');
+  h.root.scrollTop = 33;
+  h.listeners.resize();
+  assert.equal(h.root.scrollTop, h.root.scrollHeight, 'keyboard resize keeps the dock against the viewport bottom');
   h.sandbox.api.blur();
-  assert.equal(h.root.scrollTop, 47, 'blur must leave WebKit natural keyboard positioning alone');
-  assert.equal(h.queued.length, 0, 'Apple flow must not schedule three snap-back passes');
+  assert.equal(h.root.scrollTop, h.root.scrollHeight, 'blur leaves WebKit at its natural scrolled position');
+  assert.equal(h.queued.length, 1, 'Apple flow must not schedule the old three snap-back passes');
 });
 
 test('music input owns the recovery hooks without restoring a global viewport hack', () => {
