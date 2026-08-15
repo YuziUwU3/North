@@ -8,15 +8,17 @@ const app=read('../app.js');
 const bundledHtml=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
 const bundledApp=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 
-test('phone safe-area changes are scoped to the web iOS home compatibility class',()=>{
+test('phone identity and subtitle layout are shared by web Apple and Android, but not private App',()=>{
   assert.match(html,/html\.north-ios-home-safe \.phoneui \.phtop\{padding-top:calc\(12px \+ var\(--north-ios-home-safe-top\)\)/);
-  assert.match(html,/html\.north-ios-home-safe \.phcallperson \.avatar\{width:94px;height:94px/);
-  assert.match(html,/html\.north-ios-home-safe \.phcallperson\{margin-top:30px\}/,'the identity block moves down slightly without moving the controls');
-  assert.match(html,/html\.north-ios-home-safe \.phcallsub\{flex:1;min-height:92px;[^}]*padding:0 2px 44px;[^}]*overflow-y:auto;align-items:flex-end/,'the whole subtitle block rests near the input lane instead of leaving a large empty gap below');
-  assert.match(html,/html\.north-ios-home-safe \.phcallctl svg\{width:60px;height:60px/);
-  assert.match(html,/html\.north-ios-home-safe \.phendbtn\{width:66px;height:66px/);
-  assert.doesNotMatch(html,/html\.north-native-app[^}]*\.phcall/,'private App telephone layout must not inherit the web-only fix');
-  assert.match(bundledHtml,/html\.north-ios-home-safe \.phoneui \.phtop/,'the private bundle may share the CSS but only the web compatibility class can activate it');
+  assert.match(app,/<div class="phcallperson"><div class="phcallidentity">/);
+  assert.match(html,/\.phcalltop\{[^}]*transform:translateY\(18px\)/);
+  assert.match(html,/\.phcallidentity\{[^}]*transform:translateY\(18px\)/);
+  assert.match(html,/\.phcallsub\{[^}]*flex:1;min-height:92px;padding:0 2px 56px;[^}]*align-items:flex-end/);
+  assert.match(html,/\.phcallperson \.avatar\{width:94px;height:94px/);
+  assert.match(html,/\.phcallctl svg\{width:60px;height:60px/);
+  assert.doesNotMatch(html,/html\.north-ios-home-safe \.phcall(?:ui|person|identity|sub|grid|ctl|name|num|region|text|endbtn)/,'phone content layout is not hidden inside Apple compatibility');
+  assert.doesNotMatch(bundledApp,/phcallidentity/,'private App phone markup remains unchanged');
+  assert.doesNotMatch(bundledHtml,/\.phcalltop\{[^}]*translateY\(18px\)/,'private App phone position remains unchanged');
   assert.match(bundledApp,/function appleHomeCompatEnvironment\(\)\{return appleHomeCompatBrowserEnvironment\(\);\}/);
 });
 

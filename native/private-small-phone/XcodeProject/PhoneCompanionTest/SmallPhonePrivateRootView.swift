@@ -42,7 +42,6 @@ struct SmallPhonePrivateRootView: View {
                 showsDeviceManagement = true
             }
         }
-        .ignoresSafeArea(.container, edges: .bottom)
         // Keep the WKWebView frame fixed when the software keyboard appears.
         // Otherwise SwiftUI first shrinks the representable and WebKit then
         // scrolls the focused field, producing the visible down/up bounce.

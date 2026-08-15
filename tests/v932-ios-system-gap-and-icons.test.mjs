@@ -7,19 +7,13 @@ const app=read('app.js');
 const html=read('小手机.html');
 const sw=read('sw.js');
 
-test('Safari system-owned gap no longer pulls the web shell below innerHeight',()=>{
-  assert.match(app,/classList\.remove\('north-ios-pwa-shell'\)/);
+test('Safari system-owned gap uses the restored pre-repair shell contract',()=>{
+  assert.doesNotMatch(app,/north-ios-pwa-shell/);
   assert.doesNotMatch(html,/html\.north-ios-pwa-shell \.phone/);
-  assert.match(html,/north_pwa_system_bar_color/);
-  assert.match(html,/--north-system-bar-color/);
-  assert.match(app,/function pwaWallpaperBottomColor\(src\)/);
-  assert.match(app,/function pwaSystemBarSync\(\)/);
-  assert.match(app,/if\(!appleHomeCompatBrowserEnvironment\(\)\)return window\.__NORTH_SYSTEM_BAR_COLOR__/);
-  assert.match(html,/var color=apple&&standalone\?/);
-  assert.match(html,/if\(stored==='#111318'\|\|stored==='#171820'\)stored='#0a0b0d'/);
-  assert.match(html,/background-color:var\(--north-system-bar-color,#0a0b0d\)/);
-  assert.match(app,/glassThemeOn\(\)\?'#0a0b0d'/);
-  assert.match(app,/setTimeout\(\(\)=>pwaSystemBarSync\(\)\.catch/);
+  assert.doesNotMatch(html,/north_pwa_system_bar_color|--north-system-bar-color|north-ios-pwa-bottom/);
+  assert.doesNotMatch(app,/pwaWallpaperBottomColor|pwaSystemBarSync|__NORTH_SYSTEM_BAR_COLOR__/);
+  assert.match(html,/--north-ios-home-safe-bottom:0px/);
+  assert.match(html,/background-color:#000/);
 });
 
 test('Apple compatibility moves only Apple lock arrows and leaves Android geometry untouched',()=>{

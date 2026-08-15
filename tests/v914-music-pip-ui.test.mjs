@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v949 web source keeps private 1.0.70 compatibility',()=>{
-  assert.match(app,/APP_VER='v949 · 苹果电话字幕位置微调'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 70;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.70;/);
+test('v950 web source keeps private 1.0.71 compatibility',()=>{
+  assert.match(app,/APP_VER='v950 · 底部外壳回退与电话布局'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 71;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.71;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

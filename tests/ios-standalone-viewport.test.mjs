@@ -27,7 +27,7 @@ function compatOn(setting=false,privateApp=false){
 }
 
 test('full-screen shell is capped to the current available viewport',()=>{
-  assert.match(html,/viewport-fit=cover/);
+  assert.doesNotMatch(html,/viewport-fit=cover/);
   assert.match(html,/html,body,.phone,.screen\{height:100%;min-height:0;max-height:100%;overflow:hidden\}/);
   assert.match(html,/#app\{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;\}/);
   assert.match(html,/\.page\{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\}/);
@@ -56,13 +56,13 @@ test('manual safe-area mode stays on Apple home-screen web and excludes the priv
   assert.equal(compatOn(false,false),false,'the ordinary browser keeps its existing opt-in behavior');
 });
 
-test('iOS home-screen bottom paint is automatic while the compatibility switch remains available',()=>{
+test('iOS home-screen compatibility remains available without bottom-bar repair geometry',()=>{
   assert.match(functionSource('renderSettings'),/appleHomeCompatNative\(\)\?'':`<div class="it"><span>苹果兼容适配<br>/);
-  assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-ios-pwa-shell'\)/);
+  assert.doesNotMatch(functionSource('applyAppleHomeCompat'),/north-ios-pwa-shell/);
   assert.match(functionSource('applyAppleHomeCompat'),/north-ios-home-safe',browser/);
   assert.match(functionSource('applyAppleHomeCompat'),/north-apple-remote-safe',on/);
   assert.doesNotMatch(html,/html\.north-ios-pwa-shell \.phone/);
-  assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:max\(env\(safe-area-inset-bottom,0px\),34px\)\}/);
+  assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:0px\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');
   assert.match(html,/\.north-ios-home-safe \.home-premium-head\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/\.north-ios-home-safe \.inputbar\{[^}]*var\(--north-ios-home-safe-bottom\)/);
@@ -96,7 +96,7 @@ test('iOS home-screen bottom paint is automatic while the compatibility switch r
   assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
   assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of browser-wide offsets');
-  assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container reserves the entire tappable top safe area');
+  assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container returns bottom inset ownership to iOS');
   assert.match(nativeRoot,/Color\.black[\s\S]*?\.ignoresSafeArea\(\.container, edges: \.top\)/,'the private app paints the reserved status-bar lane pure black');
   assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\)/,'the web view must never extend under the iPhone status bar');
 });

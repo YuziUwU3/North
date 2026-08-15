@@ -63,10 +63,10 @@ assert.equal(sandbox.twice, sandbox.once, "alias cleanup must be idempotent");
 assert.ok(sandbox.fixed.length < 700, "existing runaway summary must be compacted");
 assert.match(sandbox.fixed, /真正事实会保留/);
 
-assert.match(html, /viewport-fit=cover/);
-assert.match(html, /apple-mobile-web-app-status-bar-style" content="black-translucent"/);
-assert.match(html, /name="theme-color" id="pwaThemeColor" content="#000000"/);
-assert.match(html, /background_color:shellColor,theme_color:shellColor/);
+assert.doesNotMatch(html, /viewport-fit=cover/);
+assert.match(html, /apple-mobile-web-app-status-bar-style" content="black"/);
+assert.match(html, /name="theme-color" content="#ff8fab"/);
+assert.match(html, /background_color:'#111111',theme_color:'#ff8fab'/);
 assert.match(app, /music-app\$\{bg\?' has-bg':''\}/);
 assert.match(html, /\.music-app\.has-bg:after/);
 assert.match(app, /if\(musicEnsureCurrent\(\)\)_mView='player'/);

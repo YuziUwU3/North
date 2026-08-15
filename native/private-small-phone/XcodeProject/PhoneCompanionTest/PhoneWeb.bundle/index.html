@@ -2,42 +2,26 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <meta name="apple-mobile-web-app-title" content="North" />
-<meta name="theme-color" id="pwaThemeColor" content="#000000" />
-<script>
-/* Safari 26.x 主屏幕 Web App 的系统底栏位于网页层外；启动时先用上次采样的壁纸底色衔接，避免固定黑条。 */
-(function(){try{
-  var n=navigator||{},ua=String(n.userAgent||''),apple=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1);
-  var standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);
-  var stored=localStorage.getItem('north_pwa_system_bar_color');
-  if(stored==='#111318'||stored==='#171820')stored='#0a0b0d';
-  var color=apple&&standalone?(stored||'#0a0b0d'):'#000000';
-  if(!/^#[0-9a-f]{6}$/i.test(color))color='#0a0b0d';
-  window.__NORTH_SYSTEM_BAR_COLOR__=color;
-  document.documentElement.style.setProperty('--north-system-bar-color',color);
-  document.documentElement.style.backgroundColor=color;
-  var meta=document.getElementById('pwaThemeColor');if(meta)meta.content=color;
-}catch(e){window.__NORTH_SYSTEM_BAR_COLOR__='#000000';}})();
-</script>
+<meta name="theme-color" content="#ff8fab" />
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='948';</script>
+<script>window.__NORTH_SHELL_BUILD__='950';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
   var base=location.href.replace(/[?#].*$/,'');var dir=base.replace(/[^\/]*$/,'');
   var icon=dir+'icon.png?v=336';
   var al=document.getElementById('pwaAppleIcon');if(al)al.href=icon;
-  var shellColor=window.__NORTH_SYSTEM_BAR_COLOR__||'#0a0b0d';
-  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:shellColor,theme_color:shellColor,icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
   var b=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});var ml=document.getElementById('pwaManifest');if(ml)ml.href=URL.createObjectURL(b);
 }catch(e){}})();
 </script>
@@ -45,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-948';
+  var key='north-sw-reloaded-950';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=948';
+  var url='sw.js?v=950';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1207,16 +1191,12 @@ body{min-height:0}
 #cou_companion_audit .v{padding:3px 7px;border-radius:99px;background:rgba(255,190,99,.08)}
 @media(max-width:390px){#coupage3{padding-left:8px;padding-right:8px}#coupage3>.section{border-radius:19px!important}#cou_companion_apps>.bill.companion-app-card{padding:13px!important;border-radius:18px!important}}
 /* v848：PWA 顶部安全区由页面壁纸覆盖；音乐背景在首页与播放器都清楚可见。 */
-html,body,.phone,.screen{min-height:100%;min-height:100dvh;background-color:var(--north-system-bar-color,#0a0b0d)}
+html,body,.phone,.screen{background-color:#000}
 /* 全屏外壳只跟随当前可用视口；禁止用物理屏幕高度拉长页面，聊天等页面由内部滚动区承载内容。 */
 html,body,.phone,.screen{height:100%;min-height:0;max-height:100%;overflow:hidden}
 /* v882：Apple 主屏幕模式保留 v877 已验证的 100% 外壳，不再用 100dvh 二次缩短页面。
    部分已安装主屏幕 WebApp 会把 env() 回报为 0，因此手动适配模式提供可点击的保守下限。 */
-html.north-ios-home-safe{--north-ios-home-safe-top:max(env(safe-area-inset-top,0px),47px);--north-ios-home-safe-bottom:max(env(safe-area-inset-bottom,0px),34px)}
-/* Safari 26.x 的主屏幕系统底栏位于网页层外，禁止再把 phone 向不可见区域拉长；
-   页面严格停在 innerHeight 内，底部系统条改用启动时缓存的壁纸底色衔接。 */
-html.north-ios-home-safe .phone{position:fixed;top:0;left:0;right:0;bottom:calc(0px - var(--north-ios-pwa-bottom,0px));width:100%;height:auto;min-height:0;max-height:none}
-html.north-ios-home-safe .screen{width:100%;height:100%;min-height:0;max-height:none}
+html.north-ios-home-safe{--north-ios-home-safe-top:max(env(safe-area-inset-top,0px),47px);--north-ios-home-safe-bottom:0px}
 html.north-ios-home-safe .home-premium-head{height:calc(67px + var(--north-ios-home-safe-top));padding-top:calc(18px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .nav{height:calc(46px + var(--north-ios-home-safe-top));flex-basis:calc(46px + var(--north-ios-home-safe-top));padding-top:var(--north-ios-home-safe-top)}
 html.north-ios-home-safe .inputbar{padding-bottom:calc(7px + var(--north-ios-home-safe-bottom))}
@@ -1345,8 +1325,8 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=948">
-<link rel="stylesheet" href="pet-game.css?v=948">
+<link rel="stylesheet" href="glass-theme.css?v=950">
+<link rel="stylesheet" href="pet-game.css?v=950">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1396,12 +1376,12 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=948" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=948" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=948" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=948" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=948" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=948" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=948"></script>
+<script src="license-gate.js?v=950" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=950" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=950" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=950" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=950" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=950" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=950"></script>
 </body>
 </html>

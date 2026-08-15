@@ -2,42 +2,26 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <meta name="apple-mobile-web-app-title" content="North" />
-<meta name="theme-color" id="pwaThemeColor" content="#000000" />
-<script>
-/* Safari 26.x 主屏幕 Web App 的系统底栏位于网页层外；启动时先用上次采样的壁纸底色衔接，避免固定黑条。 */
-(function(){try{
-  var n=navigator||{},ua=String(n.userAgent||''),apple=/iPhone|iPad|iPod/.test(ua)||(n.platform==='MacIntel'&&n.maxTouchPoints>1);
-  var standalone=n.standalone===true||(typeof matchMedia==='function'&&matchMedia('(display-mode: standalone)').matches);
-  var stored=localStorage.getItem('north_pwa_system_bar_color');
-  if(stored==='#111318'||stored==='#171820')stored='#0a0b0d';
-  var color=apple&&standalone?(stored||'#0a0b0d'):'#000000';
-  if(!/^#[0-9a-f]{6}$/i.test(color))color='#0a0b0d';
-  window.__NORTH_SYSTEM_BAR_COLOR__=color;
-  document.documentElement.style.setProperty('--north-system-bar-color',color);
-  document.documentElement.style.backgroundColor=color;
-  var meta=document.getElementById('pwaThemeColor');if(meta)meta.content=color;
-}catch(e){window.__NORTH_SYSTEM_BAR_COLOR__='#000000';}})();
-</script>
+<meta name="theme-color" content="#ff8fab" />
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='949';</script>
+<script>window.__NORTH_SHELL_BUILD__='950';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
   var base=location.href.replace(/[?#].*$/,'');var dir=base.replace(/[^\/]*$/,'');
   var icon=dir+'icon.png?v=336';
   var al=document.getElementById('pwaAppleIcon');if(al)al.href=icon;
-  var shellColor=window.__NORTH_SYSTEM_BAR_COLOR__||'#0a0b0d';
-  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:shellColor,theme_color:shellColor,icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+  var man={name:'North',short_name:'North',start_url:base,scope:dir,display:'standalone',orientation:'portrait',background_color:'#111111',theme_color:'#ff8fab',icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
   var b=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});var ml=document.getElementById('pwaManifest');if(ml)ml.href=URL.createObjectURL(b);
 }catch(e){}})();
 </script>
@@ -45,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-949';
+  var key='north-sw-reloaded-950';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=949';
+  var url='sw.js?v=950';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -869,7 +853,7 @@ body{background:#000;padding:0;}
 .phlineswitch{display:flex;gap:4px;align-items:center;justify-content:center;width:max-content;max-width:calc(100% - 32px);margin:8px auto 0;padding:3px;border-radius:999px;background:#171719;border:1px solid rgba(255,255,255,.1)}.phlineswitch button{border:0;border-radius:999px;background:transparent;color:#aaa;padding:7px 16px;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer}.phlineswitch button.on{background:#f5f5f7;color:#111}.phaliasnote{text-align:center;color:#8e8e93;font-size:12px;line-height:1.25;margin:6px 14px 0;word-break:break-all}.smslinebar{flex:0 0 auto;padding:6px 10px 0;background:#000}.smslinebar .phlineswitch{margin-top:0}.smslinebar .phaliasnote{margin-top:4px}
 .phdetail{padding:18px;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch}.phdetail .avatar{width:92px;height:92px;border-radius:50%;margin:6px auto 10px;font-size:40px}.phctitle{font-size:34px!important;line-height:1.08!important;margin:10px 0 5px!important;word-break:break-word}.phcnum{color:#b7b7bd;font-size:18px;line-height:1.25}.phcreg{color:#777;font-size:13px;margin-top:4px}.phacts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.phact{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:12px 4px;color:#fff;font-size:12px;cursor:pointer}.phact svg{display:block;margin:0 auto 6px;}
 .phcard{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:10px 0;overflow:hidden;text-align:left}.phcard .it{min-height:48px;padding:12px 14px;gap:14px;line-height:1.35;border-color:rgba(255,255,255,.09);background:transparent;color:#fff}.phcard .it span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.phcard .it .v{flex:0 0 auto;max-width:58%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:#aaa;}
-.phcallui{height:100%;background:linear-gradient(180deg,#242426 0%,#111114 45%,#050505 100%);color:#fff;display:flex;flex-direction:column;align-items:center;padding:54px 24px 28px;box-sizing:border-box;overflow:hidden}.phcalltop{font-size:22px;color:#cfd0d5;font-weight:650;text-align:center}.phcalltop span{display:inline-block;background:#fff;color:#222;border-radius:6px;padding:1px 5px;margin-right:6px;font-size:13px;vertical-align:middle}.phcalltop b{font-size:18px;color:#aaa;margin-left:8px;font-weight:500}.phcallperson{text-align:center;margin-top:32px;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center}.phcallperson .avatar{width:118px;height:118px;flex:0 0 118px;min-width:118px;min-height:118px;border-radius:50%;margin:0 auto 18px;font-size:44px}.phcallperson .avatar img{border-radius:50%}.phcallname{font-size:34px;font-weight:760;line-height:1.12;max-width:310px;word-break:break-word}.phcallname.masked{font-size:31px}.phcallnum{font-size:20px;color:#d8d8de;margin-top:8px}.phcallregion{font-size:17px;color:#a4a4aa;margin-top:6px}.phcallsub{font-size:16px;color:#e5e5e8;line-height:1.5;margin:18px auto 0;width:100%;max-width:320px;min-height:60px;overflow:hidden;display:flex;align-items:center;justify-content:center}.phcaption{display:inline-block;max-width:92%;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:#cfd0d5}.phcalltext{width:100%;max-width:350px;display:grid;grid-template-columns:64px minmax(0,1fr) 64px;align-items:center;gap:8px;margin:0 0 14px}.phcalltext input{min-width:0;border:1px solid rgba(255,255,255,.1);background:#1c1c1f;color:#fff;border-radius:16px;padding:10px 12px;outline:none;text-align:center}.phcalltext button,.phcalltxtbtn{height:40px;border:0;border-radius:14px;background:#2c2c2e;color:#fff;padding:0 10px;white-space:nowrap}.phcalldial{width:100%;max-width:310px;margin:0 0 14px;padding:10px;border-radius:18px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}.phcalldigits{min-height:24px;text-align:center;color:#f5f5f7;font-size:20px;margin-bottom:8px;letter-spacing:1px}.phcallkeys{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.phcallkeys button{height:38px;border:0;border-radius:12px;background:rgba(255,255,255,.13);color:#fff;font-size:21px}.phcalldialbar{display:flex;justify-content:center;gap:10px;margin-top:9px}.phcalldialbar button{border:0;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;padding:7px 16px}.phincomingrow{width:100%;max-width:260px;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}.phincomingrow .phcallbtn{margin:0}.phcallgrid{width:100%;max-width:330px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px 26px;align-items:center;justify-items:center}.phcallctl,.phendbtn{border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer}.phcallctl{background:transparent;font-size:13px}.phcallctl svg{width:72px;height:72px;padding:20px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.16);box-sizing:border-box}.phcallctl.off{color:#aaa}.phendbtn{width:78px;height:78px;border-radius:50%;background:#e93333;box-shadow:0 12px 26px rgba(233,51,51,.25)}.phendbtn svg{transform:rotate(135deg)}
+.phcallui{height:100%;background:linear-gradient(180deg,#242426 0%,#111114 45%,#050505 100%);color:#fff;display:flex;flex-direction:column;align-items:center;padding:54px 24px 28px;box-sizing:border-box;overflow:hidden}.phcalltop{font-size:22px;color:#cfd0d5;font-weight:650;text-align:center;transform:translateY(18px)}.phcalltop span{display:inline-block;background:#fff;color:#222;border-radius:6px;padding:1px 5px;margin-right:6px;font-size:13px;vertical-align:middle}.phcalltop b{font-size:18px;color:#aaa;margin-left:8px;font-weight:500}.phcallperson{text-align:center;margin-top:32px;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center}.phcallidentity{display:flex;flex:0 0 auto;flex-direction:column;align-items:center;transform:translateY(18px)}.phcallperson .avatar{width:118px;height:118px;flex:0 0 118px;min-width:118px;min-height:118px;border-radius:50%;margin:0 auto 18px;font-size:44px}.phcallperson .avatar img{border-radius:50%}.phcallname{font-size:34px;font-weight:760;line-height:1.12;max-width:310px;word-break:break-word}.phcallname.masked{font-size:31px}.phcallnum{font-size:20px;color:#d8d8de;margin-top:8px}.phcallregion{font-size:17px;color:#a4a4aa;margin-top:6px}.phcallsub{font-size:16px;color:#e5e5e8;line-height:1.5;margin:10px auto 0;width:100%;max-width:320px;flex:1;min-height:92px;padding:0 2px 56px;box-sizing:border-box;overflow-y:auto;display:flex;align-items:flex-end;justify-content:center;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}.phcaption{display:inline-block;max-width:92%;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:#cfd0d5}.phcalltext{width:100%;max-width:350px;display:grid;grid-template-columns:64px minmax(0,1fr) 64px;align-items:center;gap:8px;margin:0 0 14px}.phcalltext input{min-width:0;border:1px solid rgba(255,255,255,.1);background:#1c1c1f;color:#fff;border-radius:16px;padding:10px 12px;outline:none;text-align:center}.phcalltext button,.phcalltxtbtn{height:40px;border:0;border-radius:14px;background:#2c2c2e;color:#fff;padding:0 10px;white-space:nowrap}.phcalldial{width:100%;max-width:310px;margin:0 0 14px;padding:10px;border-radius:18px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}.phcalldigits{min-height:24px;text-align:center;color:#f5f5f7;font-size:20px;margin-bottom:8px;letter-spacing:1px}.phcallkeys{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.phcallkeys button{height:38px;border:0;border-radius:12px;background:rgba(255,255,255,.13);color:#fff;font-size:21px}.phcalldialbar{display:flex;justify-content:center;gap:10px;margin-top:9px}.phcalldialbar button{border:0;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;padding:7px 16px}.phincomingrow{width:100%;max-width:260px;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}.phincomingrow .phcallbtn{margin:0}.phcallgrid{width:100%;max-width:330px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px 26px;align-items:center;justify-items:center}.phcallctl,.phendbtn{border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer}.phcallctl{background:transparent;font-size:13px}.phcallctl svg{width:72px;height:72px;padding:20px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.16);box-sizing:border-box}.phcallctl.off{color:#aaa}.phendbtn{width:78px;height:78px;border-radius:50%;background:#e93333;box-shadow:0 12px 26px rgba(233,51,51,.25)}.phendbtn svg{transform:rotate(135deg)}
 .smschat{background:#000;color:#fff;height:100%;display:flex;flex-direction:column}.smshead{flex:0 0 auto;text-align:center;padding:10px 56px 8px;position:relative;border-bottom:1px solid rgba(255,255,255,.05)}.smshead .back{position:absolute;left:10px;top:8px}.smshead .avatar{width:58px;height:58px;border-radius:50%;margin:0 auto 6px}.smsname{font-size:16px;font-weight:700}.smsmeta{font-size:12px;color:#8e8e93;margin-top:3px}.smsbody{flex:1;overflow-y:auto;padding:18px 14px 12px}.smsdate{text-align:center;color:#8e8e93;font-size:12px;margin:8px 0 14px}.smsmsg{display:flex;margin:8px 0}.smsmsg.me{justify-content:flex-end}.smsbubble{max-width:72%;padding:9px 12px;border-radius:18px;background:#2c2c2e;color:#f5f5f7;font-size:16px;line-height:1.38;word-break:break-word}.smsmsg.me .smsbubble{background:#30d158;color:#fff;border-bottom-right-radius:5px}.smsmsg.them .smsbubble{border-bottom-left-radius:5px}.smsbar{flex:0 0 auto;display:flex;gap:8px;align-items:flex-end;padding:9px 10px 12px;background:#000}.smsbar textarea{flex:1;background:#1c1c1f;color:#fff;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:9px 13px;max-height:86px;resize:none;outline:none;font-size:15px}.smsbar button{border:0;border-radius:50%;width:38px;height:38px;background:#30d158;color:#fff;font-weight:800;}
 .mgrsys{text-align:center;margin:9px 18px;color:#858b9a;font-size:12px;line-height:1.55;}
 .mgrsys span{display:inline-block;max-width:92%;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.055);border:.5px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
@@ -1207,16 +1191,12 @@ body{min-height:0}
 #cou_companion_audit .v{padding:3px 7px;border-radius:99px;background:rgba(255,190,99,.08)}
 @media(max-width:390px){#coupage3{padding-left:8px;padding-right:8px}#coupage3>.section{border-radius:19px!important}#cou_companion_apps>.bill.companion-app-card{padding:13px!important;border-radius:18px!important}}
 /* v848：PWA 顶部安全区由页面壁纸覆盖；音乐背景在首页与播放器都清楚可见。 */
-html,body,.phone,.screen{min-height:100%;min-height:100dvh;background-color:var(--north-system-bar-color,#0a0b0d)}
+html,body,.phone,.screen{background-color:#000}
 /* 全屏外壳只跟随当前可用视口；禁止用物理屏幕高度拉长页面，聊天等页面由内部滚动区承载内容。 */
 html,body,.phone,.screen{height:100%;min-height:0;max-height:100%;overflow:hidden}
 /* v882：Apple 主屏幕模式保留 v877 已验证的 100% 外壳，不再用 100dvh 二次缩短页面。
    部分已安装主屏幕 WebApp 会把 env() 回报为 0，因此手动适配模式提供可点击的保守下限。 */
-html.north-ios-home-safe{--north-ios-home-safe-top:max(env(safe-area-inset-top,0px),47px);--north-ios-home-safe-bottom:max(env(safe-area-inset-bottom,0px),34px)}
-/* Safari 26.x 的主屏幕系统底栏位于网页层外，禁止再把 phone 向不可见区域拉长；
-   页面严格停在 innerHeight 内，底部系统条改用启动时缓存的壁纸底色衔接。 */
-html.north-ios-home-safe .phone{position:fixed;top:0;left:0;right:0;bottom:calc(0px - var(--north-ios-pwa-bottom,0px));width:100%;height:auto;min-height:0;max-height:none}
-html.north-ios-home-safe .screen{width:100%;height:100%;min-height:0;max-height:none}
+html.north-ios-home-safe{--north-ios-home-safe-top:max(env(safe-area-inset-top,0px),47px);--north-ios-home-safe-bottom:0px}
 html.north-ios-home-safe .home-premium-head{height:calc(67px + var(--north-ios-home-safe-top));padding-top:calc(18px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .nav{height:calc(46px + var(--north-ios-home-safe-top));flex-basis:calc(46px + var(--north-ios-home-safe-top));padding-top:var(--north-ios-home-safe-top)}
 html.north-ios-home-safe .inputbar{padding-bottom:calc(7px + var(--north-ios-home-safe-bottom))}
@@ -1274,24 +1254,19 @@ html.north-ios-home-safe .commerce-top{flex-basis:calc(52px + var(--north-ios-ho
 html.north-ios-home-safe .music-app-head{height:calc(62px + var(--north-ios-home-safe-top));padding-top:calc(8px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .dy-topbar{top:var(--north-ios-home-safe-top)}
 html.north-ios-home-safe .dynav{flex-basis:calc(48px + var(--north-ios-home-safe-top));height:calc(48px + var(--north-ios-home-safe-top));padding-top:var(--north-ios-home-safe-top)}
-/* v949：电话软件只在网页版 iPhone/iPad 主屏幕且开启苹果兼容时避让状态栏。
-   通话页缩小头像与六键区；身份块略向下，字幕贴近输入区上方，关闭兼容、Android 和私人 App 沿用原尺寸。 */
+/* v950：电话内容位置与紧凑尺寸属于网页版公共布局，苹果和安卓一致生效。 */
+.phcallui{padding:50px 22px 10px}
+.phcallperson .avatar{width:94px;height:94px;flex-basis:94px;min-width:94px;min-height:94px;margin-bottom:10px}
+.phcallname{font-size:30px}.phcallname.masked{font-size:28px}
+.phcallnum{font-size:18px;margin-top:5px}.phcallregion{font-size:15px;margin-top:3px}
+.phcallsub .csline{font-size:17px;line-height:1.42;padding-bottom:4px}
+.phcalltext{margin-bottom:8px}
+.phcallgrid{max-width:304px;gap:10px 18px;margin-top:2px}
+.phcallctl{gap:5px;font-size:12px}.phcallctl svg{width:60px;height:60px;padding:17px}
+.phendbtn{width:66px;height:66px}
+/* v950：苹果兼容仅负责电话应用顶栏避让；通话内容的位置与尺寸已在公共网页版规则中统一。 */
 html.north-ios-home-safe .phoneui .phtop{padding-top:calc(12px + var(--north-ios-home-safe-top));padding-bottom:4px}
 html.north-ios-home-safe .phoneui .phbtn{min-width:46px;min-height:46px}
-html.north-ios-home-safe .phcallui{padding:50px 22px 10px}
-html.north-ios-home-safe .phcallperson{margin-top:30px}
-html.north-ios-home-safe .phcallperson .avatar{width:94px;height:94px;flex-basis:94px;min-width:94px;min-height:94px;margin-bottom:10px}
-html.north-ios-home-safe .phcallname{font-size:30px}
-html.north-ios-home-safe .phcallname.masked{font-size:28px}
-html.north-ios-home-safe .phcallnum{font-size:18px;margin-top:5px}
-html.north-ios-home-safe .phcallregion{font-size:15px;margin-top:3px}
-html.north-ios-home-safe .phcallsub{flex:1;min-height:92px;margin-top:10px;padding:0 2px 44px;overflow-y:auto;align-items:flex-end;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-html.north-ios-home-safe .phcallsub .csline{font-size:17px;line-height:1.42;padding-bottom:4px}
-html.north-ios-home-safe .phcalltext{margin-bottom:8px}
-html.north-ios-home-safe .phcallgrid{max-width:304px;gap:10px 18px;margin-top:2px}
-html.north-ios-home-safe .phcallctl{gap:5px;font-size:12px}
-html.north-ios-home-safe .phcallctl svg{width:60px;height:60px;padding:17px}
-html.north-ios-home-safe .phendbtn{width:66px;height:66px}
 /* 微信视频通话：iPhone 主屏幕版开启兼容后，标题和计时完整避开系统状态栏。 */
 html.north-ios-home-safe .callscreen.video:not(.mini) .cname,
 html.north-ios-home-safe .callscreen.video:not(.mini) .cstat{transform:translateY(var(--north-ios-home-safe-top))}
@@ -1345,8 +1320,8 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=949">
-<link rel="stylesheet" href="pet-game.css?v=949">
+<link rel="stylesheet" href="glass-theme.css?v=950">
+<link rel="stylesheet" href="pet-game.css?v=950">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1396,12 +1371,12 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=949" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=949" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=949" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=949" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=949" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=949" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=949"></script>
+<script src="license-gate.js?v=950" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=950" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=950" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=950" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=950" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=950" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=950"></script>
 </body>
 </html>
