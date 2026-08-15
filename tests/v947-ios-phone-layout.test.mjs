@@ -11,7 +11,8 @@ const bundledApp=read('../native/private-small-phone/XcodeProject/PhoneCompanion
 test('phone safe-area changes are scoped to the web iOS home compatibility class',()=>{
   assert.match(html,/html\.north-ios-home-safe \.phoneui \.phtop\{padding-top:calc\(12px \+ var\(--north-ios-home-safe-top\)\)/);
   assert.match(html,/html\.north-ios-home-safe \.phcallperson \.avatar\{width:94px;height:94px/);
-  assert.match(html,/html\.north-ios-home-safe \.phcallsub\{flex:1;min-height:92px;[^}]*overflow-y:auto/);
+  assert.match(html,/html\.north-ios-home-safe \.phcallperson\{margin-top:30px\}/,'the identity block moves down slightly without moving the controls');
+  assert.match(html,/html\.north-ios-home-safe \.phcallsub\{flex:1;min-height:92px;[^}]*padding:0 2px 44px;[^}]*overflow-y:auto;align-items:flex-end/,'the whole subtitle block rests near the input lane instead of leaving a large empty gap below');
   assert.match(html,/html\.north-ios-home-safe \.phcallctl svg\{width:60px;height:60px/);
   assert.match(html,/html\.north-ios-home-safe \.phendbtn\{width:66px;height:66px/);
   assert.doesNotMatch(html,/html\.north-native-app[^}]*\.phcall/,'private App telephone layout must not inherit the web-only fix');

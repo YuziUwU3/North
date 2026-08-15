@@ -12,18 +12,18 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v948 web and private App files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v948 · 私人App适配整理'/);
-  assert.match(app,/const url='sw\.js\?v=948'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='948'/);
-  assert.match(html,/app\.js\?v=948/);
-  assert.match(sw,/const BUILD='948'/);
-  assert.match(sw,/north-shell-v948/);
-  assert.match(index,/小手机\.html\?v=948/);
-  assert.match(repair,/小手机\.html\?v=948/);
+test('v949 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v949 · 苹果电话字幕位置微调'/);
+  assert.match(app,/const url='sw\.js\?v=949'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='949'/);
+  assert.match(html,/app\.js\?v=949/);
+  assert.match(sw,/const BUILD='949'/);
+  assert.match(sw,/north-shell-v949/);
+  assert.match(index,/小手机\.html\?v=949/);
+  assert.match(repair,/小手机\.html\?v=949/);
 });
 
-test('the private iOS package is synchronized to v948 and 1.0.70',()=>{
+test('the private iOS package stays on its completed v948 and 1.0.70 delivery',()=>{
   assert.match(privateBundle,/<string>948<\/string>/);
   assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.70;/g)||[]).length,12);
   assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 70;/g)||[]).length,12);
