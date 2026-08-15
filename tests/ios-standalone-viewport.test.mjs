@@ -21,7 +21,8 @@ function compatEnvironment(navigator,standaloneMedia=false,privateApp=false){
 }
 
 test('full-screen shell is capped to the current available viewport',()=>{
-  assert.doesNotMatch(html,/viewport-fit=cover/);
+  assert.match(html,/viewport-fit=cover/);
+  assert.match(html,/apple-mobile-web-app-status-bar-style" content="black-translucent"/);
   assert.match(html,/html,body,.phone,.screen\{height:100%;min-height:0;max-height:100%;overflow:hidden\}/);
   assert.match(html,/#app\{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;\}/);
   assert.match(html,/\.page\{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\}/);

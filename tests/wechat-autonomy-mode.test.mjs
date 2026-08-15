@@ -91,9 +91,9 @@ assert.match(source,/不是心情值，不改变任何数值、亲密度、行�
 assert.match(source,/\[内心\|你此刻真实、简短的内心想法\]/,'inner thought must use a tag independent from mood value');
 assert.match(source,/let mm=line\.match\(\/\^\\\[内心/,'WeChat replies should consume inner-thought tags without exposing them as messages');
 assert.match(source,/function checkIgnore\(\)\{if\(wechatNaturalOn\(\)\|\|/,'legacy no-reply escalation must be disabled in natural mode');
-assert.match(source,/function checkFollowups\(\)\{if\(wechatNaturalOn\(\)\|\|/,'scheduled follow-up prompts must not force a natural-mode message');
+assert.doesNotMatch(source,/function checkFollowups\(\)\{if\(wechatNaturalOn\(\)\|\|/,'explicit future-event follow-ups must remain available in natural mode');
 assert.match(source,/async function recordTaMood\(cid\)\{if\(wechatNaturalOn\(\)\)return false;/,'the system must not invent a daily mood for the role in natural mode');
-assert.match(source,/if\(!wechatNaturalOn\(\)&&hol&&F\['hol_'\+c\.id\]/,'holiday greetings and red packets must not be forced in natural mode');
+assert.match(source,/if\(hol&&F\['hol_'\+c\.id\]/,'enabled holiday greetings must remain available in natural mode');
 assert.match(source,/if\(!wechatNaturalOn\(\)&&S\.couple&&S\.couple\.cid&&h>=14/,'the daily mood scheduler must be disabled in natural mode');
 assert.match(source,/微信自然模式：不把久未打开解释为冷落/,'phone-idle events must not force a natural-mode reply');
 assert.match(source,/if\(!wechatNaturalOn\(\)\)cf\+='\\n- 【你很黏ta、舍不得挂电话】/,'the fixed clingy call policy must be stable-mode only');

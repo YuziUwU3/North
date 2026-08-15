@@ -63,7 +63,7 @@ assert.deepEqual(sweepCreateCalls, ["c1"]);
 assert.equal(sweepSandbox.S.contacts[0]._friendReqRetry.nextAt, 0);
 assert.equal(sweepSaveCalls, 1);
 assert.match(source, /async function createFriendRequest\(id\)\{const c=getC\(id\);if\(!friendMainBlocked\(c\)\)return/);
-assert.match(source, /function rejectFriendRequestRecord\(rid\)[\s\S]*?if\(r\.kind==='readd'&&friendMainBlocked\(c\)\)friendRetryAfterIgnore/);
+assert.match(source, /function rejectFriendRequestRecord\(rid\)[\s\S]*?if\(r\.kind==='readd'&&c\)\{[\s\S]*?if\(friendMainBlocked\(c\)\)friendRetryAfterIgnore/);
 assert.match(source, /function acceptFriend\(rid\)[\s\S]*?friendMainUnblock\(c\)/);
 
 const accountSandbox = {

@@ -31,12 +31,13 @@ assert.match(source, /if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=p
 assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
 assert.match(source, /if\(aid==='main'\)\{if\(!triggerAltReports\(\)\)resumeAccountReplies\(aid\);\}else resumeAccountReplies\(aid\)/);
 assert.match(source, /scheduleReply\(c\.id,note,ok=>/);
-assert.match(source, /if\(ok\)\{cc\._altIntroDone=true;cc\._altReportAt=/);
+assert.match(source, /if\(ok\)\{if\(event\)event\.reportedAt=Date\.now\(\);cc\._altIntroDone=true;cc\._altReportAt=/);
 assert.match(source, /replyAccount!=='main'&&!c\.blocked/);
 assert.match(source, /content:'你被'\+\(c\.remark\|\|c\.name\)\+'拉黑了'/);
 assert.match(source, /_natural\|\|!_main\?'':suspicionPrompt\(c\)\+extremeLovePrompt\(c\)/);
 assert.match(source, /s\+=_main\?memoryResetPrompt\(c\):''/);
 assert.match(source, /s\+=_main\?friendOriginPrompt\(c\):''/);
+assert.match(source, /s\+=_main\?friendReaddPrompt\(c\):''/);
 assert.match(source, /const _offlineLive=_main\?offlineWechatLiveState\(c\):null/);
 assert.match(source, /const _cohabLive=_main&&!_offlineLive\?cohabWechatState\(c\):null/);
 assert.match(source, /_hlPlan=replyAccount==='main'&&humanLikeOn\(\)&&!_naturalOn/);
@@ -63,6 +64,8 @@ const sandbox = {
   actId: () => active,
   accountMessageKey: (id, aid) => (aid === "main" ? id : `${id}#${aid}`),
   offlineFocusActive: () => false,
+  altAccountReportNote: () => false,
+  replyPendingUserText: () => "",
   wxLoginBlockReply: () => false,
   _call: null,
   cur: () => ({ p: "wechat" }),
@@ -80,10 +83,13 @@ const sandbox = {
   aiReply(id, note, token, aid) {
     calls.push({ id, note, token, aid });
   },
+  friendAcceptedAutoNote: () => false,
+  friendAcceptedLocalFallback: () => false,
 };
 
 vm.runInNewContext(
-  source.slice(start, end) +
+  "var altAccountReportNote=globalThis.altAccountReportNote,replyPendingUserText=globalThis.replyPendingUserText;" +
+    source.slice(start, end) +
     ";scheduleReply('role_1');globalThis.deferred=_replyDeferred;" +
     "globalThis.resume=function(aid){resumeAccountReplies(aid)};" +
     "globalThis.delayed=function(id,note,delay,aid){delayedAccountReply(id,note,delay,aid)};",
@@ -150,6 +156,7 @@ const reportSandbox = {
   },
   isMain: () => true,
   msgToText: m => m.content || "",
+  fmtDT: t => `T${t}`,
   msgsForAccount: (id, aid) => reportMessages[aid === "main" ? id : `${id}#${aid}`] || [],
   getC: id => id === reportRole.id ? reportRole : null,
   _altReportInFlight: Object.create(null),
@@ -160,7 +167,7 @@ const reportSandbox = {
   scheduleReply: (id, note, onDone) => { reportCalls.push({ id, note, onDone }); return true; },
 };
 vm.runInNewContext(
-  ["altReportSnapshot", "lastAltMsgTime", "altReportVisibleEvidence", "repairLegacyAltReportCursor", "triggerAltReports"]
+  ["altReportSnapshot", "lastAltMsgTime", "altReportVisibleEvidence", "altReportEventStore", "altReportRemember", "repairLegacyAltReportCursor", "triggerAltReports"]
     .map(extractFunction)
     .join("\n") +
     ";globalThis.runReports=triggerAltReports;globalThis.lastTime=lastAltMsgTime;",

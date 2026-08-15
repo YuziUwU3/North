@@ -10,8 +10,8 @@ const privateAlias=read('../native/private-small-phone/XcodeProject/PhoneCompani
 const privateApp=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 const privateRoot=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift');
 
-test('web and private shells restore the pre-repair v600 viewport and manifest contract',()=>{
-  for(const html of [webHtml,privateHtml,privateAlias]){
+test('private shells retain the pre-repair v600 viewport and manifest contract',()=>{
+  for(const html of [privateHtml,privateAlias]){
     assert.match(html,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no"/);
     assert.doesNotMatch(html,/viewport-fit=cover/);
     assert.match(html,/apple-mobile-web-app-status-bar-style" content="black"/);
@@ -22,6 +22,15 @@ test('web and private shells restore the pre-repair v600 viewport and manifest c
     assert.doesNotMatch(html,/north-ios-pwa-bottom|north-system-bar-color|north_pwa_system_bar_color/);
     assert.doesNotMatch(html,/bottom:calc\(0px -/);
   }
+});
+
+test('the public iOS home-screen shell uses the independently verified top safe area contract',()=>{
+  assert.match(webHtml,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no, viewport-fit=cover"/);
+  assert.match(webHtml,/apple-mobile-web-app-status-bar-style" content="black-translucent"/);
+  assert.match(webHtml,/name="theme-color" content="#ff8fab"/);
+  assert.match(webHtml,/--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\)/);
+  assert.match(webHtml,/--north-ios-home-safe-bottom:0px/);
+  assert.doesNotMatch(webHtml,/north-ios-pwa-bottom|north-system-bar-color|north_pwa_system_bar_color/);
 });
 
 test('all dynamic system-bar repair code is gone while private App still covers the bottom inset',()=>{

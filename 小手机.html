@@ -2,19 +2,19 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="North" />
 <meta name="theme-color" content="#ff8fab" />
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='951';</script>
+<script>window.__NORTH_SHELL_BUILD__='952';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-951';
+  var key='north-sw-reloaded-952';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=951&r=apple-auto-1';
+  var url='sw.js?v=952&r=ios-top-cover-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1253,7 +1253,7 @@ html.north-ios-home-safe .commerce-top{flex-basis:calc(52px + var(--north-ios-ho
 html.north-ios-home-safe .music-app-head{height:calc(62px + var(--north-ios-home-safe-top));padding-top:calc(8px + var(--north-ios-home-safe-top))}
 html.north-ios-home-safe .dy-topbar{top:var(--north-ios-home-safe-top)}
 html.north-ios-home-safe .dynav{flex-basis:calc(48px + var(--north-ios-home-safe-top));height:calc(48px + var(--north-ios-home-safe-top));padding-top:var(--north-ios-home-safe-top)}
-/* v951：电话内容位置与紧凑尺寸属于网页版公共布局，苹果和安卓一致生效。 */
+/* v952：电话内容位置与紧凑尺寸属于网页版公共布局，苹果和安卓一致生效。 */
 .phcallui{padding:50px 22px 10px}
 .phcallperson .avatar{width:94px;height:94px;flex-basis:94px;min-width:94px;min-height:94px;margin-bottom:10px}
 .phcallname{font-size:30px}.phcallname.masked{font-size:28px}
@@ -1319,8 +1319,8 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .music-premium .music-ambient{inset:-18px;filter:blur(16px) saturate(.82);opacity:.72;transform:scale(1.06)}
 .music-premium:after{background:linear-gradient(180deg,rgba(10,11,13,.15),rgba(14,15,17,.52) 46%,rgba(17,18,20,.88) 86%)}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=951">
-<link rel="stylesheet" href="pet-game.css?v=951">
+<link rel="stylesheet" href="glass-theme.css?v=952">
+<link rel="stylesheet" href="pet-game.css?v=952">
 </head>
 <body>
 <div class="phone"><div class="screen">
@@ -1370,12 +1370,12 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=951" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=951" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=951" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=951" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=951" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=951" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=951"></script>
+<script src="license-gate.js?v=952" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=952" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=952" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=952" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=952" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=952" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=952"></script>
 </body>
 </html>

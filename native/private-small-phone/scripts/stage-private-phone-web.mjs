@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyPrivatePhoneWebTransforms } from './private-phone-web-transform.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const privateRoot = path.resolve(scriptDir, '..');
@@ -46,10 +47,13 @@ for (const relative of entries) {
   });
 }
 
+const bundledEntry = path.join(outputRoot, manifest.entry);
+await applyPrivatePhoneWebTransforms(outputRoot, manifest.entry);
+
 // WKWebView uses an ASCII entry name so the main resource and its allowed
 // read directory are always resolved from exactly the same bundle path.
 await cp(
-  path.join(repoRoot, manifest.entry),
+  bundledEntry,
   path.join(outputRoot, 'index.html'),
   { force: true }
 );
