@@ -46,18 +46,18 @@ test('no script may substitute physical screen height for the app viewport',()=>
   assert.doesNotMatch(app,/function syncAppViewport|--north-app-height/,'do not restore the keyboard-sensitive global viewport script');
 });
 
-test('manual safe-area mode stays Apple-only and the private app shares the explicit switch',()=>{
+test('manual safe-area mode stays on Apple home-screen web and excludes the private App',()=>{
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:true}),true);
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (iPhone)',platform:'iPhone',maxTouchPoints:5,standalone:false}),false,'ordinary iPhone Safari must keep its existing layout');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Linux; Android 15)',platform:'Linux armv8l',maxTouchPoints:5,standalone:false},true),false,'Android standalone must never receive the Apple workaround');
   assert.equal(compatEnvironment({userAgent:'Mozilla/5.0 (Macintosh)',platform:'MacIntel',maxTouchPoints:5,standalone:true}),true,'iPad desktop user agent is still supported');
-  assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),true,'the private iOS app may apply the explicit Apple compatibility switch');
-  assert.equal(compatOn(true,true),true,'the private app must honor the shared explicit switch');
+  assert.equal(compatEnvironment({userAgent:'Private WKWebView',platform:'iPhone',maxTouchPoints:5,standalone:false},false,true),false,'the private iOS App must not apply the web compatibility switch');
+  assert.equal(compatOn(true,true),true,'the persisted web preference may remain without activating native compatibility');
   assert.equal(compatOn(false,false),false,'the ordinary browser keeps its existing opt-in behavior');
 });
 
 test('iOS home-screen bottom paint is automatic while the compatibility switch remains available',()=>{
-  assert.match(functionSource('renderSettings'),/苹果兼容适配<br>/);
+  assert.match(functionSource('renderSettings'),/appleHomeCompatNative\(\)\?'':`<div class="it"><span>苹果兼容适配<br>/);
   assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-ios-pwa-shell'\)/);
   assert.match(functionSource('applyAppleHomeCompat'),/north-ios-home-safe',browser/);
   assert.match(functionSource('applyAppleHomeCompat'),/north-apple-remote-safe',on/);
@@ -97,6 +97,6 @@ test('iOS home-screen bottom paint is automatic while the compatibility switch r
   assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
   assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of browser-wide offsets');
   assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container reserves the entire tappable top safe area');
-  assert.match(nativeRoot,/Color\(red: 38 \/ 255, green: 33 \/ 255, blue: 39 \/ 255\)[\s\S]*?\.ignoresSafeArea\(\.container, edges: \.top\)/,'the private app paints the reserved status-bar lane with its dark glass base');
+  assert.match(nativeRoot,/Color\.black[\s\S]*?\.ignoresSafeArea\(\.container, edges: \.top\)/,'the private app paints the reserved status-bar lane pure black');
   assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\)/,'the web view must never extend under the iPhone status bar');
 });

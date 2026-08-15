@@ -36,6 +36,10 @@
     try { return localStorage.getItem(MANAGED_KEY) === String(config.epoch); } catch (_) { return false; }
   }
 
+  function isPrivateApp() {
+    return window.__SMALL_PHONE_PRIVATE__ === true;
+  }
+
   function saveSession(value, extra) {
     if (!value || !value.token || !value.licenseId) throw new Error('服务器没有返回完整授权');
     const saved = {
@@ -44,7 +48,7 @@
       sessionId: String(value.sessionId || ''),
       savedAt: Date.now(),
     };
-    if (!writeJSON(SESSION_KEY, saved)) throw new Error('浏览器无法保存授权，请检查无痕模式');
+    if (!writeJSON(SESSION_KEY, saved)) throw new Error(isPrivateApp() ? 'App 无法保存授权，请检查手机存储空间' : '浏览器无法保存授权，请检查无痕模式');
     try { localStorage.setItem(MANAGED_KEY, String(config.epoch)); } catch (_) {}
     if (extra) writeJSON(META_KEY, Object.assign({}, meta(), extra, { checkedAt: Date.now() }));
     return saved;
@@ -60,6 +64,7 @@
 
   function deviceLabel() {
     const ua = navigator.userAgent || '';
+    if (isPrivateApp()) return /iPad/i.test(ua) ? 'iPad · 私人App' : 'iPhone · 私人App';
     const standalone = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || !!navigator.standalone;
     let device = /iPhone/i.test(ua) ? 'iPhone' : /iPad/i.test(ua) ? 'iPad' : /Android/i.test(ua) ? '安卓手机' : '手机';
     let browser = /MicroMessenger/i.test(ua) ? '微信浏览器' : /EdgiOS|EdgA|Edg\//i.test(ua) ? 'Edge' : /CriOS|Chrome/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : '浏览器';
@@ -230,16 +235,16 @@
   }
 
   async function bindPasskey() {
-    if (!supportsPasskey()) throw new Error('当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
+    if (!supportsPasskey()) throw new Error(isPrivateApp() ? '当前 App 无法调用系统扫脸/指纹，请检查系统设置' : '当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
     const current = session();
-    if (!current) throw new Error('请先在当前浏览器完成授权');
+    if (!current) throw new Error(isPrivateApp() ? '请先在当前 App 完成授权' : '请先在当前浏览器完成授权');
     const start = await api('register_options', { sessionToken: current.token });
     let credential;
     try {
       credential = await navigator.credentials.create({ publicKey: creationOptions(start.options) });
     } catch (error) {
       if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) throw new Error('已取消手机绑定');
-      throw new Error('系统手机验证失败，请换Safari或Chrome重试');
+      throw new Error(isPrivateApp() ? '系统手机验证失败，请稍后重试' : '系统手机验证失败，请换Safari或Chrome重试');
     }
     if (!credential) throw new Error('系统没有返回手机验证结果');
     const result = await api('register_verify', {
@@ -254,14 +259,14 @@
   }
 
   async function restorePasskey() {
-    if (!supportsPasskey()) throw new Error('当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
+    if (!supportsPasskey()) throw new Error(isPrivateApp() ? '当前 App 无法调用系统扫脸/指纹，请检查系统设置' : '当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
     const start = await api('restore_options', {});
     let credential;
     try {
       credential = await navigator.credentials.get({ publicKey: requestOptions(start.options) });
     } catch (error) {
       if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) throw new Error('已取消恢复授权');
-      throw new Error('系统恢复验证失败，请换Safari或Chrome重试');
+      throw new Error(isPrivateApp() ? '系统恢复验证失败，请稍后重试' : '系统恢复验证失败，请换Safari或Chrome重试');
     }
     if (!credential) throw new Error('系统没有返回恢复结果');
     const result = await api('restore_verify', {
@@ -302,7 +307,7 @@
 
   async function check() {
     const current = session();
-    if (!current) throw new Error('本浏览器还没有授权');
+    if (!current) throw new Error(isPrivateApp() ? '当前 App 还没有授权' : '本浏览器还没有授权');
     const result = await api('session_check', { sessionToken: current.token }, 15000);
     writeJSON(META_KEY, Object.assign({}, meta(), result, { checkedAt: Date.now() }));
     return result;
@@ -310,7 +315,7 @@
 
   async function listSessions() {
     const current = session();
-    if (!current) throw new Error('本浏览器还没有授权');
+    if (!current) throw new Error(isPrivateApp() ? '当前 App 还没有授权' : '本浏览器还没有授权');
     const result = await api('session_list', { sessionToken: current.token });
     writeJSON(META_KEY, Object.assign({}, meta(), {
       sessionCount: Array.isArray(result.sessions) ? result.sessions.length : 0,
@@ -321,7 +326,7 @@
 
   async function revokeSession(targetSessionId) {
     const current = session();
-    if (!current) throw new Error('本浏览器还没有授权');
+    if (!current) throw new Error(isPrivateApp() ? '当前 App 还没有授权' : '本浏览器还没有授权');
     const result = await api('session_revoke', {
       sessionToken: current.token,
       targetSessionId: targetSessionId,
@@ -332,7 +337,7 @@
 
   async function syncAIIdentity(userId, clientSecret) {
     const current = session();
-    if (!current) throw new Error('本浏览器还没有授权');
+    if (!current) throw new Error(isPrivateApp() ? '当前 App 还没有授权' : '本浏览器还没有授权');
     return api('ai_identity_sync', {
       sessionToken: current.token,
       userId: userId,
@@ -342,7 +347,7 @@
 
   async function syncPhoneFriendIdentity(phoneFriendId, phoneFriendSecret) {
     const current = session();
-    if (!current) throw new Error('本浏览器还没有授权');
+    if (!current) throw new Error(isPrivateApp() ? '当前 App 还没有授权' : '本浏览器还没有授权');
     return api('phone_friend_identity_sync', {
       sessionToken: current.token,
       phoneFriendId: phoneFriendId,

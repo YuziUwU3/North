@@ -28,7 +28,7 @@ test('Apple compatibility moves only Apple lock arrows and leaves Android geomet
   assert.doesNotMatch(html,/html:not\(\.north-ios-home-safe\).*\.lockpull/);
   assert.match(app,/cur\(\)\.p==='home'&&homePageClamp\(_homePage\)===0&&!_call/,'the web and private-app arrow exists only on home page one');
   assert.match(app,/function homePageDots\(p\)[\s\S]*?renderLockPull\(\);\}/,'page swipes refresh arrow visibility immediately');
-  assert.match(app,/Safari 浏览器和安卓不受影响/);
+  assert.match(app,/Safari 普通标签页和安卓不受影响/);
   assert.match(app,/window\.addEventListener\('pageshow',lockPullRefresh/);
   assert.match(app,/document\.addEventListener\('visibilitychange',[\s\S]*lockPullRefresh\(\)/);
 });

@@ -15,20 +15,22 @@ test('phone safe-area changes are scoped to the web iOS home compatibility class
   assert.match(html,/html\.north-ios-home-safe \.phcallctl svg\{width:60px;height:60px/);
   assert.match(html,/html\.north-ios-home-safe \.phendbtn\{width:66px;height:66px/);
   assert.doesNotMatch(html,/html\.north-native-app[^}]*\.phcall/,'private App telephone layout must not inherit the web-only fix');
-  assert.doesNotMatch(bundledHtml,/v947：电话软件/,'the packaged private App keeps its existing telephone layout');
+  assert.match(bundledHtml,/html\.north-ios-home-safe \.phoneui \.phtop/,'the private bundle may share the CSS but only the web compatibility class can activate it');
+  assert.match(bundledApp,/function appleHomeCompatEnvironment\(\)\{return appleHomeCompatBrowserEnvironment\(\);\}/);
 });
 
 test('video call preview grows while Apple-compatible web titles avoid the status bar',()=>{
   assert.match(html,/\.callscreen\.video\.active \.cav\{[^}]*width:108px;height:152px/);
   assert.match(html,/html\.north-ios-home-safe \.callscreen\.video:not\(\.mini\) \.cname,[\s\S]*?\.cstat\{transform:translateY\(var\(--north-ios-home-safe-top\)\)\}/);
-  assert.match(bundledHtml,/\.callscreen\.video\.active \.cav\{[^}]*width:92px;height:130px/,'private App video preview stays unchanged in this web-only task');
+  assert.match(bundledHtml,/\.callscreen\.video\.active \.cav\{[^}]*width:108px;height:152px/,'the synchronized private bundle uses the current video preview size');
 });
 
 test('pet navigation and room status controls move together in Apple-compatible web mode',()=>{
   assert.match(html,/html\.north-ios-home-safe \.pet-nav\{height:calc\(58px \+ var\(--north-ios-home-safe-top\)\);padding-top:var\(--north-ios-home-safe-top\)\}/);
   assert.match(html,/html\.north-ios-home-safe \.pet-world-switch,[\s\S]*?\.pet-mini-vitals\{top:calc\(67px \+ var\(--north-ios-home-safe-top\)\)\}/);
   assert.match(html,/html\.north-ios-home-safe \.pet-world \.pet-role-chip\{top:calc\(142px \+ var\(--north-ios-home-safe-top\)\)\}/);
-  assert.doesNotMatch(bundledHtml,/\.pet-role-chip\{top:calc\(142px \+ var\(--north-ios-home-safe-top\)\)\}/,'private App pet layout stays unchanged in this web-only fix');
+  assert.match(bundledHtml,/html\.north-ios-home-safe \.pet-world \.pet-role-chip\{top:calc\(142px \+ var\(--north-ios-home-safe-top\)\)\}/);
+  assert.match(bundledApp,/function appleHomeCompatEnvironment\(\)\{return appleHomeCompatBrowserEnvironment\(\);\}/,'native App must not activate the web-only Apple layout class');
 });
 
 test('Apple bottom-bar diagnostic settings row is removed from web and private sources',()=>{
