@@ -1,0 +1,24 @@
+{
+  "name": "iOS 顶部状态栏诊断",
+  "short_name": "顶部诊断",
+  "start_url": "./ios-top-status-diagnostic.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c12",
+  "theme_color": "#7457ff",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

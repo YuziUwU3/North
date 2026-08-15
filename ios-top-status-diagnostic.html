@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="顶部诊断">
+  <meta name="theme-color" content="#7457ff">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="ios-top-status-diagnostic.webmanifest">
+  <title>iOS 顶部状态栏诊断</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      background: #0b0c12;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; margin: 0; background: #0b0c12; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      color: #f7f7fb;
+      background:
+        linear-gradient(180deg, #7457ff 0 96px, #232035 190px, #0b0c12 420px);
+    }
+    .top-proof {
+      height: max(84px, calc(env(safe-area-inset-top, 0px) + 46px));
+      padding: max(8px, env(safe-area-inset-top, 0px)) 18px 10px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,.24);
+      background: linear-gradient(90deg, #7457ff, #ff5d9e);
+    }
+    .top-proof b { font-size: 16px; }
+    .top-proof span { font-size: 11px; opacity: .8; }
+    main { padding: 20px 16px max(28px, env(safe-area-inset-bottom, 0px)); }
+    .card {
+      margin-bottom: 14px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 20px;
+      background: rgba(24,25,34,.88);
+      box-shadow: 0 16px 44px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    h1 { margin: 0 0 9px; font-size: 21px; }
+    p { margin: 7px 0; color: #c7c5d2; font-size: 13px; line-height: 1.65; }
+    .result { color: #fff; font-size: 15px; font-weight: 700; }
+    .result.ok { color: #89f0b5; }
+    .result.warn { color: #ffd37a; }
+    .result.bad { color: #ff8e9f; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    button {
+      min-height: 44px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 14px;
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      font: inherit;
+    }
+    pre {
+      max-height: 46vh;
+      margin: 0;
+      padding: 12px;
+      overflow: auto;
+      border-radius: 13px;
+      background: #07080c;
+      color: #d8d7e4;
+      font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .safe-probe {
+      position: fixed;
+      z-index: -1;
+      visibility: hidden;
+      pointer-events: none;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+    }
+  </style>
+</head>
+<body>
+  <div id="safeProbe" class="safe-probe" aria-hidden="true"></div>
+  <header class="top-proof">
+    <b>顶部全屏测试色带</b>
+    <span>紫色 → 粉色</span>
+  </header>
+  <main>
+    <section class="card">
+      <h1>iOS 顶部状态栏诊断</h1>
+      <p>请先在 Safari 打开本页，再“添加到主屏幕”，最后从新图标进入。不要覆盖正式小手机图标。</p>
+      <p>如果时间、电量后面能看到紫粉色带，说明网页已经拿到顶部区域；如果那里仍是独立纯黑条，说明系统仍把顶部排除在网页 viewport 之外。</p>
+      <p id="result" class="result">正在读取……</p>
+    </section>
+    <section class="card actions">
+      <button id="refresh" type="button">重新读取</button>
+      <button id="copy" type="button">复制诊断数据</button>
+    </section>
+    <section class="card">
+      <pre id="output"></pre>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const $ = id => document.getElementById(id);
+      const px = value => Number.parseFloat(value) || 0;
+      const round = value => Math.round((Number(value) || 0) * 100) / 100;
+      const rect = selector => {
+        const node = document.querySelector(selector);
+        if (!node) return null;
+        const r = node.getBoundingClientRect();
+        return { top: round(r.top), bottom: round(r.bottom), width: round(r.width), height: round(r.height) };
+      };
+      const snapshot = () => {
+        const probe = getComputedStyle($('safeProbe'));
+        const vv = window.visualViewport;
+        const screenInfo = window.screen || {};
+        const safeArea = {
+          top: px(probe.paddingTop),
+          right: px(probe.paddingRight),
+          bottom: px(probe.paddingBottom),
+          left: px(probe.paddingLeft)
+        };
+        return {
+          capturedAt: new Date().toISOString(),
+          href: location.href,
+          userAgent: navigator.userAgent,
+          standalone: navigator.standalone === true,
+          displayMode: !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches),
+          window: {
+            innerWidth,
+            innerHeight,
+            outerWidth,
+            outerHeight,
+            devicePixelRatio
+          },
+          screen: {
+            width: screenInfo.width || 0,
+            height: screenInfo.height || 0,
+            availWidth: screenInfo.availWidth || 0,
+            availHeight: screenInfo.availHeight || 0
+          },
+          visualViewport: vv ? {
+            width: round(vv.width),
+            height: round(vv.height),
+            offsetTop: round(vv.offsetTop),
+            pageTop: round(vv.pageTop),
+            scale: round(vv.scale)
+          } : null,
+          safeArea,
+          derived: {
+            physicalMinusInnerHeight: round((screenInfo.height || 0) - innerHeight),
+            physicalMinusVisualHeight: vv ? round((screenInfo.height || 0) - vv.height) : null,
+            viewportOwnsTopSafeArea: safeArea.top > 0
+          },
+          rects: {
+            html: rect('html'),
+            body: rect('body'),
+            topProof: rect('.top-proof')
+          }
+        };
+      };
+      let raw = '';
+      const paint = () => {
+        const data = snapshot();
+        raw = JSON.stringify(data, null, 2);
+        $('output').textContent = raw;
+        const result = $('result');
+        if (!data.standalone && !data.displayMode) {
+          result.className = 'result warn';
+          result.textContent = '当前仍在浏览器里，请添加到主屏幕后再测试。';
+        } else if (data.safeArea.top > 0) {
+          result.className = 'result ok';
+          result.textContent = `成功：网页获得了顶部安全区（${data.safeArea.top}px）。`;
+        } else {
+          result.className = 'result bad';
+          result.textContent = `未获得顶部区域：safeArea.top 为 0，屏幕与网页高度相差 ${data.derived.physicalMinusInnerHeight}px。`;
+        }
+      };
+      $('refresh').addEventListener('click', paint);
+      $('copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(raw);
+        } catch (_) {
+          const input = document.createElement('textarea');
+          input.value = raw;
+          document.body.appendChild(input);
+          input.select();
+          document.execCommand('copy');
+          input.remove();
+        }
+        $('copy').textContent = '已复制';
+        setTimeout(() => { $('copy').textContent = '复制诊断数据'; }, 1200);
+      });
+      addEventListener('resize', paint, { passive: true });
+      addEventListener('orientationchange', paint, { passive: true });
+      if (window.visualViewport) visualViewport.addEventListener('resize', paint, { passive: true });
+      paint();
+    })();
+  </script>
+</body>
+</html>
