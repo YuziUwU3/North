@@ -66,13 +66,6 @@ function guardedMessages(messages: unknown) {
   return [{ role: "system", content: CHAT_GUARD }, ...arr];
 }
 
-const PLANS = [
-  { id: "p_990", name: "轻量体验", amount_cny: 9.9, points: 250, tag: "初次尝试" },
-  { id: "p_2990", name: "日常畅聊", amount_cny: 29.9, points: 850, tag: "推荐" },
-  { id: "p_5990", name: "深度陪伴", amount_cny: 59.9, points: 1800, tag: "更耐用" },
-  { id: "p_9990", name: "长期相伴", amount_cny: 99.9, points: 3200, tag: "单点更省" },
-  { id: "svc_clone_1990", name: "快速音色克隆", amount_cny: 19.9, points: 0, kind: "service", tag: "一次性服务" },
-];
 
 const supabase = createClient(
   Deno.env.get("PHONE_SUPABASE_URL") || "",
@@ -1379,7 +1372,7 @@ Deno.serve(async (req) => {
         ok: true,
         account: publicAccount(acct),
         pricing: PRICE,
-        plans: PLANS,
+        plans: [],
         capabilities: {
           asr: configuredAsrRoutes().length > 0,
           asr_routes: configuredAsrRoutes().length,
@@ -1392,154 +1385,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "purchase_create") {
-      await ensureAccount(userId, clientSecret);
-      const planId = String(body.plan_id || "").trim();
-      const provider = String(body.provider || "").trim().toLowerCase();
-      const plan = PLANS.find((item) => item.id === planId);
-      if (!plan) return json({ ok: false, error: "invalid-purchase-plan" }, 400);
-      if (provider !== "alipay" && provider !== "wechat") {
-        return json({ ok: false, error: "invalid-payment-provider" }, 400);
-      }
-
-      const staleCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-      await supabase
-        .from("phone_ai_purchases")
-        .update({
-          status: "cancelled",
-          review_note: "auto-cancelled: unpaid order expired before proof upload",
-        })
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .eq("review_status", "unsubmitted")
-        .lt("created_at", staleCutoff);
-
-      const { data: reusablePurchase, error: reusableError } = await supabase
-        .from("phone_ai_purchases")
-        .select("id,plan_id,provider,amount_cny,points,status,review_status,created_at")
-        .eq("user_id", userId)
-        .eq("plan_id", plan.id)
-        .eq("provider", provider)
-        .eq("status", "pending")
-        .eq("review_status", "unsubmitted")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (reusableError) throw reusableError;
-      if (reusablePurchase) {
-        return json({
-          ok: true,
-          purchase: reusablePurchase,
-          plan,
-          reused: true,
-          payment_note: `${plan.kind === "service" ? "CLONE" : "AI"}-${String(reusablePurchase.id).replace(/-/g, "").slice(0, 10).toUpperCase()}`,
-        });
-      }
-
-      await supabase
-        .from("phone_ai_purchases")
-        .update({
-          status: "cancelled",
-          review_note: "auto-cancelled: replaced by a newer unpaid order",
-        })
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .eq("review_status", "unsubmitted");
-
-      const { count: submittedPendingCount } = await supabase
-        .from("phone_ai_purchases")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .eq("review_status", "submitted");
-      if ((submittedPendingCount || 0) >= 8) {
-        return json({ ok: false, error: "too-many-submitted-orders" }, 429);
-      }
-      const { data: purchase, error } = await supabase
-        .from("phone_ai_purchases")
-        .insert({
-          user_id: userId,
-          plan_id: plan.id,
-          provider,
-          amount_cny: plan.amount_cny,
-          points: plan.points,
-          status: "pending",
-          review_status: "unsubmitted",
-        })
-        .select("id,plan_id,provider,amount_cny,points,status,review_status,created_at")
-        .single();
-      if (error) throw error;
-      return json({
-        ok: true,
-        purchase,
-        plan,
-        payment_note: `${plan.kind === "service" ? "CLONE" : "AI"}-${String(purchase.id).replace(/-/g, "").slice(0, 10).toUpperCase()}`,
-      });
+      return json({ ok: false, error: "purchase-channel-closed" }, 410);
     }
 
     if (action === "purchase_submit") {
-      await ensureAccount(userId, clientSecret);
-      const purchaseId = String(body.purchase_id || "").trim();
-      if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) {
-        return json({ ok: false, error: "invalid-purchase-id" }, 400);
-      }
-      const { data: purchase, error: purchaseError } = await supabase
-        .from("phone_ai_purchases")
-        .select("id,user_id,plan_id,provider,amount_cny,points,status,review_status,proof_path,created_at")
-        .eq("id", purchaseId)
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (purchaseError) throw purchaseError;
-      if (!purchase) return json({ ok: false, error: "purchase-not-found" }, 404);
-      if (purchase.status !== "pending") return json({ ok: false, error: "purchase-not-pending" }, 409);
-      if (purchase.review_status === "submitted") {
-        return json({ ok: true, purchase, already_submitted: true });
-      }
-      if (Date.now() - new Date(purchase.created_at).getTime() > 24 * 60 * 60 * 1000) {
-        return json({ ok: false, error: "purchase-expired" }, 410);
-      }
-      const rawClaimedPaidAt = String(body.claimed_paid_at || "").trim();
-      const claimed = new Date(rawClaimedPaidAt);
-      const payerHint = String(body.payer_hint || "").trim().slice(0, 80);
-      if (payerHint.length < 2) {
-        return json({ ok: false, error: "payer-hint-required" }, 400);
-      }
-      if (!rawClaimedPaidAt || !Number.isFinite(claimed.getTime())) {
-        return json({ ok: false, error: "claimed-paid-time-required" }, 400);
-      }
-      const image = proofBytes(body.proof_image);
-      const path = `${userId}/${purchaseId}/${Date.now()}.${image.ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from(PROOF_BUCKET)
-        .upload(path, image.bytes, { contentType: image.mime, upsert: false });
-      if (uploadError) throw uploadError;
-      const claimedPaidAt = claimed.toISOString();
-      const { data: submitted, error: updateError } = await supabase
-        .from("phone_ai_purchases")
-        .update({
-          review_status: "submitted",
-          payer_hint: payerHint,
-          claimed_paid_at: claimedPaidAt,
-          proof_path: path,
-          review_submitted_at: new Date().toISOString(),
-          review_note: null,
-        })
-        .eq("id", purchaseId)
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .neq("review_status", "submitted")
-        .select("id,plan_id,provider,amount_cny,points,status,review_status,review_submitted_at,created_at")
-        .maybeSingle();
-      if (updateError) throw updateError;
-      if (!submitted) {
-        await supabase.storage.from(PROOF_BUCKET).remove([path]);
-        return json({ ok: false, error: "purchase-submit-conflict" }, 409);
-      }
-      await sendAdminPush(
-        "新的付款核对申请",
-        `${purchase.provider === "wechat" ? "微信" : "支付宝"} ¥${Number(purchase.amount_cny).toFixed(2)} · ${userId}`,
-        purchaseId,
-      );
-      return json({ ok: true, purchase: submitted });
+      return json({ ok: false, error: "purchase-channel-closed" }, 410);
     }
 
     if (action === "chat") {

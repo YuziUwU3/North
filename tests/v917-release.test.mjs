@@ -10,10 +10,10 @@ const account = read('ai-account.js');
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v945 source and private 1.0.69 versions are aligned', () => {
-  assert.match(app, /APP_VER='v945 · 主屏稳定与微信账号修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='945'/);
-  assert.match(sw, /const BUILD='945'/);
+test('v946 source and private 1.0.69 versions are aligned', () => {
+  assert.match(app, /APP_VER='v946 · 关闭内置AI新购买'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='946'/);
+  assert.match(sw, /const BUILD='946'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40|MARKETING_VERSION = 1\.0\.40/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 69;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.69;/g) || []).length, 12);
@@ -21,6 +21,6 @@ test('v945 source and private 1.0.69 versions are aligned', () => {
 });
 
 test('AI account first screen carries the approved visible red notice', () => {
-  assert.match(account, /内置配置仅为方便新手使用，会收取人工服务费；自己注册并使用外置配置通常更省钱。两种方式可自行选择，不强制。/);
+  assert.match(account, /内置AI的新购买入口已经关闭/);
   assert.match(account, /color:#ff5b6f/);
 });

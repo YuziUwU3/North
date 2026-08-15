@@ -53,9 +53,10 @@ assert.match(backend, /tts-voice-not-accessible:[\s\S]*?charged:\s*0,[\s\S]*?bil
 const ttsRoute=backend.slice(backend.indexOf('if (action === "tts")'),backend.indexOf('if (action === "tts_refund")'));
 assert.doesNotMatch(ttsRoute,/fallback_voice_id|voiceId\s*=\s*DEFAULT_TTS_VOICE/,'an explicitly selected voice must never silently become the system voice');
 
-assert.match(account, /aiTtsEstimatedCount\(p\.points,100\)/);
-assert.match(account, /条100字普通语音/);
-assert.match(account, /每50字1点，向上取整/);
+assert.match(account, /1～50字：1点/);
+assert.match(account, /51～100字：2点/);
+assert.match(account, /最多300字：6点/);
+assert.doesNotMatch(account, /条100字普通语音/);
 assert.doesNotMatch(account, /Math\.floor\(Number\(p\.points\|\|0\)\/Math\.max\(1,aiPrice\('tts'\)\)\)/);
 
 const accountPricing = vm.createContext({ _aiAcct: null });

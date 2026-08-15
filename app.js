@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='945'){
+if(window.__NORTH_SHELL_BUILD__!=='946'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -363,7 +363,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v945 · 主屏稳定与微信账号修复';
+const APP_VER='v946 · 关闭内置AI新购买';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1424,7 +1424,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=945';
+  const url='sw.js?v=946';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -5160,7 +5160,7 @@ function gmText(m){return m.type==='text'?m.content:m.type==='transfer'?'[转账
 /* ===== 群聊 ===== */
 function showManual(section){openModal(`<h3>North · 使用说明与常见问题</h3>
   <div id="manual_scroll" style="font-size:13.5px;line-height:1.85;color:#e6e6e6;max-height:65vh;overflow:auto;text-align:left;padding-right:3px">
-    <div style="padding:2px 0 14px;color:#b8bdc8">第一次使用先看“快速开始”和“聊天模型”；使用点数、内置语音或图片时，请重点看“AI账户”。</div>
+    <div style="padding:2px 0 14px;color:#b8bdc8">第一次使用先看“快速开始”和“聊天模型”；老用户查看现有点数或内置语音时，请重点看“AI账户”。图片功能使用外置接口，不属于AI账户。</div>
 
     <div style="padding:13px 0;border-top:1px solid rgba(255,255,255,.12)">
       <b style="font-size:15px;color:#ffd0df">一、快速开始</b><br>
@@ -5182,22 +5182,19 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
     </div>
 
     <div id="manual_ai" style="padding:13px 0;border-top:1px solid rgba(255,143,171,.5)">
-      <b style="font-size:16px;color:#ffabc8">三、AI账户使用方法（重点）</b><br>
+      <b style="font-size:16px;color:#ffabc8">三、AI账户与老用户使用说明（重点）</b><br>
       <b>1. AI账户是什么</b><br>
-      AI账户不需要另外注册密码。第一次打开时，小手机会自动生成一个<b>本机用户ID</b>并连接账户。新账户不赠送点数，充值经核对到账后，点数可用于当前已开放的内置语音、图片等功能；实际扣点以AI账户页面价格和“最近流水”为准。<br>
-      <b>AI账户不是聊天模型接口。</b>当前内置AI主聊天通道固定关闭，角色日常聊天仍需在“设置 → 聊天模型”填写可用的外置接口。<br><br>
+      AI账户不需要另外注册密码。第一次打开时，小手机会自动生成一个<b>本机用户ID</b>并连接账户。AI账户的新购买入口已经关闭，现在只保留老用户已有的点数、已绑定音色、历史订单和流水。<br>
+      <b>AI账户不是聊天模型或图片接口。</b>普通聊天、聊天识图和生图都使用“设置”里由用户自己填写的外置接口，不会强制使用AI账户。<br><br>
 
       <b>2. 用户ID和点数</b><br>
-      AI用户ID保存在当前浏览器的网站数据中。更换手机、浏览器、网址域名、无痕模式，或清除网站数据，都可能生成新ID，看起来像点数消失。普通聊天备份<b>不会自动搬走AI用户ID和余额</b>。充值前请在AI账户复制并保存用户ID；换设备前建议先用完点数并导出小手机备份。<br><br>
+      AI用户ID保存在当前浏览器的网站数据中。更换手机、浏览器、网址域名、无痕模式，或清除网站数据，都可能生成新ID，看起来像点数消失。普通聊天备份<b>不会自动搬走AI用户ID和余额</b>。老用户请先复制并保存用户ID；换设备或申请退款前不要清除网站数据。<br><br>
 
-      <b>3. 充值点数完整步骤</b><br>
-      ① 打开主屏<b>AI账户</b>，等待余额和套餐加载。<br>
-      ② 选择套餐，再选择页面提供的支付宝或微信支付；只使用页面当前显示的付款方式，暂不支持礼品卡。<br>
-      ③ 系统创建订单后，按页面显示的<b>准确金额</b>付款，并保存真实付款截图。<br>
-      ④ 回到同一订单，点<b>上传付款截图</b>，填写付款账号昵称/尾号和付款时间后提交。<br>
-      ⑤ 状态变成“等待人工核对”才表示凭证提交成功。仅付款但不上传截图，不会进入后台核对，也不会自动加点。<br>
-      ⑥ 管理员核对收款账单后会显示“已确认到账”。点右上角“刷新”或“刷新到账”查看余额。<br>
-      ⑦ 订单右侧的×只从本机列表隐藏订单，不会退款或删除后台账单。出现异常时保留订单号、用户ID和付款截图。<br><br>
+      <b>3. 购买入口关闭后还能做什么</b><br>
+      · 页面不再提供点数套餐、付款码、新订单、付款凭证上传或新的音色克隆申请。请勿向以前保存的收款码或付款链接继续付款。<br>
+      · 已有点数可以继续用于页面保留的内置功能；不想继续使用时，可以按退款公告申请退还未使用的付费点数。<br>
+      · 已经绑定的专属音色仍可以选择和使用。历史订单只用于核对记录，不会重新打开付款或申请入口。<br>
+      · 订单右侧的×只从本机列表隐藏记录，不代表退款，也不会删除后台记录。<br><br>
 
       <b>4. 内置语音怎么用</b><br>
       ① 在AI账户打开<b>内置语音</b>。开启后，角色语音条和语音/视频电话优先走部署后台；关闭后，如果设置里填了外置语音接口，则使用外置接口。<br>
@@ -5206,17 +5203,17 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
       ④ 没声音时检查媒体音量、静音模式和浏览器音频权限，并主动点一次测试按钮解锁播放；生成中不要连续点击。<br>
       ⑤ 测试成功但角色不发语音时，检查设置里的“角色发语音频率”。<br><br>
 
-      <b>5. 图片怎么用</b><br>
+      <b>5. 外置图片怎么用（不属于AI账户）</b><br>
       ① 进入<b>设置 → AI真图</b>，填写外置图片平台的地址、Key 和模型，再打开“让角色发真照片”。<br>
       ② 先点“测试出图”。系统优先尝试 <b>/images/generations</b>，必要时再走兼容路径；平台列出模型不代表一定开放生图接口。<br>
       ③ 角色发图片与画室出图只使用这里配置的外置平台，由对应平台直接计费，不使用AI账户点数。<br>
       ④ 生图通常比聊天慢，生成中不要反复点击；失败时按页面提示核对外置平台的额度、权限、模型和请求记录。<br><br>
 
-      <b>6. 流水与余额排查</b><br>
+      <b>6. 流水、余额与退款排查</b><br>
       · 点数不足提醒可以自定义阈值；余额低于阈值时会弹窗。<br>
       · “最近流水”会显示功能、成功/失败、是否计费及余额变化。<br>
       · 页面一直显示“--”或刷新失败：先检查网络并重开AI账户；仍失败时记录用户ID和报错，千万不要先清除网站数据。<br>
-      · 对扣点有疑问时，提供<b>用户ID、发生时间、功能名称和流水截图</b>，不要公开API Key。
+      · 对扣点或退款有疑问时，私下提供<b>用户ID、发生时间、功能名称和流水截图</b>；不要在公开评论区发送用户ID，也不要提供API Key或密码。
     </div>
 
     <div style="padding:13px 0;border-top:1px solid rgba(255,255,255,.12)">

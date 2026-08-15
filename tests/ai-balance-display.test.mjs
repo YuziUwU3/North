@@ -39,4 +39,5 @@ assert.doesNotMatch(source, /_aiAcct=await aiRelay\('account',\{\}\)/);
 assert.match(source, /_aiAcctFetchedAt=0/);
 assert.match(functionSource("renderAIAccount"), /Date\.now\(\)-Number\(_aiAcctFetchedAt\|\|0\)>5000/);
 assert.match(functionSource("aiAccountApplyResult"), /if\(action==='account'\)_aiAcctFetchedAt=Date\.now\(\)/);
-assert.match(functionSource("renderAIAccount"), /充值需要人工审核，如未及时到账，请联系管理员处理。/);
+assert.match(functionSource("renderAIAccount"), /内置AI的新购买入口已经关闭/);
+assert.match(functionSource("renderAIAccount"), /这里只保留老用户的余额、已有音色、历史订单和流水/);

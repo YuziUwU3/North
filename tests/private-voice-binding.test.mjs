@@ -58,7 +58,7 @@ assert.match(account, /\{id:'qingshouyin20260726',name:'青受音',clone:true,pr
 assert.match(account, /\{id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true\}/);
 assert.match(account, /系统免费音色和尚未绑定的克隆音色/);
 assert.match(account, /未绑定克隆/);
-assert.match(account, /管理员会直接绑定到这里/);
+assert.match(account, /新的音色克隆申请入口已经关闭/);
 assert.match(account, /已经绑定的克隆音色只对绑定账户显示/);
 assert.match(account, /function aiUsePrivateVoice/);
 assert.match(admin, /绑定客户专属音色/);

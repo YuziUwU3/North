@@ -25,13 +25,7 @@ assert.match(sql, /revoke all on table phone_ai_admin_push from anon/);
 assert.match(sql, /revoke all on function phone_ai_confirm_purchase\(uuid, text\) from authenticated/);
 
 assert.match(backend, /action === "purchase_submit"/);
-assert.match(backend, /\.eq\("user_id", userId\)/);
-assert.match(backend, /payer-hint-required/);
-assert.match(backend, /claimed-paid-time-required/);
-assert.match(backend, /proofBytes\(body\.proof_image\)/);
-assert.match(backend, /\.from\(PROOF_BUCKET\)[\s\S]*\.upload\(path/);
-assert.match(backend, /review_status: "submitted"/);
-assert.match(backend, /sendAdminPush\(/);
+assert.match(backend, /purchase-channel-closed/);
 assert.match(backend, /action === "admin_orders"/);
 assert.match(backend, /\.neq\("review_status", "unsubmitted"\)/);
 assert.match(backend, /createSignedUrl\(row\.proof_path, 600\)/);
@@ -44,19 +38,15 @@ assert.match(backend, /\.from\(PROOF_BUCKET\)\.remove\(\[purchase\.proof_path\]\
 assert.match(backend, /requireAdmin\(req, body\)/);
 assert.match(backend, /admin-unauthorized"\) \? 401/);
 
-assert.match(account, /function aiOpenPurchaseClaim\(purchaseId\)/);
-assert.match(account, /accept="image\/\*,\.jpg,\.jpeg,\.png,\.webp,\.heic,\.heif"/);
-assert.match(account, /function aiClaimImageData\(file\)/);
-assert.match(account, /purchase_submit/);
-assert.match(account, /付款账号昵称或尾号（必填）/);
-assert.match(account, /请填写付款昵称或付款尾号/);
-assert.match(account, /请填写付款时间/);
+assert.doesNotMatch(account, /function aiOpenPurchaseClaim\(purchaseId\)/);
+assert.doesNotMatch(account, /purchase_submit|付款账号昵称或尾号|上传付款截图/);
 assert.match(account, /function aiDetectPointsArrival\(d\)/);
 assert.match(account, /AI点数已到账/);
 assert.match(account, /function aiPlayArrivalSound\(\)/);
-assert.match(account, /页面会每15秒自动查询/);
 assert.match(account, /function aiScheduleAccountPoll\(\)/);
 assert.match(account, /aiAccountRefresh\(true,true\)/);
+assert.match(account, /历史充值与服务订单/);
+assert.match(account, /已有音色/);
 
 assert.doesNotMatch(account, />使用内置AI</);
 assert.match(app, /function aiCoreOn\(\)\{return false;\}/);

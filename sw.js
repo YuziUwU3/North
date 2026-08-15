@@ -1,5 +1,5 @@
-const BUILD='945';
-const SHELL_CACHE='north-shell-v945';
+const BUILD='946';
+const SHELL_CACHE='north-shell-v946';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,9 +15,6 @@ const OPTIONAL_FILES=[
   './assets/incoming-wechat-call-default-v2.mp3',
   './assets/message-notification-user-v1.mp3',
   './assets/pet-room-v1.webp',
-  './pay-assets/alipay-receive.jpg',
-  './pay-assets/wechat-receive.jpg',
-  './pay-assets/wechat-contact.jpg',
   './commerce-ui.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './thought-card-effects.js?v='+BUILD,
@@ -183,7 +180,7 @@ self.addEventListener('fetch',event=>{
     })());
     return;
   }
-  if(/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/pay-assets\//.test(url.pathname)||/\/vendor\//.test(url.pathname)){
+  if(/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/vendor\//.test(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       const cached=await cache.match(request,{ignoreSearch:true});
