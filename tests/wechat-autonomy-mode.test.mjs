@@ -70,8 +70,8 @@ assert.match(initiativePlan.note,/\[保持安静\]/);
 assert.match(initiativePlan.note,/1到10条之间自由决定/);
 assert.match(initiativePlan.note,/不要编造对方发过自拍/);
 
-assert.match(source,/_hlPlan=humanLikeOn\(\)&&!_naturalOn\?/,'behavior planner must not decide natural-mode replies');
-assert.match(source,/_relIntent=_naturalOn\?null:relationshipIntent/,'numeric relationship policy must be absent in natural mode');
+assert.match(source,/_hlPlan=replyAccount==='main'&&humanLikeOn\(\)&&!_naturalOn\?/,'behavior planner must not decide natural-mode or alternate-account replies');
+assert.match(source,/_relIntent=_naturalOn\|\|replyAccount!=='main'\?null:relationshipIntent/,'numeric relationship policy must be absent in natural mode and alternate accounts');
 assert.match(source,/if\(!_naturalOn\)maybeAffectionShift/,'affection must not auto-shift in natural mode');
 assert.match(source,/if\(!_naturalOn\)syncVisibleMood/,'mood must not auto-normalize in natural mode');
 assert.match(source,/if\(!_naturalOn&&moodProbeText/,'mood-driven rewrite must be disabled in natural mode');

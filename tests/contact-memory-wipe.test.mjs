@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v944 · 云端授权与音色止损修复'/);
+assert.match(source, /APP_VER='v945 · 主屏稳定与微信账号修复'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);render\(\);toast\('正在清除本机大聊天库和后台旧上下文/);
 assert.match(source, /await persistWechatMessagesNow\(\)/);
@@ -160,7 +160,7 @@ assert.match(source, /if\(!picked\.length\)picked=visible\.slice\(0,3\)/);
 assert.match(source, /if\(\(\+c\._memoryResetAt\|\|0\)!==resetAt\)return;/);
 assert.match(source, /_sp\.memorySince\?'你的旧记忆已经被清除/);
 
-assert.match(source, /s\+=memoryResetPrompt\(c\);/);
+assert.match(source, /s\+=_main\?memoryResetPrompt\(c\):'';/);
 
 context.fmtDT = () => "2026年7月23日 23:30";
 for (const name of ["memoryResetPrompt", "memoryResetProbeText", "memoryResetReplyNeedsRepair"]) {

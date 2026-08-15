@@ -20,7 +20,14 @@ assert.doesNotMatch(source, /现在跟你聊天的是小号身份/);
 assert.match(source, /if\(_main\)\{if\(!_natural\)\{const av=affNow\(c\)/);
 assert.match(source, /if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=powerDynamicPrompt/);
 assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
-assert.doesNotMatch(source, /if\(aid==='main'\)setTimeout\(triggerAltReports/);
+assert.match(source, /resumeAccountReplies\(aid\);if\(aid==='main'\)setTimeout\(triggerAltReports,1500\)/);
+assert.match(source, /_natural\|\|!_main\?'':suspicionPrompt\(c\)\+extremeLovePrompt\(c\)/);
+assert.match(source, /s\+=_main\?memoryResetPrompt\(c\):''/);
+assert.match(source, /s\+=_main\?friendOriginPrompt\(c\):''/);
+assert.match(source, /const _offlineLive=_main\?offlineWechatLiveState\(c\):null/);
+assert.match(source, /const _cohabLive=_main&&!_offlineLive\?cohabWechatState\(c\):null/);
+assert.match(source, /_hlPlan=replyAccount==='main'&&humanLikeOn\(\)&&!_naturalOn/);
+assert.match(source, /_relIntent=_naturalOn\|\|replyAccount!=='main'\?null:relationshipIntent/);
 assert.match(source, /# 姓名与称呼边界（重要）[\s\S]*?忆北的小手机[\s\S]*?应用\/设备名称/);
 assert.doesNotMatch(source, /if\(scope==='main'\)\(c\.summaries\|\|\[\]\)\.forEach/);
 assert.doesNotMatch(source, /if\(!c\|\|!isMain\(\)\)return '';const now=Date\.now\(\),items=\[\]/);
@@ -106,6 +113,54 @@ function extractFunction(name) {
   }
   throw new Error(`unterminated ${name}`);
 }
+
+const reportRole = { id: "role_report", name: "角色", _altReportAt: 0 };
+const reportMessages = {
+  "role_report#alt_1": [
+    { role: "user", type: "text", content: "你好", time: 100 },
+    { role: "assistant", type: "text", content: "你好，刚认识。", time: 101 },
+  ],
+};
+const reportCalls = [];
+const reportSandbox = {
+  S: {
+    me: {
+      active: "main",
+      name: "大号联系人",
+      accounts: [
+        { id: "main", name: "大号联系人" },
+        { id: "alt_1", name: "小号陌生人" },
+      ],
+    },
+    contacts: [reportRole],
+    messages: reportMessages,
+  },
+  isMain: () => true,
+  msgToText: m => m.content || "",
+  save() {},
+  scheduleReply: (id, note) => reportCalls.push({ id, note }),
+};
+vm.runInNewContext(
+  ["altReportSnapshot", "lastAltMsgTime", "triggerAltReports"]
+    .map(extractFunction)
+    .join("\n") +
+    ";globalThis.runReports=triggerAltReports;globalThis.lastTime=lastAltMsgTime;",
+  reportSandbox,
+);
+assert.equal(reportSandbox.lastTime("role_report"), 101);
+reportSandbox.runReports();
+assert.equal(reportCalls.length, 1, "first alt conversation must be reported once after returning to main");
+assert.match(reportCalls[0].note, /独立联系人/);
+assert.match(reportCalls[0].note, /不要猜测两个账号是同一个人/);
+assert.equal(reportRole._altReportAt, 101);
+reportSandbox.runReports();
+assert.equal(reportCalls.length, 1, "the same alt activity must not be reported twice");
+reportMessages["role_report#alt_1"].push({ role: "user", type: "image", content: "新图片", time: 202 });
+reportSandbox.runReports();
+assert.equal(reportCalls.length, 2, "new alt activity must allow exactly one new report");
+assert.match(reportCalls[1].note, /这次的新情况/);
+reportSandbox.runReports();
+assert.equal(reportCalls.length, 2, "the follow-up report must also remain one-time");
 
 let summaryActive = "main";
 const summarySandbox = {

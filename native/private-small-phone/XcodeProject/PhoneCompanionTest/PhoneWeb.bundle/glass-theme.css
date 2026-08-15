@@ -184,6 +184,25 @@ html.north-ios-home-safe.north-glass-ui .home .home-scroll{padding-top:calc(var(
 html.north-glass-ui .appswipe{margin-top:0;align-items:flex-start}
 html.north-glass-ui .home .dock{display:grid!important;width:calc(100% - 32px)!important;max-width:348px!important;margin-left:16px!important;margin-right:auto!important;padding-left:10px!important;padding-right:10px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;column-gap:6px!important;box-sizing:border-box!important;overflow:hidden!important}
 html.north-glass-ui .home .dock>.app{width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important}
+/* 旧参考图按 390px 视口定稿，348px 上限在 401~649px 的宽屏手机上会把顶部组件和 Dock 压向左侧。
+   仅对这段手机宽度解除上限；常见 390/393px 手机与平板预览均保持原布局。 */
+@media(min-width:401px) and (max-width:649px){
+  html.north-glass-ui .glass-reference-page>.glass-place-dashboard,
+  html.north-glass-ui .home .dock{max-width:none!important}
+}
+/* 少数宽屏长屏设备再给首组件下方留出一点呼吸位，避免四个 App 视觉上贴住组件；普通设备不命中。 */
+@media(min-width:401px) and (max-width:649px) and (min-height:820px){
+  html.north-glass-ui .glass-reference-page>.glass-place-app-a,
+  html.north-glass-ui .glass-reference-page>.glass-place-app-b{top:186px!important}
+  html.north-glass-ui .glass-reference-page>.glass-place-app-c,
+  html.north-glass-ui .glass-reference-page>.glass-place-app-d{top:277px!important}
+  html.north-glass-ui .glass-reference-page>.glass-place-vinyl{top:183px!important}
+  html.north-glass-ui .glass-reference-page>.glass-place-sweetie{top:373px!important}
+  html.north-glass-ui .glass-reference-page>.glass-place-app-e,
+  html.north-glass-ui .glass-reference-page>.glass-place-app-f{top:393px!important}
+  html.north-glass-ui .glass-reference-page>.glass-place-app-g,
+  html.north-glass-ui .glass-reference-page>.glass-place-app-h{top:484px!important}
+}
 html.north-glass-ui.north-pack-pink .glass-reference-page>.app,html.north-glass-ui.north-pack-blue .glass-reference-page>.app,html.north-glass-ui.north-pack-gray .glass-reference-page>.app,html.north-glass-ui.north-pack-black .glass-reference-page>.app{transform:none!important}
 html.north-glass-ui.north-pack-black .home-dashboard-card,html.north-glass-ui.north-pack-black .home-vinyl-card,html.north-glass-ui.north-pack-black .home-sweetie-card,html.north-glass-ui.north-pack-black .home .dock{background:linear-gradient(145deg,rgba(34,35,40,.18),rgba(5,6,8,.08))!important;border-color:rgba(255,255,255,.24)!important;backdrop-filter:blur(22px) saturate(145%)!important;-webkit-backdrop-filter:blur(22px) saturate(145%)!important}
 html.north-glass-ui.north-pack-pink .home-dashboard-card,html.north-glass-ui.north-pack-pink .home-vinyl-card,html.north-glass-ui.north-pack-pink .home-sweetie-card,html.north-glass-ui.north-pack-pink .home .dock{background:linear-gradient(145deg,rgba(255,202,224,.18),rgba(239,156,190,.08))!important;border-color:rgba(255,224,238,.58)!important}

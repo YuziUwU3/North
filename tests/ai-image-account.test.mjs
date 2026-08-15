@@ -18,6 +18,9 @@ assert.match(account,/当前浏览器不能读取 HEIC\/HEIF/);
 assert.match(account,/点数不足提醒/);
 assert.match(account,/function aiCheckLowBalance\(balance\)/);
 assert.match(account,/语音或影院字幕服务中断/);
+assert.match(account,/内置 AI 用途范围/);
+assert.match(account,/仅用于语音生成和影院字幕识别；不用于普通聊天、聊天识图或聊天生图/);
+assert.match(app,/function aiCoreOn\(\)\{return false;\}/);
 
 assert.doesNotMatch(app,/function aiImageInit|function aiImageRelayOn|aiRelay\('image'/);
 assert.match(app,/function imageGenerationAvailable\(\)\{const ch=S\.settings\.chat\|\|\{\};return !!\(\(S\.settings\.imgBase\|\|ch\.base\)&&\(S\.settings\.imgKey\|\|ch\.key\)\);\}/);

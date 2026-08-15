@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='944'){
+if(window.__NORTH_SHELL_BUILD__!=='945'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -363,7 +363,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v944 · 云端授权与音色止损修复';
+const APP_VER='v945 · 主屏稳定与微信账号修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1424,7 +1424,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=944';
+  const url='sw.js?v=945';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -1849,13 +1849,13 @@ function buildSystem(c,opt){
   const _natural=!!opt.natural,_need=kind=>!_natural||!!opt.allModules||wechatNaturalModuleNeeded(kind,opt.query);
   const _main=isMain();
   const _voiceLang=ttsContentLang(c);
-  let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+(_natural?traitSpeechDesc(c):traitDesc(c))+(_natural?'':suspicionPrompt(c)+extremeLovePrompt(c));
+  let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+(_natural?traitSpeechDesc(c):traitDesc(c))+(_natural||!_main?'':suspicionPrompt(c)+extremeLovePrompt(c));
   s+='\n\n# 姓名与称呼边界（重要）\n当前玩家资料姓名是「'+S.me.name+'」。角色人设、玩家资料、双方真实聊天或长期记忆里已经建立的英文名、外文名、昵称和私下称呼都可以自然使用，不要因为它是英文就拦截。历史记录里单独出现“忆北的小手机”或“小手机”时，它们是应用/设备名称；“忆北”或“North”只有在资料、双方称呼习惯或当前对话能证明是人的名字/昵称时才用，不能仅凭设备名称自行猜成玩家名字。';
   s+=_main?adultRoleRule(c.remark||c.name||'角色'):altIdentityPrompt(c);
-  s+=memoryResetPrompt(c);
-  s+=friendOriginPrompt(c);
+  s+=_main?memoryResetPrompt(c):'';
+  s+=_main?friendOriginPrompt(c):'';
   s+='\n\n# 时间感知（最高优先级）\n'+timeAwarenessPrompt(S.me.name,'wechat');
-  const _offlineLive=offlineWechatLiveState(c);if(_offlineLive)s+=offlineWechatLivePrompt(c,_offlineLive);const _cohabLive=!_offlineLive&&cohabWechatState(c);if(_cohabLive)s+=cohabWechatPrompt(c,_cohabLive);const _liveScene=!!(_offlineLive||_cohabLive);
+  const _offlineLive=_main?offlineWechatLiveState(c):null;if(_offlineLive)s+=offlineWechatLivePrompt(c,_offlineLive);const _cohabLive=_main&&!_offlineLive?cohabWechatState(c):null;if(_cohabLive)s+=cohabWechatPrompt(c,_cohabLive);const _liveScene=!!(_offlineLive||_cohabLive);
   if(S.settings.timeAware&& !_liveScene){const _gn=conversationGapNote(c);if(_gn)s+='\n\n# 当前这条消息和上一轮聊天之间的时间差（重要）\n'+_gn;}
   if(S.settings.timeAware&& !_liveScene){const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
    if(!_natural&&_lu&&_gap>=25*60000){const _dg=dayGap(_lu.time,Date.now());
@@ -2920,14 +2920,15 @@ function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
 function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}
-  const p=_aPend;if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y,ax=Math.abs(dx),ay=Math.abs(dy);
+  const p=_aPend;if(!p)return;p.pointerMoves=(p.pointerMoves||0)+1;appPanMove(e.clientX,e.clientY,e);}
+function appPanMove(x,y,e){const p=_aPend;if(!p)return;const dx=x-p.x,dy=y-p.y,ax=Math.abs(dx),ay=Math.abs(dy);
   if(!p.pan&&Math.max(ax,ay)>12){clearTimeout(_aTimer);p.pan=ax>ay?'x':'y';_aNoClick=Date.now()+450;try{if(p.el&&p.el.setPointerCapture)p.el.setPointerCapture(p.pid);}catch(_){}}
-  if(p.pan){e.preventDefault();if(p.pan==='x'&&p.sw){p.sw.scrollLeft=p.swLeft-dx;homePgScroll(p.sw);}else if(p.pan==='y'&&p.scroll)p.scroll.scrollTop=p.scrollTop-dy;}}
+  if(p.pan){if(e&&e.cancelable)e.preventDefault();if(p.pan==='x'&&p.sw){p.sw.scrollLeft=p.swLeft-dx;homePgScroll(p.sw);}else if(p.pan==='y'&&p.scroll)p.scroll.scrollTop=p.scrollTop-dy;}}
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
   const p=_aPend;_aPend=null;if(p&&p.pan){if(p.pan==='x'&&p.sw)homeSnapPage(p.sw);return;}if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
-function appTouchMove(e){if(!_aDrag)return;const t=e.touches&&e.touches[0];if(!t)return;e.preventDefault();appGhostMove(t.clientX,t.clientY);}
-function appTouchEnd(e){if(!_aDrag)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){appCancel();return;}e.preventDefault();appDrop(t.clientX,t.clientY);}
+function appTouchMove(e){const t=e.touches&&e.touches[0];if(!t)return;if(_aDrag){if(e.cancelable)e.preventDefault();appGhostMove(t.clientX,t.clientY);return;}if(_aPend)appPanMove(t.clientX,t.clientY,e);}
+function appTouchEnd(e){if(!_aDrag&&!_aPend)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){appCancel();return;}if(e.cancelable)e.preventDefault();if(_aDrag){appDrop(t.clientX,t.clientY);return;}appUp({clientX:t.clientX,clientY:t.clientY});}
 function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(typeof document!=='undefined'&&document.body)document.body.classList.remove('home-drag-active');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(d){if(typeof render==='function')render();if(typeof requestAnimationFrame==='function')requestAnimationFrame(homeEditStart);return;}if(sw)sw.classList.remove('aedit');}
 function homeLayoutReadDom(){const pageEls=Array.from(document.querySelectorAll('#appswipe .apppage')),pages=pageEls.map(pg=>Array.from(pg.children).map(el=>el.dataset.token).filter(Boolean)),dock=$('#homeDesktop .dock');if(pages.length!==APP_PAGES||!dock)return false;const dockTokens=Array.from(dock.children).map(el=>el.dataset.token).filter(Boolean);if(dockTokens.length>4||dockTokens.some(k=>!APPDEFS[k]))return false;const before=(Array.isArray(S.me.homeLayout)?S.me.homeLayout.flat():[]).concat(Array.isArray(S.me.appDock)?S.me.appDock:[]).filter(homeTokenValid),after=pages.flat().concat(dockTokens),beforeSet=new Set(before),afterSet=new Set(after);if(before.length!==beforeSet.size||after.length!==afterSet.size||beforeSet.size!==afterSet.size||Array.from(beforeSet).some(k=>!afterSet.has(k)))return false;const ref=pageEls[0],map={};if(ref)ref.querySelectorAll(':scope>.home-item[data-ref-slot]').forEach(el=>{const token=el.dataset.token,n=Number(el.dataset.refSlot);if(APPDEFS[token]&&Number.isInteger(n))map[token]=n;});S.me.homeLayout=pages;S.me.appDock=dockTokens;S.me.homeReferenceAppSlots=map;homeLayoutSyncLegacy();return true;}
 function appDrop(x,y){const d=_aDrag;if(d&&Number.isFinite(x)&&Number.isFinite(y))appLiveReorder(x,y);_aDrag=null;_aPend=null;clearTimeout(_aTimer);const sw=$('#appswipe');
@@ -2940,6 +2941,7 @@ function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
   document.addEventListener('pointermove',appMove,{passive:false});
   document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appCancel);
   document.addEventListener('touchmove',appTouchMove,{passive:false});document.addEventListener('touchend',appTouchEnd,{passive:false});document.addEventListener('touchcancel',appCancel);
+  window.addEventListener('blur',appCancel);document.addEventListener('visibilitychange',()=>{if(document.hidden)appCancel();});
   document.addEventListener('click',e=>{if(Date.now()<_aNoClick&&e.target.closest('.home-item')){e.preventDefault();e.stopImmediatePropagation();}},true);}
 initAppDrag();
 function homeEditStart(){const h=$('#homeDesktop');if(h)h.classList.add('home-editing');}
@@ -7972,14 +7974,15 @@ function switchAccount(aid){initAccounts();if(aid===actId()){closeModal();return
   S.me.age=t.age||18;S.me.adultConsent=t.adultConsent!==false;
   if(t.balance==null)t.balance=(aid==='main'?0:188);if(!t.bills)t.bills=[];S.me.balance=t.balance;S.me.bills=t.bills;
   syncBlocks();save();closeModal();wxTab='chats';render();toast('已切换到「'+t.name+'」');
-  resumeAccountReplies(aid);}
-function lastAltMsgTime(cid){let t=0;Object.keys(S.messages).forEach(k=>{if(k.indexOf(cid+'#')===0){const arr=S.messages[k]||[];const lm=arr[arr.length-1];if(lm&&lm.time>t)t=lm.time;}});return t;}
-function triggerAltReports(){if(!isMain())return;for(const c of S.contacts){if(c.deleted||c.blocked)continue;const t=lastAltMsgTime(c.id);if(t&&t>(c._altReportAt||0)){
-    let who='',recent='';Object.keys(S.messages).forEach(k=>{const idx=k.indexOf('#');if(idx>0&&k.slice(0,idx)===c.id){const acc=(S.me.accounts||[]).find(a=>a.id===k.slice(idx+1));const arr=S.messages[k]||[];if(!acc||!arr.length)return;who=acc.name;recent=arr.slice(-5).map(m=>(m.role==='user'?acc.name:'我')+'：'+((m.content||msgToText(m))||'').replace(/\n/g,' ').slice(0,28)).join('；');}});
-    const first=!c._altIntroDone;c._altIntroDone=true;c._altReportAt=Date.now();save();
+  resumeAccountReplies(aid);if(aid==='main')setTimeout(triggerAltReports,1500);}
+function altReportSnapshot(cid){let latest=null;Object.keys(S.messages).forEach(k=>{if(k.indexOf(cid+'#')!==0)return;const aid=k.slice((cid+'#').length),acc=(S.me.accounts||[]).find(a=>a.id===aid);if(!acc)return;const arr=(S.messages[k]||[]).filter(m=>m&&m.type!=='sys'&&(m.role==='user'||m.role==='assistant')&&m.time);if(!arr.length)return;const lm=arr[arr.length-1];if(latest&&latest.time>=lm.time)return;latest={time:lm.time,who:acc.name,recent:arr.slice(-5).map(m=>(m.role==='user'?acc.name:'我')+'：'+((m.content||msgToText(m))||'').replace(/\n/g,' ').slice(0,28)).join('；')};});return latest;}
+function lastAltMsgTime(cid){const info=altReportSnapshot(cid);return info?info.time:0;}
+function triggerAltReports(){if(!isMain())return;for(const c of S.contacts){if(c.deleted||c.blocked)continue;const info=altReportSnapshot(c.id),t=info&&info.time;if(t&&t>(c._altReportAt||0)){
+    const who=info.who,recent=info.recent;
+    const first=!c._altIntroDone;c._altIntroDone=true;c._altReportAt=t;save();
     const note=first
-      ?'[系统：有个叫「'+who+'」的人(用别的微信号)加了你、还聊了几句。主动、【简短】跟'+S.me.name+'(你恋人)报备一下：有人加你了、是谁、你什么态度。两三句话就好，别逐句复述聊天。]'
-      :'[系统：你之前已经跟'+S.me.name+'报备过有人(「'+who+'」)加你。现在你们又聊了些新的：'+recent+'。【简短】跟'+S.me.name+'说下近况(又聊了啥、你态度)，两三句就好，别再说"有人加我"那套、别逐句复述。]';
+      ?'[系统：有个独立联系人「'+who+'」用另一个微信号加了你，并和你聊过。现在你已经回到与大号联系人「'+S.me.name+'」的聊天，请用你自己的口吻简短报备一次：谁加了你、你是什么态度。不要猜测两个账号是同一个人，不要逐句复述。]'
+      :'[系统：你以前已经向大号联系人「'+S.me.name+'」报备过「'+who+'」。这次对方又和你发生了新聊天：'+recent+'。请只简短报备这次的新情况和你的态度，不要重复首次报备，不要猜测两个账号是同一个人。]';
     scheduleReply(c.id,note);break;}}}
 function editAccount(aid){initAccounts();const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',city:'',_new:true};if(!a)return;
   openModal(`<h3>${aid&&!a._new?'编辑身份':'新建小号'}</h3>
@@ -9075,7 +9078,7 @@ function buildPart(c,m,me){
   if(m.type==='image'){
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
     if(!m.src)return `<div class="imgmsg imgfail"${m.failed&&m.genPrompt?` onclick="event.stopPropagation();retryGeneratedImage('${c.id}','${m.id}')" style="cursor:pointer"`:''}>[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.68">${m.failed?esc(generatedImageFailureLabel(m.errText))+(m.genPrompt?' · 点这里重试':''):''}</small></div>`;
-    return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>`;
+    return `<div class="imgmsg" onclick="event.stopPropagation();${me?`msgMenu('${c.id}','${m.id}')`:`viewImg('${m.src}')`}"><img src="${m.src}"></div>`;
   }
   if(m.type==='transfer')return payCard('t',m,me);
   if(m.type==='redpacket')return payCard('r',m,me);
@@ -9263,13 +9266,14 @@ function runVisionForMessage(id,m,sourceFactory,prompt){m.visionState='pending';
     finally{save(0);visionStatusRefresh(id);}})();
   _visionTasks.set(m.id,task);task.finally(()=>{if(_visionTasks.get(m.id)===task)_visionTasks.delete(m.id);});return task;}
 function visionDataURLSource(src,max,q){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{try{let w=im.naturalWidth||im.width,h=im.naturalHeight||im.height;if(Math.max(w,h)>max){const z=max/Math.max(w,h);w=Math.max(1,Math.round(w*z));h=Math.max(1,Math.round(h*z));}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);res(c.toDataURL('image/jpeg',q));}catch(e){rej(e);}};im.onerror=()=>rej(new Error('图片读取失败'));im.src=src;});}
-async function retryVisionMessage(id,mid){const m=msgs(id).find(x=>x.id===mid&&x.type==='image');if(!m||!m.src||m.visionState==='pending')return;const ok=await runVisionForMessage(id,m,()=>visionDataURLSource(m.src,1200,.74),'请仔细、客观地用中文描述这张图片。读出关键文字并说明主体、动作、场景和最明显的细节，用2到3句自然白话说清楚。');if(ok){suspicionFulfillRequest(getC(id),m);toast('图片已经看清了');scheduleReply(id);}else toast('识图仍失败：'+(m.visionError||'检查识图线路'));}
+async function retryVisionMessage(id,mid){const m=msgs(id).find(x=>x.id===mid&&x.type==='image');if(!m||!m.src||m.visionState==='pending')return;const ok=await runVisionForMessage(id,m,()=>visionDataURLSource(m.src,1200,.74),'请仔细、客观地用中文描述这张图片。读出关键文字并说明主体、动作、场景和最明显的细节，用2到3句自然白话说清楚。');if(m._deleted)return;if(ok){suspicionFulfillRequest(getC(id),m);toast('图片已经看清了');scheduleReply(id);}else toast('识图仍失败：'+(m.visionError||'检查识图线路'));}
 function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',async f=>{
   let src;try{src=await compress(f,1400,.78);}catch(e){src=null;}
   if(!src){try{src=await readAsDataURL(f);}catch(e){toast('图片读取失败，再试一次');return;}}
   const m={role:'user',type:'image',src,desc:'',visionState:'pending',id:uid()};pushMsg(id,m);
   const _vp='请仔细、客观地用中文描述这张图片。有人物时说清人数、年龄段、表情、发型穿着、动作和场景；是聊天截图、表情包或梗图时，读出关键文字并说明表达的意思；是物品、风景、动物或食物时，说清主体、颜色、细节和氛围。用2到3句自然白话描述，让没看过图的人也能理解，不要评价或攻击人物。';
   const okv=await runVisionForMessage(id,m,async()=>{let v=await visionPhotoSource(f,1280,.76);if(v.length>1400000)v=await visionPhotoSource(f,1000,.7);return v;},_vp);
+  if(m._deleted)return;
   if(okv){suspicionFulfillRequest(getC(id),m);if(m.visionFallback)toast('聊天模型没能看图，已按顺序由备用 '+m.visionModel+' 接管；没有并发重复识别');scheduleReply(id);}
   else toast('图片理解失败：'+(m.visionError||'请检查图片理解线路').slice(0,90)+'（检查设置后可重新发送）');});}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
@@ -10181,7 +10185,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
-    const _userText=(_lu&&msgToText(_lu))||'',_naturalOn=wechatNaturalOn(),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_hlPlan=humanLikeOn()&&!_naturalOn?hlInterpret(c,note||_userText,note):null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
+    const _userText=(_lu&&msgToText(_lu))||'',_naturalOn=wechatNaturalOn(),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_hlPlan=replyAccount==='main'&&humanLikeOn()&&!_naturalOn?hlInterpret(c,note||_userText,note):null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
     const _nativeUserInspectionQueued=!note&&(nativeInspectionPending(_lu,id)||maybeSpyIntent('',c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true}));if(_nativeUserInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}
     const _memQuery=[note||_userText,...msgs(id).slice(-4).map(msgToText).filter(Boolean)].join('\n'),_hasMovedMemory=isMain()&&aiMemoryDocs(c).some(d=>d&&Array.isArray(d.chunks)&&d.chunks.length),_memCtx=(humanLikeOn()||_hasMovedMemory)?selectRelevantMemory(c,_memQuery,_hasMovedMemory?5:3):null;
     const _webAutoQuery=!note?autoWebQuery(_userText,c):'',_webAutoResult=_webAutoQuery?(toast('🌐 正在联网查询…'),await webSearch(_webAutoQuery)):'';
@@ -10190,7 +10194,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';
     const _voiceRequired=!note&&explicitVoiceReplyRequest(_userText)&&(S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0,_voiceTurnPrompt=_voiceRequired?'\n\n# 本轮必须发语音\n'+S.me.name+'这一轮明确要求你发语音。回复正文必须合并成一条 [语音|要说的话]，不能只发普通文字，也不要在语音标签外重复一遍。严格满足ta提出的长度和内容要求，但语音最多'+VOICE_MAX_CHARS+'字。若角色语音语言不是中文，必须用 [语音|对应外语原文|中文翻译]。':'';
     const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。':'';
-    const _giftIntent=!note?giftRequestIntent(_userText):'',_giftTurnPrompt=!note?giftRequestPrompt(_userText):'',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=_naturalOn?null:relationshipIntent(c,note,_userText),_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_tail=(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_giftTurnPrompt+_thoughtTurnPrompt+relationshipPolicyPrompt(c,_relIntent),_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
+    const _giftIntent=!note?giftRequestIntent(_userText):'',_giftTurnPrompt=!note?giftRequestPrompt(_userText):'',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=_naturalOn||replyAccount!=='main'?null:relationshipIntent(c,note,_userText),_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_tail=(_hlPlan?hlPlanPrompt(c,_hlPlan)+dialogueEmotionPrompt(c):'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_giftTurnPrompt+_thoughtTurnPrompt+relationshipPolicyPrompt(c,_relIntent),_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
     const hist=chatHistoryWithDateBoundaries(lastRounds(msgs(id),S.settings.hist||12),m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:_naturalOn&&m.type==='sys'?'system':m.role,content:cn}:null;}
       return {role:_naturalOn&&m.type==='sys'?'system':m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -10530,15 +10534,18 @@ function msgMenu(cid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=�
   const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
   const canEdit=m.type==='text'||(m.role==='assistant'&&m.type==='voice');
   const canTextVoice=m.role==='assistant'&&m.type==='text'&&String(m.content||'').trim();
+  const canDeleteOwn=m.role==='user'&&(m.type==='text'||m.type==='image');
   const canQuote=(S.settings.quoteOn!==false)&&(m.type==='text'||m.type==='voice');
   // 重新生成：他发的(文字/语音/视频都行、不是系统提示)、且这条后面你没再说话(是最新那轮)才行
   let canRegen=(m.role==='assistant'&&m.type!=='sys'&&!m._call);
   if(canRegen){const i=list.findIndex(x=>x.id===mid);for(let j=i+1;j<list.length;j++){if(list[j].role==='user'&&list[j].type!=='sys'){canRegen=false;break;}}}
   openModal(`<h3>消息操作</h3>
+    ${m.type==='image'&&m.src?`<button class="btn g" style="margin-bottom:8px" onclick="viewWechatMsgImage('${cid}','${mid}')">查看图片</button>`:''}
     ${canQuote?`<button class="btn g" style="margin-bottom:8px" onclick="quoteSet('${cid}','${mid}')">引用这句</button>`:''}
     ${canTextVoice?`<button class="btn g" style="margin-bottom:8px" onclick="openTextToVoice('${cid}','${mid}')">${svgIc('mic',15,'#eee')} 文字转语音</button>`:''}
     ${canEdit?`<button class="btn g" style="margin-bottom:8px" onclick="editMsg('${cid}','${mid}')">${m.type==='voice'?'编辑语音文字':'编辑'}</button>`:''}
     ${canRegen?`<button class="btn p" style="margin-bottom:8px" onclick="regenMsg('${cid}','${mid}')">${svgIc('refresh',15,'#fff')} 重新生成</button>`:''}
+    ${canDeleteOwn?`<button class="btn d" style="margin-bottom:8px" onclick="deleteOwnMsg('${cid}','${mid}')">${m.type==='image'?'删除这张图片':'删除这条消息'}</button>`:''}
     ${m.role==='assistant'?`<button class="btn d" style="margin-bottom:8px" onclick="deleteRoleMsg('${cid}','${mid}')">删除这条角色消息</button>`:''}
     <button class="btn d" onclick="recallMsg('${cid}','${mid}')">撤回</button>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
@@ -10550,6 +10557,8 @@ async function convertTextToVoice(cid,mid){const c=getC(cid),m=msgs(cid).find(x=
   if(!ttsApiOn()){speakMsg(m,c);_textToVoiceBusy.delete(mid);toast('已转为系统语音');return;}
   m._ttsLoading=true;m._playWhenReady=true;refreshVoiceBubble(m);const url=await warmVoiceMsg(m,c);_textToVoiceBusy.delete(mid);if(url){save();toast(useRelay?'已转为语音，本次扣除 '+info.points+' 点；重复播放不再扣点':'已用外置语音接口转换；未扣内置AI点数');return;}
   delete m._playWhenReady;delete m._ttsLoading;delete m._ttsFailAt;m.type='text';delete m.showText;delete m.voiceCue;save();if(cur().p==='chat'&&cur().id===cid)render();toast('转换失败，原文字已保留');}
+function viewWechatMsgImage(cid,mid){const m=msgs(cid).find(x=>x.id===mid&&x.type==='image');if(!m||!m.src)return;closeModal();viewImg(m.src);}
+function deleteOwnMsg(cid,mid){const list=msgs(cid),i=list.findIndex(x=>x.id===mid&&x.role==='user'&&(x.type==='text'||x.type==='image'));if(i<0)return;const m=list[i],isImage=m.type==='image';m._deleted=true;list.splice(i,1);if(isImage)_visionTasks.delete(mid);saveNow();persistWechatMessagesNow().catch(()=>{});if(isImage)try{imgGC();}catch(_){}closeModal();render();toast(isImage?'图片已删除':'消息已删除');}
 function deleteRoleMsg(cid,mid){const list=msgs(cid),i=list.findIndex(x=>x.id===mid&&x.role==='assistant');if(i<0)return;list.splice(i,1);saveNow();persistWechatMessagesNow().catch(()=>{});closeModal();render();toast('角色消息已删除');}
 function regenMsg(cid,mid){const c=getC(cid);if(!c){closeModal();return;}if(c.blocked){toast('ta把你拉黑了');closeModal();return;}
   const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0){closeModal();return;}

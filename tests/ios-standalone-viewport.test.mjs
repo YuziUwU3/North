@@ -97,5 +97,6 @@ test('iOS home-screen bottom paint is automatic while the compatibility switch r
   assert.match(html,/html\.north-native-app \.phone\{position:fixed;inset:0/);
   assert.doesNotMatch(html,/\.north-native-app\.north-ios-home-safe/,'native pages keep the proven browser layout instead of browser-wide offsets');
   assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the native container reserves the entire tappable top safe area');
+  assert.match(nativeRoot,/Color\(red: 38 \/ 255, green: 33 \/ 255, blue: 39 \/ 255\)[\s\S]*?\.ignoresSafeArea\(\.container, edges: \.top\)/,'the private app paints the reserved status-bar lane with its dark glass base');
   assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\)/,'the web view must never extend under the iPhone status bar');
 });

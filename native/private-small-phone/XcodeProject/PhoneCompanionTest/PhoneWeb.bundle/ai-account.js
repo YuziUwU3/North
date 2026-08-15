@@ -101,6 +101,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     <div style="margin:0 0 12px;padding:12px 14px;border:1px solid rgba(255,72,92,.62);border-radius:9px;background:rgba(255,72,92,.11);color:#ff5b6f;font-size:14px;font-weight:800;line-height:1.65">内置配置仅为方便新手使用，会收取人工服务费；自己注册并使用外置配置通常更省钱。两种方式可自行选择，不强制。<br><span style="font-size:12px;font-weight:700">充值需要人工审核，如未及时到账，请联系管理员处理。</span></div>
     <button onclick="showManual('ai')" style="width:100%;margin:0 0 12px;padding:11px 12px;border:1px solid rgba(165,180,252,.3);background:#171a24;color:#cdd5ff;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between"><span>AI账户使用说明与常见问题</span><b style="font-size:16px">›</b></button>
     <div class="section">
+      <div class="it"><span>内置 AI 用途范围<br><small style="color:#888">仅用于语音生成和影院字幕识别；不用于普通聊天、聊天识图或聊天生图。</small></span><span class="v">固定</span></div>
       <div class="it"><span>点数不足提醒<br><small style="color:#888">余额低于设定值时在小手机屏幕弹窗提醒</small></span><span class="sw ${low.lowBalanceAlertOn?'on':''}" onclick="aiToggleLowBalance()"></span></div>
       <div class="it"><span>提醒额度</span><span class="v"><input type="number" min="1" max="99999" inputmode="numeric" value="${low.lowBalanceThreshold}" onchange="aiSetLowBalance(this.value)" style="width:82px;text-align:right"> 点</span></div>
     </div>

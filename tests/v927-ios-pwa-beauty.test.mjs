@@ -7,11 +7,11 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v944 web and private 1.0.68 releases are aligned', () => {
-  assert.match(app, /APP_VER='v944 · 云端授权与音色止损修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='944'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 68;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.68;/g) || []).length, 12);
+test('v945 web and private 1.0.69 releases are aligned', () => {
+  assert.match(app, /APP_VER='v945 · 主屏稳定与微信账号修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='945'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 69;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.69;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {
@@ -51,8 +51,8 @@ test('long-press dragging starts reliably on Android and keeps page scrolling on
   assert.match(app, /p\.pan=ax>ay\?'x':'y'/);
   assert.match(app, /p\.sw\.scrollLeft=p\.swLeft-dx/);
   assert.match(app, /p\.scroll\.scrollTop=p\.scrollTop-dy/);
-  assert.match(app, /function appTouchMove\(e\)\{if\(!_aDrag\)return;[\s\S]*?e\.preventDefault\(\);appGhostMove\(t\.clientX,t\.clientY\)/);
-  assert.match(app, /function appTouchEnd\(e\)\{if\(!_aDrag\)return;[\s\S]*?appDrop\(t\.clientX,t\.clientY\)/);
+  assert.match(app, /function appTouchMove\(e\)[\s\S]*?if\(_aDrag\)[\s\S]*?appGhostMove\(t\.clientX,t\.clientY\)[\s\S]*?if\(_aPend\)appPanMove\(t\.clientX,t\.clientY,e\)/);
+  assert.match(app, /function appTouchEnd\(e\)[\s\S]*?if\(_aDrag\)\{appDrop\(t\.clientX,t\.clientY\);return;\}appUp\(\{clientX:t\.clientX,clientY:t\.clientY\}\)/);
   assert.match(app, /function appDrop\(x,y\)\{const d=_aDrag;if\(d&&Number\.isFinite\(x\)&&Number\.isFinite\(y\)\)appLiveReorder\(x,y\);_aDrag=null;_aPend=null;clearTimeout\(_aTimer\)/);
   assert.match(app, /addEventListener\('touchmove',appTouchMove,\{passive:false\}\)/);
 });

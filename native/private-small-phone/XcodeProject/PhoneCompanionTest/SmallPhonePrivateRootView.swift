@@ -24,6 +24,13 @@ struct SmallPhonePrivateRootView: View {
 
     var body: some View {
         ZStack {
+            // Paint the system-owned top safe area with the same dark glass
+            // base as the bundled phone navigation bars.  The web view still
+            // starts below the status bar, so time, signal and battery remain
+            // fully tappable and no page is pushed under the Dynamic Island.
+            Color(red: 38 / 255, green: 33 / 255, blue: 39 / 255)
+                .ignoresSafeArea(.container, edges: .top)
+
             // Keep the privacy-preserving report extension mounted so an
             // explicit role read can request a fresh tokenized snapshot even
             // while the all-in-one web surface is the visible page.
