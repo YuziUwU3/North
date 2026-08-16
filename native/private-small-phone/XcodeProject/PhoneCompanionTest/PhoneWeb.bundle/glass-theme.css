@@ -89,6 +89,13 @@ html.north-glass-ui.north-shell-pink .statusbar{background:#ffeaf3!important;col
 html.north-glass-ui.north-shell-blue .statusbar{background:#eaf4ff!important;color:#355271!important}
 html.north-glass-ui.north-shell-gray .statusbar{background:#e6e8ec!important;color:#42464e!important}
 html.north-glass-ui.north-shell-white .statusbar{background:#fff!important;color:#111!important}
+/* Web/PWA outer chrome and safe-area backdrop follow the selected shell theme.
+   The native private app keeps using its dedicated status-bar bridge. */
+html.north-shell-black,html.north-shell-black body,html.north-shell-black .phone{background-color:#000!important}
+html.north-shell-pink,html.north-shell-pink body,html.north-shell-pink .phone{background-color:#ffeaf3!important}
+html.north-shell-blue,html.north-shell-blue body,html.north-shell-blue .phone{background-color:#eaf4ff!important}
+html.north-shell-gray,html.north-shell-gray body,html.north-shell-gray .phone{background-color:#e6e8ec!important}
+html.north-shell-white,html.north-shell-white body,html.north-shell-white .phone{background-color:#fff!important}
 html.north-glass-ui .msgbanner{border-color:rgba(255,255,255,.24);background:linear-gradient(145deg,rgba(67,63,72,.68),rgba(30,29,35,.58));box-shadow:0 18px 42px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.18);backdrop-filter:blur(30px) saturate(165%);-webkit-backdrop-filter:blur(30px) saturate(165%)}
 html.north-glass-ui .north-glass-modal{background:rgba(4,4,7,.34);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
 html.north-glass-ui .north-glass-modal .sheet{border:1px solid rgba(255,255,255,.18);background:linear-gradient(145deg,rgba(55,50,59,.82),rgba(26,24,30,.78));box-shadow:0 28px 70px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.14);backdrop-filter:blur(34px) saturate(155%);-webkit-backdrop-filter:blur(34px) saturate(155%)}

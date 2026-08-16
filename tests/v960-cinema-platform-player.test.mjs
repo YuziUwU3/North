@@ -31,6 +31,10 @@ test('platform parser accepts Youku, Bilibili IDs, full share text and b23 short
   assert.deepEqual({...context.parse('https://www.bilibili.com/video/BV1xx411c7mD')},{provider:'bilibili',id:'BV1xx411c7mD',idType:'bvid',pageUrl:'https://www.bilibili.com/video/BV1xx411c7mD'});
   assert.equal(context.parse('复制这段文字 https://b23.tv/AbC123 打开哔哩哔哩').idType,'short');
   assert.equal(context.parse('https://www.bilibili.com/video/av170001').idType,'aid');
+  assert.deepEqual({...context.parse('https://b23.tv/ep5137671')},{provider:'bilibili',id:'5137671',idType:'episode',pageUrl:'https://www.bilibili.com/bangumi/play/ep5137671'});
+  assert.equal(context.parse('复制这段文字打开哔哩哔哩 https://b23.tv/ep5137671 看完整视频').idType,'episode');
+  assert.equal(context.parse('ep5137671').idType,'episode');
+  assert.equal(context.parse('https://www.bilibili.com/bangumi/play/ss105212').idType,'season');
   assert.equal(context.parse('https://evil.example/video/BV1xx411c7mD').provider,'bilibili','a shared BV id remains an explicit official-player identifier');
   assert.equal(context.parse('https://evil.example/watch?id=123456'),null);
 });
@@ -43,6 +47,8 @@ test('Youku search and playback use current official endpoints without stream sc
   assert.match(player,/new YKU\.Player/);
   assert.match(functionSource('cinemaEnsureYoukuApi'),/https:\/\/player\.youku\.com\/jsapi/);
   assert.match(functionSource('cinemaPlayerHTML'),/player\.bilibili\.com\/player\.html/);
+  assert.match(functionSource('cinemaPlayerHTML'),/episodeId=/);
+  assert.match(functionSource('cinemaPlayerHTML'),/seasonId=/);
   assert.match(functionSource('cinemaBilibiliJSONP'),/api\.bilibili\.com\/x\/web-interface\/view/);
   assert.doesNotMatch(search+player+functionSource('cinemaBilibiliPrepare'),/playurl|m3u8|dash|cookie|Authorization|解锁|解析视频/i);
   assert.match(functionSource('cinemaPlatformOpenPaste'),/优酷官方播放器需要先填写 Client ID/);
@@ -65,11 +71,18 @@ test('private WKWebView embeds only the three explicit official media players',(
   assert.match(native,/host == "music\.163\.com" && url\.path == "\/outchain\/player"/);
   assert.match(native,/host == "player\.youku\.com"/);
   assert.match(native,/host == "player\.bilibili\.com" && url\.path == "\/player\.html"/);
+  assert.match(native,/host == "www\.bilibili\.com"[\s\S]*?\/blackboard\/webplayer\/mbplayer\.html/);
+  assert.match(native,/\/blackboard\/html5mobileplayer\.html/);
   assert.match(native,/UIApplication\.shared\.open\(url\)/);
   assert.match(bridge,/case "media\.resolveBilibiliShort"/);
   assert.match(bridge,/input\.host\?\.lowercased\(\) == "b23\.tv"/);
+  assert.match(bridge,/\/bangumi\/play\/ep/);
+  assert.match(bridge,/\/bangumi\/play\/ss/);
   assert.match(html,/\.cin-platform-player/);
   assert.match(html,/\.cin-platform-frame/);
+  assert.match(html,/\.cin-platform-stage \.cin-danmaku,\.cin-platform-stage \.cin-sub,\.cin-platform-stage \.cin-voice-sub\{pointer-events:none\}/);
+  assert.doesNotMatch(html,/\.cin-platform-stage \.cin-danmaku[^}]*\{pointer-events:auto\}/);
+  assert.doesNotMatch(native,/hasSuffix\("bilibili\.com"\)/,'the native allowlist must not broaden to arbitrary Bilibili pages');
   assert.match(html,/aspect-ratio:16\/9/);
   assert.match(html,/\.cin-platform-results/);
 });

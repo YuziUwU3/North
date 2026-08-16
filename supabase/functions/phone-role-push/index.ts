@@ -644,7 +644,14 @@ function roleRecentTurnBoundary(profile: Record<string, unknown>) {
 
 function profileTemporarilySuspended(profile: Record<string, unknown> | null | undefined) {
   const config = profile?.automation_config;
-  return !!(config && typeof config === "object" && (config as Record<string, unknown>).suspended === true);
+  if (!config || typeof config !== "object") return false;
+  const value = config as Record<string, unknown>;
+  if (value.suspended !== true) return false;
+  // A live call/date/cinema state is only a renewable lease. Older clients
+  // persisted a bare `suspended: true`; treating that as permanent could
+  // silence background contact forever after the app closed in that state.
+  const until = snapshotTime(value.suspendedUntil);
+  return until > Date.now();
 }
 
 function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {

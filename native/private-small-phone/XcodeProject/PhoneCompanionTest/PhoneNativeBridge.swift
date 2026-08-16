@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 19
+    static let contractVersion = 20
 
     weak var webView: WKWebView? {
         didSet {
@@ -316,7 +316,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 ])
                 let path = finalURL.path.lowercased()
                 guard allowedHosts.contains(host),
-                      path.contains("/video/bv") || path.contains("/video/av") else {
+                      path.contains("/video/bv") ||
+                      path.contains("/video/av") ||
+                      path.contains("/bangumi/play/ep") ||
+                      path.contains("/bangumi/play/ss") else {
                     self.reply(requestID: requestID, error: "invalid_bilibili_redirect")
                     return
                 }

@@ -7,6 +7,12 @@ const root=path.resolve(import.meta.dirname,'..');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'glass-theme.css'),'utf8');
 const iconKeys=fs.readdirSync(path.join(root,'assets','app-icons','glass','black')).filter(x=>x.endsWith('.webp')).map(x=>x.slice(0,-5));
+function functionSource(name){
+  const start=app.indexOf('function '+name+'(');
+  assert.ok(start>=0,'missing '+name);
+  const next=app.indexOf('\nfunction ',start+10);
+  return app.slice(start,next<0?app.length:next).trim();
+}
 
 test('transparent black glass is the default while line icons remain selectable',()=>{
   assert.match(app,/uiMaterial:'glass',appIconPack:'black'/);
@@ -128,6 +134,21 @@ test('private iOS top safe-area strip follows theme colors without moving the we
   assert.match(shell,/smallPhone\.statusBarTheme\.v1/);
   assert.match(shell,/LocalPhoneWebView/);
   assert.doesNotMatch(shell,/LocalPhoneWebView\s*\{[\s\S]{0,240}\}\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
+});
+
+test('public web browser chrome follows every shell theme while native staging stays black',()=>{
+  const webHtml=fs.readFileSync(path.join(root,'小手机.html'),'utf8');
+  const transform=fs.readFileSync(path.join(root,'native','private-small-phone','scripts','private-phone-web-transform.mjs'),'utf8');
+  const sync=functionSource('webStatusBarThemeSync');
+  assert.match(webHtml,/apple-mobile-web-app-status-bar-style" content="default"/);
+  assert.match(sync,/root\.style\.setProperty\('--north-shell-status-color',color\)/);
+  assert.match(sync,/meta\.remove\(\)/);
+  assert.match(sync,/document\.head\.appendChild\(meta\)/);
+  assert.match(sync,/apple\.setAttribute\('content','default'\)/);
+  for(const [theme,color] of Object.entries({black:'#000',pink:'#ffeaf3',blue:'#eaf4ff',gray:'#e6e8ec',white:'#fff'})){
+    assert.match(css,new RegExp(`north-shell-${theme}[^}]+background-color:${color.replace('#','\\#')}!important`));
+  }
+  assert.match(transform,/status-bar-style" content="default"[^\n]+status-bar-style" content="black"/);
 });
 
 test('second-page portrait caption keeps theme color with a translucent glass fill',()=>{

@@ -202,6 +202,9 @@ test('completed chat turns are marked before scheduled proactive generation', ()
 
 test('temporary offline or face-to-face states suspend without disabling background contact', () => {
   assert.match(edgeFunctionSource('profileTemporarilySuspended'), /automation_config/);
+  assert.match(edgeFunctionSource('profileTemporarilySuspended'), /snapshotTime\(value\.suspendedUntil\)/);
+  assert.match(edgeFunctionSource('profileTemporarilySuspended'), /until > Date\.now\(\)/);
+  assert.match(functionSource('roleServerAutomationConfig'), /suspendedUntil:suspended\?Date\.now\(\)\+12\*60000:0/);
   assert.match(edge, /profileTemporarilySuspended\(freshProfile\)/);
   assert.match(edge, /profileTemporarilySuspended\(latestProfile\)/);
   assert.match(edge, /next_due_at: new Date\(Date\.now\(\) \+ 10 \* 60_000\)/);

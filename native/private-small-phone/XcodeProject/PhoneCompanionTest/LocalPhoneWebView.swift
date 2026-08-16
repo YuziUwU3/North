@@ -171,6 +171,11 @@ struct LocalPhoneWebView: UIViewRepresentable {
             if host == "player.bilibili.com" && url.path == "/player.html" {
                 return true
             }
+            if host == "www.bilibili.com" &&
+                (url.path == "/blackboard/webplayer/mbplayer.html" ||
+                 url.path == "/blackboard/html5mobileplayer.html") {
+                return true
+            }
             return false
         }
 
@@ -297,7 +302,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.83 (83)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.84 (84)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

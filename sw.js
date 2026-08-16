@@ -1,6 +1,6 @@
-const BUILD='961';
-const HOTFIX='v961-bilibili-mobile-1';
-const SHELL_CACHE='north-shell-v961';
+const BUILD='962';
+const HOTFIX='v962-theme-bilibili-push-1';
+const SHELL_CACHE='north-shell-v962';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

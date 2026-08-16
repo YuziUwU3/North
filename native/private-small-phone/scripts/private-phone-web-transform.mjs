@@ -10,6 +10,7 @@ export async function applyPrivatePhoneWebTransforms(outputRoot, entry) {
   privateHtml = privateHtml
     .replace(', viewport-fit=cover', '')
     .replace('apple-mobile-web-app-status-bar-style" content="black-translucent"', 'apple-mobile-web-app-status-bar-style" content="black"')
+    .replace('apple-mobile-web-app-status-bar-style" content="default"', 'apple-mobile-web-app-status-bar-style" content="black"')
     .replace(/var url='sw\.js\?v=(\d+)&r=[^']+';/, "var url='sw.js?v=$1';")
     .replace('text-align:center;transform:translateY(18px)', 'text-align:center')
     .replace(/\.phcallidentity\{[^}]*\}/, '')
