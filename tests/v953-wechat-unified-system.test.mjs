@@ -6,11 +6,11 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v963 · 陪看字幕、共享画面与后台链路修复'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='963'/);
-assert.match(sw,/BUILD='963'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 85;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1\.0\.85;/g)||[]).length,12);
+assert.match(source,/APP_VER='v964 · 陪看语音不停播修复'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='964'/);
+assert.match(sw,/BUILD='964'/);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 86;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1\.0\.86;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);
@@ -28,4 +28,4 @@ assert.match(source,/const plan=initiativePlan\(c,a,st\)/);
 assert.match(source,/if\(!wechatNaturalOn\(\)\)maybeGrudgeResolve/);
 assert.match(source,/if\(_main&&!_natural&&!opt\.selectiveMemory\)/);
 
-console.log('v963 WeChat unified system tests passed');
+console.log('v964 WeChat unified system tests passed');

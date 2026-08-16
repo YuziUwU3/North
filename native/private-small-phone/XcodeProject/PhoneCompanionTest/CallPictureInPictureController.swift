@@ -134,10 +134,16 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         data: Data,
         volume: Float,
         mixWithMedia: Bool = false,
+        preserveCurrentSession: Bool = false,
         completion: @escaping (Bool) -> Void
     ) {
         stopAudio()
-        activateCallAudio(mixWithMedia: mixWithMedia)
+        // Bilibili and hands-free recognition already share the App's active
+        // audio session. Reapplying its category here interrupts WKWebView
+        // playback even when mixWithOthers is present.
+        if !preserveCurrentSession {
+            activateCallAudio(mixWithMedia: mixWithMedia)
+        }
         do {
             let player = try AVAudioPlayer(data: data)
             player.delegate = self

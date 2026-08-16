@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v963 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v963 · 陪看字幕、共享画面与后台链路修复'/);
-  assert.match(app,/const url='sw\.js\?v=963&r=v963-cinema-subtitle-share-push-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='963'/);
-  assert.match(html,/app\.js\?v=963/);
-  assert.match(sw,/const BUILD='963'/);
-  assert.match(sw,/north-shell-v963/);
-  assert.match(index,/小手机\.html\?v=963/);
-  assert.match(repair,/小手机\.html\?v=963/);
+test('v964 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v964 · 陪看语音不停播修复'/);
+  assert.match(app,/const url='sw\.js\?v=964&r=v964-cinema-audio-session-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='964'/);
+  assert.match(html,/app\.js\?v=964/);
+  assert.match(sw,/const BUILD='964'/);
+  assert.match(sw,/north-shell-v964/);
+  assert.match(index,/小手机\.html\?v=964/);
+  assert.match(repair,/小手机\.html\?v=964/);
 });
 
-test('the private iOS package advances to v963 and 1.0.85 delivery',()=>{
-  assert.match(privateBundle,/<string>963<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.85;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 85;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.85 \(85\)'/);
+test('the private iOS package advances to v964 and 1.0.86 delivery',()=>{
+  assert.match(privateBundle,/<string>964<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.86;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 86;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.86 \(86\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

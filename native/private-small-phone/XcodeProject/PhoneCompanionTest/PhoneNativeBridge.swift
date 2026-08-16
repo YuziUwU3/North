@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 21
+    static let contractVersion = 22
 
     weak var webView: WKWebView? {
         didSet {
@@ -218,7 +218,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             CallPictureInPictureController.shared.playAudio(
                 data: data,
                 volume: volume,
-                mixWithMedia: mixWithMedia
+                mixWithMedia: mixWithMedia,
+                preserveCurrentSession: mixWithMedia
             ) { [weak self] success in
                 self?.reply(requestID: requestID, result: ["played": success])
             }

@@ -84,8 +84,12 @@ test('private cinema screen frames keep ReplayKit orientation and role speech mi
   assert.doesNotMatch(functionSource('playCallMediaWait'),/cinemaMicPauseForRole/);
   assert.match(bridge,/arguments\["mixMode"\] as\? String == "cinema"/);
   assert.match(bridge,/mixWithMedia: mixWithMedia/);
+  assert.match(bridge,/preserveCurrentSession: mixWithMedia/);
   assert.match(pipAudio,/mixWithMedia: Bool = false/);
+  assert.match(pipAudio,/preserveCurrentSession: Bool = false/);
+  assert.match(pipAudio,/if !preserveCurrentSession \{[\s\S]*?activateCallAudio\(mixWithMedia: mixWithMedia\)/);
   assert.match(pipAudio,/if mixWithMedia \{[\s\S]*?\.playAndRecord,[\s\S]*?mode: \.default,[\s\S]*?\.mixWithOthers/);
+  assert.match(app,/if\(!cinemaNativeMediaAudioOn\(\)&&!hfAudioPaused&&_callHF&&_callSR\)/);
 });
 
 test('private WKWebView embeds only the explicit NetEase and Bilibili media players',()=>{
