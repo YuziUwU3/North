@@ -16,6 +16,7 @@ html.north-glass-ui .glass-app>.scroll>.bill{border-color:var(--ng-line-soft);bo
 html.north-glass-ui .home .hwid:not(.wpet),
 html.north-glass-ui .home .dock,
 html.north-glass-ui .home .home-editbar{overflow:hidden;border:1px solid var(--ng-line)!important;box-shadow:var(--ng-shadow)!important;backdrop-filter:blur(22px) saturate(150%)!important;-webkit-backdrop-filter:blur(22px) saturate(150%)!important}
+
 html.north-glass-ui .home:not([style*="background:url"]){background:radial-gradient(circle at 74% 18%,rgba(255,255,255,.055),transparent 28%),radial-gradient(circle at 20% 56%,rgba(255,255,255,.035),transparent 32%),linear-gradient(160deg,#101114,#030405 58%,#0a0b0d)!important;color:#f3f3f4}
 html.north-glass-ui .home:not([style*="background:url"]):before{background:radial-gradient(circle,rgba(255,255,255,.055),transparent 70%);opacity:.7}
 html.north-glass-ui .home:not([style*="background:url"]):after{background:radial-gradient(circle,rgba(148,154,166,.09),transparent 70%);opacity:.6}
@@ -268,3 +269,20 @@ html.north-glass-ui .wx-glass>.scroll{flex:1 1 auto!important;min-height:0!impor
 html.north-glass-ui .wx-glass.wxlight{background:linear-gradient(180deg,rgba(250,247,249,.94),rgba(237,234,238,.96))!important}
 html.north-glass-ui .wx-glass:not(.wxlight)>.nav,html.north-glass-ui .wx-glass:not(.wxlight)>.tabbar,html.north-glass-ui .wx-glass:not(.wxlight) .list .row{background:rgba(25,23,29,.48)!important}
 html.north-glass-ui .wx-glass.wxlight>.nav,html.north-glass-ui .wx-glass.wxlight>.tabbar,html.north-glass-ui .wx-glass.wxlight .list .row{background:rgba(255,255,255,.5)!important}
+
+/* Android/触屏浏览器在页面恢复或显存紧张时会丢弃大面积 backdrop 合成层，
+   造成组件仍占位但整块不绘制。仅让三个大组件退回实体玻璃底色；布局、内容和拖动不变。 */
+@media (pointer:coarse),(hover:none){
+html.north-android.north-glass-ui .home .home-widget-item,
+html.north-android.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-widget-item.home-dashboard-card:not(.wpet),
+html.north-android.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-widget-item.home-vinyl-card:not(.wpet),
+html.north-android.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-widget-item.home-sweetie-card:not(.wpet){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* 设置页表单会同时包含大量按钮和输入框。触屏 WebView 对这些逐层实时取景代价很高，
+   保留实体玻璃配色和边框，只关闭设置页自身的 backdrop 合成。 */
+html.north-android.north-glass-ui .settings-glass>.nav,
+html.north-android.north-glass-ui .settings-glass .section,
+html.north-android.north-glass-ui .settings-glass .field input,
+html.north-android.north-glass-ui .settings-glass .field textarea,
+html.north-android.north-glass-ui .settings-glass .field select,
+html.north-android.north-glass-ui .settings-glass .minibtn{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}

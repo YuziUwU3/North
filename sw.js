@@ -1,6 +1,6 @@
-const BUILD='955';
+const BUILD='956';
 const HOTFIX='v950-shell-restore-1';
-const SHELL_CACHE='north-shell-v955';
+const SHELL_CACHE='north-shell-v956';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

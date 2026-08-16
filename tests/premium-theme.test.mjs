@@ -6,6 +6,7 @@ import path from 'node:path';
 const root=path.resolve(import.meta.dirname,'..');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'小手机.html'),'utf8');
+const glass=fs.readFileSync(path.join(root,'glass-theme.css'),'utf8');
 
 test('premium home theme keeps all three established color modes',()=>{
   assert.match(html,/\.home\{background:linear-gradient\(155deg,#18151a 0%,#211a20 44%,#171820 100%\)/);
@@ -57,6 +58,14 @@ test('formal home includes the complete edit layer and movable widgets',()=>{
   assert.match(app,/function homeEditFinish\(\)/);
   assert.match(html,/\.home\.home-editing \.home-editbar\{display:flex/);
   assert.match(html,/\.home-widget-ghost\{/);
+});
+
+test('Android touch devices keep glass styling without fragile large backdrop layers',()=>{
+  assert.match(app,/const NORTH_ANDROID=.*?\/Android\/i\.test/);
+  assert.match(glass,/@media \(pointer:coarse\),\(hover:none\)\{/);
+  assert.match(glass,/html\.north-android\.north-glass-ui \.home \.home-widget-item[\s\S]*?backdrop-filter:none!important/);
+  assert.match(glass,/html\.north-android\.north-glass-ui \.settings-glass>\.nav,[\s\S]*?html\.north-android\.north-glass-ui \.settings-glass \.section,[\s\S]*?html\.north-android\.north-glass-ui \.settings-glass \.minibtn\{backdrop-filter:none!important/);
+  assert.match(glass,/\.settings-glass \.section\{[^}]*backdrop-filter:blur\(25px\) saturate\(145%\)/);
 });
 
 test('WeChat uses a full-bleed frame while original chat internals stay intact',()=>{

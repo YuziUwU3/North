@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='955'){
+if(window.__NORTH_SHELL_BUILD__!=='956'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -7,6 +7,8 @@ const KEY='yibei_phone_v2';
 const NORTH_PREVIEW_PARAMS=(()=>{try{return new URLSearchParams(location.search).get('northPreview')||'';}catch(_){return'';}})();
 const NORTH_PREVIEW=!!NORTH_PREVIEW_PARAMS;
 const NORTH_VIEWPORT_DIAG=(()=>{try{return new URLSearchParams(location.search).get('northViewportDiag')==='1';}catch(_){return false;}})();
+const NORTH_ANDROID=(()=>{try{return /Android/i.test(String(navigator.userAgent||''));}catch(_){return false;}})();
+try{document.documentElement.classList.toggle('north-android',NORTH_ANDROID);}catch(_){}
 /* ☁️ 云同步（Supabase）：云地址+key 在「设置→云同步」里各自填(不写死在公开代码里)，
    你和每个网友各填各的 Supabase，数据各进各的云、互不相干 */
 function cloudUrl(){return (((S.settings&&S.settings.cloudUrl)||'').trim()).replace(/\/+$/,'');}
@@ -363,7 +365,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v955 · 限额与生活事件连续性修复';
+const APP_VER='v956 · 安卓首页与设置绘制稳定性修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1432,7 +1434,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-const url='sw.js?v=955&r=v950-shell-restore-1';
+const url='sw.js?v=956&r=v950-shell-restore-1';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
