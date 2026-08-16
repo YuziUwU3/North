@@ -1,6 +1,7 @@
 import CoreImage
 import CoreMedia
 import Foundation
+import ImageIO
 import ReplayKit
 import UIKit
 
@@ -46,7 +47,24 @@ final class SampleHandler: RPBroadcastSampleHandler {
               ) else { return }
         lastFrameAt = now
 
-        let input = CIImage(cvPixelBuffer: pixelBuffer)
+        var input = CIImage(cvPixelBuffer: pixelBuffer)
+        if let value = CMGetAttachment(
+            sampleBuffer,
+            key: RPVideoSampleOrientationKey as CFString,
+            attachmentModeOut: nil
+        ) as? NSNumber,
+           let orientation = CGImagePropertyOrientation(
+               rawValue: value.uint32Value
+           ) {
+            input = input.oriented(orientation)
+        }
+        let orientedExtent = input.extent.integral
+        if orientedExtent.origin != .zero {
+            input = input.transformed(by: CGAffineTransform(
+                translationX: -orientedExtent.origin.x,
+                y: -orientedExtent.origin.y
+            ))
+        }
         let longest = max(input.extent.width, input.extent.height)
         let scale = longest > 960 ? 960 / longest : 1
         let output = input.transformed(by: CGAffineTransform(scaleX: scale, y: scale))

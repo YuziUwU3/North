@@ -8,8 +8,8 @@ const html = read('小手机.html');
 const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift');
 
 test('ordinary voice and video calls reactivate iOS audio before role playback', () => {
-  const play = pip.match(/func playAudio\(data: Data[\s\S]*?func stopAudio/)?.[0] ?? '';
-  assert.match(play, /stopAudio\(\)[\s\S]*?activateCallAudio\(\)[\s\S]*?AVAudioPlayer/);
+  const play = pip.match(/func playAudio\([\s\S]*?func stopAudio/)?.[0] ?? '';
+  assert.match(play, /stopAudio\(\)[\s\S]*?activateCallAudio\(mixWithMedia: mixWithMedia\)[\s\S]*?AVAudioPlayer/);
   assert.match(play, /guard player\.play\(\)/);
 });
 
@@ -25,10 +25,12 @@ test('the v800-v850 hands-free noise filter is restored without touching subtitl
   assert.match(html, /@keyframes csphrasein/);
 });
 
-test('foreground calls use the v907 web player while native playback is reserved for background PiP', () => {
+test('foreground calls keep the web player except private Bilibili cinema, which uses mixed native audio', () => {
   const play = app.match(/async function playCallMediaWait[\s\S]*?async function prepareCallSpeech/)?.[0] ?? '';
   assert.match(play, /const nativeBackground=privateNativeAppOn\(\).*document\.hidden/);
-  assert.match(play, /if\(nativeBackground\)[\s\S]*?call\.audio\.play/);
+  assert.match(play, /nativeCinema=privateNativeAppOn\(\)[\s\S]*?_cin\.provider==='bilibili'/);
+  assert.match(play, /if\(nativeBackground\|\|nativeCinema\)[\s\S]*?call\.audio\.play/);
+  assert.match(play, /mixMode:nativeCinema\?'cinema':'call'/);
   assert.match(play, /const a=callMediaElement\(\)/);
 });
 

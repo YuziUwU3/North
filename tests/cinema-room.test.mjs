@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v962 · 主题、B站播放与后台通知修复'/);
+assert.match(source, /APP_VER='v963 · 陪看字幕、共享画面与后台链路修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -80,6 +80,21 @@ assert.equal(cues.length, 2);
 assert.equal(cues[0].start, 1);
 assert.equal(cues[1].start, 10.5);
 assert.equal(cues[1].text, "第二句");
+const compactCues = helperContext.parse(`1\n00:01,00 --> 00:03,50\n没有空行的第一句\n2\n00:04.000 --> 00:06.000\n没有空行的第二句`);
+assert.equal(compactCues.length, 2);
+assert.equal(compactCues[0].start, 1);
+assert.equal(compactCues[1].text, "没有空行的第二句");
+const decodeContext = vm.createContext({ TextDecoder, Uint8Array, ArrayBuffer });
+vm.runInContext(lineFunctionSource("cinemaDecodeText") + ";globalThis.decode=cinemaDecodeText;", decodeContext);
+const utf16Text = "1\n00:00:01,000 --> 00:00:02,000\n中文字幕";
+const utf16Bytes = new Uint8Array(2 + utf16Text.length * 2);
+utf16Bytes[0] = 0xff; utf16Bytes[1] = 0xfe;
+for (let i = 0; i < utf16Text.length; i++) {
+  const code = utf16Text.charCodeAt(i);
+  utf16Bytes[2 + i * 2] = code & 0xff;
+  utf16Bytes[3 + i * 2] = code >> 8;
+}
+assert.match(decodeContext.decode(utf16Bytes.buffer), /中文字幕/);
 const pages = helperContext.paginate("第一段。".repeat(180) + "\n\n" + "第二段。".repeat(180), 500);
 assert.ok(pages.length >= 3);
 assert.ok(pages.every((page) => page.length <= 510));
@@ -131,6 +146,15 @@ assert.match(source, /timestamp_granularities\[\]/);
 assert.match(source, /接口没有返回分段时间戳/);
 assert.match(source, /function cinemaAnalyzeFrame/);
 assert.match(source, /visionAPI\(data/);
+assert.match(functionSource("cinemaDecodeText"), /utf-16le/);
+assert.match(functionSource("cinemaDecodeText"), /utf-16be/);
+assert.match(functionSource("cinemaPickSubtitle"), /privateNativeAppOn\(\)\?'':/);
+assert.match(functionSource("cinemaPickSubtitle"), /cinPut\(cinemaManualSubtitleKey\(s\)/);
+assert.match(functionSource("cinemaRestoreStoredSubtitles"), /手动导入字幕/);
+assert.match(functionSource("cinemaDeleteStoredSubtitles"), /subtitle-file/);
+assert.match(functionSource("cinemaAnalyzeFrame"), /【字幕：原文】/);
+assert.match(functionSource("cinemaAnalyzeFrame"), /cinemaApplyVisionSubtitle/);
+assert.match(functionSource("cinemaApplyVisionSubtitle"), /source:'vision-subtitle'/);
 assert.match(source, /visionInterval/);
 assert.match(source, /visionOnAsk/);
 assert.match(source, /visionByRole/);
@@ -619,6 +643,6 @@ assert.match(functionSource("cinemaSend"), /cinemaRoleReply\([\s\S]*,false\)/);
 assert.match(functionSource("cinemaBookComment"), /,false\)/);
 assert.doesNotMatch(functionSource("cinemaBookPage"), /autoCount=.*\+1/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=962/);
+assert.match(html, /app\.js\?v=963/);
 
 console.log("cinema room tests passed");

@@ -30,10 +30,10 @@ test('main call subtitle restores v850 size and vertical position without changi
 });
 
 test('background role audio can reactivate the mixed native call session', () => {
-  assert.match(pip, /func playAudio\(data: Data/);
+  assert.match(pip, /func playAudio\([\s\S]*?data: Data,[\s\S]*?mixWithMedia: Bool = false/);
   assert.match(pip, /guard player\.play\(\)/);
   assert.match(pip, /options: \[\.defaultToSpeaker, \.allowBluetoothHFP, \.mixWithOthers\]/);
-  assert.match(pip.match(/func playAudio[\s\S]*?func stopAudio/)?.[0] ?? '', /stopAudio\(\)[\s\S]*?activateCallAudio\(\)[\s\S]*?AVAudioPlayer/);
+  assert.match(pip.match(/func playAudio[\s\S]*?func stopAudio/)?.[0] ?? '', /stopAudio\(\)[\s\S]*?activateCallAudio\(mixWithMedia: mixWithMedia\)[\s\S]*?AVAudioPlayer/);
   assert.doesNotMatch(bridge, /if !audioSessionConfigured/);
 });
 

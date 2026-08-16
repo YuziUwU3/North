@@ -130,9 +130,14 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         stopAudio()
     }
 
-    func playAudio(data: Data, volume: Float, completion: @escaping (Bool) -> Void) {
+    func playAudio(
+        data: Data,
+        volume: Float,
+        mixWithMedia: Bool = false,
+        completion: @escaping (Bool) -> Void
+    ) {
         stopAudio()
-        activateCallAudio()
+        activateCallAudio(mixWithMedia: mixWithMedia)
         do {
             let player = try AVAudioPlayer(data: data)
             player.delegate = self
@@ -167,13 +172,21 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         }
     }
 
-    private func activateCallAudio() {
+    private func activateCallAudio(mixWithMedia: Bool = false) {
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(
-            .playAndRecord,
-            mode: .voiceChat,
-            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
-        )
+        if mixWithMedia {
+            try? session.setCategory(
+                .playAndRecord,
+                mode: .default,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+            )
+        } else {
+            try? session.setCategory(
+                .playAndRecord,
+                mode: .voiceChat,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+            )
+        }
         try? session.setActive(true)
     }
 

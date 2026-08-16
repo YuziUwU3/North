@@ -165,9 +165,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
             if host == "music.163.com" && url.path == "/outchain/player" {
                 return true
             }
-            if host == "player.youku.com" {
-                return true
-            }
             if host == "player.bilibili.com" && url.path == "/player.html" {
                 return true
             }
@@ -302,7 +299,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.84 (84)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.85 (85)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
