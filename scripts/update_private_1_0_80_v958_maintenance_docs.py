@@ -50,7 +50,7 @@ records = {
             "处理一：网页端和云端均显式计算最近用户消息及其后的角色回复。已完成回合被标记为对话结束，随机主动联系只能从独立新事件开场，禁止回答、复述或改写最后一句；尚未回复的用户消息存在时，定时主动联系保持安静。主动记忆检索同时排除与最后一句相同或包含关系的候选。",
             "现象二：线下约会、共同生活面对面等临时状态会让角色资料同步 enabled=false，云端把它当成用户永久关闭后台联系；App 关闭后没有新的完整同步，因而持续不推送。根因是临时暂停与持久偏好共用同一个 enabled 字段。",
             "处理二：enabled 只表达用户持久开启状态，临时线下、通话、睡眠等状态改由 automation_config.suspended 表达。普通定时任务在暂停时顺延十分钟且不关闭资料；生成前后均复核暂停状态。明确的 reply_handoff、device_handoff、one_minute_test 与 app_watch_test 不被误删，面对面期间的普通 App 查看后续仍暂停。",
-            "影响核对：保留每日额度、睡眠、通话、随机静默、去重、通知头像、回复接力、设备接力、一分钟测试和 App 查看测试。phone-role-push 已部署到现有 Supabase 项目；Windows 自动回归 667/667 通过。未在 Mac 编译、签名，也未冒充真实 iPhone 前台、后台或上划强退通知通过。版本为网页 v958、私人 iOS 1.0.80 (80)、原生桥 18。",
+            "影响核对：保留每日额度、睡眠、通话、随机静默、去重、通知头像、回复接力、设备接力、一分钟测试和 App 查看测试。phone-role-push 已部署到现有 Supabase 项目；Windows 自动回归 668/668 通过。未在 Mac 编译、签名，也未冒充真实 iPhone 前台、后台或上划强退通知通过。版本为网页 v958、私人 iOS 1.0.80 (80)、原生桥 18。",
         ],
     ),
     "AI开发项目_Bug修改规范": (
@@ -66,7 +66,7 @@ records = {
         [
             "主动消息系统现在有明确的对话边界：最近用户消息已有角色回复时，本轮视为结束，随机主动消息不得继续回答、复述或改写该句；最近用户消息尚未回复时，随机任务保持安静。服务端与前台队列使用同一边界语义，主动记忆检索不再把最后一句当作必选主题。",
             "后台联系把用户持久开关与临时场景暂停分离。角色资料 enabled 保留用户的长期选择，automation_config.suspended 负责线下约会、共同生活面对面、通话和睡眠等短暂停顿；普通定时任务暂停时顺延而不关闭资料，明确接力和测试任务仍按原规则保留。",
-            "当前版本为网页 v958、私人 iOS 1.0.80 (80)、原生桥 18。phone-role-push 已部署，Windows 自动回归 667/667 通过。仍必须在 Mac 用 Xcode 编译五个 Target，并在真实 iPhone 分别验证前台、后台、锁屏与上划强退后的 APNs 行为。",
+            "当前版本为网页 v958、私人 iOS 1.0.80 (80)、原生桥 18。phone-role-push 已部署，Windows 自动回归 668/668 通过。仍必须在 Mac 用 Xcode 编译五个 Target，并在真实 iPhone 分别验证前台、后台、锁屏与上划强退后的 APNs 行为。",
         ],
     ),
 }
@@ -159,3 +159,53 @@ status_bar_records = {
 
 for stem, (heading, paragraphs) in status_bar_records.items():
     append_record(stem, heading, paragraphs)
+
+
+music_disc_records = {
+    "AI开发项目_Bug记录模板": (
+        "v958 音乐唱片独立四色与一起听按钮联动记录（2026-08-17）",
+        [
+            "需求：音乐播放页唱片需要脱离主屏透明玻璃主题，允许用户在音乐设置内单独选择黑、白、蓝、粉四色；头像下方原粉色一起听圆形按钮应跟随唱片颜色。白色唱片对应的白色按钮必须使用深色外圈和深色图标，避免与周围浅色线条融在一起。",
+            "处理：在 S.music 中新增受白名单约束的 discColor，默认黑色并持久化。播放页根节点只增加 music-disc-black／white／blue／pink 状态类，四色规则只命中 .music-vinyl 与 .music-headphone-action；主屏 .home-vinyl-card、音乐进度条、发送按钮和其他主题颜色均不改动。白色按钮固定深色边框与图标。",
+            "数据与发布：discColor 写入整包和分首音乐备份，导入时只接受四个合法值。网页 Service Worker 热修订键更新，使 v958 线上缓存重新拉取本次正式 app.js 与样式；私人 PhoneWeb.bundle 从共享清单重新生成。Windows 自动回归通过后仍需真实 Android 浏览器与 Mac／iPhone 验证视觉和点击行为。",
+        ],
+    ),
+    "AI开发项目_Bug修改规范": (
+        "音乐界面补充规范｜应用内独立配色不得污染全局主题",
+        [
+            "音乐播放器内部的唱片配色必须由音乐自己的持久状态控制，不得复用主屏 north-pack-* 根类。选择器作用域必须同时包含音乐播放页根类和目标控件，禁止改写主屏唱片、全局强调色、进度条、发送按钮或其他同色控件。",
+            "浅色控件与相邻浅色装饰可能重叠时，必须单独提供深色边界与图标对比度。新增可选颜色必须同时验证默认值、非法值回退、保存恢复、整包／分首备份导入，以及四种颜色之间连续切换。",
+        ],
+    ),
+    "AI开发项目_项目说明文档": (
+        "v958 界面补充｜音乐播放页唱片可独立选择黑白蓝粉",
+        [
+            "音乐设置的播放页外观新增黑、白、蓝、粉四色唱片选项。选择只影响完整播放器中的唱片和头像下方的一起听圆形按钮，不会改变主屏主题、主屏唱片、音乐背景、封面、进度条或其他按钮。白色圆形按钮使用深色外圈和深色图标保持清晰。",
+            "所选颜色保存在 S.music.discColor，并随音乐整包和分首备份导出、导入恢复。私人 App 内置 PhoneWeb.bundle 与网页共享同一实现；Windows 验证不能代替 Android 真机渲染、Mac 编译或 iPhone 真机视觉验收。",
+        ],
+    ),
+}
+
+
+for stem, (heading, paragraphs) in music_disc_records.items():
+    append_record(stem, heading, paragraphs)
+
+
+for docx_path in DOCS.glob("AI开发项目_*.docx"):
+    document = Document(docx_path)
+    changed = False
+    for paragraph in document.paragraphs:
+        for run in paragraph.runs:
+            if "667/667" in run.text:
+                run.text = run.text.replace("667/667", "668/668")
+                changed = True
+    if changed:
+        document.save(docx_path)
+    with ZipFile(docx_path) as archive:
+        assert archive.testzip() is None
+
+for txt_path in DOCS.glob("AI开发项目_*.txt"):
+    text = txt_path.read_text(encoding="utf-8")
+    updated = text.replace("667/667", "668/668")
+    if updated != text:
+        txt_path.write_text(updated, encoding="utf-8")

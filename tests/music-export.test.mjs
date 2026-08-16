@@ -35,7 +35,7 @@ assert.match(functionSource('musicMissingModal'),/歌词和已经打好的时间
 assert.match(functionSource('beautySaveFile'),/blob&&blob\.type\|\|'application\/octet-stream'/);
 
 const ctx=vm.createContext({
-  S:{music:{loop:true,totalSec:12,distance:8,meAvatar:'me',taAvatar:'ta',bg:'bg'}},
+  S:{music:{loop:true,totalSec:12,distance:8,meAvatar:'me',taAvatar:'ta',bg:'bg',discColor:'blue'}},
   Blob,Map,Date,TextEncoder,TextDecoder,DataView,Uint8Array,JSON,
   musicExportDataURLSafe(){return true;},
   async mGet(){throw new Error('preloaded blob should be reused');},
@@ -52,6 +52,7 @@ assert.equal(parsed.ver,1);
 assert.equal(parsed.music.songs[0].file,'data:audio/mpeg;base64,QUJD');
 assert.equal(parsed.music.songs[0].lyrics,'[00:12.34]第一句');
 assert.equal(parsed.music.songs[1].src.url,'https://example.com/a.mp3');
+assert.equal(parsed.music.discColor,'blue');
 
 const longAudio=new Blob([new Uint8Array(40*1024*1024)],{type:'video/mp4'});
 const binaryBlob=ctx.musicBinaryPackBlob({...songs[0],fileName:'四分钟录屏.mp4'},longAudio);

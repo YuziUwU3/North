@@ -3,8 +3,9 @@ import fs from "node:fs";
 
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
+const glassCss = fs.readFileSync(new URL("../glass-theme.css", import.meta.url), "utf8");
 
-assert.match(source, /class="music-premium"/);
+assert.match(source, /class="music-premium music-disc-\$\{musicDiscColor\(\)\}"/);
 assert.match(source, /class="music-ambient"/);
 assert.match(source, /id="m_disk" class="music-vinyl"/);
 assert.doesNotMatch(source, /id="m_arm"/);
@@ -41,6 +42,10 @@ assert.match(source, /onclick="musicOpenHome\(\)" aria-label="缩小播放器"/)
 assert.match(source, /if\(_mView!==\'player\'\|\|!cur\)return renderMusicHome\(\)/);
 assert.match(source, /class="music-settings"/);
 assert.match(source, /class="music-settings-quick"/);
+assert.match(source, /class="music-disc-picker"/);
+assert.match(source, /function musicDiscColorSet\(color\)/);
+assert.match(source, /唱片颜色独立设置，不会跟随主屏主题/);
+assert.match(source, /discColor:\s*musicDiscColor|discColor\}/);
 assert.match(source, /class="music-library-modal"/);
 assert.match(source, /class="music-seek-fill"/);
 assert.match(html, /\.music-premium\{/);
@@ -71,6 +76,7 @@ assert.match(html, /html\.north-apple-remote-safe \.music-lyrics\{height:clamp\(
 assert.match(html, /@media\(max-height:720px\)\{\.music-meta\{margin-top:14px\}[\s\S]*?\.music-lyrics \.mlrc\{font-size:12px;line-height:1\.75\}[\s\S]*?\.music-controls\{padding-bottom:12px\}\.music-chat-toggle\{font-size:12px\}\}/);
 assert.doesNotMatch(html, /\.music-lyrics \.mlrc\.on\{color:#ffd6e8!important/);
 assert.match(html, /\.music-settings\{/);
+assert.match(glassCss, /\.music-disc-picker\{/);
 assert.match(html, /\.music-library-modal\{/);
 assert.match(html, /@media\(max-height:720px\)/);
 assert.match(source, /music:'<path d="M9\.2 17\.5V7\.2l9\.1-2\.1v9\.2"/);

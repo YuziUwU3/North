@@ -73,11 +73,16 @@ test('reference widgets use live storage and native-first telemetry without repl
   assert.match(css,/\.home-widget-vinyl\{grid-column:span 2/);
 });
 
-test('music player stays silver while every home vinyl keeps its theme texture',()=>{
+test('music player owns four independent colors while every home vinyl keeps its theme texture',()=>{
   for(const pack of ['black','pink','blue','gray']){
     assert.match(css,new RegExp(`north-pack-${pack} \\.home-vinyl-card \\.vinyl-record\\{background:repeating-radial-gradient`));
   }
+  for(const color of ['black','white','blue','pink']){
+    assert.match(css,new RegExp(`music-premium\\.music-disc-${color} \\.music-vinyl\\{background:repeating-radial-gradient`));
+    assert.match(css,new RegExp(`music-premium\\.music-disc-${color} \\.music-headphone-action\\{`));
+  }
   assert.match(css,/\.home-vinyl-card \.vinyl-record\.wdisc,html\.north-glass-ui \.music-vinyl\{animation-duration:24s!important\}/);
+  assert.match(css,/music-disc-white \.music-headphone-action\{border-color:#202124!important;background:#fff!important/);
   assert.doesNotMatch(css,/north-pack-(?:black|pink|blue|gray) \.music-vinyl-wrap/);
   assert.doesNotMatch(css,/north-pack-(?:black|pink|blue|gray) \.music-vinyl-cover/);
 });
@@ -284,7 +289,10 @@ test('vinyl playback activates native iOS audio and every pack has a final recor
   assert.match(css,/north-pack-gray \.home-vinyl-card \.vinyl-record[^{]*\{[^}]*conic-gradient/);
   assert.match(css,/north-pack-black \.home-vinyl-card \.vinyl-record[^{]*\{[^}]*conic-gradient/);
   assert.match(css,/north-pack-gray \.home-vinyl-card \.vinyl-record\{background:repeating-radial-gradient[^}]*conic-gradient/);
-  assert.match(css,/html\.north-glass-ui \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
+  assert.match(css,/music-disc-black \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
+  assert.match(css,/music-disc-white \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
+  assert.match(css,/music-disc-blue \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
+  assert.match(css,/music-disc-pink \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
   assert.doesNotMatch(css,/north-pack-(?:black|pink|blue|gray) \.music-vinyl\{/);
   assert.doesNotMatch(css,/north-pack-black \.home-vinyl-card \.vinyl-record,html\.north-glass-ui\.north-pack-black \.music-vinyl/);
   const bridge=fs.readFileSync(path.join(root,'native','private-small-phone','XcodeProject','PhoneCompanionTest','PhoneNativeBridge.swift'),'utf8');

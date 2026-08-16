@@ -14,7 +14,7 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v958 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v958 · 主动消息、后台联系与主题箭头修复'/);
-  assert.match(app,/const url='sw\.js\?v=958&r=v950-shell-restore-1'/);
+  assert.match(app,/const url='sw\.js\?v=958&r=v958-music-disc-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='958'/);
   assert.match(html,/app\.js\?v=958/);
   assert.match(sw,/const BUILD='958'/);
