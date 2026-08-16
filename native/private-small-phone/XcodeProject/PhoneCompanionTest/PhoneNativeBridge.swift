@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 18
+    static let contractVersion = 19
 
     weak var webView: WKWebView? {
         didSet {
@@ -67,6 +67,12 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             performAlarmSync(requestID: requestID, arguments: arguments)
         case "location.current":
             performNativeLocation(requestID: requestID)
+        case "media.resolveBilibiliShort":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performBilibiliShortResolve(
+                requestID: requestID,
+                arguments: arguments
+            )
         case "device.snapshot":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLocalDeviceSnapshot(
@@ -271,6 +277,56 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     "place": manager.currentPlaceName
                 ]
             )
+        }
+    }
+
+    private func performBilibiliShortResolve(
+        requestID: String,
+        arguments: [String: Any]
+    ) {
+        let raw = (arguments["url"] as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let input = URL(string: raw),
+              input.scheme?.lowercased() == "https",
+              input.host?.lowercased() == "b23.tv",
+              input.user == nil,
+              input.password == nil,
+              input.port == nil else {
+            reply(requestID: requestID, error: "invalid_bilibili_short_url")
+            return
+        }
+
+        var request = URLRequest(url: input)
+        request.httpMethod = "HEAD"
+        request.timeoutInterval = 15
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let (_, response) = try await URLSession.shared.data(for: request)
+                guard let finalURL = response.url,
+                      finalURL.scheme?.lowercased() == "https" else {
+                    self.reply(requestID: requestID, error: "bilibili_short_resolve_failed")
+                    return
+                }
+                let host = finalURL.host?.lowercased() ?? ""
+                let allowedHosts = Set([
+                    "bilibili.com", "www.bilibili.com", "m.bilibili.com"
+                ])
+                let path = finalURL.path.lowercased()
+                guard allowedHosts.contains(host),
+                      path.contains("/video/bv") || path.contains("/video/av") else {
+                    self.reply(requestID: requestID, error: "invalid_bilibili_redirect")
+                    return
+                }
+                self.reply(
+                    requestID: requestID,
+                    result: ["url": finalURL.absoluteString]
+                )
+            } catch {
+                self.reply(requestID: requestID, error: "bilibili_short_resolve_failed")
+            }
         }
     }
 

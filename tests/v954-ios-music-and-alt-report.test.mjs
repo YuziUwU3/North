@@ -41,4 +41,4 @@ assert.match(source, /严禁逐句复读聊天/);
 assert.match(source, /严禁逐句复读聊天、列出“某某：\/我：”/);
 assert.doesNotMatch(source, /最近大概聊的是：/);
 
-console.log("v960 iOS music picker and alt-account report tests passed");
+console.log("v961 iOS music picker and alt-account report tests passed");

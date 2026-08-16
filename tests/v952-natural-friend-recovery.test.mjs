@@ -80,4 +80,4 @@ assert.doesNotMatch(source, /async function maybeFollowup\(id,text\)\{const c=ge
 assert.doesNotMatch(source, /async function holidayGreet\(id,hol\)\{if\(wechatNaturalOn\(\)/);
 assert.doesNotMatch(source, /checkStepReport=function\(\)\{if\(wechatNaturalOn\(\)/);
 
-console.log("v960 natural mode and friend recovery tests passed");
+console.log("v961 natural mode and friend recovery tests passed");
