@@ -58,7 +58,8 @@ assert.equal(sandbox.api.altFriendFirstContact({ id: "role" }, "alt_1"), true);
 messages.push({ role: "assistant", type: "text", content: "正常角色消息" });
 assert.equal(sandbox.api.altFriendFirstContact({ id: "role" }, "alt_1"), false);
 
-assert.match(source, /_altFirstContact&&wechatRoleDrift\(content\)\)content=altFriendOpeningFallback\(c\)/);
+assert.ok(source.includes("if((_altFirstContact&&wechatRoleDrift(content))||(replyAccount!=='main'&&wechatServiceGreeting(content)))content=altFriendOpeningFallback(c);"));
+assert.match(source, /if\(note\)hist\.push\(\{role:friendAcceptedAutoNote\(note\)\?'user'/);
 assert.match(source, /!friendAcceptedAutoNote\(note\)\)toast\('模型未回复：'\+em,10000\)/);
 
 assert.match(source, /callEligible=plan\.kind!=='photo'&&plan\.kind!=='location'&&plan\.kind!=='checkin'&&plan\.kind!=='conflict'/);
@@ -79,4 +80,4 @@ assert.doesNotMatch(source, /async function maybeFollowup\(id,text\)\{const c=ge
 assert.doesNotMatch(source, /async function holidayGreet\(id,hol\)\{if\(wechatNaturalOn\(\)/);
 assert.doesNotMatch(source, /checkStepReport=function\(\)\{if\(wechatNaturalOn\(\)/);
 
-console.log("v953 natural mode and friend recovery tests passed");
+console.log("v954 natural mode and friend recovery tests passed");

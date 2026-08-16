@@ -35,7 +35,7 @@ assert.match(source, /if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=p
 assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
 assert.match(source, /if\(aid==='main'\)\{if\(!triggerAltReports\(\)\)resumeAccountReplies\(aid\);\}else resumeAccountReplies\(aid\)/);
 assert.match(source, /scheduleReply\(c\.id,note,ok=>/);
-assert.match(source, /if\(ok\)\{if\(event\)event\.reportedAt=Date\.now\(\);cc\._altIntroDone=true;cc\._altReportAt=/);
+assert.match(source, /const delivered=altReportVisibleEvidence\(cc,info\)\|\|\(ok\?false:altReportDeliverLocal\(cc,info\)\)/);
 assert.match(source, /replyAccount!=='main'&&!c\.blocked/);
 assert.match(source, /content:'你被'\+\(c\.remark\|\|c\.name\)\+'拉黑了'/);
 assert.match(source, /\(!_main\?'':suspicionPrompt\(c\)\+extremeLovePrompt\(c\)\)/);
@@ -168,10 +168,16 @@ const reportSandbox = {
   setTimeout: fn => { fn(); return 1; },
   save() {},
   replyTouch() {},
+  uid: () => `local_${Date.now()}`,
+  wechatTailJournalWrite() {},
+  notifyIncoming() {},
+  cur: () => ({ p: "wechat" }),
+  refreshChatMessages() {},
+  render() {},
   scheduleReply: (id, note, onDone) => { reportCalls.push({ id, note, onDone }); return true; },
 };
 vm.runInNewContext(
-  ["altReportReplyMatches", "altReportSnapshot", "lastAltMsgTime", "altReportVisibleEvidence", "altReportEventStore", "altReportRemember", "repairLegacyAltReportCursor", "triggerAltReports"]
+  ["altReportReplyMatches", "altReportCleanText", "altReportTopic", "altReportReplyFallback", "altReportSnapshot", "lastAltMsgTime", "altReportVisibleEvidence", "altReportDeliverLocal", "altReportEventStore", "altReportRemember", "repairLegacyAltReportCursor", "triggerAltReports"]
     .map(extractFunction)
     .join("\n") +
     ";globalThis.runReports=triggerAltReports;globalThis.lastTime=lastAltMsgTime;globalThis.reportMatches=altReportReplyMatches;",
@@ -201,24 +207,24 @@ reportSandbox.runReports();
 assert.equal(reportCalls.length, 2, "new alt activity must allow exactly one new report");
 assert.match(reportCalls[1].note, /这次的新情况/);
 reportCalls[1].onDone(false);
-assert.equal(reportRole._altReportAt, 101, "a failed report must leave the new alt activity pending");
-assert.equal(reportCalls.length, 3, "a failed report gets one immediate automatic retry");
-reportMessages.role_report.push({ role: "assistant", type: "text", content: "小号陌生人这次又给我发了消息。", time: 210, _altReportEventTime: 202 });
-reportCalls[2].onDone(true);
+assert.equal(reportRole._altReportAt, 202, "a failed model report must be delivered by the local event fallback");
 assert.equal(reportRole._altReportAt, 202);
 assert.equal(reportRole._altReportDeliveredAt, 202);
+assert.equal(reportCalls.length, 2, "local delivery avoids an endless model retry loop");
+assert.match(reportMessages.role_report.at(-1).content, /刚才小号陌生人用另一个号找过我/);
+assert.doesNotMatch(reportMessages.role_report.at(-1).content, /大概聊的是|小号陌生人：|我：/);
 reportSandbox.runReports();
-assert.equal(reportCalls.length, 3, "the successful follow-up report must remain one-time");
+assert.equal(reportCalls.length, 2, "the locally delivered follow-up report must remain one-time");
 
 reportRole._altReportAt = 999;
 reportRole._altReportDeliveredAt = 0;
 reportRole._altIntroDone = true;
 reportMessages["role_report#alt_1"].push({ role: "user", type: "text", content: "旧存档里漏掉的消息", time: 303 });
 reportSandbox.runReports();
-assert.equal(reportCalls.length, 4, "a legacy pre-delivery cursor must be repaired and retried");
+assert.equal(reportCalls.length, 3, "a legacy pre-delivery cursor must be repaired and retried");
 assert.equal(reportRole._altReportAt, 0, "legacy cursor is reset until the repaired report is visible");
 reportMessages.role_report.push({ role: "assistant", type: "text", content: "刚才小号陌生人又联系我了。", time: 310, _altReportEventTime: 303 });
-reportCalls[3].onDone(true);
+reportCalls[2].onDone(true);
 assert.equal(reportRole._altReportAt, 303);
 
 let summaryActive = "main";
