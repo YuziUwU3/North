@@ -21,6 +21,10 @@ assert.match(source, /你已有稳定伴侣[\s\S]*?这条忠诚边界始终有�
 assert.match(privateSource, /你已有稳定伴侣[\s\S]*?这条忠诚边界始终有效/);
 assert.match(privateSource, /【小号最高优先级覆盖】[\s\S]*?这条边界始终有效/);
 assert.match(source, /function altAccountReportNote\(note\)/);
+assert.match(source, /function altReportReplyMatches\(info,content\)/);
+assert.match(source, /内部报备事件时间戳/);
+assert.match(source, /if\(_altReportInfo&&!altReportReplyMatches\(_altReportInfo,content\)\)/);
+assert.match(source, /if\(_altReportInfo\)msg\._altReportEventTime=/);
 assert.match(source, /_naturalOn=wechatNaturalOn\(\)/);
 assert.match(privateSource, /_naturalOn=wechatNaturalOn\(\)/);
 assert.match(source, /持续纠缠或严重越界时可以单独输出 \[拉黑\]/);
@@ -167,12 +171,16 @@ const reportSandbox = {
   scheduleReply: (id, note, onDone) => { reportCalls.push({ id, note, onDone }); return true; },
 };
 vm.runInNewContext(
-  ["altReportSnapshot", "lastAltMsgTime", "altReportVisibleEvidence", "altReportEventStore", "altReportRemember", "repairLegacyAltReportCursor", "triggerAltReports"]
+  ["altReportReplyMatches", "altReportSnapshot", "lastAltMsgTime", "altReportVisibleEvidence", "altReportEventStore", "altReportRemember", "repairLegacyAltReportCursor", "triggerAltReports"]
     .map(extractFunction)
     .join("\n") +
-    ";globalThis.runReports=triggerAltReports;globalThis.lastTime=lastAltMsgTime;",
+    ";globalThis.runReports=triggerAltReports;globalThis.lastTime=lastAltMsgTime;globalThis.reportMatches=altReportReplyMatches;",
   reportSandbox,
 );
+const reportInfo = { aid: "alt_1", time: 101, who: "小号陌生人", recent: "小号陌生人：你好" };
+assert.equal(reportSandbox.reportMatches(reportInfo, "好，那你先忙。"), false, "continuing the previous main-account topic is not a report");
+assert.equal(reportSandbox.reportMatches(reportInfo, "刚才有个人联系了我。"), false, "a generic contact from the previous main-account topic is not enough for a named alt report");
+assert.equal(reportSandbox.reportMatches(reportInfo, "刚才小号陌生人用另一个微信号联系了我。"), true, "a concrete account-contact statement is a report");
 assert.equal(reportSandbox.lastTime("role_report"), 101);
 reportSandbox.runReports();
 assert.equal(reportCalls.length, 1, "first alt conversation must be reported once after returning to main");
@@ -183,6 +191,7 @@ assert.match(reportCalls[0].note, /不要猜测两个账号是同一个人/);
 assert.equal(reportRole._altReportAt, 0, "alt activity must not be consumed before a visible report succeeds");
 reportSandbox.runReports();
 assert.equal(reportCalls.length, 1, "an in-flight report must not be queued twice");
+reportMessages.role_report = [{ role: "assistant", type: "text", content: "刚才小号陌生人用另一个微信号联系了我。", time: 110, _altReportEventTime: 101 }];
 reportCalls[0].onDone(true);
 assert.equal(reportRole._altReportAt, 101);
 reportSandbox.runReports();
@@ -194,6 +203,7 @@ assert.match(reportCalls[1].note, /这次的新情况/);
 reportCalls[1].onDone(false);
 assert.equal(reportRole._altReportAt, 101, "a failed report must leave the new alt activity pending");
 assert.equal(reportCalls.length, 3, "a failed report gets one immediate automatic retry");
+reportMessages.role_report.push({ role: "assistant", type: "text", content: "小号陌生人这次又给我发了消息。", time: 210, _altReportEventTime: 202 });
 reportCalls[2].onDone(true);
 assert.equal(reportRole._altReportAt, 202);
 assert.equal(reportRole._altReportDeliveredAt, 202);
@@ -207,6 +217,7 @@ reportMessages["role_report#alt_1"].push({ role: "user", type: "text", content: 
 reportSandbox.runReports();
 assert.equal(reportCalls.length, 4, "a legacy pre-delivery cursor must be repaired and retried");
 assert.equal(reportRole._altReportAt, 0, "legacy cursor is reset until the repaired report is visible");
+reportMessages.role_report.push({ role: "assistant", type: "text", content: "刚才小号陌生人又联系我了。", time: 310, _altReportEventTime: 303 });
 reportCalls[3].onDone(true);
 assert.equal(reportRole._altReportAt, 303);
 
