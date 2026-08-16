@@ -103,6 +103,24 @@ test('glass home keeps the pull-arrow behavior while matching the three light pa
   assert.match(css,/html\.north-glass-ui \.home-scroll\{overflow-y:auto;padding-top:38px;box-sizing:border-box\}/);
 });
 
+test('private iOS top safe-area strip follows theme colors without moving the web view',()=>{
+  const bridge=fs.readFileSync(path.join(root,'native','private-small-phone','XcodeProject','PhoneCompanionTest','PhoneNativeBridge.swift'),'utf8');
+  const shell=fs.readFileSync(path.join(root,'native','private-small-phone','XcodeProject','PhoneCompanionTest','SmallPhonePrivateRootView.swift'),'utf8');
+  assert.match(app,/function privateNativeStatusBarThemeSync\(force\)/);
+  assert.match(app,/request\('appearance\.statusBar',\{theme\}\)/);
+  for(const theme of ['black','pink','blue','gray','white'])assert.match(bridge,new RegExp(`"${theme}"`));
+  assert.match(bridge,/case "appearance\.statusBar"/);
+  assert.match(shell,/case \.black:[\s\S]*return \.black/);
+  assert.match(shell,/case \.pink:[\s\S]*234 \/ 255[\s\S]*243 \/ 255/);
+  assert.match(shell,/case \.blue:[\s\S]*234 \/ 255[\s\S]*244 \/ 255/);
+  assert.match(shell,/case \.gray:[\s\S]*230 \/ 255[\s\S]*232 \/ 255[\s\S]*236 \/ 255/);
+  assert.match(shell,/case \.white:[\s\S]*return \.white/);
+  assert.match(shell,/\.preferredColorScheme\(statusBarTheme\.colorScheme\)/);
+  assert.match(shell,/smallPhone\.statusBarTheme\.v1/);
+  assert.match(shell,/LocalPhoneWebView/);
+  assert.doesNotMatch(shell,/LocalPhoneWebView\s*\{[\s\S]{0,240}\}\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
+});
+
 test('final reference widgets keep the photo square and the vinyl controls removed',()=>{
   assert.match(css,/\.home-dashboard-photo\{width:128px;height:128px/);
   assert.match(css,/\.home-dashboard-photo img\{[^}]*inset:0!important[^}]*object-fit:cover/);

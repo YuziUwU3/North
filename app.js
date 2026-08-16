@@ -2814,7 +2814,9 @@ function appleHomeCompatBrowserEnvironment(){const n=typeof navigator==='undefin
 function appleHomeCompatEnvironment(){return appleHomeCompatBrowserEnvironment();}
 function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement;if(root&&root.classList){root.classList.remove('north-ios-home-safe');root.classList.remove('north-apple-remote-safe');}return false;}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
-function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}return on;}
+let _nativeStatusBarTheme='';
+function privateNativeStatusBarThemeSync(force){const on=glassThemeOn(),pack=appIconPack(),theme=on&&['black','gray','pink','blue'].includes(pack)?pack:(S&&S.me&&S.me.theme==='white'?'white':S&&S.me&&S.me.theme==='pink'?'pink':'black');if(!force&&theme===_nativeStatusBarTheme)return theme;_nativeStatusBarTheme=theme;if(privateNativeAppOn())window.SmallPhoneNative.request('appearance.statusBar',{theme}).catch(()=>{_nativeStatusBarTheme='';});return theme;}
+function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}privateNativeStatusBarThemeSync(false);return on;}
 function glassThemeSet(){S.me=S.me||{};S.me.uiMaterial='glass';applyGlassTheme();save();render();renderLockScreen(true);toast('已使用透明玻璃材质');}
 const GLASS_ICON_PACKS={blue:'蓝白',pink:'粉白',gray:'灰白',black:'纯黑'};
 function appIconPack(){const pack=S&&S.me&&S.me.appIconPack;return ['blue','pink','gray','black'].includes(pack)?pack:'line';}

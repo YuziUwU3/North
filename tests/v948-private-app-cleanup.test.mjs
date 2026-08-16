@@ -15,7 +15,9 @@ test('private App version, bundled core and native status area are current',()=>
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.80;/g)||[]).length,12);
   assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.80 \(80\)'/);
   assert.match(bundleInfo,/<string>958<\/string>/);
-  assert.match(root,/Color\.black\s*\n\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
+  assert.match(root,/statusBarTheme\.color\s*\n\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
+  assert.match(root,/case \.black:[\s\S]*return \.black/);
+  assert.match(root,/\.preferredColorScheme\(statusBarTheme\.colorScheme\)/);
   assert.doesNotMatch(root,/Color\(red: 38 \/ 255, green: 33 \/ 255, blue: 39 \/ 255\)/);
 });
 

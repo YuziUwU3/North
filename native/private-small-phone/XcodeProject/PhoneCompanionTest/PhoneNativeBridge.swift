@@ -47,6 +47,21 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "native.management.open":
             openDeviceManagement?()
             reply(requestID: requestID, result: ["opened": true])
+        case "appearance.statusBar":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let requested = arguments["theme"] as? String ?? "black"
+            let allowed = Set(["black", "pink", "blue", "gray", "white"])
+            let theme = allowed.contains(requested) ? requested : "black"
+            UserDefaults.standard.set(
+                theme,
+                forKey: "smallPhone.statusBarTheme.v1"
+            )
+            NotificationCenter.default.post(
+                name: .smallPhoneStatusBarThemeChanged,
+                object: nil,
+                userInfo: ["theme": theme]
+            )
+            reply(requestID: requestID, result: ["theme": theme])
         case "alarm.sync":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performAlarmSync(requestID: requestID, arguments: arguments)

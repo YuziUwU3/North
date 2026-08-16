@@ -68,6 +68,11 @@ test('second page geometry follows the requested top, photo, two-row stack',()=>
 
 test('all glass packs reuse identical geometry and only recolor the cards',()=>{
   for(const pack of ['pink','blue','gray'])assert.match(css,new RegExp(`north-pack-${pack} \\.glass-second-portrait`));
+  for(const pack of ['pink','blue','gray'])assert.match(css,new RegExp(`north-pack-${pack} \\.glass-second-portrait-copy\\{[^}]*background:linear-gradient`));
+  assert.match(css,/north-pack-pink \.glass-second-portrait-copy\{[^}]*color:#71344f/);
+  assert.match(css,/north-pack-blue \.glass-second-portrait-copy\{[^}]*color:#304c72/);
+  assert.match(css,/north-pack-gray \.glass-second-portrait-copy\{[^}]*color:#3f444e/);
+  assert.doesNotMatch(css,/north-pack-black \.glass-second-portrait-copy/);
   assert.match(css,/\.home\.twhite \.glass-second-portrait/);
   assert.match(css,/\.home\.tpink \.glass-second-portrait/);
   assert.match(css,/\.home\.glass-widget-custom \.glass-second-portrait/);
