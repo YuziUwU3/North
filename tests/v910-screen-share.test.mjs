@@ -14,9 +14,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v957 · 网易云官方播放器接入'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 79;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.79;/);
+  assert.match(app, /APP_VER='v958 · 主动消息、后台联系与主题箭头修复'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 80;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.80;/);
   assert.match(bridge, /contractVersion = 18/);
 });
 
@@ -61,7 +61,8 @@ test('app-watch refreshes snapshots and records deterministic 50-50 follow-up ch
 });
 
 test('proactive messages prioritize ordinary real chat and silence context', () => {
-  assert.match(edge, /最近真实聊天是本次主动联系的第一优先上下文/);
+  assert.match(edge, /这是与上一轮分开的独立主动联系事件/);
+  assert.match(edge, /禁止再次回答用户最后一句/);
   assert.match(edge, /silenceMinutes/);
   assert.match(edge, /用户距离最近一次真实回复约/);
 });

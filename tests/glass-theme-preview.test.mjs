@@ -89,10 +89,17 @@ test('glass home keeps only the dashboard clock',()=>{
   assert.match(css,/\.dash-time b\{[^}]*font-size:24px/);
 });
 
-test('glass home keeps the v910 lock-screen pull arrow and reserves its top space',()=>{
+test('glass home keeps the pull-arrow behavior while matching the three light packs',()=>{
   assert.match(app,/function renderLockPull\(\)/);
   assert.match(app,/function lockShow\(drop\)/);
   assert.doesNotMatch(css,/html\.north-glass-ui \.lockpull/);
+  assert.match(css,/north-pack-pink \.lockpull\{[^}]*background:linear-gradient/);
+  assert.match(css,/north-pack-pink \.lockpull:before\{border-color:rgba\(255,226,239,\.96\)\}/);
+  assert.match(css,/north-pack-blue \.lockpull\{[^}]*background:linear-gradient/);
+  assert.match(css,/north-pack-blue \.lockpull:before\{border-color:rgba\(220,237,255,\.97\)\}/);
+  assert.match(css,/north-pack-gray \.lockpull\{[^}]*background:linear-gradient/);
+  assert.match(css,/north-pack-gray \.lockpull:before\{border-color:rgba\(72,76,85,\.9\)\}/);
+  assert.doesNotMatch(css,/north-pack-black \.lockpull/);
   assert.match(css,/html\.north-glass-ui \.home-scroll\{overflow-y:auto;padding-top:38px;box-sizing:border-box\}/);
 });
 

@@ -13,11 +13,11 @@ const contentView = read('native/private-small-phone/XcodeProject/PhoneCompanion
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('current web and private release versions align', () => {
-  assert.match(app, /APP_VER='v957 · 网易云官方播放器接入'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 79;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.79;/);
+  assert.match(app, /APP_VER='v958 · 主动消息、后台联系与主题箭头修复'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 80;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.80;/);
   assert.match(bridge, /contractVersion = 18/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.79 \(79\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.80 \(80\)'/);
 });
 
 test('native speech freezes the system frame that belongs to the final utterance', () => {

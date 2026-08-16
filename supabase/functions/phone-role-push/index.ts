@@ -296,6 +296,7 @@ async function roleMessage(
   const lastUserAt = snapshotTime(profile.last_user_at);
   const silenceMinutes = timeAware && lastUserAt ? Math.max(0, Math.floor((Date.now() - lastUserAt) / 60_000)) : 0;
   const repeatCandidates = [...recentBodies, ...roleRecentAssistantMessages(profile)];
+  const turnBoundary = roleRecentTurnBoundary(profile);
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
   const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
   const prompt = [
@@ -308,6 +309,7 @@ async function roleMessage(
     recentContext ? `你与用户最近的真实聊天（按时间顺序）：\n${recentContext}` : "最近没有可用的聊天上下文。",
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
     timeAware && lastUserAt ? `用户距离最近一次真实回复约 ${silenceMinutes} 分钟。` : "不提供用户沉默时长。",
+    `本次对话边界：${turnBoundary.text}`,
   ];
   if (!timeAware) {
     prompt[4] = "时间感知已关闭：不知道当前日期、时间、星期、时段或间隔，不得推测。";
@@ -322,7 +324,7 @@ async function roleMessage(
   }
   const promptText = prompt.filter(Boolean).join("\n");
   const baseMessages = [
-    { role: "system", content: "最近真实聊天是本次主动联系的第一优先上下文。先判断其中是否有可自然延续的话题、用户留下的情绪、真实交代或长时间未回复的停顿；能自然延续就优先延续，并按角色性格对沉默作出真实反应。不要机械补答已经回答完的问题，也不要复读旧回答。只有确实没有自然承接点时，才开启新的日常话题。" },
+    { role: "system", content: turnBoundary.pending ? "最近真实聊天仍停在一条尚未完成正常回复的用户消息。本次是正式随机主动联系，必须只输出 [保持安静]，不能抢答、补答或另开话题。" : "这是与上一轮分开的独立主动联系事件。最近真实聊天只用于理解已经发生的事实、关系、情绪和用户明确交代的去向，不是等待你继续作答的当前回合。可以自然关心交代过的事情后来怎么样，或开启符合本人生活的新话题，但禁止再次回答用户最后一句，禁止复述或改写角色已经给过的回答。" },
     { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。极少数确实更想听用户声音、且符合本人性格的时刻，可以只输出 [来电|语音] 或 [来电|视频]，不能和普通消息、图片或位置同时发送。图片、位置和来电也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: promptText },
   ];
@@ -619,6 +621,32 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
   return "";
 }
 
+function roleRecentTurnBoundary(profile: Record<string, unknown>) {
+  const raw = String(profile?.recent_context || "");
+  if (/\[对话边界\]\s*用户最近一条消息尚未得到角色回复/.test(raw)) {
+    return { pending: true, text: "用户最后一条消息仍在等待正常回复；本次正式随机主动联系必须保持安静。" };
+  }
+  if (/\[对话边界\]\s*用户最近一条消息已经得到角色回复/.test(raw)) {
+    return { pending: false, text: "用户最后一条消息已经由角色回复，上一轮已经结束；不得再次回答、复述或改写那一轮。" };
+  }
+  const userName = String(profile?.user_name || "你").trim();
+  const roleName = String(profile?.role_name || "角色").trim();
+  let lastSpeaker = "";
+  for (const source of raw.split(/\r?\n/)) {
+    const line = String(source || "").trim().replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "");
+    if (userName && line.startsWith(`${userName}：`)) lastSpeaker = "user";
+    else if (roleName && line.startsWith(`${roleName}：`)) lastSpeaker = "assistant";
+  }
+  return lastSpeaker === "user"
+    ? { pending: true, text: "最近聊天停在用户消息，尚未看到角色回复；本次正式随机主动联系必须保持安静。" }
+    : { pending: false, text: "最近聊天没有待回答的用户回合；这是与上一轮分开的独立主动联系事件。" };
+}
+
+function profileTemporarilySuspended(profile: Record<string, unknown> | null | undefined) {
+  const config = profile?.automation_config;
+  return !!(config && typeof config === "object" && (config as Record<string, unknown>).suspended === true);
+}
+
 function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
   const config = (profile.automation_config && typeof profile.automation_config === "object"
     ? profile.automation_config : {}) as Record<string, unknown>;
@@ -805,7 +833,7 @@ Deno.serve(async (request) => {
       const explicitHandoff = ["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test"].includes(String(task.kind || ""));
       /* 这些任务由用户操作直接创建，不能因页面退后台后 profile.enabled 的瞬时变化被取消。
          正式主动消息仍保持原来的 enabled 与新消息基线限制。 */
-      if (!profile || (!explicitHandoff && !profile.enabled) || (!explicitHandoff && baseline && latestUser > baseline + 1000)) {
+      if (!profile || (!explicitHandoff && (!profile.enabled || profileTemporarilySuspended(profile))) || (!explicitHandoff && baseline && latestUser > baseline + 1000)) {
         await client.from("phone_role_background_tasks").update({ status: "canceled", completed_at: new Date().toISOString() }).eq("id", task.id);
         continue;
       }
@@ -994,6 +1022,14 @@ Deno.serve(async (request) => {
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
+      if (profileTemporarilySuspended(freshProfile)) {
+        await client.from("phone_role_push_profiles").update({
+          claimed_until: null,
+          next_due_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
       Object.assign(profile, freshProfile);
       const clock = localClock(profile.timezone);
       const count = profile.daily_day === clock.day ? Number(profile.daily_count || 0) : 0;
@@ -1088,9 +1124,9 @@ Deno.serve(async (request) => {
         : "";
       const decision = await roleMessage(profile, recentBodies, ambientInstruction, ambientFacts);
       const { data: latestProfile } = await client.from("phone_role_push_profiles")
-        .select("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context")
+        .select("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context,automation_config")
         .eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
-      if (!latestProfile?.enabled || !activityQuietForThirtyMinutes(latestProfile) || !profileQuietPeriodEnded(latestProfile) || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
+      if (!latestProfile?.enabled || profileTemporarilySuspended(latestProfile) || !activityQuietForThirtyMinutes(latestProfile) || !profileQuietPeriodEnded(latestProfile) || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;

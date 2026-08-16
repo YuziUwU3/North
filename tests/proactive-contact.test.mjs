@@ -109,6 +109,8 @@ const freshnessContext=vm.createContext({
   lastUserTs:()=>queuedUserTime,
   initiativeConflictState:()=>({active:queuedConflict,cause:''}),
   initiativeAwayPrompt:()=>'',
+  roleServerPushConversationBoundary:()=>'[对话边界] 上一轮已经结束。',
+  roleServerPushTurnState:()=>({answered:true}),
   companionAmbientContext:()=>'',
 });
 vm.runInContext(functionSource('initiativeNoteActive')+';'+functionSource('initiativeQueueNote')+';'+functionSource('initiativeReplyFresh')+';globalThis.queue=initiativeQueueNote;globalThis.fresh=initiativeReplyFresh;',freshnessContext);
@@ -155,6 +157,9 @@ assert.equal(repeatContext.repeated('r1','那你想听什么？'),false,'user te
 assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/独立的新事件/,'local proactive contact must be framed as a new event');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/不是等待你继续回答的当前回合/,'recent chat must be background rather than an unanswered turn');
+assert.match(functionSource('initiativeQueueNote'),/roleServerPushConversationBoundary\(c\)/,'every foreground proactive generation must carry a completed-turn boundary');
+assert.doesNotMatch(functionSource('initiativeMemory'),/initiativeRecentUser\(c\)/,'memory retrieval must not be seeded from the final completed user message');
+assert.match(functionSource('initiativeReplyFresh'),/!roleServerPushTurnState\(c\)\.answered/,'a pending user turn must invalidate a queued proactive reply');
 
 let awayMessages=[];
 const awayContext=vm.createContext({

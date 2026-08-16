@@ -7,11 +7,11 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v957 web keeps private 1.0.79 compatibility', () => {
-  assert.match(app, /APP_VER='v957 · 网易云官方播放器接入'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='957'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 79;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.79;/g) || []).length, 12);
+test('v958 web keeps private 1.0.80 compatibility', () => {
+  assert.match(app, /APP_VER='v958 · 主动消息、后台联系与主题箭头修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='958'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 80;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.80;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {

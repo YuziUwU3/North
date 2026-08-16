@@ -94,7 +94,7 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /真实恋人的日常聊天/);
   assert.match(edge, /严禁使用破折号或横杠字符/);
   assert.match(edge, /roleMessageStyleInvalid\(body, messageMax\)/);
-  assert.match(edge, /select\("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context"\)/);
+  assert.match(edge, /select\("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context,automation_config"\)/);
   assert.match(edge, /!profileQuietPeriodEnded\(freshProfile\)/);
   assert.match(edge, /!profileQuietPeriodEnded\(latestProfile\)/);
   assert.match(edge, /!activityQuietForThirtyMinutes\(freshProfile\)/);
@@ -128,8 +128,9 @@ test('server proactive contact compares ordinary role replies and starts a new e
   };
   assert.deepEqual(recent(profile), ['嗯，去吧宝宝。']);
   assert.match(edge, /repeatCandidates\.some\(\(old\) => roleMessageRepeated\(body, old\)\)/);
-  assert.match(edge, /最近真实聊天是本次主动联系的第一优先上下文/);
-  assert.match(edge, /按角色性格对沉默作出真实反应/);
+  assert.match(edge, /这是与上一轮分开的独立主动联系事件/);
+  assert.match(edge, /禁止再次回答用户最后一句/);
+  assert.match(edge, /用户最后一条消息仍在等待正常回复/);
 });
 
 test('role notification avatars use bounded thumbnails and unguessable fetch URLs', () => {
@@ -174,7 +175,9 @@ test('web client opt-in sends bounded memory and recent context', () => {
   assert.match(profile, /messageMin:min,messageMax:max/);
   assert.match(functionSource('roleServerPushRecentContext'), /slice\(-8000\)/);
   assert.match(functionSource('roleServerPushRecentContext'), /roleOnlineLiveStateText\(c\)/);
-  assert.match(functionSource('roleServerPushEffectiveEnabled'), /!roleOnlineProactiveBlocked\(c\.id\)/);
+  assert.doesNotMatch(functionSource('roleServerPushEffectiveEnabled'), /roleOnlineProactiveBlocked/,'temporary live states must not persistently disable the server profile');
+  assert.match(functionSource('roleServerAutomationConfig'), /suspended/,'temporary live states remain a reversible server-side suspension');
+  assert.match(functionSource('roleServerAutomationConfig'), /return base/,'suspension must be synchronized even without role data access');
   assert.match(functionSource('roleServerPushMemoryContext'), /slice\(0,16000\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /memoryList\(c,scope\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /summaryList\(c,scope\)/);
@@ -187,6 +190,22 @@ test('web client opt-in sends bounded memory and recent context', () => {
   assert.match(functionSource('roleServerPushSyncEnabled'), /600000/);
   assert.match(app, /phone_role_push_status/);
   assert.match(app, /后台链路已接通/);
+});
+
+test('completed chat turns are marked before scheduled proactive generation', () => {
+  assert.match(functionSource('roleServerPushRecentContext'), /roleServerPushConversationBoundary\(c\)/);
+  assert.match(functionSource('roleServerPushConversationBoundary'), /上一轮已经结束/);
+  assert.match(functionSource('roleServerPushConversationBoundary'), /正式随机主动联系必须保持安静/);
+  assert.match(edgeFunctionSource('roleRecentTurnBoundary'), /上一轮已经结束/);
+  assert.match(edge, /turnBoundary\.pending \?/);
+});
+
+test('temporary offline or face-to-face states suspend without disabling background contact', () => {
+  assert.match(edgeFunctionSource('profileTemporarilySuspended'), /automation_config/);
+  assert.match(edge, /profileTemporarilySuspended\(freshProfile\)/);
+  assert.match(edge, /profileTemporarilySuspended\(latestProfile\)/);
+  assert.match(edge, /next_due_at: new Date\(Date\.now\(\) \+ 10 \* 60_000\)/);
+  assert.match(edge, /!profile\.enabled \|\| profileTemporarilySuspended\(profile\)/);
 });
 
 test('unified private app registers itself and exposes end-to-end push diagnostics', () => {
