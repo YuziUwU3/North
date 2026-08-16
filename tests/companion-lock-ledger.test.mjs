@@ -11,9 +11,18 @@ const app = readFileSync(join(root, 'app.js'), 'utf8');
 const swift = readFileSync(join(
   root,
   'native',
-  'phone-companion-v857',
-  'Xcode主App文件',
+  'private-small-phone',
+  'XcodeProject',
+  'PhoneCompanionTest',
   'CompanionSyncView.swift',
+), 'utf8');
+const monitor = readFileSync(join(
+  root,
+  'native',
+  'private-small-phone',
+  'XcodeProject',
+  'PhoneCompanionMonitor',
+  'DeviceActivityMonitorExtension.swift',
 ), 'utf8');
 
 function functionSource(name) {
@@ -68,6 +77,19 @@ test('daily-limit monitoring rebuild preserves shields and the persistent lock l
   assert.match(swift, /effectiveLockedTokens\(\)/);
   assert.match(swift, /loadLimitLockedTokens\(\)/);
   assert.match(swift, /savePersistentLockLedger/);
+});
+
+test('daily-limit shields are retained only for the local usage day', () => {
+  assert.match(swift, /lockedLimitDayKey = "limit\.lockedUsageDay"/);
+  assert.match(swift, /savedDay != today[\s\S]{0,120}clearDailyLimitLockState\(\)/);
+  assert.match(swift, /defaults\.set\([\s\S]{0,100}forKey: lockedLimitDayKey/);
+  assert.match(swift, /let savedLimitTokens = loadLimitLockedTokens\(\)[\s\S]{0,120}\.union\(savedLimitTokens\)/);
+
+  assert.match(monitor, /lockedLimitDayKey = "limit\.lockedUsageDay"/);
+  assert.match(monitor, /intervalDidStart[\s\S]{0,160}clearDailyLimitLock\(\)/);
+  assert.match(monitor, /intervalDidEnd[\s\S]{0,160}clearDailyLimitLock\(\)/);
+  assert.match(monitor, /savedDay != today[\s\S]{0,180}removeObject\(forKey: lockedLimitDayKey\)/);
+  assert.match(monitor, /defaults\.set\(today, forKey: lockedLimitDayKey\)/);
 });
 
 test('native explicit unlock clears manual, daily-limit and ledger stores with rollback state', () => {

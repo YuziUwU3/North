@@ -522,6 +522,7 @@ final class CompanionSyncService: ObservableObject {
     private let dailyLimitsKey = "limit.savedSettings"
     private let tokenKeyPrefix = "limit.token."
     private let lockedLimitTokensKey = "limit.lockedTokens"
+    private let lockedLimitDayKey = "limit.lockedUsageDay"
     private let persistentLockLedgerKey = "companion.lock.ledger.v1"
     private let savedTargetKey = "companion.sync.target.v1"
     private let savedDeviceIDKey = "companion.sync.device-id.v1"
@@ -2141,13 +2142,25 @@ final class CompanionSyncService: ObservableObject {
     }
 
     private func loadLimitLockedTokens() -> Set<ApplicationToken> {
-        guard let data = sharedDefaults?.data(
+        guard let defaults = sharedDefaults,
+              let data = defaults.data(
             forKey: lockedLimitTokensKey
         ),
         let tokens = try? JSONDecoder().decode(
             Set<ApplicationToken>.self,
             from: data
-        ) else {
+        ), !tokens.isEmpty else {
+            return []
+        }
+
+        let today = usageDay(for: Date())
+        let savedDay = defaults.string(forKey: lockedLimitDayKey) ?? ""
+        if savedDay.isEmpty {
+            // A pre-date build may already have reached today's threshold.
+            // Adopt it once instead of unexpectedly unlocking mid-day.
+            defaults.set(today, forKey: lockedLimitDayKey)
+        } else if savedDay != today {
+            clearDailyLimitLockState()
             return []
         }
         return tokens
@@ -2156,9 +2169,24 @@ final class CompanionSyncService: ObservableObject {
     private func saveLimitLockedTokens(
         _ tokens: Set<ApplicationToken>
     ) {
-        if let data = try? JSONEncoder().encode(tokens) {
-            sharedDefaults?.set(data, forKey: lockedLimitTokensKey)
+        guard !tokens.isEmpty else {
+            clearDailyLimitLockState()
+            return
         }
+        if let data = try? JSONEncoder().encode(tokens),
+           let defaults = sharedDefaults {
+            defaults.set(data, forKey: lockedLimitTokensKey)
+            defaults.set(
+                usageDay(for: Date()),
+                forKey: lockedLimitDayKey
+            )
+        }
+    }
+
+    private func clearDailyLimitLockState() {
+        dailyLimitStore.shield.applications = nil
+        sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
+        sharedDefaults?.removeObject(forKey: lockedLimitDayKey)
     }
 
     private func loadPersistentLockLedger() -> Set<ApplicationToken> {
@@ -2185,8 +2213,9 @@ final class CompanionSyncService: ObservableObject {
     private func effectiveLockedTokens() -> Set<ApplicationToken> {
         let manualTokens = (manualLockStore.shield.applications ?? [])
             .union(loadLockedTokens())
+        let savedLimitTokens = loadLimitLockedTokens()
         let limitTokens = (dailyLimitStore.shield.applications ?? [])
-            .union(loadLimitLockedTokens())
+            .union(savedLimitTokens)
         let ledgerTokens =
             (persistentLockStore.shield.applications ?? [])
             .union(loadPersistentLockLedger())

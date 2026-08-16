@@ -91,9 +91,10 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
   assert.match(source,/function offlineFocusActive\(\)\{if\(typeof cohabSceneActive==='function'&&cohabSceneActive\(\)\)return true/);
-  assert.match(source,/function incomingCall\(id,kind,opt\)\{if\(offlineFocusActive\(\)\)return false/);
+  assert.match(source,/function incomingCall\(id,kind,opt\)\{if\(roleOnlineProactiveBlocked\(id\)\)return false/);
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|roleOnlineProactiveBlocked\(id\)/);
-  assert.match(source,/function roleOnlineProactiveBlocked\(id\)\{return !!\(\(typeof offlineFocusActive==='function'&&offlineFocusActive\(\)\)\|\|\(typeof _call!=='undefined'&&_call\)\);\}/);
+  assert.match(source,/function roleOnlineProactiveBlocked\(id\).*offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/);
+  assert.match(source,/面对面在一起，普通后台主动微信与来电必须静默/);
   assert.match(functionSource('cohabToggle'),/c\.proactive\.enabled=true;c\.proactive\.serverPush=true;initiativeArm\(c\)/);
   assert.match(source,/去微信联系TA吧/);
   assert.match(source,/function cohabConsumeOnlineState\(text,c,id\)/);

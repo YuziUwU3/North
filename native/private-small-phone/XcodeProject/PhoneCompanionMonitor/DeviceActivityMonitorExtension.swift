@@ -11,6 +11,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private let appGroupID = "group.com.qianyi.PhoneCompanionTest"
     private let tokenKeyPrefix = "limit.token."
     private let lockedLimitTokensKey = "limit.lockedTokens"
+    private let lockedLimitDayKey = "limit.lockedUsageDay"
     private let store = ManagedSettingsStore(named: .dailyLimit)
 
     private var sharedDefaults: UserDefaults? {
@@ -19,14 +20,12 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        store.shield.applications = nil
-        sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
+        clearDailyLimitLock()
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        store.shield.applications = nil
-        sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
+        clearDailyLimitLock()
     }
 
     override func eventDidReachThreshold(
@@ -48,6 +47,19 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return
         }
 
+        let today = usageDay(for: Date())
+        let savedDay = defaults.string(forKey: lockedLimitDayKey) ?? ""
+        if savedDay.isEmpty,
+           defaults.data(forKey: lockedLimitTokensKey) != nil {
+            // Preserve a same-day lock created by an older build once, then
+            // all following reads have an explicit day boundary.
+            defaults.set(today, forKey: lockedLimitDayKey)
+        } else if savedDay != today {
+            store.shield.applications = nil
+            defaults.removeObject(forKey: lockedLimitTokensKey)
+            defaults.removeObject(forKey: lockedLimitDayKey)
+        }
+
         var lockedTokens = Set<ApplicationToken>()
 
         if let savedData = defaults.data(forKey: lockedLimitTokensKey),
@@ -63,6 +75,22 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         if let encoded = try? JSONEncoder().encode(lockedTokens) {
             defaults.set(encoded, forKey: lockedLimitTokensKey)
+            defaults.set(today, forKey: lockedLimitDayKey)
         }
+    }
+
+    private func clearDailyLimitLock() {
+        store.shield.applications = nil
+        sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
+        sharedDefaults?.removeObject(forKey: lockedLimitDayKey)
+    }
+
+    private func usageDay(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 }
