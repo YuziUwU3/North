@@ -11,10 +11,10 @@ const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('current release versions align', () => {
-  assert.match(app, /APP_VER='v956 · 安卓首页与设置绘制稳定性修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='956'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 78;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.78;/);
+  assert.match(app, /APP_VER='v957 · 网易云官方播放器接入'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='957'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 79;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.79;/);
   assert.match(bridge, /contractVersion = 18/);
 });
 

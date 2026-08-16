@@ -147,6 +147,14 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
             if url.isFileURL || url.scheme == "about" {
                 decisionHandler(.allow)
+            } else if navigationAction.targetFrame?.isMainFrame == false,
+                      url.scheme == "https",
+                      url.host?.lowercased() == "music.163.com",
+                      url.path == "/outchain/player" {
+                // Only the official NetEase external player may stay inside
+                // the bundled phone. All other remote navigation continues
+                // to leave the private app and open through iOS.
+                decisionHandler(.allow)
             } else {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
@@ -276,7 +284,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.78 (78)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.79 (79)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
