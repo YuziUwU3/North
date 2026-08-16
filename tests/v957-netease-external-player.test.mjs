@@ -47,7 +47,7 @@ test('NetEase integration uses the official external player without scraping or 
 
 test('private WKWebView only keeps the official NetEase outchain subframe in-app',()=>{
   assert.match(native,/navigationAction\.targetFrame\?\.isMainFrame == false/);
-  assert.match(native,/url\.host\?\.lowercased\(\) == "music\.163\.com"/);
-  assert.match(native,/url\.path == "\/outchain\/player"/);
+  assert.match(native,/host == "music\.163\.com" && url\.path == "\/outchain\/player"/);
+  assert.match(native,/allowedEmbeddedPlayer\(url\)/);
   assert.match(native,/UIApplication\.shared\.open\(url\)/);
 });

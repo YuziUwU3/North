@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v959 · 音乐唱片四色与主题界面修复'/);
+assert.match(source, /APP_VER='v960 · 正版视频与粉色图标修复'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -53,7 +53,8 @@ assert.match(functionSource("cinemaVideoPlaybackError"), /MP4 容器、H\.264 \/
 assert.doesNotMatch(source, /S\.cinema\.(?:videoFile|bookText)\s*=/);
 assert.match(source, /cinemaOpenOnlineModal/);
 assert.match(source, /cinemaOpenOnline\(\)[\s\S]*?https\?:/);
-assert.match(functionSource("renderCinema"), /在线找片 \/ 搜书/);
+assert.match(functionSource("renderCinema"), /正版视频片库/);
+assert.match(functionSource("renderCinema"), /更多搜索/);
 assert.match(functionSource("cinemaOpenSearchModal"), /夸克[\s\S]*百度[\s\S]*必应/);
 assert.match(functionSource("cinemaOpenSearchModal"), /target="_blank"[\s\S]*noopener noreferrer external/);
 assert.match(functionSource("cinemaLaunchSearch"), /S\.browser\.history\.unshift/);
@@ -618,6 +619,6 @@ assert.match(functionSource("cinemaSend"), /cinemaRoleReply\([\s\S]*,false\)/);
 assert.match(functionSource("cinemaBookComment"), /,false\)/);
 assert.doesNotMatch(functionSource("cinemaBookPage"), /autoCount=.*\+1/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=959/);
+assert.match(html, /app\.js\?v=960/);
 
 console.log("cinema room tests passed");

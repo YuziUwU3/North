@@ -149,16 +149,29 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 decisionHandler(.allow)
             } else if navigationAction.targetFrame?.isMainFrame == false,
                       url.scheme == "https",
-                      url.host?.lowercased() == "music.163.com",
-                      url.path == "/outchain/player" {
-                // Only the official NetEase external player may stay inside
-                // the bundled phone. All other remote navigation continues
-                // to leave the private app and open through iOS.
+                      Self.allowedEmbeddedPlayer(url) {
+                // Keep only the explicitly supported official media players
+                // inside the bundled phone. Search pages, account pages and
+                // every other remote navigation still leave through iOS.
                 decisionHandler(.allow)
             } else {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
             }
+        }
+
+        private static func allowedEmbeddedPlayer(_ url: URL) -> Bool {
+            let host = url.host?.lowercased() ?? ""
+            if host == "music.163.com" && url.path == "/outchain/player" {
+                return true
+            }
+            if host == "player.youku.com" {
+                return true
+            }
+            if host == "player.bilibili.com" && url.path == "/player.html" {
+                return true
+            }
+            return false
         }
 
         private func showLoadFailure(
@@ -284,7 +297,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.81 (81)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.82 (82)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
