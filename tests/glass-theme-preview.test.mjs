@@ -112,7 +112,11 @@ test('private iOS top safe-area strip follows theme colors without moving the we
   const bridge=fs.readFileSync(path.join(root,'native','private-small-phone','XcodeProject','PhoneCompanionTest','PhoneNativeBridge.swift'),'utf8');
   const shell=fs.readFileSync(path.join(root,'native','private-small-phone','XcodeProject','PhoneCompanionTest','SmallPhonePrivateRootView.swift'),'utf8');
   assert.match(app,/function privateNativeStatusBarThemeSync\(force\)/);
+  assert.match(app,/function webStatusBarThemeSync\(theme\)/);
   assert.match(app,/request\('appearance\.statusBar',\{theme\}\)/);
+  assert.match(app,/small-phone-native-ready[^\n]*privateNativeStatusBarThemeSync\(true\)/);
+  for(const theme of ['pink','blue','gray','white'])assert.match(css,new RegExp(`north-shell-${theme} \\.statusbar\\{background:`));
+  assert.doesNotMatch(css,/north-shell-black \.statusbar\{/);
   for(const theme of ['black','pink','blue','gray','white'])assert.match(bridge,new RegExp(`"${theme}"`));
   assert.match(bridge,/case "appearance\.statusBar"/);
   assert.match(shell,/case \.black:[\s\S]*return \.black/);
@@ -124,6 +128,15 @@ test('private iOS top safe-area strip follows theme colors without moving the we
   assert.match(shell,/smallPhone\.statusBarTheme\.v1/);
   assert.match(shell,/LocalPhoneWebView/);
   assert.doesNotMatch(shell,/LocalPhoneWebView\s*\{[\s\S]{0,240}\}\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
+});
+
+test('second-page portrait caption keeps theme color with a translucent glass fill',()=>{
+  assert.match(css,/\.glass-second-portrait-copy\{[^}]*background:rgba\(5,6,8,\.24\)[^}]*backdrop-filter:blur\(14px\)/);
+  assert.match(css,/north-pack-pink \.glass-second-portrait-copy[^\{]*\{[^}]*rgba\(255,235,244,\.48\)[^}]*rgba\(246,190,215,\.3\)/);
+  assert.match(css,/north-pack-blue \.glass-second-portrait-copy\{[^}]*rgba\(235,246,255,\.49\)[^}]*rgba\(184,216,251,\.31\)/);
+  assert.match(css,/north-pack-gray \.glass-second-portrait-copy[^\{]*\{[^}]*rgba\(255,255,255,\.5\)[^}]*rgba\(220,225,233,\.32\)/);
+  assert.match(css,/\.home\.tpink \.glass-second-portrait-copy/);
+  assert.match(css,/\.home\.twhite \.glass-second-portrait-copy/);
 });
 
 test('final reference widgets keep the photo square and the vinyl controls removed',()=>{

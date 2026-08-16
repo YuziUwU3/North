@@ -284,7 +284,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.80 (80)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.81 (81)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

@@ -1,6 +1,6 @@
-const BUILD='958';
-const HOTFIX='v958-music-disc-1';
-const SHELL_CACHE='north-shell-v958';
+const BUILD='959';
+const HOTFIX='v959-music-disc-1';
+const SHELL_CACHE='north-shell-v959';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

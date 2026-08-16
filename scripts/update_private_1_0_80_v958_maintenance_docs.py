@@ -163,11 +163,11 @@ for stem, (heading, paragraphs) in status_bar_records.items():
 
 music_disc_records = {
     "AI开发项目_Bug记录模板": (
-        "v958 音乐唱片独立四色与一起听按钮联动记录（2026-08-17）",
+        "v959 音乐唱片独立四色与一起听按钮联动记录（2026-08-17）",
         [
             "需求：音乐播放页唱片需要脱离主屏透明玻璃主题，允许用户在音乐设置内单独选择黑、白、蓝、粉四色；头像下方原粉色一起听圆形按钮应跟随唱片颜色。白色唱片对应的白色按钮必须使用深色外圈和深色图标，避免与周围浅色线条融在一起。",
             "处理：在 S.music 中新增受白名单约束的 discColor，默认黑色并持久化。播放页根节点只增加 music-disc-black／white／blue／pink 状态类，四色规则只命中 .music-vinyl 与 .music-headphone-action；主屏 .home-vinyl-card、音乐进度条、发送按钮和其他主题颜色均不改动。白色按钮固定深色边框与图标。",
-            "数据与发布：discColor 写入整包和分首音乐备份，导入时只接受四个合法值。网页 Service Worker 热修订键更新，使 v958 线上缓存重新拉取本次正式 app.js 与样式；私人 PhoneWeb.bundle 从共享清单重新生成。Windows 自动回归通过后仍需真实 Android 浏览器与 Mac／iPhone 验证视觉和点击行为。",
+            "数据与发布：discColor 写入整包和分首音乐备份，导入时只接受四个合法值。网页 Service Worker 热修订键更新，使 v959 线上缓存重新拉取本次正式 app.js 与样式；私人 PhoneWeb.bundle 从共享清单重新生成。Windows 自动回归通过后仍需真实 Android 浏览器与 Mac／iPhone 验证视觉和点击行为。",
         ],
     ),
     "AI开发项目_Bug修改规范": (
@@ -178,7 +178,7 @@ music_disc_records = {
         ],
     ),
     "AI开发项目_项目说明文档": (
-        "v958 界面补充｜音乐播放页唱片可独立选择黑白蓝粉",
+        "v959 界面补充｜音乐播放页唱片可独立选择黑白蓝粉",
         [
             "音乐设置的播放页外观新增黑、白、蓝、粉四色唱片选项。选择只影响完整播放器中的唱片和头像下方的一起听圆形按钮，不会改变主屏主题、主屏唱片、音乐背景、封面、进度条或其他按钮。白色圆形按钮使用深色外圈和深色图标保持清晰。",
             "所选颜色保存在 S.music.discColor，并随音乐整包和分首备份导出、导入恢复。私人 App 内置 PhoneWeb.bundle 与网页共享同一实现；Windows 验证不能代替 Android 真机渲染、Mac 编译或 iPhone 真机视觉验收。",
@@ -191,13 +191,49 @@ for stem, (heading, paragraphs) in music_disc_records.items():
     append_record(stem, heading, paragraphs)
 
 
+v959_visible_ui_records = {
+    "AI开发项目_Bug记录模板": (
+        "v959 唱片入口可见性、顶部主题条与第二页透明气泡复核（2026-08-17）",
+        [
+            "用户真机反馈：播放页外观只看见背景和导出项目，没有找到唱片选色；顶部黑色状态区域切换主题后没有变色；第二页姓名／签名主题气泡虽然变亮，但填充过实，亮壁纸透不出来。仅确认源码存在选择器不能视为交付完成。",
+            "处理：播放页外观列表新增独立且带当前颜色摘要的“唱片颜色”设置行，点击进入黑／白／蓝／粉选择；原有四色按钮仍保留。网页根节点新增统一 shell 主题状态并同步 theme-color，网页状态条直接使用浅粉、浅蓝、浅灰、纯白或原纯黑；私人 App 在主题切换和 native-ready 时强制重发 appearance.statusBar，避免桥初始化时序或旧缓存使顶部仍黑。",
+            "第二页姓名／签名气泡保留粉、蓝、灰白主题和可读深色文字，但明显降低渐变填充 alpha 并提高背景模糊；线条淡粉、线条白色和默认暗色气泡也有对应透明规则。尺寸、点击编辑、头像、主屏布局、音乐背景、主屏唱片和其他音乐按钮均未改动。Windows 自动测试只能核对结构、作用域、缓存版本和资源包一致性，仍需真实 Android、Mac 与 iPhone 视觉验收。",
+        ],
+    ),
+    "AI开发项目_Bug修改规范": (
+        "发布补充规范｜用户可见入口与主题视觉必须按实际交付层复核",
+        [
+            "新增设置不能只在模板中出现，还要给用户一个文字明确、可直接点击、能显示当前值的入口，并验证网页、私人 PhoneWeb.bundle 和最终 ZIP 三层都包含它。主题安全区修改必须同时覆盖网页状态条、原生安全区、冷启动桥时序和主题切换重发；静态源码存在不等于真机已生效。",
+            "玻璃主题的亮色适配不得用接近不透明的浅色块代替玻璃。应同时验证背景可透出、文字对比度、边框和模糊强度，并覆盖图标包主题与线条配色两条状态路径。",
+        ],
+    ),
+    "AI开发项目_项目说明文档": (
+        "v959 界面复核｜唱片颜色入口、顶部主题条与透明气泡",
+        [
+            "音乐播放页外观列表直接显示“唱片颜色”一行和当前颜色，进入后可选黑、白、蓝、粉。网页顶部状态条和私人 App 顶部系统安全区使用同一主题映射，切换主题会立即同步；纯黑保持黑色，粉蓝灰使用浅色，白色为纯白。",
+            "第二页姓名／签名气泡仍随粉白、蓝白、灰白和线条配色变化，但填充已降低到透明玻璃范围，亮壁纸可明显透出。以上调整不改变主屏布局、气泡编辑、音乐背景、主屏唱片或其他音乐控制。",
+        ],
+    ),
+}
+
+
+for stem, (heading, paragraphs) in v959_visible_ui_records.items():
+    append_record(stem, heading, paragraphs)
+
+
 for docx_path in DOCS.glob("AI开发项目_*.docx"):
     document = Document(docx_path)
     changed = False
     for paragraph in document.paragraphs:
         for run in paragraph.runs:
-            if "667/667" in run.text:
-                run.text = run.text.replace("667/667", "668/668")
+            updated = (
+                run.text.replace("667/667", "668/668")
+                .replace("v958 音乐唱片独立四色与一起听按钮联动记录", "v959 音乐唱片独立四色与一起听按钮联动记录")
+                .replace("v958 界面补充｜音乐播放页唱片可独立选择黑白蓝粉", "v959 界面补充｜音乐播放页唱片可独立选择黑白蓝粉")
+                .replace("使 v958 线上缓存重新拉取本次正式 app.js 与样式", "使 v959 线上缓存重新拉取本次正式 app.js 与样式")
+            )
+            if updated != run.text:
+                run.text = updated
                 changed = True
     if changed:
         document.save(docx_path)
@@ -206,6 +242,11 @@ for docx_path in DOCS.glob("AI开发项目_*.docx"):
 
 for txt_path in DOCS.glob("AI开发项目_*.txt"):
     text = txt_path.read_text(encoding="utf-8")
-    updated = text.replace("667/667", "668/668")
+    updated = (
+        text.replace("667/667", "668/668")
+        .replace("v958 音乐唱片独立四色与一起听按钮联动记录", "v959 音乐唱片独立四色与一起听按钮联动记录")
+        .replace("v958 界面补充｜音乐播放页唱片可独立选择黑白蓝粉", "v959 界面补充｜音乐播放页唱片可独立选择黑白蓝粉")
+        .replace("使 v958 线上缓存重新拉取本次正式 app.js 与样式", "使 v959 线上缓存重新拉取本次正式 app.js 与样式")
+    )
     if updated != text:
         txt_path.write_text(updated, encoding="utf-8")

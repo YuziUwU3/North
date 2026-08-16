@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v958 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v958 · 主动消息、后台联系与主题箭头修复'/);
-  assert.match(app,/const url='sw\.js\?v=958&r=v958-music-disc-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='958'/);
-  assert.match(html,/app\.js\?v=958/);
-  assert.match(sw,/const BUILD='958'/);
-  assert.match(sw,/north-shell-v958/);
-  assert.match(index,/小手机\.html\?v=958/);
-  assert.match(repair,/小手机\.html\?v=958/);
+test('v959 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v959 · 音乐唱片四色与主题界面修复'/);
+  assert.match(app,/const url='sw\.js\?v=959&r=v959-music-disc-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='959'/);
+  assert.match(html,/app\.js\?v=959/);
+  assert.match(sw,/const BUILD='959'/);
+  assert.match(sw,/north-shell-v959/);
+  assert.match(index,/小手机\.html\?v=959/);
+  assert.match(repair,/小手机\.html\?v=959/);
 });
 
-test('the private iOS package advances to v958 and 1.0.80 delivery',()=>{
-  assert.match(privateBundle,/<string>958<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.80;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 80;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.80 \(80\)'/);
+test('the private iOS package advances to v959 and 1.0.81 delivery',()=>{
+  assert.match(privateBundle,/<string>959<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.81;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 81;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.81 \(81\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
