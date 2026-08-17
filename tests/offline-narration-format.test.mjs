@@ -8,8 +8,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const parserStart = source.indexOf('function offNarrationText(part)');
 const parserEnd = source.indexOf('function offGeneratedTalk(text)', parserStart);
+const visibleStart = source.indexOf('function roleVisibleEnvelopeText(value)');
+const visibleEnd = source.indexOf('\n', visibleStart);
 
 assert.ok(parserStart >= 0 && parserEnd > parserStart, 'offline narration parser must exist');
+assert.ok(visibleStart >= 0 && visibleEnd > visibleStart, 'visible reply envelope parser must exist');
 
 const sandbox = {
   splitBubbles(text) {
@@ -33,7 +36,7 @@ const sandbox = {
 };
 
 vm.runInNewContext(
-  source.slice(parserStart, parserEnd) +
+  source.slice(visibleStart, visibleEnd) + '\n' + source.slice(parserStart, parserEnd) +
     ';globalThis.parse=offResponseParts;' +
     'globalThis.narration=offNarrationText;' +
     'globalThis.implicitNarration=offImplicitNarrationText;',

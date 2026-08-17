@@ -5,7 +5,10 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const start=source.indexOf('function wechatAuxConfigured(');
 const end=source.indexOf('async function aiReply(id,note,replyToken,replyAccount,replyIntent)',start);
+const visibleStart=source.indexOf('function roleVisibleEnvelopeText(value)');
+const visibleEnd=source.indexOf('\n',visibleStart);
 assert.ok(start>=0&&end>start,'wechat fallback helpers must exist');
+assert.ok(visibleStart>=0&&visibleEnd>visibleStart,'visible reply envelope parser must exist');
 
 assert.match(source,/具体约会只能使用本轮已选中的一条相关记忆/);
 assert.doesNotMatch(source,/_off\.memory\.map\(offMemText\)/);
@@ -33,7 +36,7 @@ const sandbox={
   splitBubbles:t=>String(t||'').split('\n'),
   isOOCLine:t=>/^OOC/.test(String(t||'')),
 };
-vm.runInNewContext(source.slice(start,end),sandbox);
+vm.runInNewContext(source.slice(visibleStart,visibleEnd)+'\n'+source.slice(start,end),sandbox);
 const role={id:'c1'};
 
 sandbox.mode='throw';let directState={fallback:false};

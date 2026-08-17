@@ -54,7 +54,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v966 · 主屏点按与组件稳定/);
+assert.match(source, /v967 · 回复显示与设备兼容/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -62,7 +62,7 @@ assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'call'\)/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
 assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
-assert.match(source, /if\(offlineRoleDrift\(r\)\)r=''/);
+assert.match(source, /if\(offlineRoleDrift\(r\)&&offlineUnsafeRoleDrift\(r\)\)r=''/);
 assert.match(source, /\u53cc\u65b9\u5747\u4e3a\u6210\u5e74\u4eba/);
 assert.match(source, /\u5f53\u524d\u4e92\u52a8\u6301\u7eed\u81ea\u613f/);
 assert.match(source, /\u4e0d\u5f97\u56e0\u4e3a\u4eb2\u5bc6\u7a0b\u5ea6\u6216\u79c1\u5bc6\u6c1b\u56f4\u65e0\u6545\u62d2\u7edd/);
@@ -185,12 +185,15 @@ assert.match(continueSandbox.request.at(-1).content, /\u7981\u6b62\u91cd\u65b0\u
 const repeatStart = source.indexOf("function offlineIsUserMsg(m)");
 const repeatEnd = source.indexOf("function offlineSystem(c,query)", repeatStart);
 assert.ok(repeatStart >= 0 && repeatEnd > repeatStart);
+const visibleStart = source.indexOf("function roleVisibleEnvelopeText(value)");
+const visibleEnd = source.indexOf("\n", visibleStart);
+assert.ok(visibleStart >= 0 && visibleEnd > visibleStart);
 const repeatSandbox = {
   splitBubbles: (text) => String(text).split(/\n+/).filter(Boolean),
   splitActions: (text) => [text],
 };
 vm.runInNewContext(
-  source.slice(repeatStart, repeatEnd) +
+  source.slice(visibleStart, visibleEnd) + "\n" + source.slice(repeatStart, repeatEnd) +
     ";const date={msgs:[" +
     "{who:'ta',text:'\\u6211\\u7ed9\\u4f60\\u7684\\u4efb\\u52a1\\u505a\\u5b8c\\u4e86\\u5417\\uff1f'}," +
     "{who:'ta',text:'\\u665a\\u996d\\u5403\\u8fc7\\u6ca1\\u6709\\uff1f'}" +
@@ -648,6 +651,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=966/);
+assert.match(html, /app\.js\?v=967/);
 
 console.log("offline date tests passed");

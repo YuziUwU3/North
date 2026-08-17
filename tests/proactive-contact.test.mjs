@@ -111,6 +111,7 @@ const freshnessContext=vm.createContext({
   initiativeAwayPrompt:()=>'',
   roleServerPushConversationBoundary:()=>'[对话边界] 上一轮已经结束。',
   roleServerPushTurnState:()=>({answered:true}),
+  privateNativeAppOn:()=>true,
   companionAmbientContext:()=>'',
 });
 vm.runInContext(functionSource('initiativeNoteActive')+';'+functionSource('initiativeQueueNote')+';'+functionSource('initiativeReplyFresh')+';globalThis.queue=initiativeQueueNote;globalThis.fresh=initiativeReplyFresh;',freshnessContext);
@@ -184,6 +185,7 @@ const groundingContext=vm.createContext({
   msgs:()=>[{role:'user',type:'text',content:'我先去洗澡，晚点回来',time:Date.now()}],
   msgToText:m=>m.content||'',
   roleServerPushMemoryContext:()=>'',
+  privateNativeAppOn:()=>false,
   companionAmbientContext:()=>'',
   splitBubbles:text=>String(text||'').split(/\n+/),
   parseVoiceTagLine:()=>null,
