@@ -42,7 +42,8 @@ assert.match(migration, /now\(\) \+ interval '24 hours'/);
 assert.match(migration, /grant execute on function public\.phone_license_restore_all_safe[\s\S]*?to service_role/);
 
 assert.match(aiBackend, /action === "admin_license_restore_all"/);
-assert.match(adminHtml, /id="licenseRestoreAllBtn" data-owner-only/);
+assert.match(adminHtml, /id="licenseRestoreAllBtn"/);
+assert.doesNotMatch(adminHtml, /id="licenseRestoreAllBtn" data-owner-only/);
 assert.match(adminApp, /openRestoreAllLicenses/);
 
 console.log('license incident recovery tests passed');

@@ -62,11 +62,115 @@ function corsHeaders(req: Request): HeadersInit {
   const origin = req.headers.get('origin') || '';
   return {
     'Access-Control-Allow-Origin': ALLOWED_ORIGINS.has(origin) ? origin : `https://${RP_ID}`,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-token',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json; charset=utf-8',
     'Vary': 'Origin',
   };
+}
+
+function secureEqual(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+type LicenseAdminIdentity = { role: 'license'; operatorId: string };
+
+function requireLicenseAdmin(req: Request, body: JsonMap): LicenseAdminIdentity {
+  const supplied = cleanText(req.headers.get('x-admin-token') || body.admin_token, 240);
+  const tokens = String(Deno.env.get('LICENSE_ADMIN_TOKENS') || '')
+    .split(/[\n,;]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+  const tokenIndex = tokens.findIndex((token) => secureEqual(supplied, token));
+  if (tokenIndex < 0) throw new LicenseHttpError('后台授权码无效', 401, 'admin-unauthorized', true);
+  const labelled = supplied.match(/^ADMIN-(\d{2})-/i);
+  return { role: 'license', operatorId: labelled ? `admin-${labelled[1]}` : `license-${tokenIndex + 1}` };
+}
+
+async function adminLicenseUsers(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireLicenseAdmin(req, body);
+  const pageSize = Math.min(100, Math.max(10, Math.trunc(Number(body.page_size || 50))));
+  const page = Math.min(200000, Math.max(1, Math.trunc(Number(body.page || 1))));
+  const query = cleanText(body.query, 120);
+  const requestedStatus = cleanText(body.status || 'all', 16).toLowerCase();
+  const status = requestedStatus === 'active' || requestedStatus === 'blocked' ? requestedStatus : 'all';
+  const { data, error } = await supabase.rpc('phone_license_admin_page', {
+    p_query: query,
+    p_status: status,
+    p_offset: (page - 1) * pageSize,
+    p_limit: pageSize,
+  });
+  if (error) throw error;
+  const payload = data && typeof data === 'object' ? data as JsonMap : {};
+  const users = Array.isArray(payload.users) ? payload.users : [];
+  const total = Math.max(0, Number(payload.total || 0));
+  return { ok: true, users, total, page, page_size: pageSize, total_pages: Math.max(1, Math.ceil(total / pageSize)), status, query };
+}
+
+async function adminLicenseBlock(req: Request, body: JsonMap): Promise<JsonMap> {
+  const identity = requireLicenseAdmin(req, body);
+  const licenseId = cleanText(body.license_id, 80);
+  if (!/^[0-9a-f-]{36}$/i.test(licenseId)) throw new LicenseHttpError('授权编号无效', 400, 'invalid-license-id', true);
+  const { data: license, error: findError } = await supabase.from('phone_licenses').select('id,phone_friend_id').eq('id', licenseId).maybeSingle();
+  if (findError) throw findError;
+  if (!license) throw new LicenseHttpError('手机授权不存在', 404, 'license-not-found', true);
+  const now = new Date().toISOString();
+  const { error: blockError } = await supabase.from('phone_licenses').update({ status: 'blocked', updated_at: now }).eq('id', license.id);
+  if (blockError) throw blockError;
+  const [sessions, codes] = await Promise.all([
+    supabase.from('phone_license_sessions').update({ revoked_at: now }).eq('license_id', license.id).is('revoked_at', null),
+    supabase.from('phone_license_transfers').update({ used_at: now }).eq('license_id', license.id).is('used_at', null),
+  ]);
+  if (sessions.error || codes.error) throw sessions.error || codes.error;
+  await supabase.from('phone_license_admin_actions').insert({ license_id: license.id, phone_friend_id: license.phone_friend_id, action: 'block', operator_id: identity.operatorId });
+  return { ok: true };
+}
+
+async function adminLicenseUnblock(req: Request, body: JsonMap): Promise<JsonMap> {
+  const identity = requireLicenseAdmin(req, body);
+  const licenseId = cleanText(body.license_id, 80);
+  if (!/^[0-9a-f-]{36}$/i.test(licenseId)) throw new LicenseHttpError('授权编号无效', 400, 'invalid-license-id', true);
+  const { data: license, error: findError } = await supabase.from('phone_licenses').select('id,phone_friend_id').eq('id', licenseId).maybeSingle();
+  if (findError) throw findError;
+  if (!license) throw new LicenseHttpError('手机授权不存在', 404, 'license-not-found', true);
+  const now = new Date().toISOString();
+  const { error: restoreError } = await supabase.from('phone_licenses').update({ status: 'active', epoch: LICENSE_EPOCH, updated_at: now }).eq('id', license.id);
+  if (restoreError) throw restoreError;
+  await supabase.from('phone_license_admin_actions').insert({ license_id: license.id, phone_friend_id: license.phone_friend_id, action: 'recovery', operator_id: identity.operatorId });
+  return { ok: true };
+}
+
+async function adminLicenseRestoreAll(req: Request, body: JsonMap): Promise<JsonMap> {
+  const identity = requireLicenseAdmin(req, body);
+  const { data, error } = await supabase.rpc('phone_license_restore_all_safe', { p_epoch: LICENSE_EPOCH, p_operator_id: identity.operatorId });
+  if (error) throw error;
+  const result = data && typeof data === 'object' ? data as JsonMap : {};
+  return { ok: true, restored: Math.max(0, Number(result.restored || 0)), total: Math.max(0, Number(result.total || 0)), expires_at: String(result.expires_at || '') };
+}
+
+async function adminInviteGenerate(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireLicenseAdmin(req, body);
+  const count = Math.min(100, Math.max(1, Math.trunc(Number(body.count || 1))));
+  const note = cleanText(body.note, 180) || `新版授权 ${new Date().toISOString().slice(0, 10)}`;
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let codes: string[] = [];
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const batch = new Set<string>();
+    while (batch.size < count) {
+      const bytes = crypto.getRandomValues(new Uint8Array(12));
+      const suffix = Array.from(bytes, (value) => alphabet[value % alphabet.length]).join('');
+      batch.add(`YB2-${suffix}`);
+    }
+    const next = [...batch];
+    const { error } = await supabase.from('invites').insert(next.map((code) => ({ code, active: true, reusable: false, note })));
+    if (!error) { codes = next; break; }
+    if (error.code !== '23505') throw error;
+  }
+  if (codes.length !== count) throw temporaryLicenseError('邀请码没有完整生成，请重新操作');
+  return { ok: true, codes, count: codes.length };
 }
 
 function reply(req: Request, body: JsonMap, status = 200): Response {
@@ -827,7 +931,16 @@ Deno.serve(async (req) => {
     const body = await req.json() as JsonMap;
     const action = cleanText(body.action, 48);
     let result: JsonMap;
-    if (action === 'activate') result = await activateInvite(req, body);
+    if (action === 'admin_auth') {
+      const identity = requireLicenseAdmin(req, body);
+      result = { ok: true, role: identity.role };
+    }
+    else if (action === 'admin_invite_generate') result = await adminInviteGenerate(req, body);
+    else if (action === 'admin_license_users') result = await adminLicenseUsers(req, body);
+    else if (action === 'admin_license_block') result = await adminLicenseBlock(req, body);
+    else if (action === 'admin_license_unblock') result = await adminLicenseUnblock(req, body);
+    else if (action === 'admin_license_restore_all') result = await adminLicenseRestoreAll(req, body);
+    else if (action === 'activate') result = await activateInvite(req, body);
     else if (action === 'legacy_activate') result = await activateLegacy(req, body);
     else if (action === 'register_options') result = await registrationOptions(req, body);
     else if (action === 'register_verify') result = await registrationVerify(req, body);

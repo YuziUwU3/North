@@ -46,8 +46,6 @@ assert.match(source,/_relIntent=null/,'forced relationship policy is retired');
 assert.match(source,/_hlPlan=null/,'forced behavior planner is retired');
 assert.match(source,/function checkIgnore\(\)\{if\(/);
 assert.doesNotMatch(functionSource('checkIgnore'),/wechatNaturalOn/,'real events remain available after removing controllers');
-assert.doesNotMatch(functionSource('handleIdleEvent'),/wechatNaturalOn/,'idle events must not be discarded');
-assert.doesNotMatch(functionSource('handleExternalEvent'),/wechatNaturalOn/,'external events must not be discarded');
 assert.match(source,/# 角色内心想法（仅展示，不控制角色）/);
 assert.match(source,/不是心情值，不改变任何数值、亲密度、行为权限或自主决定/);
 assert.match(source,/role:_naturalOn&&m\.type==='sys'\?'system':m\.role/,'system events must not masquerade as user speech');

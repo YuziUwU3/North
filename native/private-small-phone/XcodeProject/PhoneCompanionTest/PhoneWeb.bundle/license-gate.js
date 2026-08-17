@@ -5,6 +5,7 @@
   const MANAGED_KEY = 'north_license_managed_v1';
   const META_KEY = 'north_license_meta_v1';
   const LEGACY_DEVICE_KEY = 'north_license_legacy_device_v1';
+  const LAST_ENDPOINT_KEY = 'north_license_last_endpoint_v1';
   let config = { baseUrl: '', apiKey: '', epoch: 0, endpoints: [] };
   let lastEndpointId = '';
 
@@ -51,6 +52,7 @@
       savedAt: Date.now(),
     };
     if (!writeJSON(SESSION_KEY, saved)) throw new Error(isPrivateApp() ? 'App 无法保存授权，请检查手机存储空间' : '浏览器无法保存授权，请检查无痕模式');
+    try { if (saved.endpointId) localStorage.setItem(LAST_ENDPOINT_KEY, saved.endpointId); } catch (_) {}
     try { localStorage.setItem(MANAGED_KEY, String(config.epoch)); } catch (_) {}
     if (extra) writeJSON(META_KEY, Object.assign({}, meta(), extra, { checkedAt: Date.now() }));
     return saved;
@@ -155,7 +157,7 @@
     };
   }
 
-  function licenseEndpoints(action) {
+  function licenseEndpoints(action, body) {
     const configured = Array.isArray(config.endpoints) && config.endpoints.length
       ? config.endpoints
       : [{ id: 'primary', baseUrl: config.baseUrl, apiKey: config.apiKey }];
@@ -170,10 +172,18 @@
       seen.add(key);
       return true;
     });
+    if (action === 'activate' && /^YB2-/i.test(String(body && body.inviteCode || '').replace(/\s+/g, ''))) {
+      const isolated = endpoints.filter((endpoint) => endpoint.id === 'license-failover');
+      return isolated.length ? isolated : endpoints;
+    }
     const current = session();
-    if (!current || !current.endpointId || ['activate', 'legacy_activate', 'restore_options'].includes(action)) return endpoints;
+    let preferredId = current && current.endpointId || '';
+    if (!preferredId && ['restore_options', 'restore_verify'].includes(action)) {
+      try { preferredId = localStorage.getItem(LAST_ENDPOINT_KEY) || ''; } catch (_) {}
+    }
+    if (!preferredId || ['activate', 'legacy_activate'].includes(action)) return endpoints;
     return endpoints.slice().sort((left, right) =>
-      Number(right.id === current.endpointId) - Number(left.id === current.endpointId));
+      Number(right.id === preferredId) - Number(left.id === preferredId));
   }
 
   function rememberSessionEndpoint(endpointId, body) {
@@ -253,7 +263,7 @@
   }
 
   async function api(action, body, timeoutMs) {
-    const endpoints = licenseEndpoints(action);
+    const endpoints = licenseEndpoints(action, body);
     if (!endpoints.length) throw new Error('授权服务尚未配置');
     let firstTemporary = null;
     let firstPermanent = null;
@@ -330,7 +340,22 @@
 
   async function restorePasskey() {
     if (!supportsPasskey()) throw new Error(isPrivateApp() ? '当前 App 无法调用系统扫脸/指纹，请检查系统设置' : '当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
-    const start = await api('restore_options', {});
+    const endpoints = licenseEndpoints('restore_options', {});
+    if (!endpoints.length) throw new Error('授权服务尚未配置');
+    let endpoint = null;
+    let start = null;
+    let startError = null;
+    for (const candidate of endpoints) {
+      try {
+        start = await requestEndpoint(candidate, 'restore_options', {}, 25000);
+        endpoint = candidate;
+        break;
+      } catch (error) {
+        startError = error;
+        if (!retryableLicenseError(error)) break;
+      }
+    }
+    if (!start || !endpoint) throw startError || new Error('授权服务暂时不可用');
     let credential;
     try {
       credential = await navigator.credentials.get({ publicKey: requestOptions(start.options) });
@@ -339,16 +364,16 @@
       throw new Error(isPrivateApp() ? '系统恢复验证失败，请稍后重试' : '系统恢复验证失败，请换Safari或Chrome重试');
     }
     if (!credential) throw new Error('系统没有返回恢复结果');
-    const result = await api('restore_verify', {
+    const result = await requestEndpoint(endpoint, 'restore_verify', {
       challengeId: start.challengeId,
       credential: authenticationCredentialJSON(credential),
       deviceLabel: deviceLabel(),
-    });
+    }, 25000);
     saveSession(result.session, {
       sessionCount: result.session.activeCount || 1,
       passkeyCount: 1,
       evicted: result.session.evicted || [],
-    });
+    }, endpoint.id);
     return result;
   }
 

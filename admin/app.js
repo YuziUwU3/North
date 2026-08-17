@@ -1,5 +1,7 @@
-const API_URL = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-ai';
-const PUBLIC_KEY = 'sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
+const ORDER_API_URL = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-ai';
+const ORDER_PUBLIC_KEY = 'sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
+const LICENSE_API_URL = 'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-license';
+const LICENSE_PUBLIC_KEY = 'sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
 const TOKEN_KEY = 'north_admin_access';
 
 let token = localStorage.getItem(TOKEN_KEY) || '';
@@ -47,18 +49,20 @@ const operatorLabel = (value) => {
   return numbered ? `管理员${Number(numbered[1])}` : '旧记录';
 };
 
-async function api(action, payload = {}) {
+const isLicenseAction = (action) => action === 'admin_auth' || action === 'admin_invite_generate' || action.startsWith('admin_license_');
+
+async function requestApi(action, payload, apiUrl, publicKey) {
   const attempts = action === 'admin_license_users' ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          apikey: PUBLIC_KEY,
-          Authorization: 'Bearer ' + PUBLIC_KEY,
+          apikey: publicKey,
+          Authorization: 'Bearer ' + publicKey,
           'x-admin-token': token,
         },
         body: JSON.stringify({action, ...payload}),
@@ -79,6 +83,23 @@ async function api(action, payload = {}) {
       clearTimeout(timer);
     }
   }
+}
+
+async function api(action, payload = {}) {
+  if (action === 'admin_auth') {
+    try {
+      return await requestApi(action, payload, LICENSE_API_URL, LICENSE_PUBLIC_KEY);
+    } catch (licenseError) {
+      try {
+        return await requestApi(action, payload, ORDER_API_URL, ORDER_PUBLIC_KEY);
+      } catch (_) {
+        throw licenseError;
+      }
+    }
+  }
+  return isLicenseAction(action)
+    ? requestApi(action, payload, LICENSE_API_URL, LICENSE_PUBLIC_KEY)
+    : requestApi(action, payload, ORDER_API_URL, ORDER_PUBLIC_KEY);
 }
 
 function setStatus(text) {
@@ -104,6 +125,7 @@ function showWorkspace(role) {
   $('workspace').classList.remove('hidden');
   const licenseOnly = adminAccessRole === 'license';
   document.querySelectorAll('[data-owner-only]').forEach((item) => item.classList.toggle('hidden', licenseOnly));
+  $('licenseTab').classList.toggle('hidden', !licenseOnly);
   if (licenseOnly) openLicenseView();
   else openOrdersView(scope);
   schedulePoll();
@@ -320,14 +342,14 @@ window.confirmBlockLicense = async (id) => {
 };
 
 window.openRestoreAllLicenses = () => {
-  if (adminAccessRole !== 'owner') return;
+  if (!adminAccessRole) return;
   openSheet(`<h2>一键放回异常授权</h2>
     <p>系统会把全部授权（包括当前显示“已移出”的用户）恢复到当前版本。放回后仍只能由本人扫脸或验证指纹，不会生成代码，也不会使用本机身份自动找回。</p>
     <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="licenseRestoreAllConfirmBtn" onclick="confirmRestoreAllLicenses()">确认放回</button></div>`);
 };
 
 window.confirmRestoreAllLicenses = async () => {
-  if (actionBusy || adminAccessRole !== 'owner') return;
+  if (actionBusy || !adminAccessRole) return;
   actionBusy = true;
   const button = $('licenseRestoreAllConfirmBtn');
   if (button) { button.disabled = true; button.textContent = '正在安全恢复…'; }
@@ -344,6 +366,44 @@ window.confirmRestoreAllLicenses = async () => {
   } finally {
     actionBusy = false;
   }
+};
+
+window.openGenerateInvites = () => {
+  openSheet(`<h2>生成新版邀请码</h2>
+    <p>新版邀请码以 <b>YB2-</b> 开头，只会写入独立授权项目。旧项目恢复后也不会误走旧库。</p>
+    <label class="field"><span>数量（1–100）</span><input id="inviteGenerateCount" type="number" min="1" max="100" value="1" inputmode="numeric"></label>
+    <label class="field"><span>备注（选填）</span><input id="inviteGenerateNote" maxlength="180" placeholder="例如：8月测试用户"></label>
+    <div class="sheet-actions"><button class="btn" onclick="closeSheet()">取消</button><button class="btn approve" id="inviteGenerateConfirmBtn" onclick="confirmGenerateInvites()">确认生成</button></div>`);
+};
+
+window.confirmGenerateInvites = async () => {
+  if (actionBusy) return;
+  const count = Math.max(1, Math.min(100, Math.trunc(Number($('inviteGenerateCount')?.value || 1))));
+  const note = String($('inviteGenerateNote')?.value || '').trim();
+  actionBusy = true;
+  const button = $('inviteGenerateConfirmBtn');
+  if (button) { button.disabled = true; button.textContent = '正在生成…'; }
+  try {
+    const data = await api('admin_invite_generate', {count, note});
+    const codes = Array.isArray(data.codes) ? data.codes : [];
+    const joined = codes.join('\n');
+    openSheet(`<h2>已生成 ${codes.length} 个</h2>
+      <p>邀请码只在这里完整显示，请现在复制并妥善保存。</p>
+      <textarea id="generatedInviteCodes" readonly style="width:100%;min-height:180px;resize:vertical">${esc(joined)}</textarea>
+      <div class="sheet-actions"><button class="btn" onclick="closeSheet()">完成</button><button class="btn approve" onclick="copyGeneratedInvites()">复制全部</button></div>`);
+  } catch (error) {
+    alert('生成失败：' + error.message);
+  } finally {
+    actionBusy = false;
+  }
+};
+
+window.copyGeneratedInvites = async () => {
+  const value = String($('generatedInviteCodes')?.value || '');
+  if (!value) return;
+  try { await navigator.clipboard.writeText(value); }
+  catch (_) { $('generatedInviteCodes').select(); document.execCommand('copy'); }
+  alert('已复制全部邀请码');
 };
 
 window.openUnblockLicense = (id, phoneId) => {
@@ -613,7 +673,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=633', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=634', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -651,6 +711,7 @@ $('loginBtn').addEventListener('click', login);
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
 $('refreshBtn').addEventListener('click', () => workspaceView === 'licenses' ? loadLicenseUsers(true) : loadOrders(true));
 $('licenseRefreshBtn').addEventListener('click', () => loadLicenseUsers(true));
+$('licenseGenerateBtn').addEventListener('click', openGenerateInvites);
 $('licenseRestoreAllBtn').addEventListener('click', openRestoreAllLicenses);
 $('licenseSearch').addEventListener('input', () => {
   clearTimeout(licenseSearchTimer);
@@ -710,6 +771,6 @@ async function restoreSavedLogin() {
   showAuth('请重新进入');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=633', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=634', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();
