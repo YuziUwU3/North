@@ -1,6 +1,6 @@
-const BUILD='971';
-const HOTFIX='v971-reply-moment-remote-1';
-const SHELL_CACHE='north-shell-v971';
+const BUILD='972';
+const HOTFIX='v972-his-wechat-friend-reply-1';
+const SHELL_CACHE='north-shell-v972';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

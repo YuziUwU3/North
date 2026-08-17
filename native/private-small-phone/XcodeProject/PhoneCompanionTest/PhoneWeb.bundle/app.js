@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='971'){
+if(window.__NORTH_SHELL_BUILD__!=='972'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -365,7 +365,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v971 · 连续回复朋友圈与远控承接修复';
+const APP_VER='v972 · 登录他微信好友回复修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1435,7 +1435,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=971&r=v971-reply-moment-remote-1';
+  const url='sw.js?v=972&r=v972-his-wechat-friend-reply-1';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -8719,10 +8719,10 @@ function renderHisChat(cid,fid){const s=_hisLogin;if(!s){home();return '';}const
      <div class="scroll" id="hisselflog" style="flex:1;background:#0e0e0e">${body}<div style="height:12px"></div></div>
      <div class="inputbar" style="background:#111"><textarea id="his_selfin" rows="1" placeholder="以${esc(c.name)}的身份发…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisSelfSend('${cid}')">发送</button></div></div>`;}
   const f=(d.friends||[]).find(x=>x.id===fid);if(!f){_hisTab='chat';go('hiswx');return '';}
-  const body=(f.msgs||[]).map(m=>bub(m.r==='me',m.c)).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>';
+  const body=(f.msgs||[]).map(m=>bub(m.r==='me',m.c)).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>',replying=hisFriendReplyBusy(cid,fid)?'<div style="color:#888;font-size:12px;padding:5px 16px 10px">对方正在输入…</div>':'';
   return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0e0e0e">
    <div class="nav" style="background:#1b1b1b"><span class="l" onclick="_hisTab='chat';go('hiswx')" style="color:#ededed">‹</span><span class="t" style="color:#ededed">${esc(f.name)}</span><span class="r" onclick="hisClearChat('${cid}','${fid}')" style="color:#fa5151;font-size:13px">清空</span></div>
-   <div class="scroll" id="hischatlog" style="flex:1;background:#0e0e0e">${body}<div style="height:12px"></div></div>
+   <div class="scroll" id="hischatlog" style="flex:1;background:#0e0e0e">${body}${replying}<div style="height:12px"></div></div>
    <div class="inputbar"><textarea id="his_in" rows="1" placeholder="以${esc(c.name)}的身份发…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisChatSend('${cid}','${fid}')">发送</button></div>
   </div>`;}
 // 自导自演：以他的身份给"你自己"发消息 —— 直接进你和他的真实聊天(标记 _forged)，他不会自动回；日后他会发现这几句不是自己发的
@@ -8733,19 +8733,22 @@ function hisSelfSend(cid){const inp=$('#his_selfin');const t=inp?inp.value.trim(
 function hisChatSend(cid,fid){const inp=$('#his_in');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!f)return;
   f.msgs.push({r:'me',c:t,t:Date.now(),mine:1});hisLog(cid,'用他的号给「'+f.name+'」发了："'+t+'"');
   hisSpyFriend(cid,f.name).lines.push('他：'+t);/* 同步进查他手机 */
-  save();render();aiHisFriendReply(cid,fid);}
-let _hisReplyBusy=false;
-async function aiHisFriendReply(cid,fid){if(_hisReplyBusy)return;_hisReplyBusy=true;const c=getC(cid);const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!c||!f){_hisReplyBusy=false;return;}
-  try{const hist=(f.msgs||[]).slice(-12).map(m=>({role:m.r==='me'?'user':'assistant',content:m.c}));
-    const sys='【你的身份】你是「'+f.name+'」，是「'+c.name+'」的'+(f.relation||'微信好友')+'。'+(f.persona?'你（'+f.name+'）的性格：'+f.persona+'。':'')+
-      '\n现在「'+c.name+'」在微信上找你聊天（其实是别人登录了'+c.name+'的号在冒充他，但你并不知道、你以为就是'+c.name+'本人）。对方（'+c.name+'）说的话是发给你的，你要【回应】他、而不是模仿他。'+
-      '\n【铁律·身份不许串】你【从头到尾只是「'+f.name+'」本人】，第一人称"我"指的就是「'+f.name+'」。无论对方说什么、哪怕问"你是谁"，你都只能以「'+f.name+'」的身份回答（比如"我是你妹妹呀""我是老张啊"）。【绝对不许把自己说成「'+c.name+'」、不许冒充'+c.name+'、不许替'+c.name+'说话】。'+
-      '\n按你和「'+c.name+'」的关系，自然、口语、简短地回（1~2句），像真人发微信。';
-    const r=await chatAPI([{role:'system',content:sys},...hist],{max:200,aux:true});
-    const txt=cleanReply(r).replace(/\s*\n+\s*/g,' ').trim();if(!txt)return;
-    f.msgs.push({r:'ta',c:txt,t:Date.now()});hisSpyFriend(cid,f.name).lines.push(f.name+'：'+txt);/* 同步进查他手机 */
-    save();if(cur().p==='hischat'&&cur().fid===fid)render();
-  }catch(e){}finally{_hisReplyBusy=false;}}
+  save();queueHisFriendReply(cid,fid);render();}
+let _hisReplyState={};
+function hisFriendReplyKey(cid,fid){return String(cid||'')+'|'+String(fid||'');}
+function hisFriendReplyBusy(cid,fid){const st=_hisReplyState[hisFriendReplyKey(cid,fid)];return !!(st&&st.running);}
+function queueHisFriendReply(cid,fid){const key=hisFriendReplyKey(cid,fid),st=_hisReplyState[key]||(_hisReplyState[key]={version:0,doneVersion:0,running:false});st.version++;if(!st.running)aiHisFriendReply(cid,fid);return true;}
+function hisFriendReplyFallback(c,f){const rel=String(f&&f.relation||''),seed=String((f&&f.name)||'')+'|'+String((f&&f.msgs&&f.msgs.length)||0),n=Math.abs([...seed].reduce((a,x)=>((a*31+x.charCodeAt(0))|0),7));let pool;if(/家人|妈妈|母亲|爸爸|父亲|兄|姐|弟|妹/.test(rel))pool=['刚看到，怎么了？','在呢，刚才没看手机。你说。'];else if(/同事|领导|上司|客户|合作/.test(rel))pool=['刚看到消息，什么事？','在，刚忙完。你说。'];else pool=['在，刚看到。你说。','刚才没看手机，怎么了？','看到了，你接着说。'];return pool[n%pool.length];}
+function hisFriendReplyText(raw){return cleanReply(raw).replace(/\s*\n+\s*/g,' ').trim().slice(0,500);}
+async function aiHisFriendReply(cid,fid){const key=hisFriendReplyKey(cid,fid),st=_hisReplyState[key]||(_hisReplyState[key]={version:1,doneVersion:0,running:false});if(st.running)return;st.running=true;
+  try{while(true){const version=st.version,c=getC(cid),d=hisWxData(cid),f=(d.friends||[]).find(x=>x.id===fid);if(!c||!f)break;const hist=(f.msgs||[]).slice(-12).map(m=>({role:m.r==='me'?'user':'assistant',content:m.c}));
+      const sys='【你的身份】你是「'+f.name+'」，是「'+c.name+'」的'+(f.relation||'微信好友')+'。'+(f.persona?'你（'+f.name+'）的性格：'+f.persona+'。':'')+
+        '\n现在「'+c.name+'」在微信上找你聊天（其实是别人登录了'+c.name+'的号在冒充他，但你并不知道、你以为就是'+c.name+'本人）。对方（'+c.name+'）说的话是发给你的，你要【回应】他、而不是模仿他。'+
+        '\n【铁律·身份不许串】你【从头到尾只是「'+f.name+'」本人】，第一人称"我"指的就是「'+f.name+'」。无论对方说什么、哪怕问"你是谁"，你都只能以「'+f.name+'」的身份回答（比如"我是你妹妹呀""我是老张啊"）。【绝对不许把自己说成「'+c.name+'」、不许冒充'+c.name+'、不许替'+c.name+'说话】。'+
+        '\n按你和「'+c.name+'」的关系，自然、口语、简短地回（1~2句），像真人发微信。';
+      const req=[{role:'system',content:sys},...hist];let txt='';for(let attempt=0;attempt<2&&!txt;attempt++){if(st.version!==version)break;try{const rows=attempt?[...req,{role:'user',content:'[刚才没有形成可显示的回复。仍以「'+f.name+'」本人身份，结合上面的真实聊天自然回一句；不要解释原因，不要重复对方原话。]'}]:req;txt=hisFriendReplyText(await chatAPI(rows,{max:200,aux:attempt?false:true}));}catch(_){}}
+      if(st.version!==version)continue;const live=(hisWxData(cid).friends||[]).find(x=>x.id===fid);if(!live)break;if(!txt)txt=hisFriendReplyFallback(c,live);live.msgs.push({r:'ta',c:txt,t:Date.now()});hisSpyFriend(cid,live.name).lines.push(live.name+'：'+txt);/* 同步进查他手机 */st.doneVersion=version;save();if(cur().p==='hischat'&&cur().fid===fid)render();break;}
+  }finally{st.running=false;if(st.doneVersion<st.version)setTimeout(()=>aiHisFriendReply(cid,fid),0);else delete _hisReplyState[key];if(cur().p==='hischat'&&cur().fid===fid)render();}}
 function hisAddFriend(cid){const mine=S.contacts.filter(c=>!c.deleted);
   openModal(`<h3>添加好友（加进他的微信）</h3>
   <div class="field"><label>手动加：名字</label><input id="haf_n" placeholder="对方名字"></div>
