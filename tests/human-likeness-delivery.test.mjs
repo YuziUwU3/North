@@ -30,7 +30,7 @@ assert.doesNotMatch(functionSource('currentActivityPrompt'), /humanLikeOn/, 'cur
 assert.doesNotMatch(functionSource('personaGuardOn'), /humanLikeOn/, 'persona protection has its own switch');
 
 const schedule = functionSource('scheduleReply');
-assert.match(schedule, /aiReply\(id,note,token,aid,replyIntent\)\)\.then\(ok=>/, 'queued replies must report actual delivery completion');
+assert.match(schedule, /success=\(await aiReply\(id,note,token,aid,replyIntent\)\)===true/, 'queued replies must report actual delivery completion');
 assert.match(functionSource('aiReply'), /return delivered/, 'AI replies must expose whether a visible message was delivered');
 
 const alarm = functionSource('checkAlarms');

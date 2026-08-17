@@ -22,6 +22,7 @@ function functionSource(name){
 const context=vm.createContext({WECHAT_UNIFIED_SYSTEM:true,String});
 vm.runInContext([
   functionSource('wechatNaturalOn'),
+  functionSource('featureEventNote'),
   functionSource('wechatNaturalCallEventNote'),
   functionSource('wechatNaturalSilentDecision'),
   functionSource('wechatNaturalSlimSystem'),

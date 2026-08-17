@@ -57,7 +57,7 @@ test('proactive WeChat and silent call use a new synthetic user turn', () => {
   assert.match(functionSource('checkCallSilence'), /\{silentContinuation:true\}/);
   assert.match(functionSource('callAI'), /_screenShareEvent\|\|_silentContinuation\|\|_connectionEvent\?'user':'system'/);
   assert.match(functionSource('callAI'), /当前唯一事件：通话静默后的主动续聊/);
-  assert.match(functionSource('aiReply'), /friendAcceptedAutoNote\(note\)\|\|initiativeNoteActive\(note\)\|\|wechatNaturalCallEventActive\(note\)\?'user'/);
+  assert.match(functionSource('aiReply'), /friendAcceptedAutoNote\(note\)\|\|initiativeNoteActive\(note\)\|\|wechatNaturalCallEventActive\(note\)\|\|featureEventNoteActive\(note\)\?'user'/);
 });
 
 test('call connection and hangup preserve both direction and actor', () => {
@@ -80,7 +80,7 @@ test('an unanswered role-initiated call creates a distinct natural reaction even
   assert.match(missed, /在响铃时间内没有接听，所以电话从未接通/);
   assert.match(missed, /不能说成.*接通后挂断/);
   assert.match(missed, /wechatNaturalCallEventNote\(missedContext\)/);
-  assert.match(missed, /delayedAccountReply/);
+  assert.match(missed, /scheduleFeatureReply/);
 });
 
 test('hangup context distinguishes user and role actions and carries call content', () => {

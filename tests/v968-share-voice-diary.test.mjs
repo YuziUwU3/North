@@ -133,7 +133,7 @@ test('diary security, full-screen reading and collapsed call records are wired',
 test('changing my remark in his WeChat is discovered only on the next chat', () => {
   assert.match(functionSource('hisSaveMyRemark'), /meRemarkChange=/);
   assert.doesNotMatch(functionSource('hisSaveMyRemark'), /scheduleReply|hisDiscover/);
-  assert.match(functionSource('hisRemarkDiscoveryNote'), /刚刚回到与你的微信聊天并发来消息/);
+  assert.match(functionSource('hisRemarkDiscoveryNote'), /刚刚回到与你的微信聊天并发来一条新消息/);
   assert.match(functionSource('sendText'), /hisRemarkDiscoveryNote\(c\)/);
   assert.match(app, /hisChangeMyRemark\('\$\{cid\}'\)/);
 });
