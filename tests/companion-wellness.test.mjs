@@ -91,7 +91,7 @@ test('companion UI and role prompt expose wellness only through separate switche
   assert.match(app, /不能诊断疾病/);
 });
 
-test('long absence checks both battery and location and must visibly contact the user', () => {
+test('long absence checks both battery and location while leaving contact to the role', () => {
   const permissions = functionSource('companionAutomationPermissions');
   const toggle = functionSource('companionToggleAutomation');
   const candidate = functionSource('companionAutomationCandidate');
@@ -103,12 +103,11 @@ test('long absence checks both battery and location and must visibly contact the
   assert.match(candidate, /a\.absenceBattery&&per\.battery&&per\.location/);
   assert.match(candidate, /companionAutomationFresh\(loc\.ts,30\*60000,now\)/);
   assert.match(candidate, /最近位置/);
-  assert.match(candidate, /查完后必须马上采取一种可见行动/);
-  assert.match(candidate, /\[来电\|语音\]/);
-  assert.match(candidate, /禁止保持安静/);
-  assert.match(send, /candidate\.kind==='absenceBattery'&&proCall\(c\.id\)/);
+  assert.match(functionSource('companionAutomationNote'), /是否使用来电等已有功能/);
+  assert.match(functionSource('companionAutomationNote'), /不想联系可以输出 \[保持安静\]/);
+  assert.doesNotMatch(send, /candidate\.kind==='absenceBattery'&&proCall\(c\.id\)/);
   assert.match(app, /失联时查看 iPhone 电量与位置/);
-  assert.match(app, /查完必须发消息或来电/);
+  assert.match(app, /查看后由角色自主决定是否联系/);
 });
 
 test('server snapshots accept telemetry and health without changing secure RPC schema', () => {

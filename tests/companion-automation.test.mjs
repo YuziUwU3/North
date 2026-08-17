@@ -150,7 +150,7 @@ test('good morning triggers the daily sleep check immediately with authorized li
   vm.runInContext('this.pick=companionMorningSleepCandidate(c,st,now)', context);
   assert.equal(context.pick.kind, 'morningSleep');
   assert.equal(context.pick.replyingToGoodMorning, true);
-  assert.match(context.pick.note, /正常接住这句早安/);
+  assert.match(context.pick.note, /正常承接这句早安/);
   assert.match(context.pick.note, /今日步数 4321 步/);
   assert.doesNotMatch(context.pick.note, /最新心率|iPhone 电量|最近位置/);
   assert.match(context.pick.note, /本次必查不包含心率、电量或位置/);

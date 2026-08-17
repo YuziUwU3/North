@@ -91,13 +91,13 @@ test('the chosen flower, meaning and date persist as role-readable gift facts',(
   assert.match(app,/以后提起必须和这次已经确定的礼物一致/,'the signing acknowledgement must pin the role to the saved gift');
 });
 
-test('holidays and anniversaries automatically give the couple one autonomous gift choice',()=>{
+test('holidays and anniversaries provide a real date fact and leave the action to the role',()=>{
   assert.match(app,/function occasionGift/);
-  assert.match(app,/gift_hol_/);
-  assert.match(app,/三类中必须且只能选一类/);
-  assert.match(app,/\[送礼\|一束鲜花\|0\|/);
-  assert.match(app,/\[送礼\|玩偶礼物\|0\|/);
-  assert.match(app,/\[送礼\|订婚戒指\|0\|/);
+  assert.match(app,/重要日期自主决策/);
+  assert.match(app,/系统不替你决定情绪或行动/);
+  assert.match(app,/自主决定是否联系、是否准备礼物或邀请一起做某件事/);
+  assert.match(app,/真正想送礼时使用 \[送礼\|礼物名\|价格\|附言\]/);
+  assert.doesNotMatch(app,/三类中必须且只能选一类/);
   assert.match(app,/giftEffectRecipe\(name,null,giftId,giftTime,words\)/,'the role note must persist into the chosen particle recipe');
   for(const color of ['blue','pink','white','red'])assert.match(app,new RegExp(color+":'#"));
 });
@@ -129,7 +129,7 @@ test('full-screen particle animation is mobile-bounded and cleans itself up',()=
 });
 
 test('the app, offline cache and gate-free preview all load the effect',()=>{
-  assert.match(html,/gift-effects\.js\?v=964/);
+  assert.match(html,/gift-effects\.js\?v=965/);
   assert.match(sw,/gift-effects\.js\?v='\+BUILD/);
   assert.match(sw,/gift-effects\|thought-card-effects/,'optional gift and thought-card scripts must be served from the offline cache');
   assert.match(html,/\.giftcard-simple\{[^}]*width:210px/,'the gift card must retain its layout even before the effect script executes');

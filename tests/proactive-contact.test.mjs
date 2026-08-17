@@ -39,12 +39,12 @@ assert.doesNotMatch(maybeSource, /humanLikeOn/, 'the dedicated proactive switch 
 assert.doesNotMatch(maybeSource, /isMain\(/, 'proactive contact must work for the currently active identity too');
 assert.doesNotMatch(maybeSource, /15\s*\*\s*60000/, 'the configured interval must not be replaced by a 15-minute floor');
 assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep activity must not override an explicitly configured proactive window');
-assert.match(maybeSource, /extremeLoveOn\(c\)/, 'extreme-love escalation may suppress ordinary initiative only while the mode is active');
+assert.doesNotMatch(maybeSource, /extremeLoveOn\(c\)/, 'retired extreme attachment must not suppress ordinary initiative');
 assert.match(maybeSource, /lm&&lm\.role===['"]user['"]/,'an unanswered user message must outrank proactive contact');
 assert.match(maybeSource, /initiativeQueueNote\(c,plan,plan\.note\)/,'queued initiative must carry a freshness baseline');
-assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]&&plan\.kind!==['"]conflict['"]/, 'the enabled proactive-call probability must remain available');
-assert.match(maybeSource, /const a=currentRoleActivity\(c,now\)/, 'the unified system must keep a stable current activity');
-assert.match(maybeSource, /const plan=initiativePlan\(c,a,st\)/, 'the unified system must use the guarded proactive planner');
+assert.match(maybeSource, /const plan=wechatNaturalInitiativePlan\(c\)/, 'the role model must choose the proactive message or function');
+assert.doesNotMatch(maybeSource, /currentRoleActivity\(/, 'the program must not invent a current activity for the role');
+assert.doesNotMatch(maybeSource, /effCallProb|proCall\(/, 'the program must not randomly preselect a call');
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);
@@ -155,7 +155,7 @@ repeatedMessages.push({role:'user',type:'text',content:'那你想听什么？',t
 assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天最开心的一件事。'),false,'the duplicate guard must not invent a replacement line or block unrelated speech');
 assert.equal(repeatContext.repeated('r1','那你想听什么？'),false,'user text must not be treated as a prior assistant reply');
 assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
-assert.match(functionSource('wechatNaturalInitiativePlan'),/独立的新事件/,'local proactive contact must be framed as a new event');
+assert.match(functionSource('wechatNaturalInitiativePlan'),/独立新事件/,'local proactive contact must be framed as a new event');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/不是等待你继续回答的当前回合/,'recent chat must be background rather than an unanswered turn');
 assert.match(functionSource('initiativeQueueNote'),/roleServerPushConversationBoundary\(c\)/,'every foreground proactive generation must carry a completed-turn boundary');
 assert.doesNotMatch(functionSource('initiativeMemory'),/initiativeRecentUser\(c\)/,'memory retrieval must not be seeded from the final completed user message');
@@ -200,6 +200,8 @@ vm.runInContext([
 assert.equal(groundingContext.unsupported({id:'r1'},'刚翻了你今早发的自拍，领口松了两颗扣。'),true,'proactive messages must reject invented user selfies and clothing details');
 assert.equal(groundingContext.unsupported({id:'r1'},'洗完了吗？\n有点想你。'),false,'questions and feelings that do not assert user facts must remain available');
 
+assert.match(functionSource('initiativePlan'),/return wechatNaturalInitiativePlan\(c\)/,'the retired deterministic planner must delegate to role autonomy');
+if(false){ // legacy numeric-trait planner checks retained only as historical source context
 const planMath = Object.create(Math);
 planMath.random = () => 0.99;
 let planConflict={active:false,cause:''};
@@ -271,6 +273,7 @@ const paranoidRole = {id:'paranoid',traits:{active:50,cling:50,suspicious:10,par
 assert.equal(planContext.checkin(paranoidRole,{turn:0,lastCheckinAt:0},Date.now()),'scrutiny');
 const cooldownState={turn:2,lastCheckinAt:Date.now()-5*60000};
 assert.equal(planContext.checkin(strictRole,cooldownState,Date.now()),'','check-ins must respect a short anti-spam cooldown');
+}
 
 function schedulerContext({planKind = 'share', callProb = 0, queue = true, delivered = queue, activityKey = 'work',lastRole='assistant'} = {}) {
   const now = Date.now();
@@ -305,6 +308,7 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true, deliv
     extremeLoveOn: () => false,
     currentRoleActivity: () => ({key: activityKey, label: activityKey === 'sleep' ? '在睡觉或休息' : '正在忙工作', busy: 4, until: now + 21600000}),
     initiativePlan: () => ({kind: planKind, memory: null, note: '[系统：主动联系]'}),
+    wechatNaturalInitiativePlan: () => ({kind:'autonomy', memory:null, note:'[主动联系自主决策]'}),
     initiativeQueueNote: (c,plan,note) => note,
     effCallProb: () => callProb,
     proCall: () => { calls.called++; return true; },
@@ -341,8 +345,8 @@ assert.equal(failedDelivery.result, true);
 assert.equal(failedDelivery.S._proactiveCount.r1, undefined, 'an AI failure after queuing must not consume the daily quota');
 
 const call = schedulerContext({callProb: 100});
-assert.equal(call.calls.called, 1, 'high call probability must be checked on ordinary proactive opportunities');
-assert.equal(call.calls.queued, 0);
+assert.equal(call.calls.called, 0, 'the program must not randomly replace a model-led proactive opportunity with a call');
+assert.equal(call.calls.queued, 1);
 
 const location = schedulerContext({planKind: 'location', callProb: 100});
 assert.equal(location.calls.called, 0, 'location sharing must not be replaced by a call');

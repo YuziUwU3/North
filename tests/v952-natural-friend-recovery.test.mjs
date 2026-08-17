@@ -62,8 +62,8 @@ assert.ok(source.includes("if((_altFirstContact&&wechatRoleDrift(content))||(rep
 assert.match(source, /if\(note\)hist\.push\(\{role:friendAcceptedAutoNote\(note\)\?'user'/);
 assert.match(source, /!friendAcceptedAutoNote\(note\)\)toast\('模型未回复：'\+em,10000\)/);
 
-assert.match(source, /callEligible=plan\.kind!=='photo'&&plan\.kind!=='location'&&plan\.kind!=='checkin'&&plan\.kind!=='conflict'/);
-assert.doesNotMatch(source, /callEligible=!natural&&/);
+assert.match(source, /const plan=wechatNaturalInitiativePlan\(c\)/);
+assert.doesNotMatch(functionSource('initiativeMaybeSend'), /callEligible|effCallProb|proCall\(/);
 assert.match(source, /function blockedPhoneStart\(c,now\)[\s\S]*?dueAt:t\+20000[\s\S]*?max:3/);
 assert.match(source, /function blockedPhoneRetry\(call,why\)[\s\S]*?Date\.now\(\)\+20000/);
 assert.match(source, /if\(isMain\(\)\)blockedPhoneStart\(c,now\)/);
@@ -80,4 +80,4 @@ assert.doesNotMatch(source, /async function maybeFollowup\(id,text\)\{const c=ge
 assert.doesNotMatch(source, /async function holidayGreet\(id,hol\)\{if\(wechatNaturalOn\(\)/);
 assert.doesNotMatch(source, /checkStepReport=function\(\)\{if\(wechatNaturalOn\(\)/);
 
-console.log("v964 natural mode and friend recovery tests passed");
+console.log("v965 natural mode and friend recovery tests passed");

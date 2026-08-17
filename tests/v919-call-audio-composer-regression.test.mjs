@@ -29,9 +29,9 @@ test('foreground calls keep the web player except private Bilibili cinema, which
   const play = app.match(/async function playCallMediaWait[\s\S]*?async function prepareCallSpeech/)?.[0] ?? '';
   assert.match(play, /const nativeBackground=privateNativeAppOn\(\).*document\.hidden/);
   assert.match(app, /function cinemaNativeMediaAudioOn\(\)\{return privateNativeAppOn\(\)[\s\S]*?_cin\.provider==='bilibili'/);
-  assert.match(play, /nativeCinema=cinemaNativeMediaAudioOn\(\)/);
-  assert.match(play, /if\(nativeBackground\|\|nativeCinema\)[\s\S]*?call\.audio\.play/);
-  assert.match(play, /mixMode:nativeCinema\?'cinema':'call'/);
+  assert.match(play, /nativeCinema=cinemaNativeMediaAudioOn\(\),nativeScreenShare=privateNativeAppOn\(\)&&callScreenShareOn\(\)/);
+  assert.match(play, /if\(nativeBackground\|\|nativeSharedMedia\)[\s\S]*?call\.audio\.play/);
+  assert.match(play, /mixMode:nativeCinema\?'cinema':nativeScreenShare\?'screenShare':'call'/);
   assert.match(play, /const a=callMediaElement\(\)/);
 });
 

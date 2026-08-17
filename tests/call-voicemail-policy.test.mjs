@@ -15,7 +15,7 @@ test('connected calls and role-ended calls never create voicemail',()=>{
 });
 
 test('outgoing cancellation cannot leave voicemail',()=>{
-  assert.match(fn('declineCall'),/if\(wasIn\)phAddRoleVoicemail/);
+  assert.doesNotMatch(fn('declineCall'),/phAddRoleVoicemail/);
   assert.match(fn('phAddRoleVoicemail'),/if\(!\['missed','decline'\]\.includes\(opt\.why\)\)return''/);
   assert.doesNotMatch(source,/why:'(?:hangup|canceled|role_hangup|role_block)'/);
 });

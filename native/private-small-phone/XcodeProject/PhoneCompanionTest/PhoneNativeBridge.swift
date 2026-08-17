@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 22
+    static let contractVersion = 23
 
     weak var webView: WKWebView? {
         didSet {
@@ -214,7 +214,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 return
             }
             let volume = Float(arguments["volume"] as? Double ?? 1)
-            let mixWithMedia = arguments["mixMode"] as? String == "cinema"
+            let mixMode = arguments["mixMode"] as? String ?? "call"
+            let mixWithMedia = mixMode == "cinema" || mixMode == "screenShare"
             CallPictureInPictureController.shared.playAudio(
                 data: data,
                 volume: volume,

@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v964 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v964 · 陪看语音不停播修复'/);
-  assert.match(app,/const url='sw\.js\?v=964&r=v964-cinema-audio-session-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='964'/);
-  assert.match(html,/app\.js\?v=964/);
-  assert.match(sw,/const BUILD='964'/);
-  assert.match(sw,/north-shell-v964/);
-  assert.match(index,/小手机\.html\?v=964/);
-  assert.match(repair,/小手机\.html\?v=964/);
+test('v965 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v965 · 角色自主与共享屏幕稳定'/);
+  assert.match(app,/const url='sw\.js\?v=965&r=v965-role-autonomy-screen-share-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='965'/);
+  assert.match(html,/app\.js\?v=965/);
+  assert.match(sw,/const BUILD='965'/);
+  assert.match(sw,/north-shell-v965/);
+  assert.match(index,/小手机\.html\?v=965/);
+  assert.match(repair,/小手机\.html\?v=965/);
 });
 
-test('the private iOS package advances to v964 and 1.0.86 delivery',()=>{
-  assert.match(privateBundle,/<string>964<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.86;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 86;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.86 \(86\)'/);
+test('the private iOS package advances to v965 and 1.0.87 delivery',()=>{
+  assert.match(privateBundle,/<string>965<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.87;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 87;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.87 \(87\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

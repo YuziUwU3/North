@@ -80,16 +80,16 @@ test('private cinema screen frames keep ReplayKit orientation and role speech mi
   assert.match(broadcast,/CGImagePropertyOrientation/);
   assert.match(broadcast,/input = input\.oriented\(orientation\)/);
   assert.match(functionSource('playCallMediaWait'),/nativeCinema/);
-  assert.match(functionSource('playCallMediaWait'),/mixMode:nativeCinema\?'cinema':'call'/);
+  assert.match(functionSource('playCallMediaWait'),/mixMode:nativeCinema\?'cinema':nativeScreenShare\?'screenShare':'call'/);
   assert.doesNotMatch(functionSource('playCallMediaWait'),/cinemaMicPauseForRole/);
-  assert.match(bridge,/arguments\["mixMode"\] as\? String == "cinema"/);
+  assert.match(bridge,/mixMode == "cinema" \|\| mixMode == "screenShare"/);
   assert.match(bridge,/mixWithMedia: mixWithMedia/);
   assert.match(bridge,/preserveCurrentSession: mixWithMedia/);
   assert.match(pipAudio,/mixWithMedia: Bool = false/);
   assert.match(pipAudio,/preserveCurrentSession: Bool = false/);
   assert.match(pipAudio,/if !preserveCurrentSession \{[\s\S]*?activateCallAudio\(mixWithMedia: mixWithMedia\)/);
   assert.match(pipAudio,/if mixWithMedia \{[\s\S]*?\.playAndRecord,[\s\S]*?mode: \.default,[\s\S]*?\.mixWithOthers/);
-  assert.match(app,/if\(!cinemaNativeMediaAudioOn\(\)&&!hfAudioPaused&&_callHF&&_callSR\)/);
+  assert.match(app,/if\(!callNativeSharedMediaAudioOn\(\)&&!hfAudioPaused&&_callHF&&_callSR\)/);
 });
 
 test('private WKWebView embeds only the explicit NetEase and Bilibili media players',()=>{

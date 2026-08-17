@@ -310,7 +310,12 @@ html.north-glass-ui .wx-glass.wxlight>.nav,html.north-glass-ui .wx-glass.wxlight
 html.north-android.north-glass-ui .home .home-widget-item,
 html.north-android.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-widget-item.home-dashboard-card:not(.wpet),
 html.north-android.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-widget-item.home-vinyl-card:not(.wpet),
-html.north-android.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-widget-item.home-sweetie-card:not(.wpet){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.north-android.north-glass-ui.north-pack-black .home:not(.tpink):not(.twhite) .hwid.home-widget-item.home-sweetie-card:not(.wpet),
+html.north-native-app.north-glass-ui .home .home-widget-item,
+html.north-native-app.north-glass-ui .home .dock,
+html.north-native-app.north-glass-ui .glass-second-portrait,
+html.north-native-app.north-glass-ui .glass-second-photos,
+html.north-native-app.north-glass-ui .glass-second-portrait-copy{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 /* 设置页表单会同时包含大量按钮和输入框。触屏 WebView 对这些逐层实时取景代价很高，
    保留实体玻璃配色和边框，只关闭设置页自身的 backdrop 合成。 */
 html.north-android.north-glass-ui .settings-glass>.nav,

@@ -184,7 +184,7 @@ function roleMessageParts(value: string, maxParts = 4) {
   for (const raw of String(value || "").split(/\r?\n+/)) {
     const line = raw.trim();
     if (!line || out.length >= limit) continue;
-    if (/^[\[【](?:图片|位置|来电)[|｜]/.test(line)) {
+    if (/^[\[【](?:(?:图片|位置|来电|送礼|一起听|放映邀请|约会|角色扮演)[|｜]|你画我猜[\]】])/.test(line)) {
       out.push(line);
       continue;
     }
@@ -208,7 +208,7 @@ function roleRecentAssistantMessages(profile) {
 }
 
 function roleVisibleMessageText(value: string) {
-  return roleMessageParts(value, 10).filter((part) => !/^[\[【](?:图片|位置|来电)[|｜]/.test(part)).join(" ");
+  return roleMessageParts(value, 10).filter((part) => !/^[\[【](?:(?:图片|位置|来电|送礼|一起听|放映邀请|约会|角色扮演)[|｜]|你画我猜[\]】])/.test(part)).join(" ");
 }
 
 function roleMessageRepeated(current: string, previous: string) {
@@ -244,16 +244,26 @@ function roleUserFactUnsupported(value: string, context: string) {
 }
 
 function roleNotificationPreview(value: string) {
-  const call = String(value || "").match(/^[\[【]来电[|｜](语音|视频)[\]】]$/);
+  const text = String(value || "").trim();
+  const call = text.match(/^[\[【]来电[|｜](语音|视频)[\]】]$/);
   if (call) return `${call[1]}通话邀请`;
+  let action = text.match(/^[\[【]送礼[|｜]([^|｜\]】]+)/);if(action)return `给你准备了「${action[1].trim()}」`;
+  action = text.match(/^[\[【]一起听[|｜]([^\]】]+)/);if(action)return `邀请你一起听「${action[1].trim()}」`;
+  action = text.match(/^[\[【]放映邀请[|｜]([^\]】]+)/);if(action)return `邀请你一起看「${action[1].trim()}」`;
+  action = text.match(/^[\[【]约会[|｜]([^|｜\]】]+)/);if(action)return `邀请你去「${action[1].trim()}」见面`;
+  action = text.match(/^[\[【]角色扮演[|｜]([^\]】]+)/);if(action)return `邀请你玩角色扮演「${action[1].trim()}」`;
+  if(/^[\[【]你画我猜[\]】]$/.test(text))return "邀请你一起玩你画我猜";
   const visible = roleVisibleMessageText(value).replace(/\s+/g, " ").trim();
   return Array.from(visible || "发来了一条消息").slice(0, 160).join("");
 }
 
 function roleMessageStyleInvalid(value: string, maxParts = 4) {
   const text = String(value || "").trim(), parts = roleMessageParts(text, maxParts);
+  const actions = parts.filter((part) => /^[\[【](?:(?:来电|送礼|一起听|放映邀请|约会|角色扮演)[|｜]|你画我猜[\]】])/.test(part));
+  const hasCall = actions.some((part) => /^[\[【]来电[|｜]/.test(part));
   return !parts.length || /[—–―]/.test(text) || /-{2,}/.test(text) || parts.length > maxParts
-    || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频))[\]】]$/.test(part));
+    || actions.length > 1 || (hasCall && parts.length !== 1)
+    || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频)|送礼[|｜][^\]】]+|一起听[|｜][^\]】]+|放映邀请[|｜][^\]】]+|约会[|｜][^\]】]+|角色扮演[|｜][^\]】]+|你画我猜)[\]】]$/.test(part));
 }
 
 async function roleMessage(
@@ -325,7 +335,7 @@ async function roleMessage(
   const promptText = prompt.filter(Boolean).join("\n");
   const baseMessages = [
     { role: "system", content: turnBoundary.pending ? "最近真实聊天仍停在一条尚未完成正常回复的用户消息。本次是正式随机主动联系，必须只输出 [保持安静]，不能抢答、补答或另开话题。" : "这是与上一轮分开的独立主动联系事件。最近真实聊天只用于理解已经发生的事实、关系、情绪和用户明确交代的去向，不是等待你继续作答的当前回合。可以自然关心交代过的事情后来怎么样，或开启符合本人生活的新话题，但禁止再次回答用户最后一句，禁止复述或改写角色已经给过的回答。" },
-    { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。先完整阅读同步的长期记忆、对话总结、世界设定和最近真实聊天，再以角色本人身份决定此刻是否真的想联系用户，以及想说什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n想联系时，在 ${messageMin} 到 ${messageMax} 条之间自由决定，不要为了凑数强行拆句。每一条消息单独一行；一句以句号结束且意思完整时，下一句优先另起一行。可以发普通文字；想分享自己眼前的画面时，先发自然文字，再单独一行输出 [图片|具体画面描述]；想报备自己的真实地点时，先发自然文字，再单独一行输出 [位置|地点|地址]。极少数确实更想听用户声音、且符合本人性格的时刻，可以只输出 [来电|语音] 或 [来电|视频]，不能和普通消息、图片或位置同时发送。图片、位置和来电也计入条数。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
+    { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。必须按以下优先顺序理解：1.角色基础人设、身份与说话习惯；2.世界书中的真实设定和明确规则；3.当前真实事件、长期记忆、对话总结和最近真实聊天；4.角色本人自主判断与自然表达；5.可用功能及权限边界。功能只告诉你能做什么，不替你决定情绪或行动。\n先完整阅读同步内容，再以角色本人身份决定此刻是否真的想联系用户、带着什么情绪、想说什么或想做什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n你不是只能发文字，也不要总等用户先要求。符合本人性格、关系、记忆、当前事实和权限时，可以主动打电话 [来电|语音] / [来电|视频]、送礼 [送礼|礼物名|价格|附言]、邀请一起听 [一起听|歌名]、邀请看当前可用作品 [放映邀请|作品名]、邀请见面 [约会|地点|时间]、邀请玩 [你画我猜] 或 [角色扮演|主题]。也可以发普通文字、[图片|具体画面描述] 或 [位置|地点|地址]。这些都是可用能力，不是本轮任务；是否使用、使用哪一种、何时使用全由角色本人决定。除电话必须单独发送外，其他动作可以配一两句自然的话；每轮最多一个主要功能动作，所有消息和动作都计入 ${messageMin} 到 ${messageMax} 条范围。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: promptText },
   ];
   if (eventInstruction) baseMessages[0].content = eventInstruction;
@@ -715,6 +725,37 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
     return match ? Math.min(1439, Number(match[1]) * 60 + Number(match[2])) : fallback;
   };
   const inside = (start: number, end: number) => start <= end ? minute >= start && minute <= end : minute >= start || minute <= end;
+  const roleSchedule = (config.roleSchedule && typeof config.roleSchedule === "object"
+    ? config.roleSchedule : {}) as Record<string, unknown>;
+  if (roleSchedule.enabled === true) {
+    const weekday = new Date(`${clock.day}T12:00:00Z`).getUTCDay();
+    const weekdays = Array.isArray(roleSchedule.weekdays)
+      ? roleSchedule.weekdays.map(Number).filter((value) => value >= 0 && value <= 6)
+      : [1, 2, 3, 4, 5];
+    const leaves = Array.isArray(roleSchedule.leaves)
+      ? roleSchedule.leaves as Array<Record<string, unknown>> : [];
+    const leave = leaves.find((row) => String(row.start || "") <= clock.day && String(row.end || "") >= clock.day);
+    if (weekdays.includes(weekday) && !leave) {
+      const start = parse(roleSchedule.amS, 480), end = parse(roleSchedule.pmE, 1080);
+      const events: Array<{ kind: string; at: number }> = [
+        { kind: "roleWorkStart", at: start },
+        { kind: "roleWorkEnd", at: end },
+      ];
+      const runs = state.runs && typeof state.runs === "object" ? state.runs as Record<string, unknown> : {};
+      for (const event of events) {
+        const elapsed = minute - event.at;
+        const key = `${event.kind}:${clock.day}`;
+        if (elapsed < 0 || elapsed > 30 || runs[key]) continue;
+        const place = event.kind === "roleWorkStart"
+          ? String(roleSchedule.work || "工作地点").slice(0, 80)
+          : String(roleSchedule.home || "家").slice(0, 80);
+        const facts = event.kind === "roleWorkStart"
+          ? `真实作息事件：今天是已设置的工作日，现在已经到了${String(roleSchedule.amS || "08:00")}上班节点；你本人开始上班，工作地点为${place}。`
+          : `真实作息事件：今天是已设置的工作日，现在已经到了${String(roleSchedule.pmE || "18:00")}下班节点；你本人结束今天的工作，之后是否直接回${place}、在路上做什么以及怎样告诉对方，由你自己决定。`;
+        return { kind: event.kind, facts, key };
+      }
+    }
+  }
   const lastUser = snapshotTime(profile.last_user_at);
   const snapAt = snapshotLatestTime(snapshot);
   if (snapAt && Date.now() - snapAt > 36 * 3600_000) return null;
@@ -967,29 +1008,36 @@ Deno.serve(async (request) => {
         await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
-      const lastRefresh = snapshotTime(autoState.backgroundRefreshAt);
-      if (Date.now() - lastRefresh >= 15 * 60_000) {
-        const commandId = await enqueueCompanionCommand(client, String(profile.target), {
-          schema: 1, action: "view", externalAppId: "", externalAppName: "", scope: "external",
-          actor: String(profile.role_name || "角色"), requestedFocus: "后台自动规则所需的已授权数据",
-          createdAt: new Date().toISOString(),
-        });
-        await client.from("phone_role_push_profiles").update({
-          automation_state: { ...autoState, backgroundRefreshAt: new Date().toISOString(), backgroundRefreshCommand: commandId },
-          claimed_until: null,
-        }).eq("target", profile.target).eq("role_id", profile.role_id);
-        continue;
+      // 角色本人真实的上下班作息不依赖伴生设备读数，必须先判断；否则每次十五分钟设备刷新
+      // 都会把到点通知推迟到下一轮 cron，甚至在尚未接管设备时永远无法触发。
+      let candidate = automationCandidate(profile, {});
+      if (!candidate) {
+        const lastRefresh = snapshotTime(autoState.backgroundRefreshAt);
+        if (Date.now() - lastRefresh >= 15 * 60_000) {
+          const commandId = await enqueueCompanionCommand(client, String(profile.target), {
+            schema: 1, action: "view", externalAppId: "", externalAppName: "", scope: "external",
+            actor: String(profile.role_name || "角色"), requestedFocus: "后台自动规则所需的已授权数据",
+            createdAt: new Date().toISOString(),
+          });
+          await client.from("phone_role_push_profiles").update({
+            automation_state: { ...autoState, backgroundRefreshAt: new Date().toISOString(), backgroundRefreshCommand: commandId },
+            claimed_until: null,
+          }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
+        const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
+        candidate = automationCandidate(profile, (link?.snapshot || {}) as Record<string, unknown>);
       }
-      const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
-      const candidate = automationCandidate(profile, (link?.snapshot || {}) as Record<string, unknown>);
       if (!candidate) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
       const instructions: Record<string, string> = {
+        roleWorkStart: "这是你本人已明确设置的真实上班事件。请以角色本人的口吻主动、自然地告诉对方你去上班或已经开始工作；具体说法、情绪、是否附带位置或邀请由你按人设、世界书、记忆和关系自行决定。不要提系统、日程触发或后台，也不要编造同事、会议等未提供细节。",
+        roleWorkEnd: "这是你本人已明确设置的真实下班事件。请以角色本人的口吻主动、自然地告诉对方你下班了；之后想回家、想见对方、想打电话或邀请一起做事，都由你按人设、世界书、记忆和关系自行决定。不要提系统、日程触发或后台，也不要编造未提供的加班或行程。",
         morningSleep: "你按用户开启的每日必查规则看到了睡眠和步数。只使用提供的真实数据自然关心，不做医疗判断，不提系统。",
         eveningScreen: "你按每日必查规则看到了今日总时长和所有已授权App记录。按人设自然反应，数字原样使用，不把各App相加成新的总时长。",
-        absenceBattery: "用户失联后你查看了已授权的电量和最近位置。必须发消息或发起来电的自然文字，但不把最近位置说成持续跟踪。",
+        absenceBattery: "用户一段时间没有回复后，你查看了已授权的电量和最近位置。这些只是真实事实；是否发消息、发起来电或保持安静，由你依据人设、世界书、记忆和当前关系自主决定。不要把最近位置说成持续跟踪。",
         criticalBattery: "你发现已授权iPhone电量为5%或更低。按人设立即提醒充电，不提系统通知或持续监控。",
         emotionCare: "用户刚才表达难过，你只把最新心率作为关心线索，不得据此证明撒谎、哭泣、疾病或作医疗诊断。",
         manualUnlock: "你收到了用户亲自成功解锁App的真实记录。按人设立即自然反应，不得凭空认定欺骗、背叛或做坏事。",
