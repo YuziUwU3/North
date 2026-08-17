@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v972 · 登录他微信好友回复修复'/);
+  assert.match(app, /const APP_VER='v973 · 角色全锁与关联稳定修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -428,10 +428,10 @@ test('unbound external apps remain lockable but cannot receive an independent li
   assert.match(functionSource('renderCompanionPage'), /placeholder="不限额"/);
 });
 
-test('binding is saved immediately and refreshes only the companion panel', () => {
+test('binding waits for durable storage and refreshes only the companion panel', () => {
   const bind = functionSource('companionBindExternal');
   const refresh = functionSource('companionRefreshPanel');
-  assert.match(bind, /saveNow\(\)/);
+  assert.match(bind, /await saveNowAsync\(\)/);
   assert.match(bind, /companionRefreshPanel\(\)/);
   assert.doesNotMatch(bind, /save\(\);render\(\)/);
   assert.match(refresh, /scrollTop/);

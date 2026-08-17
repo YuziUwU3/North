@@ -88,7 +88,7 @@ test('role inspections pull a fresh external snapshot instead of trusting the co
   assert.match(functionSource('companionRoleRefreshExternal'), /companionRoleFocusRevision\(current,focus\)>before/);
   assert.match(functionSource('companionRoleRefreshExternal'), /companionRoleSnapshotFresh/);
   assert.match(functionSource('companionRoleDataState'), /_companionRoleExternalSnapshot/);
-  assert.match(assignmentSource('companionRolePrompt'), /不得读取或复述情侣空间里的伴生缓存/);
+  assert.match(functionSource('companionRoleControlOnlyPrompt'), /不得读取或复述情侣空间里的伴生缓存/);
   assert.match(assignmentSource('companionRolePrompt'), /companionRoleDataState/);
   assert.match(functionSource('cohabRunPhoneInspection'), /companionRolePullLatest/);
   assert.match(functionSource('doSpyView'), /companionRolePullLatest/);
