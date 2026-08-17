@@ -63,15 +63,17 @@ test('robotic share notices and missing translations are repaired once with the 
   assert.match(callAI, /throw callOutputBlockedError\(issue\|\|'共享状态回复重试仍不可用'/);
 });
 
-test('shared-media role speech uses unclamped settings and a native compressor gain stage', () => {
+test('shared-media role speech uses unclamped settings and a public native gain stage', () => {
   const play = app.match(/async function playCallMediaWait[\s\S]*?async function prepareCallSpeech/)?.[0] ?? '';
   assert.match(play, /volume:Math\.max\(0,Math\.min\(3,volMul\(\)\)\)/);
   assert.match(bridge, /let mime = arguments\["mime"\]/);
   assert.match(bridge, /mime: mime/);
   assert.match(pip, /if mixWithMedia, playEnhancedAudio/);
   assert.match(pip, /AVAudioEngine\(\)/);
-  assert.match(pip, /AVAudioUnitDynamicsProcessor\(\)/);
-  assert.match(pip, /dynamics\.masterGain = min\(12, 5 \+ extraGain\)/);
+  assert.match(pip, /AVAudioUnitEQ\(numberOfBands: 0\)/);
+  assert.match(pip, /gainUnit\.globalGain = min\(12, 5 \+ extraGain\)/);
+  assert.doesNotMatch(pip, /AVAudioUnitDynamicsProcessor/);
+  assert.doesNotMatch(pip, /completionCallbackType/);
   assert.match(bridge, /preserveCurrentSession: mixWithMedia/);
   assert.match(pip, /enhancedAudioEngine\?\.stop\(\)/);
 });

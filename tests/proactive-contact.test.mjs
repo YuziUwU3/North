@@ -110,6 +110,7 @@ const freshnessContext=vm.createContext({
   initiativeConflictState:()=>({active:queuedConflict,cause:''}),
   initiativeAwayPrompt:()=>'',
   roleServerPushConversationBoundary:()=>'[对话边界] 上一轮已经结束。',
+  completedTurnContinuation:()=>'',
   roleServerPushTurnState:()=>({answered:true}),
   privateNativeAppOn:()=>true,
   companionAmbientContext:()=>'',

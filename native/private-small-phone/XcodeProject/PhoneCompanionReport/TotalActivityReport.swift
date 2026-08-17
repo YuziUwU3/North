@@ -1,5 +1,5 @@
 import CryptoKit
-import DeviceActivity
+@preconcurrency import DeviceActivity
 import ExtensionKit
 import FamilyControls
 import Foundation

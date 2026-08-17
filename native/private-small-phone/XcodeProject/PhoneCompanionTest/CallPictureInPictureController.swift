@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import AVKit
 import UIKit
 import WebKit
@@ -21,6 +21,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     private var enhancedPlayerNode: AVAudioPlayerNode?
     private var enhancedAudioFile: AVAudioFile?
     private var enhancedAudioURL: URL?
+    private var enhancedFinishTimer: Timer?
     private var audioCompletion: ((Bool) -> Void)?
 
     func attach(to webView: WKWebView?) {
@@ -151,7 +152,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         }
         // AVAudioPlayer clamps volume to 1.0, so the former 100–300% setting
         // was identical while a loud video was playing. Shared-media speech
-        // gets a compressor/gain stage without touching the active media
+        // gets a public AVAudioUnitEQ gain stage without touching the active media
         // session; ordinary calls keep the proven AVAudioPlayer path below.
         if mixWithMedia, playEnhancedAudio(data: data, mime: mime, volume: volume, completion: completion) {
             return
@@ -177,6 +178,8 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         audioPlayer = nil
         enhancedPlayerNode?.stop()
         enhancedAudioEngine?.stop()
+        enhancedFinishTimer?.invalidate()
+        enhancedFinishTimer = nil
         enhancedPlayerNode = nil
         enhancedAudioEngine = nil
         enhancedAudioFile = nil
@@ -222,22 +225,16 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             let file = try AVAudioFile(forReading: url)
             let engine = AVAudioEngine()
             let player = AVAudioPlayerNode()
-            let dynamics = AVAudioUnitDynamicsProcessor()
-
-            dynamics.threshold = -18
-            dynamics.headRoom = 5
-            dynamics.expansionRatio = 1
-            dynamics.attackTime = 0.001
-            dynamics.releaseTime = 0.08
+            let gainUnit = AVAudioUnitEQ(numberOfBands: 0)
             let requested = max(1, min(3, volume))
             let extraGain = Float(20 * log10(Double(requested)))
-            dynamics.masterGain = min(12, 5 + extraGain)
+            gainUnit.globalGain = min(12, 5 + extraGain)
             player.volume = max(0, min(1, volume))
 
             engine.attach(player)
-            engine.attach(dynamics)
-            engine.connect(player, to: dynamics, format: file.processingFormat)
-            engine.connect(dynamics, to: engine.mainMixerNode, format: file.processingFormat)
+            engine.attach(gainUnit)
+            engine.connect(player, to: gainUnit, format: file.processingFormat)
+            engine.connect(gainUnit, to: engine.mainMixerNode, format: file.processingFormat)
             engine.prepare()
             try engine.start()
 
@@ -246,14 +243,22 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             enhancedAudioEngine = engine
             enhancedPlayerNode = player
             audioCompletion = completion
-            player.scheduleFile(file, at: nil, completionCallbackType: .dataPlayedBack) { [weak self, weak player] _ in
-                Task { @MainActor in
-                    guard let self, let player, self.enhancedPlayerNode === player else { return }
-                    self.stopAudio(result: true)
-                }
-            }
+            // Do not use AVAudioPlayerNode's @Sendable completion closure here:
+            // capturing AVFoundation reference types creates Swift 6 build errors.
+            player.scheduleFile(file, at: nil, completionHandler: nil)
             player.play()
             if player.isPlaying {
+                let sampleRate = file.processingFormat.sampleRate
+                let duration = sampleRate > 0
+                    ? Double(file.length) / sampleRate
+                    : 60
+                enhancedFinishTimer = Timer.scheduledTimer(
+                    timeInterval: max(0.1, duration + 0.05),
+                    target: self,
+                    selector: #selector(enhancedAudioDidFinish),
+                    userInfo: nil,
+                    repeats: false
+                )
                 return true
             }
             player.stop()
@@ -262,6 +267,8 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             enhancedAudioEngine = nil
             enhancedAudioFile = nil
             enhancedAudioURL = nil
+            enhancedFinishTimer?.invalidate()
+            enhancedFinishTimer = nil
             audioCompletion = nil
             try? FileManager.default.removeItem(at: url)
             return false
@@ -271,9 +278,15 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             enhancedAudioFile = nil
             enhancedAudioEngine = nil
             enhancedPlayerNode = nil
+            enhancedFinishTimer?.invalidate()
+            enhancedFinishTimer = nil
             audioCompletion = nil
             return false
         }
+    }
+
+    @objc private func enhancedAudioDidFinish() {
+        stopAudio(result: true)
     }
 
     private func activateCallAudio(mixWithMedia: Bool = false) {

@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v968 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v968 · 共享反应、人声与日记'/);
-  assert.match(app,/const url='sw\.js\?v=968&r=v968-share-voice-diary-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='968'/);
-  assert.match(html,/app\.js\?v=968/);
-  assert.match(sw,/const BUILD='968'/);
-  assert.match(sw,/north-shell-v968/);
-  assert.match(index,/小手机\.html\?v=968/);
-  assert.match(repair,/小手机\.html\?v=968/);
+test('v969 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v969 · Xcode编译与人声增益修复'/);
+  assert.match(app,/const url='sw\.js\?v=969&r=v969-native-build-gain-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='969'/);
+  assert.match(html,/app\.js\?v=969/);
+  assert.match(sw,/const BUILD='969'/);
+  assert.match(sw,/north-shell-v969/);
+  assert.match(index,/小手机\.html\?v=969/);
+  assert.match(repair,/小手机\.html\?v=969/);
 });
 
-test('the private iOS package advances to v968 and 1.0.90 delivery',()=>{
-  assert.match(privateBundle,/<string>968<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.90;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 90;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.90 \(90\)'/);
+test('the private iOS package advances to v969 and 1.0.91 delivery',()=>{
+  assert.match(privateBundle,/<string>969<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.91;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 91;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.91 \(91\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

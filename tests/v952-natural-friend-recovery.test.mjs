@@ -59,7 +59,7 @@ messages.push({ role: "assistant", type: "text", content: "正常角色消息" }
 assert.equal(sandbox.api.altFriendFirstContact({ id: "role" }, "alt_1"), false);
 
 assert.ok(source.includes("if((_altFirstContact&&wechatRoleDrift(content))||(replyAccount!=='main'&&wechatServiceGreeting(content)))content=altFriendOpeningFallback(c);"));
-assert.match(source, /if\(note\)hist\.push\(\{role:friendAcceptedAutoNote\(note\)\?'user'/);
+assert.match(source, /if\(note\)hist\.push\(\{role:friendAcceptedAutoNote\(note\)\|\|initiativeNoteActive\(note\)\|\|wechatNaturalCallEventActive\(note\)\?'user'/);
 assert.match(source, /!friendAcceptedAutoNote\(note\)\)toast\('模型未回复：'\+em,10000\)/);
 
 assert.match(source, /const plan=wechatNaturalInitiativePlan\(c\)/);

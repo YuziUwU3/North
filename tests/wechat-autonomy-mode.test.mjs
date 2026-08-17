@@ -31,7 +31,8 @@ vm.runInContext([
 assert.equal(context.enabled(),true,'the unified system remains the only default');
 const sample='基础人设\n\n# 申请远程操控小手机\n远控规则\n\n# 你对玩家手机App的管控权\n锁软件规则\n\n# 微信聊天规则\n基本格式';
 assert.match(context.slim(sample,{natural:true,query:'早上好'}),/远控规则|锁软件规则/,'capabilities must not disappear from ordinary turns');
-assert.match(context.note(),/最新电话事件已经写在聊天历史末尾/);
+assert.match(context.note(),/绝不能把双方说反/);
+assert.match(context.note(),/电话里已经回应过的用户话语都属于完成的旧轮次/);
 assert.match(context.note(),/由你本人决定怎样自然承接/);
 assert.match(context.note(),/也可以暂时不继续动作/);
 assert.equal(context.silent('[保持安静]',context.note()),true,'the role may autonomously choose not to follow a call event');
