@@ -1,6 +1,6 @@
-const BUILD='965';
-const HOTFIX='v965-role-autonomy-screen-share-1';
-const SHELL_CACHE='north-shell-v965';
+const BUILD='966';
+const HOTFIX='v966-home-tap-render-1';
+const SHELL_CACHE='north-shell-v966';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

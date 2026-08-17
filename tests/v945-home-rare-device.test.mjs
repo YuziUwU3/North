@@ -25,15 +25,16 @@ test('only wide phones escape the legacy 348px reference cap',()=>{
   assert.doesNotMatch(css,/@media\(min-width:390px\)[\s\S]*?glass-place-dashboard/,'390/393px baseline must not be globally reflowed');
 });
 
-test('touchmove is a fallback for WebViews whose pointermove stream is incomplete',()=>{
-  const ctx=vm.createContext({clearTimeout(){},homePgScroll(){ctx.paged++;},paged:0,prevented:0});
-  vm.runInContext(`let _aPend={x:100,y:100,pan:'',sw:{scrollLeft:0},scroll:null,swLeft:20,scrollTop:0,el:null,pid:1},_aDrag=null,_aTimer=null,_aNoClick=0;${functionSource('appPanMove')};${functionSource('appTouchMove')};globalThis.run=appTouchMove;globalThis.state=()=>_aPend;`,ctx);
+test('touchmove cancels a pending tap without taking over native scrolling',()=>{
+  const ctx=vm.createContext({clearTimeout(){ctx.cleared++;},cleared:0,prevented:0});
+  vm.runInContext(`const APP_TAP_MOVE=26;let _aPend={x:100,y:100},_aDrag=null,_aTimer=1,_aNoClick=0;${functionSource('appPendingMove')};${functionSource('appTouchMove')};globalThis.run=appTouchMove;globalThis.state=()=>({pending:_aPend,noClick:_aNoClick});`,ctx);
   ctx.run({touches:[{clientX:50,clientY:102}],cancelable:true,preventDefault(){ctx.prevented++;}});
-  assert.equal(ctx.state().pan,'x');
-  assert.equal(ctx.state().sw.scrollLeft,70);
-  assert.equal(ctx.paged,1);
-  assert.equal(ctx.prevented,1);
+  assert.equal(ctx.state().pending,null);
+  assert.ok(ctx.state().noClick>0);
+  assert.equal(ctx.cleared,1);
+  assert.equal(ctx.prevented,0);
   assert.match(functionSource('initAppDrag'),/window\.addEventListener\('blur',appCancel\)/);
+  assert.match(functionSource('initAppDrag'),/window\.addEventListener\('pagehide',appCancel\)/);
   assert.match(functionSource('initAppDrag'),/visibilitychange/);
 });
 

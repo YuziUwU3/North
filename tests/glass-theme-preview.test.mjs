@@ -301,9 +301,11 @@ test('glass packs keep a free persisted mixed app-widget layout and appearance p
   const appDown=app.slice(app.indexOf('function appDown('),app.indexOf('function appBeginDrag('));
   assert.doesNotMatch(appDown,/preventDefault\(\)/,'pointerdown must not cancel the trailing click before a real pan or drag');
   assert.match(app,/function appBeginDrag\(\)[\s\S]*?p\.el\.setPointerCapture\(p\.pid\)/);
-  assert.match(css,/#homeDesktop \.home-item\{touch-action:none\}/);
-  assert.match(app,/p\.pan=ax>ay\?'x':'y'/);
-  assert.match(css,/glass-reference-page~\.apppage\{content-visibility:auto/);
+  assert.match(css,/#homeDesktop \.home-item\{touch-action:manipulation\}/);
+  assert.match(app,/function appPendingMove\(x,y\)/);
+  assert.doesNotMatch(app,/function appPanMove\(/);
+  assert.match(css,/glass-reference-page~\.apppage\{content-visibility:visible/);
+  assert.doesNotMatch(css,/glass-second-page\{[^}]*content-visibility:auto/);
   assert.match(css,/grid-auto-flow:dense/);
   assert.match(css,/north-pack-black \.home-dashboard-card[\s\S]*rgba\(34,35,40,\.18\)/);
 });

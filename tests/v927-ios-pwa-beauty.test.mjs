@@ -7,11 +7,11 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v965 web keeps private 1.0.87 compatibility', () => {
-  assert.match(app, /APP_VER='v965 · 角色自主与共享屏幕稳定'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='965'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 87;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.87;/g) || []).length, 12);
+test('v966 web keeps private 1.0.88 compatibility', () => {
+  assert.match(app, /APP_VER='v966 · 主屏点按与组件稳定'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='966'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 88;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.88;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {
@@ -44,14 +44,14 @@ test('beauty packs never overwrite page, widget, or Dock placement', () => {
   assert.match(imported, /'appIcons'/);
 });
 
-test('long-press dragging starts reliably on Android and keeps page scrolling on both mobile systems', () => {
+test('native paging stays responsive while long-press dragging remains available', () => {
   assert.match(css, /html\.north-glass-ui \.home\.home-editing \.home-scroll\{padding-top:38px\}/);
-  assert.match(css, /html\.north-glass-ui #homeDesktop \.home-item\{touch-action:none\}/);
+  assert.match(css, /html\.north-glass-ui #homeDesktop \.home-item\{touch-action:manipulation\}/);
+  assert.match(css, /body\.home-drag-active #homeDesktop \.home-item\{touch-action:none\}/);
   assert.match(app, /opacity:\.94;transform:none/);
-  assert.match(app, /p\.pan=ax>ay\?'x':'y'/);
-  assert.match(app, /p\.sw\.scrollLeft=p\.swLeft-dx/);
-  assert.match(app, /p\.scroll\.scrollTop=p\.scrollTop-dy/);
-  assert.match(app, /function appTouchMove\(e\)[\s\S]*?if\(_aDrag\)[\s\S]*?appGhostMove\(t\.clientX,t\.clientY\)[\s\S]*?if\(_aPend\)appPanMove\(t\.clientX,t\.clientY,e\)/);
+  assert.match(app, /function appPendingMove\(x,y\)[\s\S]*?APP_TAP_MOVE/);
+  assert.doesNotMatch(app, /function appPanMove\(/);
+  assert.match(app, /function appTouchMove\(e\)[\s\S]*?if\(_aDrag\)[\s\S]*?appGhostMove\(t\.clientX,t\.clientY\)[\s\S]*?appPendingMove\(t\.clientX,t\.clientY\)/);
   assert.match(app, /function appTouchEnd\(e\)[\s\S]*?if\(_aDrag\)\{appDrop\(t\.clientX,t\.clientY\);return;\}appUp\(\{clientX:t\.clientX,clientY:t\.clientY\}\)/);
   assert.match(app, /function appDrop\(x,y\)\{const d=_aDrag;if\(d&&Number\.isFinite\(x\)&&Number\.isFinite\(y\)\)appLiveReorder\(x,y\);_aDrag=null;_aPend=null;clearTimeout\(_aTimer\)/);
   assert.match(app, /addEventListener\('touchmove',appTouchMove,\{passive:false\}\)/);

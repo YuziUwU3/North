@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='965'){
+if(window.__NORTH_SHELL_BUILD__!=='966'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -365,7 +365,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v965 · 角色自主与共享屏幕稳定';
+const APP_VER='v966 · 主屏点按与组件稳定';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1434,7 +1434,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=965&r=v965-role-autonomy-screen-share-1';
+  const url='sw.js?v=966&r=v966-home-tap-render-1';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -2914,7 +2914,7 @@ function renderHome(){
 }
 function homePageClamp(p){return Math.max(0,Math.min(APP_PAGES-1,+p||0));}
 function homePageDots(p){p=homePageClamp(p);for(let i=0;i<APP_PAGES;i++){const d=document.getElementById('pgdot'+i);if(d)d.className='pgdot'+(i===p?' on':'');}renderLockPull();}
-function homePgScroll(el){const w=el.clientWidth||1;_homePage=homePageClamp(Math.round((el.scrollLeft||0)/w));homePageDots(_homePage);if(_homeSnapTimer){clearTimeout(_homeSnapTimer);_homeSnapTimer=null;}}
+function homePgScroll(el){const w=el.clientWidth||1,next=homePageClamp(Math.round((el.scrollLeft||0)/w));if(next!==_homePage){_homePage=next;homePageDots(_homePage);}if(_homeSnapTimer){clearTimeout(_homeSnapTimer);_homeSnapTimer=null;}}
 function homeSnapPage(el){if(!el||!el.isConnected)return;if(_homeSnapTimer){clearTimeout(_homeSnapTimer);_homeSnapTimer=null;}const w=el.clientWidth||1,p=homePageClamp(Math.round((el.scrollLeft||0)/w)),left=p*w;_homePage=p;homePageDots(p);if(Math.abs((el.scrollLeft||0)-left)<2)el.scrollLeft=left;else try{el.scrollTo({left,behavior:'smooth'});}catch(_){el.scrollLeft=left;}}
 function homeRestorePage(){requestAnimationFrame(()=>{const el=$('#appswipe');if(!el)return;_homePage=homePageClamp(_homePage);el.scrollLeft=_homePage*(el.clientWidth||1);homePageDots(_homePage);});}
 function homeAppIconTone(){const n=+S.me.appIconTone;return Number.isFinite(n)?Math.max(45,Math.min(135,Math.round(n))):100;}
@@ -3005,8 +3005,7 @@ function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
   const f=APPRUN[k];if(f)f();}
 function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定，暂时无法打开');return;}const f=APPRUN[k];if(f)setTimeout(f,0);}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
-  const sw=$('#appswipe'),scroll=$('#homeDesktop .home-scroll');
-  _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId,pan:'',sw,scroll,swLeft:sw?sw.scrollLeft:0,scrollTop:scroll?scroll.scrollTop:0};clearTimeout(_aTimer);
+  _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
 function appBeginDrag(){const p=_aPend;if(!p)return;const desktop=$('#homeDesktop'),sw=$('#appswipe');if(!desktop||!sw)return;
   const cell=p.el&&p.el.isConnected?p.el:desktop.querySelector('.home-item[data-token="'+p.k+'"]');if(!cell)return;
@@ -3028,17 +3027,14 @@ function appLiveReorder(x,y){const d=_aDrag;if(!d||!d.item)return;const hit=docu
 function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.clientWidth;let pg=Math.max(0,Math.min(APP_PAGES-1,Math.round(sw.scrollLeft/w)+dir));
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
-function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}
-  const p=_aPend;if(!p)return;p.pointerMoves=(p.pointerMoves||0)+1;appPanMove(e.clientX,e.clientY,e);}
-function appPanMove(x,y,e){const p=_aPend;if(!p)return;const dx=x-p.x,dy=y-p.y,ax=Math.abs(dx),ay=Math.abs(dy);
-  if(!p.pan&&Math.max(ax,ay)>12){clearTimeout(_aTimer);p.pan=ax>ay?'x':'y';_aNoClick=Date.now()+450;try{if(p.el&&p.el.setPointerCapture)p.el.setPointerCapture(p.pid);}catch(_){}}
-  if(p.pan){if(e&&e.cancelable)e.preventDefault();if(p.pan==='x'&&p.sw){p.sw.scrollLeft=p.swLeft-dx;homePgScroll(p.sw);}else if(p.pan==='y'&&p.scroll)p.scroll.scrollTop=p.scrollTop-dy;}}
+function appPendingMove(x,y){const p=_aPend;if(!p)return;const dx=x-p.x,dy=y-p.y;if(Math.max(Math.abs(dx),Math.abs(dy))<=APP_TAP_MOVE)return;clearTimeout(_aTimer);_aPend=null;_aNoClick=Date.now()+300;}
+function appMove(e){if(_aDrag){if(e.cancelable)e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}appPendingMove(e.clientX,e.clientY);}
 function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
   if(_aDrag){appDrop(e.clientX,e.clientY);return;}
-  const p=_aPend;_aPend=null;if(p&&p.pan){if(p.pan==='x'&&p.sw)homeSnapPage(p.sw);return;}if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
-function appTouchMove(e){const t=e.touches&&e.touches[0];if(!t)return;if(_aDrag){if(e.cancelable)e.preventDefault();appGhostMove(t.clientX,t.clientY);return;}if(_aPend)appPanMove(t.clientX,t.clientY,e);}
+  const p=_aPend;_aPend=null;if(p&&Date.now()-p.t<=APP_TAP_MS&&Math.abs(e.clientX-p.x)<=APP_TAP_MOVE&&Math.abs(e.clientY-p.y)<=APP_TAP_MOVE&&!String(p.k).startsWith('w:')){if(HOME_SHORTCUTS[p.k])homeShortcutTap(null,p.k);else appLaunch(p.k);}}
+function appTouchMove(e){const t=e.touches&&e.touches[0];if(!t)return;if(_aDrag){if(e.cancelable)e.preventDefault();appGhostMove(t.clientX,t.clientY);return;}appPendingMove(t.clientX,t.clientY);}
 function appTouchEnd(e){if(!_aDrag&&!_aPend)return;const t=e.changedTouches&&e.changedTouches[0];if(!t){appCancel();return;}if(e.cancelable)e.preventDefault();if(_aDrag){appDrop(t.clientX,t.clientY);return;}appUp({clientX:t.clientX,clientY:t.clientY});}
-function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(typeof document!=='undefined'&&document.body)document.body.classList.remove('home-drag-active');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(d){if(typeof render==='function')render();if(typeof requestAnimationFrame==='function')requestAnimationFrame(homeEditStart);return;}if(sw)sw.classList.remove('aedit');}
+function appCancel(){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;_aPend=null;const d=_aDrag;if(d)_aNoClick=Date.now()+450;_aDrag=null;const sw=$('#appswipe');if(typeof document!=='undefined'&&document.body)document.body.classList.remove('home-drag-active');if(d&&d.ghost)try{d.ghost.remove();}catch(_){}if(d&&d.item){d.item.style.opacity='';d.item.style.pointerEvents='';}if(sw)sw.classList.remove('aedit');if(d){const h=$('#homeDesktop');if(h)h.classList.remove('home-editing');if(typeof render==='function')render();}}
 function homeLayoutReadDom(){const pageEls=Array.from(document.querySelectorAll('#appswipe .apppage')),pages=pageEls.map(pg=>Array.from(pg.children).map(el=>el.dataset.token).filter(Boolean)),dock=$('#homeDesktop .dock');if(pages.length!==APP_PAGES||!dock)return false;const dockTokens=Array.from(dock.children).map(el=>el.dataset.token).filter(Boolean);if(dockTokens.length>4||dockTokens.some(k=>!APPDEFS[k]))return false;const before=(Array.isArray(S.me.homeLayout)?S.me.homeLayout.flat():[]).concat(Array.isArray(S.me.appDock)?S.me.appDock:[]).filter(homeTokenValid),after=pages.flat().concat(dockTokens),beforeSet=new Set(before),afterSet=new Set(after);if(before.length!==beforeSet.size||after.length!==afterSet.size||beforeSet.size!==afterSet.size||Array.from(beforeSet).some(k=>!afterSet.has(k)))return false;const ref=pageEls[0],map={};if(ref)ref.querySelectorAll(':scope>.home-item[data-ref-slot]').forEach(el=>{const token=el.dataset.token,n=Number(el.dataset.refSlot);if(APPDEFS[token]&&Number.isInteger(n))map[token]=n;});S.me.homeLayout=pages;S.me.appDock=dockTokens;S.me.homeReferenceAppSlots=map;homeLayoutSyncLegacy();return true;}
 function appDrop(x,y){const d=_aDrag;if(d&&Number.isFinite(x)&&Number.isFinite(y))appLiveReorder(x,y);_aDrag=null;_aPend=null;clearTimeout(_aTimer);const sw=$('#appswipe');
   _aNoClick=Date.now()+900;
@@ -3050,7 +3046,7 @@ function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
   document.addEventListener('pointermove',appMove,{passive:false});
   document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appCancel);
   document.addEventListener('touchmove',appTouchMove,{passive:false});document.addEventListener('touchend',appTouchEnd,{passive:false});document.addEventListener('touchcancel',appCancel);
-  window.addEventListener('blur',appCancel);document.addEventListener('visibilitychange',()=>{if(document.hidden)appCancel();});
+  window.addEventListener('blur',appCancel);window.addEventListener('pagehide',appCancel);document.addEventListener('visibilitychange',()=>{if(document.hidden)appCancel();});
   document.addEventListener('click',e=>{if(Date.now()<_aNoClick&&e.target.closest('.home-item')){e.preventDefault();e.stopImmediatePropagation();}},true);}
 initAppDrag();
 function homeEditStart(){const h=$('#homeDesktop');if(h)h.classList.add('home-editing');}

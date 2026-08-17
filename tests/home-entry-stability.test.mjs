@@ -98,15 +98,17 @@ test('home widgets, apps, and dock share live reorder data without browser text 
   assert.match(html, /\.home\.home-editing \.dock \.app/);
 });
 
-test('home paging is manually preserved after mobile drag takes ownership at pointer down', () => {
+test('home paging uses native touch scrolling and only a real long press takes ownership', () => {
   const scroll = functionSource('homePgScroll');
   assert.doesNotMatch(scroll, /setTimeout\(\(\)=>homeSnapPage/);
   assert.match(source, /onscrollend="homeSnapPage\(this\)" onpointerup="homeSnapPage\(this\)" onpointercancel="homeSnapPage\(this\)"/);
   const css = fs.readFileSync(path.join(root, 'glass-theme.css'), 'utf8');
-  assert.match(css, /#homeDesktop \.home-item\{touch-action:none\}/);
+  assert.match(css, /#homeDesktop \.home-item\{touch-action:manipulation\}/);
   assert.match(css, /body\.home-drag-active #homeDesktop \.home-item\{touch-action:none\}/);
-  assert.match(source, /p\.sw\.scrollLeft=p\.swLeft-dx/);
-  assert.match(source, /homeSnapPage\(p\.sw\)/);
+  assert.match(source, /function appPendingMove\(x,y\)/);
+  assert.doesNotMatch(source, /p\.sw\.scrollLeft=p\.swLeft-dx/);
+  assert.doesNotMatch(source, /function appPanMove\(/);
+  assert.match(scroll, /if\(next!==_homePage\)/);
 });
 
 test('the first glass page persists empty app slots instead of compacting every drop', () => {
