@@ -19,6 +19,7 @@ let licenseQuery = '';
 let licenseStatus = 'all';
 let licenseSearchTimer = 0;
 let loadingOrders = false;
+let orderSyncPaused = false;
 let loadingLicenses = false;
 let licenseReloadQueued = false;
 let actionBusy = false;
@@ -138,8 +139,8 @@ function showWorkspace(access) {
   $('workspace').classList.remove('hidden');
   document.querySelectorAll('[data-owner-only]').forEach((item) => item.classList.toggle('hidden', !canManageOrders));
   $('licenseTab').classList.toggle('hidden', !canManageLicenses);
-  if (canManageOrders) openOrdersView(scope);
-  else openLicenseView();
+  if (canManageLicenses) openLicenseView();
+  else openOrdersView(scope);
   schedulePoll();
 }
 
@@ -148,7 +149,7 @@ function schedulePoll() {
   if (!adminAccessRole) return;
   pollTimer = setTimeout(async () => {
     if (workspaceView === 'licenses') await loadLicenseUsers(false);
-    else await loadOrders(false);
+    else if (!orderSyncPaused) await loadOrders(false);
     if (adminAccessRole) schedulePoll();
   }, 15000);
 }
@@ -246,8 +247,8 @@ function renderLicensePager() {
   const totalPages = Math.max(1, Math.ceil(licenseTotal / licensePageSize));
   $('licenseCount').textContent = licenseTotal;
   $('licenseResultText').textContent = licenseTotal
-    ? `共 ${licenseTotal.toLocaleString()} 人 · 本页 ${licenseUsers.length} 人`
-    : '共 0 人';
+    ? `新授权项目 ${licenseTotal.toLocaleString()} 人 · 本页 ${licenseUsers.length} 人`
+    : '新授权项目 0 人';
   $('licensePageText').textContent = `第 ${licensePage.toLocaleString()} / ${totalPages.toLocaleString()} 页`;
   $('licensePrevBtn').disabled = licensePage <= 1 || loadingLicenses;
   $('licenseNextBtn').disabled = licensePage >= totalPages || loadingLicenses;
@@ -481,6 +482,7 @@ async function loadOrders(showLoading) {
   setStatus('正在同步…');
   try {
     const data = await api('admin_orders', {scope});
+    orderSyncPaused = false;
     orders = Array.isArray(data.orders) ? data.orders : [];
     consecutiveAuthFailures = 0;
     orders.forEach((order) => {
@@ -499,8 +501,9 @@ async function loadOrders(showLoading) {
     if (error.status === 401 || /admin-unauthorized/i.test(error.message)) {
       handleAuthFailure();
     } else {
-      setStatus('同步失败：' + error.message);
-      if (showLoading) $('orders').innerHTML = '<div class="empty">暂时无法读取订单，请检查网络后刷新</div>';
+      orderSyncPaused = true;
+      setStatus('旧订单项目暂不可用，已暂停自动重试');
+      if (showLoading) $('orders').innerHTML = '<div class="empty">旧订单项目正在恢复中。系统已暂停自动同步，不会再反复提示失败；需要时可点右上角刷新重试。</div>';
     }
   } finally {
     loadingOrders = false;
@@ -718,7 +721,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=635', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=636', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -754,7 +757,10 @@ $('installBtn').addEventListener('click', async () => {
 });
 $('loginBtn').addEventListener('click', login);
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
-$('refreshBtn').addEventListener('click', () => workspaceView === 'licenses' ? loadLicenseUsers(true) : loadOrders(true));
+$('refreshBtn').addEventListener('click', () => {
+  if (workspaceView === 'licenses') loadLicenseUsers(true);
+  else { orderSyncPaused = false; loadOrders(true); }
+});
 $('licenseRefreshBtn').addEventListener('click', () => loadLicenseUsers(true));
 $('licenseGenerateBtn').addEventListener('click', openGenerateInvites);
 $('licenseListInvitesBtn').addEventListener('click', openUnusedInvites);
@@ -801,6 +807,7 @@ $('closeViewer').addEventListener('click', () => $('viewer').classList.add('hidd
 document.querySelectorAll('.tab[data-scope]').forEach((button) => button.addEventListener('click', () => {
   collapsedOrders.clear();
   seenOrders.clear();
+  orderSyncPaused = false;
   openOrdersView(button.dataset.scope);
 }));
 
@@ -817,6 +824,6 @@ async function restoreSavedLogin() {
   showAuth('请重新进入');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=635', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=636', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();

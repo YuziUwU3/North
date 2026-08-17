@@ -23,11 +23,11 @@ assert.match(migration, /grant execute on function public\.redeem_invite_license
 assert.match(migration, /grant execute on function public\.phone_license_admin_page[\s\S]*to service_role/);
 
 assert.match(adminHtml, /完整邀请码或授权编号/);
-assert.match(adminHtml, /完整邀请码可查到所有使用者/);
+assert.match(adminHtml, /完整邀请码可查询已迁入的使用者/);
 assert.match(adminApp, /<b>使用邀请码<\/b>/);
 assert.match(adminApp, /user\.invite_code_hint \|\| '旧记录未保存'/);
-assert.match(adminHtml, /app\.js\?v=635/);
-assert.match(adminApp, /sw\.js\?v=635/g);
-assert.match(adminWorker, /north-admin-v635/);
+assert.match(adminHtml, /app\.js\?v=636/);
+assert.match(adminApp, /sw\.js\?v=636/g);
+assert.match(adminWorker, /north-admin-v636/);
 
 console.log('license admin invite search tests passed');

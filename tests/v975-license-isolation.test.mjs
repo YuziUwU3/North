@@ -76,6 +76,9 @@ test('license administration and invitation generation are hosted by phone-licen
   assert.match(adminApp, /Promise\.allSettled/);
   assert.match(adminApp, /can_orders: orderAccess/);
   assert.match(adminApp, /can_licenses: licenseAccess/);
+  assert.match(adminApp, /if \(canManageLicenses\) openLicenseView\(\)/);
+  assert.match(adminApp, /orderSyncPaused = true/);
+  assert.match(adminHtml, /不代表旧项目历史总人数/);
   assert.doesNotMatch(adminApp, /SERVICE_ROLE/);
 });
 
