@@ -5,7 +5,8 @@
   const MANAGED_KEY = 'north_license_managed_v1';
   const META_KEY = 'north_license_meta_v1';
   const LEGACY_DEVICE_KEY = 'north_license_legacy_device_v1';
-  let config = { baseUrl: '', apiKey: '', epoch: 0 };
+  let config = { baseUrl: '', apiKey: '', epoch: 0, endpoints: [] };
+  let lastEndpointId = '';
 
   function readJSON(key) {
     try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { return null; }
@@ -40,12 +41,13 @@
     return window.__SMALL_PHONE_PRIVATE__ === true;
   }
 
-  function saveSession(value, extra) {
+  function saveSession(value, extra, endpointId) {
     if (!value || !value.token || !value.licenseId) throw new Error('服务器没有返回完整授权');
     const saved = {
       token: String(value.token),
       licenseId: String(value.licenseId),
       sessionId: String(value.sessionId || ''),
+      endpointId: String(endpointId || value.endpointId || lastEndpointId || (session() && session().endpointId) || ''),
       savedAt: Date.now(),
     };
     if (!writeJSON(SESSION_KEY, saved)) throw new Error(isPrivateApp() ? 'App 无法保存授权，请检查手机存储空间' : '浏览器无法保存授权，请检查无痕模式');
@@ -153,7 +155,41 @@
     };
   }
 
-  async function api(action, body, timeoutMs) {
+  function licenseEndpoints(action) {
+    const configured = Array.isArray(config.endpoints) && config.endpoints.length
+      ? config.endpoints
+      : [{ id: 'primary', baseUrl: config.baseUrl, apiKey: config.apiKey }];
+    const seen = new Set();
+    const endpoints = configured.map((item, index) => ({
+      id: String(item && item.id || (index ? 'failover-' + index : 'primary')),
+      baseUrl: String(item && item.baseUrl || ''),
+      apiKey: String(item && item.apiKey || ''),
+    })).filter((item) => {
+      const key = item.baseUrl.replace(/\/+$/, '');
+      if (!key || !item.apiKey || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const current = session();
+    if (!current || !current.endpointId || ['activate', 'legacy_activate', 'restore_options'].includes(action)) return endpoints;
+    return endpoints.slice().sort((left, right) =>
+      Number(right.id === current.endpointId) - Number(left.id === current.endpointId));
+  }
+
+  function rememberSessionEndpoint(endpointId, body) {
+    const current = session();
+    if (!current || !endpointId || current.endpointId === endpointId) return;
+    if (body && body.sessionToken && String(body.sessionToken) !== current.token) return;
+    writeJSON(SESSION_KEY, Object.assign({}, current, { endpointId: String(endpointId) }));
+  }
+
+  function retryableLicenseError(error) {
+    const status = Number(error && error.status || 0);
+    return !!(error && error.network) || status === 0 || status === 408 || status === 425 || status === 429 || status >= 500
+      || ((status === 401 || status === 403) && !(error && error.code));
+  }
+
+  async function requestEndpoint(endpoint, action, body, timeoutMs) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs || 25000);
     let response;
@@ -161,18 +197,18 @@
     try {
       if (window.SmallPhoneNative && location.protocol === 'file:') {
         nativeResult = await window.SmallPhoneNative.request('license.request', {
-          baseUrl: config.baseUrl,
-          apiKey: config.apiKey,
+          baseUrl: endpoint.baseUrl,
+          apiKey: endpoint.apiKey,
           action: action,
           body: body || {},
           timeoutMs: timeoutMs || 25000,
         });
       } else {
-        response = await fetch(config.baseUrl.replace(/\/+$/, '') + '/functions/v1/phone-license', {
+        response = await fetch(endpoint.baseUrl.replace(/\/+$/, '') + '/functions/v1/phone-license', {
           method: 'POST',
           headers: {
-            apikey: config.apiKey,
-            Authorization: 'Bearer ' + config.apiKey,
+            apikey: endpoint.apiKey,
+            Authorization: 'Bearer ' + endpoint.apiKey,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(Object.assign({ action: action }, body || {})),
@@ -182,6 +218,7 @@
     } catch (error) {
       const out = new Error(error && error.name === 'AbortError' ? '授权服务器响应超时' : '连不上授权服务器，请检查网络');
       out.network = true;
+      out.endpointId = endpoint.id;
       throw out;
     } finally {
       clearTimeout(timer);
@@ -196,6 +233,7 @@
       const out = new Error((payload && payload.error) || ('授权服务器异常(' + status + ')'));
       out.status = status;
       out.server = true;
+      out.endpointId = endpoint.id;
       out.code = String(payload && payload.code || '');
       const permanentCodes = new Set([
         'license-session-invalid',
@@ -209,7 +247,39 @@
       out.permanent = !!(payload && payload.permanent) && permanentCodes.has(out.code);
       throw out;
     }
+    lastEndpointId = endpoint.id;
+    rememberSessionEndpoint(endpoint.id, body || {});
     return payload;
+  }
+
+  async function api(action, body, timeoutMs) {
+    const endpoints = licenseEndpoints(action);
+    if (!endpoints.length) throw new Error('授权服务尚未配置');
+    let firstTemporary = null;
+    let firstPermanent = null;
+    let lastError = null;
+    for (let index = 0; index < endpoints.length; index += 1) {
+      try {
+        return await requestEndpoint(endpoints[index], action, body, timeoutMs);
+      } catch (error) {
+        lastError = error;
+        const temporary = retryableLicenseError(error);
+        if (temporary && !firstTemporary) firstTemporary = error;
+        if (error && error.permanent && !firstPermanent) firstPermanent = error;
+        const mayBelongToAnotherBackend = !!(body && body.sessionToken) || ['restore_options', 'restore_verify'].includes(action);
+        const shouldTryNext = index + 1 < endpoints.length && (temporary || (mayBelongToAnotherBackend && error && error.permanent));
+        if (!shouldTryNext) {
+          if (index + 1 >= endpoints.length && firstTemporary && !temporary) throw firstTemporary;
+          throw error;
+        }
+      }
+    }
+    // If the preferred backend was unavailable and the standby has not caught
+    // up yet, keep the outage error. Never turn that situation into a false
+    // "invalid session/invite" result that could remove a valid local grant.
+    if (firstTemporary) throw firstTemporary;
+    if (firstPermanent) throw firstPermanent;
+    throw lastError || new Error('授权服务暂时不可用');
   }
 
   async function activate(inviteCode) {
@@ -357,6 +427,9 @@
 
   function init(nextConfig) {
     config = Object.assign({}, config, nextConfig || {});
+    if (!Array.isArray(config.endpoints) || !config.endpoints.length) {
+      config.endpoints = [{ id: 'primary', baseUrl: config.baseUrl, apiKey: config.apiKey }];
+    }
     return api;
   }
 
@@ -379,6 +452,6 @@
     revokeSession,
     syncAIIdentity,
     syncPhoneFriendIdentity,
-    _test: { b64urlToBuffer, bufferToB64url, creationOptions, requestOptions },
+    _test: { b64urlToBuffer, bufferToB64url, creationOptions, requestOptions, licenseEndpoints, retryableLicenseError },
   };
 })();

@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v973 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v973 · 角色全锁与关联稳定修复'/);
-  assert.match(app,/const url='sw\.js\?v=973&r=v973-role-lock-binding-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='973'/);
-  assert.match(html,/app\.js\?v=973/);
-  assert.match(sw,/const BUILD='973'/);
-  assert.match(sw,/north-shell-v973/);
-  assert.match(index,/小手机\.html\?v=973/);
-  assert.match(repair,/小手机\.html\?v=973/);
+test('v974 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v974 · 线下记忆与授权容灾修复'/);
+  assert.match(app,/const url='sw\.js\?v=974&r=v974-memory-license-failover-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='974'/);
+  assert.match(html,/app\.js\?v=974/);
+  assert.match(sw,/const BUILD='974'/);
+  assert.match(sw,/north-shell-v974/);
+  assert.match(index,/小手机\.html\?v=974/);
+  assert.match(repair,/小手机\.html\?v=974/);
 });
 
-test('the private iOS package advances to v973 and 1.0.95 delivery',()=>{
-  assert.match(privateBundle,/<string>973<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.95;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 95;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.95 \(95\)'/);
+test('the private iOS package advances to v974 and 1.0.96 delivery',()=>{
+  assert.match(privateBundle,/<string>974<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.96;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 96;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.96 \(96\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

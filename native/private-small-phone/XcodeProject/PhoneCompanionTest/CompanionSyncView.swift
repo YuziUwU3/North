@@ -1169,13 +1169,12 @@ final class CompanionSyncService: ObservableObject {
                 case .report(let snapshot):
                     report = snapshot
                 case .unavailable:
-                    report = nil
+                    report = latestDirectUsageSnapshot
                 case .timedOut:
-                    report = nil
-                    latestDirectUsageSnapshot = nil
+                    report = latestDirectUsageSnapshot
                     reportGenerationText = "读取超时"
                     reportStatusText =
-                        "读取超过 8 秒，已跳过使用量并继续上传其他真实数据"
+                        "读取超过 8 秒，已保留上次有效使用量并继续上传其他真实数据"
                 }
             } else {
                 report = nil
@@ -2418,24 +2417,101 @@ final class CompanionSyncService: ObservableObject {
             withJSONObject: body
         )
 
-        let (data, response) = try await URLSession.shared.data(
-            for: request
+        var lastError: Error?
+        for attempt in 0..<2 {
+            do {
+                let (data, response) = try await URLSession.shared.data(
+                    for: request
+                )
+                guard let http = response as? HTTPURLResponse else {
+                    throw CompanionSyncError.message("服务器没有返回 HTTP 状态")
+                }
+
+                guard 200..<300 ~= http.statusCode else {
+                    let error = CompanionSyncError.message(
+                        rpcErrorMessage(http: http, data: data)
+                    )
+                    if attempt == 0, isRetryableHTTPStatus(http.statusCode) {
+                        lastError = error
+                        try await Task.sleep(nanoseconds: 900_000_000)
+                        continue
+                    }
+                    throw error
+                }
+
+                do {
+                    return try JSONDecoder().decode(T.self, from: data)
+                } catch {
+                    throw CompanionSyncError.message(
+                        "服务器返回格式异常，本机已有数据未被覆盖"
+                    )
+                }
+            } catch {
+                if attempt == 0, isRetryableTransportError(error) {
+                    lastError = error
+                    try await Task.sleep(nanoseconds: 900_000_000)
+                    continue
+                }
+                throw error
+            }
+        }
+        throw lastError ?? CompanionSyncError.message(
+            "服务器暂时不可用，请稍后重试；本机已有数据未被覆盖"
         )
-        guard let http = response as? HTTPURLResponse else {
-            throw CompanionSyncError.message("服务器没有返回 HTTP 状态")
-        }
+    }
 
-        guard 200..<300 ~= http.statusCode else {
-            let object = try? JSONSerialization.jsonObject(
-                with: data
-            ) as? [String: Any]
-            let message = object?["message"] as? String
-                ?? String(data: data, encoding: .utf8)
-                ?? "HTTP \(http.statusCode)"
-            throw CompanionSyncError.message(message)
-        }
+    private func isRetryableHTTPStatus(_ status: Int) -> Bool {
+        [408, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524]
+            .contains(status)
+    }
 
-        return try JSONDecoder().decode(T.self, from: data)
+    private func isRetryableTransportError(_ error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        return [
+            .timedOut,
+            .cannotFindHost,
+            .cannotConnectToHost,
+            .networkConnectionLost,
+            .dnsLookupFailed,
+            .notConnectedToInternet
+        ].contains(urlError.code)
+    }
+
+    private func rpcErrorMessage(
+        http: HTTPURLResponse,
+        data: Data
+    ) -> String {
+        let status = http.statusCode
+        let contentType = http.value(
+            forHTTPHeaderField: "Content-Type"
+        )?.lowercased() ?? ""
+        let raw = String(data: data, encoding: .utf8) ?? ""
+        let leading = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let isHTML = contentType.contains("text/html")
+            || leading.hasPrefix("<!doctype html")
+            || leading.hasPrefix("<html")
+            || leading.hasPrefix("<head")
+
+        if status == 522 {
+            return "服务器连接超时（522），请稍后重试；本机已有数据未被覆盖"
+        }
+        if isHTML {
+            return "服务器暂时不可用（HTTP \(status)），请稍后重试；本机已有数据未被覆盖"
+        }
+        if let object = try? JSONSerialization.jsonObject(
+            with: data
+        ) as? [String: Any],
+           let message = object["message"] as? String {
+            let clean = message
+                .replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty {
+                return String(clean.prefix(240))
+            }
+        }
+        return "服务器请求失败（HTTP \(status)），请稍后重试"
     }
 
     private func deviceID() -> String {

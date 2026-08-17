@@ -738,7 +738,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
 
         guard var components = URLComponents(string: baseURL),
               components.scheme == "https",
-              components.host == "lkhlyfpssmrjkkzhuzag.supabase.co",
+              Set([
+                "lkhlyfpssmrjkkzhuzag.supabase.co",
+                "lovbzibismsjqvjujilz.supabase.co"
+              ]).contains(components.host ?? ""),
               !apiKey.isEmpty,
               !action.isEmpty else {
             reply(requestID: requestID, error: "invalid_license_request")
