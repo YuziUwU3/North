@@ -214,10 +214,12 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 return
             }
             let volume = Float(arguments["volume"] as? Double ?? 1)
+            let mime = arguments["mime"] as? String ?? "audio/mpeg"
             let mixMode = arguments["mixMode"] as? String ?? "call"
             let mixWithMedia = mixMode == "cinema" || mixMode == "screenShare"
             CallPictureInPictureController.shared.playAudio(
                 data: data,
+                mime: mime,
                 volume: volume,
                 mixWithMedia: mixWithMedia,
                 preserveCurrentSession: mixWithMedia

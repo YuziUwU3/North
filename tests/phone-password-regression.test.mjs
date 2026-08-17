@@ -49,13 +49,14 @@ assert.equal(unlock.r1,false,'changing the password must invalidate the previous
 assert.equal(context.apply({id:'r1'},'零六一九'),true);
 assert.equal(spy.pwd,'0619','spoken Chinese digits must be stored as the same four digits the user enters');
 
-const role={id:'r1',spy:{pwd:'1111'}},state={couple:{cid:'r1',grant:{},gagAuth:[]}},unlock2={r1:true};
+const role={id:'r1',spy:{pwd:'1111',diaryPwd:'1225'}},state={couple:{cid:'r1',grant:{},gagAuth:[]}},unlock2={r1:true},diaryUnlock={r1:true};
 let saveCount=0,renderCount=0;
 const integration=vm.createContext({
   S:state,
   Math,
   getSpy:c=>c.spy,
   _spyUnlock:unlock2,
+  _spyDiaryUnlock:diaryUnlock,
   _collarTagFired:false,
   routePhoneInspectionTags:text=>text,
   companionApplyReadTags:text=>({content:text,changed:false}),
@@ -67,6 +68,8 @@ vm.runInContext([
   functionSource('rolePhonePasswordDigits'),
   functionSource('rolePhonePasswordIntent'),
   functionSource('rolePhonePasswordApply'),
+  functionSource('roleDiaryPasswordIntent'),
+  functionSource('roleDiaryPasswordApply'),
   functionSource('applyControlTags'),
   functionSource('spyPwd'),
   ';globalThis.control=applyControlTags;globalThis.currentPwd=spyPwd;',
@@ -80,6 +83,10 @@ assert.equal(saveCount,1,'the full reply pipeline must persist the changed passw
 assert.equal(renderCount,1,'the active chat should refresh after the password changes');
 integration.control('[改密码|２４八〇]',role,'r1',null);
 assert.equal(role.spy.pwd,'2480','the control tag and spoken-number normalization must share one write path');
+integration.control('[改日记密码|０６一九]',role,'r1',null);
+assert.equal(role.spy.diaryPwd,'0619','the diary password control tag must update the independent diary PIN');
+assert.equal(role.spy.pwd,'2480','changing the diary password must not change the phone unlock password');
+assert.equal(diaryUnlock.r1,false,'changing the diary password must lock the diary app again');
 
 const control=functionSource('applyControlTags');
 assert.match(control,/rolePhonePasswordIntent\(content\)/);

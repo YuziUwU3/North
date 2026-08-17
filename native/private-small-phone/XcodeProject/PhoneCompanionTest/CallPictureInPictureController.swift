@@ -17,6 +17,10 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     private var subtitleMinimumHeight: NSLayoutConstraint?
     private var subtitleAnimator: UIViewPropertyAnimator?
     private var audioPlayer: AVAudioPlayer?
+    private var enhancedAudioEngine: AVAudioEngine?
+    private var enhancedPlayerNode: AVAudioPlayerNode?
+    private var enhancedAudioFile: AVAudioFile?
+    private var enhancedAudioURL: URL?
     private var audioCompletion: ((Bool) -> Void)?
 
     func attach(to webView: WKWebView?) {
@@ -132,6 +136,7 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
 
     func playAudio(
         data: Data,
+        mime: String = "audio/mpeg",
         volume: Float,
         mixWithMedia: Bool = false,
         preserveCurrentSession: Bool = false,
@@ -143,6 +148,13 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
         // playback even when mixWithOthers is present.
         if !preserveCurrentSession {
             activateCallAudio(mixWithMedia: mixWithMedia)
+        }
+        // AVAudioPlayer clamps volume to 1.0, so the former 100–300% setting
+        // was identical while a loud video was playing. Shared-media speech
+        // gets a compressor/gain stage without touching the active media
+        // session; ordinary calls keep the proven AVAudioPlayer path below.
+        if mixWithMedia, playEnhancedAudio(data: data, mime: mime, volume: volume, completion: completion) {
+            return
         }
         do {
             let player = try AVAudioPlayer(data: data)
@@ -163,6 +175,15 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
     func stopAudio(result: Bool = false) {
         audioPlayer?.stop()
         audioPlayer = nil
+        enhancedPlayerNode?.stop()
+        enhancedAudioEngine?.stop()
+        enhancedPlayerNode = nil
+        enhancedAudioEngine = nil
+        enhancedAudioFile = nil
+        if let url = enhancedAudioURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+        enhancedAudioURL = nil
         let completion = audioCompletion
         audioCompletion = nil
         completion?(result)
@@ -175,6 +196,83 @@ final class CallPictureInPictureController: NSObject, AVPictureInPictureControll
             let completion = self.audioCompletion
             self.audioCompletion = nil
             completion?(flag)
+        }
+    }
+
+    private func playEnhancedAudio(
+        data: Data,
+        mime: String,
+        volume: Float,
+        completion: @escaping (Bool) -> Void
+    ) -> Bool {
+        let lowerMime = mime.lowercased()
+        let fileExtension: String
+        if lowerMime.contains("wav") {
+            fileExtension = "wav"
+        } else if lowerMime.contains("mp4") || lowerMime.contains("m4a") || lowerMime.contains("aac") {
+            fileExtension = "m4a"
+        } else {
+            fileExtension = "mp3"
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("small-phone-role-\(UUID().uuidString)")
+            .appendingPathExtension(fileExtension)
+        do {
+            try data.write(to: url, options: .atomic)
+            let file = try AVAudioFile(forReading: url)
+            let engine = AVAudioEngine()
+            let player = AVAudioPlayerNode()
+            let dynamics = AVAudioUnitDynamicsProcessor()
+
+            dynamics.threshold = -18
+            dynamics.headRoom = 5
+            dynamics.expansionRatio = 1
+            dynamics.attackTime = 0.001
+            dynamics.releaseTime = 0.08
+            let requested = max(1, min(3, volume))
+            let extraGain = Float(20 * log10(Double(requested)))
+            dynamics.masterGain = min(12, 5 + extraGain)
+            player.volume = max(0, min(1, volume))
+
+            engine.attach(player)
+            engine.attach(dynamics)
+            engine.connect(player, to: dynamics, format: file.processingFormat)
+            engine.connect(dynamics, to: engine.mainMixerNode, format: file.processingFormat)
+            engine.prepare()
+            try engine.start()
+
+            enhancedAudioURL = url
+            enhancedAudioFile = file
+            enhancedAudioEngine = engine
+            enhancedPlayerNode = player
+            audioCompletion = completion
+            player.scheduleFile(file, at: nil, completionCallbackType: .dataPlayedBack) { [weak self, weak player] _ in
+                Task { @MainActor in
+                    guard let self, let player, self.enhancedPlayerNode === player else { return }
+                    self.stopAudio(result: true)
+                }
+            }
+            player.play()
+            if player.isPlaying {
+                return true
+            }
+            player.stop()
+            engine.stop()
+            enhancedPlayerNode = nil
+            enhancedAudioEngine = nil
+            enhancedAudioFile = nil
+            enhancedAudioURL = nil
+            audioCompletion = nil
+            try? FileManager.default.removeItem(at: url)
+            return false
+        } catch {
+            try? FileManager.default.removeItem(at: url)
+            enhancedAudioURL = nil
+            enhancedAudioFile = nil
+            enhancedAudioEngine = nil
+            enhancedPlayerNode = nil
+            audioCompletion = nil
+            return false
         }
     }
 
