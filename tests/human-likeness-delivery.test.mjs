@@ -62,7 +62,7 @@ assert.ok(spy.indexOf('await doSpyView') < spy.indexOf('_spyFired[c.id]=tag'), '
 const autoPost = functionSource('scanAutoPost');
 assert.doesNotMatch(autoPost, /pc\.m\+\+;pc\.last=.*doAutoMoment/, 'auto moments must not be counted before generation');
 assert.match(autoPost, /\.then\(ok=>\{if\(!ok\)return;/, 'automatic posts are counted only after successful publishing');
-assert.match(functionSource('doAutoMoment'), /return true/, 'automatic moments report successful publishing');
+assert.match(functionSource('doAutoMoment'), /return publishRoleMoment/, 'automatic moments report only duplicate-safe successful publishing');
 assert.match(functionSource('doAutoTweet'), /return publishRoleTweet/, 'automatic tweets report successful publishing');
 
 const mail = functionSource('scanMail');

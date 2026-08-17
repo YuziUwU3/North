@@ -13,14 +13,14 @@ const plist=fs.readFileSync(path.join(root,'native/private-small-phone/Resources
 const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'),'utf8');
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
-test('v970 and private 1.0.92 stay aligned',()=>{
-  assert.match(app,/APP_VER='v970 · 功能事件主动回复修复'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='970'/);
-  assert.match(sw,/BUILD='970'/);
-  assert.match(plist,/<string>970<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 92;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.92;/g)||[]).length,12);
-  assert.match(native,/1\.0\.92 \(92\)/);
+test('v971 and private 1.0.93 stay aligned',()=>{
+  assert.match(app,/APP_VER='v971 · 连续回复朋友圈与远控承接修复'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='971'/);
+  assert.match(sw,/BUILD='971'/);
+  assert.match(plist,/<string>971<\/string>/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 93;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.93;/g)||[]).length,12);
+  assert.match(native,/1\.0\.93 \(93\)/);
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{
