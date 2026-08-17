@@ -91,6 +91,18 @@ function adminIdentity(req: Request, body: any): AdminIdentity {
   if (ownerToken && secureEqual(supplied, ownerToken)) {
     return { role: "owner", operatorId: "owner" };
   }
+  const unifiedTokens = String(Deno.env.get("UNIFIED_ADMIN_TOKENS") || "")
+    .split(/[\n,;]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+  const unifiedIndex = unifiedTokens.findIndex((token) => secureEqual(supplied, token));
+  if (unifiedIndex >= 0) {
+    const labelled = supplied.match(/^ADMIN-(\d{2})-/i);
+    return {
+      role: "owner",
+      operatorId: labelled ? `unified-${labelled[1]}` : `unified-${unifiedIndex + 1}`,
+    };
+  }
   const licenseTokens = String(Deno.env.get("LICENSE_ADMIN_TOKENS") || "")
     .split(/[\n,;]+/)
     .map((token) => token.trim())

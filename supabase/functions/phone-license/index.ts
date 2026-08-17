@@ -173,6 +173,22 @@ async function adminInviteGenerate(req: Request, body: JsonMap): Promise<JsonMap
   return { ok: true, codes, count: codes.length };
 }
 
+async function adminInviteList(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireLicenseAdmin(req, body);
+  const limit = Math.min(500, Math.max(1, Math.trunc(Number(body.limit || 200))));
+  const { data, error, count } = await supabase
+    .from('invites')
+    .select('code,note,created_at', { count: 'exact' })
+    .eq('active', true)
+    .eq('reusable', false)
+    .is('used_at', null)
+    .order('created_at', { ascending: false })
+    .order('code', { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return { ok: true, invites: Array.isArray(data) ? data : [], total: Math.max(0, Number(count || 0)), limit };
+}
+
 function reply(req: Request, body: JsonMap, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders(req) });
 }
@@ -936,6 +952,7 @@ Deno.serve(async (req) => {
       result = { ok: true, role: identity.role };
     }
     else if (action === 'admin_invite_generate') result = await adminInviteGenerate(req, body);
+    else if (action === 'admin_invite_list') result = await adminInviteList(req, body);
     else if (action === 'admin_license_users') result = await adminLicenseUsers(req, body);
     else if (action === 'admin_license_block') result = await adminLicenseBlock(req, body);
     else if (action === 'admin_license_unblock') result = await adminLicenseUnblock(req, body);

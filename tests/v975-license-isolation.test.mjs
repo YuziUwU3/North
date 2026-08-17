@@ -10,6 +10,7 @@ const app = read('app.js');
 const adminApp = read('admin/app.js');
 const adminHtml = read('admin/index.html');
 const backend = read('supabase/functions/phone-license/index.ts');
+const orderBackend = read('supabase/functions/phone-ai/index.ts');
 const removal = read('supabase/migrations/202608180001_remove_idle_external_cloud.sql');
 
 class MemoryStorage {
@@ -61,13 +62,20 @@ test('license administration and invitation generation are hosted by phone-licen
   assert.match(adminApp, /LICENSE_API_URL = 'https:\/\/lovbzibismsjqvjujilz\.supabase\.co\/functions\/v1\/phone-license'/);
   assert.match(adminApp, /isLicenseAction/);
   assert.match(adminHtml, /id="licenseGenerateBtn"/);
+  assert.match(adminHtml, /id="licenseListInvitesBtn"/);
   assert.match(backend, /action === 'admin_invite_generate'/);
+  assert.match(backend, /action === 'admin_invite_list'/);
+  assert.match(backend, /\.eq\('active', true\)[\s\S]*\.is\('used_at', null\)/);
   assert.match(backend, /action === 'admin_license_users'/);
   assert.match(backend, /action === 'admin_license_block'/);
   assert.match(backend, /action === 'admin_license_unblock'/);
   assert.match(backend, /action === 'admin_license_restore_all'/);
   assert.match(backend, /`YB2-\$\{suffix\}`/);
   assert.match(backend, /LICENSE_ADMIN_TOKENS/);
+  assert.match(orderBackend, /UNIFIED_ADMIN_TOKENS/);
+  assert.match(adminApp, /Promise\.allSettled/);
+  assert.match(adminApp, /can_orders: orderAccess/);
+  assert.match(adminApp, /can_licenses: licenseAccess/);
   assert.doesNotMatch(adminApp, /SERVICE_ROLE/);
 });
 

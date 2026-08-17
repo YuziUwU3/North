@@ -6,6 +6,8 @@ const TOKEN_KEY = 'north_admin_access';
 
 let token = localStorage.getItem(TOKEN_KEY) || '';
 let adminAccessRole = '';
+let canManageOrders = false;
+let canManageLicenses = false;
 let scope = 'pending';
 let workspaceView = 'orders';
 let orders = [];
@@ -49,7 +51,7 @@ const operatorLabel = (value) => {
   return numbered ? `管理员${Number(numbered[1])}` : '旧记录';
 };
 
-const isLicenseAction = (action) => action === 'admin_auth' || action === 'admin_invite_generate' || action.startsWith('admin_license_');
+const isLicenseAction = (action) => action === 'admin_auth' || action.startsWith('admin_invite_') || action.startsWith('admin_license_');
 
 async function requestApi(action, payload, apiUrl, publicKey) {
   const attempts = action === 'admin_license_users' ? 2 : 1;
@@ -87,15 +89,21 @@ async function requestApi(action, payload, apiUrl, publicKey) {
 
 async function api(action, payload = {}) {
   if (action === 'admin_auth') {
-    try {
-      return await requestApi(action, payload, LICENSE_API_URL, LICENSE_PUBLIC_KEY);
-    } catch (licenseError) {
-      try {
-        return await requestApi(action, payload, ORDER_API_URL, ORDER_PUBLIC_KEY);
-      } catch (_) {
-        throw licenseError;
-      }
+    const [licenseResult, orderResult] = await Promise.allSettled([
+      requestApi(action, payload, LICENSE_API_URL, LICENSE_PUBLIC_KEY),
+      requestApi(action, payload, ORDER_API_URL, ORDER_PUBLIC_KEY),
+    ]);
+    const licenseAccess = licenseResult.status === 'fulfilled';
+    const orderAccess = orderResult.status === 'fulfilled' && orderResult.value.role === 'owner';
+    if (!licenseAccess && !orderAccess) {
+      throw licenseResult.status === 'rejected' ? licenseResult.reason : orderResult.reason;
     }
+    return {
+      ok: true,
+      role: licenseAccess && orderAccess ? 'unified' : orderAccess ? 'owner' : 'license',
+      can_orders: orderAccess,
+      can_licenses: licenseAccess,
+    };
   }
   return isLicenseAction(action)
     ? requestApi(action, payload, LICENSE_API_URL, LICENSE_PUBLIC_KEY)
@@ -109,6 +117,8 @@ function setStatus(text) {
 function showAuth(message = '') {
   clearTimeout(pollTimer);
   adminAccessRole = '';
+  canManageOrders = false;
+  canManageLicenses = false;
   $('workspace').classList.add('hidden');
   $('auth').classList.remove('hidden');
   $('adminToken').value = token;
@@ -118,16 +128,18 @@ function showAuth(message = '') {
   }
 }
 
-function showWorkspace(role) {
+function showWorkspace(access) {
   consecutiveAuthFailures = 0;
-  adminAccessRole = role === 'license' ? 'license' : 'owner';
+  const role = typeof access === 'string' ? access : String(access?.role || '');
+  canManageOrders = typeof access === 'object' ? access.can_orders === true : role === 'owner';
+  canManageLicenses = typeof access === 'object' ? access.can_licenses === true : role === 'license';
+  adminAccessRole = canManageOrders && canManageLicenses ? 'unified' : canManageOrders ? 'owner' : 'license';
   $('auth').classList.add('hidden');
   $('workspace').classList.remove('hidden');
-  const licenseOnly = adminAccessRole === 'license';
-  document.querySelectorAll('[data-owner-only]').forEach((item) => item.classList.toggle('hidden', licenseOnly));
-  $('licenseTab').classList.toggle('hidden', !licenseOnly);
-  if (licenseOnly) openLicenseView();
-  else openOrdersView(scope);
+  document.querySelectorAll('[data-owner-only]').forEach((item) => item.classList.toggle('hidden', !canManageOrders));
+  $('licenseTab').classList.toggle('hidden', !canManageLicenses);
+  if (canManageOrders) openOrdersView(scope);
+  else openLicenseView();
   schedulePoll();
 }
 
@@ -298,6 +310,7 @@ async function loadLicenseUsers(showLoading) {
 }
 
 function openLicenseView() {
+  if (!canManageLicenses) return;
   workspaceView = 'licenses';
   $('orders').classList.add('hidden');
   $('licensePanel').classList.remove('hidden');
@@ -308,7 +321,7 @@ function openLicenseView() {
 }
 
 function openOrdersView(nextScope) {
-  if (adminAccessRole === 'license') return;
+  if (!canManageOrders) return;
   workspaceView = 'orders';
   scope = nextScope || scope;
   $('orders').classList.remove('hidden');
@@ -406,6 +419,38 @@ window.copyGeneratedInvites = async () => {
   alert('已复制全部邀请码');
 };
 
+window.openUnusedInvites = async () => {
+  if (actionBusy || !canManageLicenses) return;
+  actionBusy = true;
+  openSheet('<h2>尚未使用的邀请码</h2><div class="empty"><div class="spinner"></div>正在读取</div>');
+  try {
+    const data = await api('admin_invite_list', {limit: 500});
+    const invites = Array.isArray(data.invites) ? data.invites : [];
+    const rows = invites.map((item) => {
+      const note = String(item?.note || '').trim();
+      return note ? `${String(item.code || '')}\t${note}` : String(item.code || '');
+    }).filter(Boolean);
+    const clipped = Number(data.total || 0) > invites.length;
+    openSheet(`<h2>尚未使用的邀请码 · ${Number(data.total || 0).toLocaleString()}</h2>
+      <p>这里读取的是新授权项目；包含 YB2-，以及已经安全复制进来的旧 YB-。${clipped ? '当前只显示最近 500 个。' : ''}</p>
+      <textarea id="unusedInviteCodes" readonly style="width:100%;min-height:260px;resize:vertical">${esc(rows.join('\n'))}</textarea>
+      <div class="sheet-actions"><button class="btn" onclick="closeSheet()">完成</button><button class="btn approve" onclick="copyUnusedInvites()">复制全部</button></div>`);
+  } catch (error) {
+    openSheet(`<h2>读取失败</h2><p>${esc(error.message)}</p><div class="sheet-actions"><button class="btn" onclick="closeSheet()">关闭</button></div>`);
+  } finally {
+    actionBusy = false;
+  }
+};
+
+window.copyUnusedInvites = async () => {
+  const field = $('unusedInviteCodes');
+  const value = String(field?.value || '');
+  if (!value) return;
+  try { await navigator.clipboard.writeText(value); }
+  catch (_) { field.select(); document.execCommand('copy'); }
+  alert('已复制全部未使用邀请码');
+};
+
 window.openUnblockLicense = (id, phoneId) => {
   openSheet(`<h2>放进来 · ${esc(phoneId)}</h2>
     <p>系统会重新启用这条授权，但不会生成任何迁移码或恢复码。本人仍须通过已经绑定的人脸或指纹恢复设备。</p>
@@ -429,7 +474,7 @@ window.confirmUnblockLicense = async (id) => {
 };
 
 async function loadOrders(showLoading) {
-  if (adminAccessRole === 'license') return;
+  if (!canManageOrders) return;
   if (loadingOrders) return;
   loadingOrders = true;
   if (showLoading) $('orders').innerHTML = '<div class="empty"><div class="spinner"></div>正在读取订单</div>';
@@ -648,7 +693,7 @@ async function login() {
   try {
     const result = await api('admin_auth');
     localStorage.setItem(TOKEN_KEY, token);
-    showWorkspace(result.role);
+    showWorkspace(result);
   } catch (_) {
     token = '';
     localStorage.removeItem(TOKEN_KEY);
@@ -665,7 +710,7 @@ function urlBase64ToBytes(value) {
 }
 
 async function enableNotifications() {
-  if (adminAccessRole !== 'owner') return;
+  if (!canManageOrders) return;
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     alert('当前浏览器不支持后台通知。iPhone 请先用 Safari 添加到主屏幕后再打开。');
     return;
@@ -673,7 +718,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=634', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=635', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -712,6 +757,7 @@ $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Ente
 $('refreshBtn').addEventListener('click', () => workspaceView === 'licenses' ? loadLicenseUsers(true) : loadOrders(true));
 $('licenseRefreshBtn').addEventListener('click', () => loadLicenseUsers(true));
 $('licenseGenerateBtn').addEventListener('click', openGenerateInvites);
+$('licenseListInvitesBtn').addEventListener('click', openUnusedInvites);
 $('licenseRestoreAllBtn').addEventListener('click', openRestoreAllLicenses);
 $('licenseSearch').addEventListener('input', () => {
   clearTimeout(licenseSearchTimer);
@@ -762,7 +808,7 @@ async function restoreSavedLogin() {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const result = await api('admin_auth');
-      showWorkspace(result.role);
+      showWorkspace(result);
       return;
     } catch (_) {
       if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 900));
@@ -771,6 +817,6 @@ async function restoreSavedLogin() {
   showAuth('请重新进入');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=634', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=635', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();
