@@ -11,8 +11,8 @@ const hash=path=>crypto.createHash('sha256').update(fs.readFileSync(`${root}/${p
 test('modern wedding preview v9 is loaded by web and private shells',()=>{
   for(const htmlPath of ['小手机.html',`${privateBundle}/小手机.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-14/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-14/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-15/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-15/);
   }
 });
 
@@ -21,8 +21,8 @@ test('private bundle stages the current wedding code, shell entries, art and BGM
   assert.equal(hash(`${privateBundle}/小手机.html`),hash(`${privateBundle}/index.html`));
   for(const htmlPath of [`${privateBundle}/小手机.html`,`${privateBundle}/index.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-14/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-14/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-15/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-15/);
   }
   assert.match(read(`${privateBundle}/app.js`),/预约婚礼/);
   assert.match(read(`${privateBundle}/app.js`),/weddingCalendarTick/);
@@ -198,6 +198,18 @@ test('invitation shows background preparation progress, then sends role line and
   assert.match(css,/\.wedding-mini-countdown/);
   assert.doesNotMatch(css,/invitation-card-v1/);
   assert.match(app,/m\.phase==='style'/);
+});
+
+test('wedding reference generation keeps first-scene identity without repeating a slow unsupported route',()=>{
+  const js=read('wedding-game.js');
+  assert.match(js,/WEDDING_REFERENCE_TIMEOUT_MS=60000/);
+  assert.match(js,/WEDDING_REFERENCE_COOLDOWN_MS=15\*60\*1000/);
+  assert.match(js,/function weddingReferenceNoteKey\(ref,formalwear,style\)/);
+  assert.match(js,/Object\.prototype\.hasOwnProperty\.call\(W\.referenceNotes,cacheKey\)/);
+  assert.match(js,/blockedUntil:Date\.now\(\)\+WEDDING_REFERENCE_COOLDOWN_MS/);
+  assert.match(js,/const fallbackPrompt=prompt\+'\\n\\n参考图线路当前不可用/);
+  assert.match(js,/await imageGenerateExternal\(base,key,model,fallbackPrompt,'1024x1536','high'\)/);
+  assert.doesNotMatch(js,/当前生图接口不支持参考第一幕保持人物一致/);
 });
 
 test('private simulation runs the full ceremony but exits before every persistent wedding effect',()=>{

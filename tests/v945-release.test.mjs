@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v990 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v992 · 婚礼邀请删除恢复'/);
-  assert.match(app,/const url='sw\.js\?v=992&r=v992-wedding-deleted-invite-recovery-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='992'/);
-  assert.match(html,/app\.js\?v=992/);
-  assert.match(sw,/const BUILD='992'/);
-  assert.match(sw,/north-shell-v992/);
-  assert.match(index,/小手机\.html\?v=992/);
-  assert.match(repair,/小手机\.html\?v=992/);
+  assert.match(app,/APP_VER='v993 · 婚礼生图稳定修复'/);
+  assert.match(app,/const url='sw\.js\?v=993&r=v993-wedding-generation-stability-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='993'/);
+  assert.match(html,/app\.js\?v=993/);
+  assert.match(sw,/const BUILD='993'/);
+  assert.match(sw,/north-shell-v993/);
+  assert.match(index,/小手机\.html\?v=993/);
+  assert.match(repair,/小手机\.html\?v=993/);
 });
 
-test('the private iOS package embeds web v990 and keeps 1.0.113 delivery',()=>{
+test('the private iOS package embeds web v990 and keeps 1.0.114 delivery',()=>{
   assert.match(privateBundle,/<string>990<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.113;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 113;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.113 \(113\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.114;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 114;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.114 \(114\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
