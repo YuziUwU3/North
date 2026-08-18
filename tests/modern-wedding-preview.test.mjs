@@ -11,8 +11,8 @@ const hash=path=>crypto.createHash('sha256').update(fs.readFileSync(`${root}/${p
 test('modern wedding preview v9 is loaded by web and private shells',()=>{
   for(const htmlPath of ['小手机.html',`${privateBundle}/小手机.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-13/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-13/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-14/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-14/);
   }
 });
 
@@ -21,8 +21,8 @@ test('private bundle stages the current wedding code, shell entries, art and BGM
   assert.equal(hash(`${privateBundle}/小手机.html`),hash(`${privateBundle}/index.html`));
   for(const htmlPath of [`${privateBundle}/小手机.html`,`${privateBundle}/index.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-13/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-13/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-14/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-14/);
   }
   assert.match(read(`${privateBundle}/app.js`),/预约婚礼/);
   assert.match(read(`${privateBundle}/app.js`),/weddingCalendarTick/);
@@ -172,7 +172,8 @@ test('invitation shows background preparation progress, then sends role line and
   assert.match(js,/像你平时私下对她说话/);
   assert.match(js,/不是订婚宴/);
   assert.match(js,/script\.arrival_line=await weddingGenerateArrivalLine/);
-  assert.match(js,/prepared=weddingState\(\)\.prepared\[m\.id\],text=weddingArrivalLine/);
+  assert.match(js,/ref=weddingResolvePreparedInvite\(c,m\)/);
+  assert.match(js,/text=weddingArrivalLine\(c,style,ref\.prepared\.script\)/);
   assert.doesNotMatch(js,/const text=await weddingArrivalLine/);
   assert.match(js,/婚礼已准备就绪，新郎正在向你走来/);
   assert.match(js,/styleName\+'婚礼已准备就绪/);

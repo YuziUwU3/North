@@ -108,11 +108,20 @@ test('couple-space album reads current scene keys so a chapter replacement updat
 
 test('expired wedding countdown self-recovers after app resume and browser gets the same offline controls', () => {
   assert.doesNotMatch(wedding, /function weddingOfflineEntryHTML\(\)\{if\(!weddingPrivateApp\(\)\)return''/);
-  assert.match(wedding, /function weddingRecoverReadyInvite\(cid,mid\)/);
+  assert.match(wedding, /function weddingRecoverReadyInvite\(cid,token,style\)/);
   assert.match(wedding, /立即进入婚礼/);
   assert.match(wedding, /document\.addEventListener\('visibilitychange'/);
   assert.match(wedding, /window\.addEventListener\('pageshow'/);
   assert.match(wedding, /window\.addEventListener\('focus'/);
+});
+
+test('a deleted ready card recovers from the latest prepared wedding instead of looping on a stale countdown', () => {
+  assert.match(wedding, /function weddingLatestPreparedEntry\(c,style\)/);
+  assert.match(wedding, /function weddingResolvePreparedInvite\(c,m\)/);
+  assert.match(wedding, /if\(!ref&&token&&weddingState\(\)\.prepared\[token\]\)/);
+  assert.match(wedding, /原邀请卡即使已经删除，也可以从这里继续进入/);
+  assert.match(wedding, /weddingRecoverReadyInvite\(\\''\+c\.id\+'\\',\\''\+token\+'\\',\\''\+style\+'\\'\)/);
+  assert.match(wedding, /m\.preparedId=ref\.id/);
 });
 
 test('private bridge saves original wedding art to Photos with add-only permission', () => {
