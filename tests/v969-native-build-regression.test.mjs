@@ -12,11 +12,11 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('v978 uses one web and private iOS build identity', () => {
-  assert.match(app, /APP_VER='v978 · 全锁实执行与通话记录修复'/);
-  assert.match(app, /sw\.js\?v=978&r=v978-all-control-call-log-1/);
-  assert.match(shell, /north-shell-v978/);
-  assert.match(bundleInfo, /<string>978<\/string>/);
+test('v979 uses one web and private iOS build identity', () => {
+  assert.match(app, /APP_VER='v979 · 邀请码成功进入修复'/);
+  assert.match(app, /sw\.js\?v=979&r=v979-license-entry-1/);
+  assert.match(shell, /north-shell-v979/);
+  assert.match(bundleInfo, /<string>979<\/string>/);
   assert.match(localWebView, /1\.0\.100 \(100\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 100;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.100;/g) || []).length, 12);

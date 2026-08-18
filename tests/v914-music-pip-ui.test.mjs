@@ -7,8 +7,8 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v978 web source keeps private 1.0.100 compatibility',()=>{
-  assert.match(app,/APP_VER='v978 · 全锁实执行与通话记录修复'/);
+test('v979 web source keeps private 1.0.100 compatibility',()=>{
+  assert.match(app,/APP_VER='v979 · 邀请码成功进入修复'/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 100;/);
   assert.match(project,/MARKETING_VERSION = 1\.0\.100;/);
 });

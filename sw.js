@@ -1,6 +1,6 @@
-const BUILD='978';
-const HOTFIX='v978-all-control-call-log-1';
-const SHELL_CACHE='north-shell-v978';
+const BUILD='979';
+const HOTFIX='v979-license-entry-1';
+const SHELL_CACHE='north-shell-v979';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

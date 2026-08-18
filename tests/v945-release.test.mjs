@@ -12,19 +12,19 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v978 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v978 · 全锁实执行与通话记录修复'/);
-  assert.match(app,/const url='sw\.js\?v=978&r=v978-all-control-call-log-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='978'/);
-  assert.match(html,/app\.js\?v=978/);
-  assert.match(sw,/const BUILD='978'/);
-  assert.match(sw,/north-shell-v978/);
-  assert.match(index,/小手机\.html\?v=978/);
-  assert.match(repair,/小手机\.html\?v=978/);
+test('v979 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v979 · 邀请码成功进入修复'/);
+  assert.match(app,/const url='sw\.js\?v=979&r=v979-license-entry-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='979'/);
+  assert.match(html,/app\.js\?v=979/);
+  assert.match(sw,/const BUILD='979'/);
+  assert.match(sw,/north-shell-v979/);
+  assert.match(index,/小手机\.html\?v=979/);
+  assert.match(repair,/小手机\.html\?v=979/);
 });
 
-test('the private iOS package advances to v978 and 1.0.100 delivery',()=>{
-  assert.match(privateBundle,/<string>978<\/string>/);
+test('the private iOS package embeds web v979 and keeps 1.0.100 delivery',()=>{
+  assert.match(privateBundle,/<string>979<\/string>/);
   assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.100;/g)||[]).length,12);
   assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 100;/g)||[]).length,12);
   assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.100 \(100\)'/);

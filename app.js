@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='978'){
+if(window.__NORTH_SHELL_BUILD__!=='979'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -370,7 +370,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v978 · 全锁实执行与通话记录修复';
+const APP_VER='v979 · 邀请码成功进入修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1441,7 +1441,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=978&r=v978-all-control-call-log-1';
+  const url='sw.js?v=979&r=v979-license-entry-1';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -5328,6 +5328,16 @@ function maybeFirstRun(){try{if(!gateOK())return;if(localStorage.getItem('yibei_
 function licenseMarkUnlocked(){try{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));}catch(e){}}
 function licenseFinishGate(){licenseMarkUnlocked();const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);}
 function licenseEvictedNotice(result){const a=result&&result.session&&result.session.evicted;if(a&&a.length)toast('已恢复，并退出最早的'+(appleHomeCompatNative()?'授权设备：':'浏览器：')+a.join('、'));}
+async function licensePostActivationSetup(){
+  let aiSyncFailed=false;
+  try{await licenseSyncAiIdentity(true);}catch(_){aiSyncFailed=true;}
+  try{await licenseSyncPhoneFriendIdentity(true);}catch(_){}
+  try{
+    await NorthLicense.bindPasskey();
+    toast(appleHomeCompatNative()?'手机验证已绑定，以后重装或换设备可通过扫脸或指纹恢复':'已绑定手机，以后换浏览器可通过扫脸或指纹恢复');
+  }catch(bindErr){const m=(bindErr&&bindErr.message)||'';if(!/取消/.test(m))toast(m+'；设备恢复必须使用扫脸或指纹');}
+  if(aiSyncFailed)toast('邀请码已通过，AI账户将在进入后自动重试同步，不影响使用');
+}
 function showGate(){if(gateOK())return;let el=document.getElementById('gate');
   if(!el){el=document.createElement('div');el.id='gate';el.className='gate';document.body.appendChild(el);}
   el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>'+(window.__SMALL_PHONE_PRIVATE__?'小手机':'North')+'</h2><p>第一次使用请输入邀请码<br>邀请码成功后永久失效</p><input id="gateInp" inputmode="text" placeholder="邀请码" autocomplete="one-time-code"><button id="gateBtn">使用邀请码进入</button><div class="gerr" id="gateErr"></div><div class="gline"><span>已经在这部手机使用过</span></div><button id="gateRestore" class="gsecondary">扫脸 / 指纹恢复授权</button><div class="hint" style="margin-top:12px;text-align:center">设备恢复只允许使用本人的人脸或指纹验证</div>';
@@ -5340,9 +5350,7 @@ function showGate(){if(gateOK())return;let el=document.getElementById('gate');
     setBusy(true,'正在核销邀请码…');btn.textContent='验证中…';
     try{
       try{await pfEnsure(true);}catch(_){}
-      await NorthLicense.activate(v);licenseMarkUnlocked();await licenseSyncAiIdentity(true);try{await licenseSyncPhoneFriendIdentity(true);}catch(_){}err.textContent='邀请码已通过，正在绑定这部手机…';btn.textContent='绑定手机…';
-      try{await NorthLicense.bindPasskey();toast(appleHomeCompatNative()?'手机验证已绑定，以后重装或换设备可通过扫脸或指纹恢复':'已绑定手机，以后换浏览器可通过扫脸或指纹恢复');}catch(bindErr){const m=(bindErr&&bindErr.message)||'';if(!/取消/.test(m))toast(m+'；设备恢复必须使用扫脸或指纹');}
-      licenseFinishGate();
+      await NorthLicense.activate(v);licenseMarkUnlocked();licenseFinishGate();licensePostActivationSetup();
     }catch(e){err.textContent=(e&&e.message)||'邀请码验证失败';inp.value='';inp.focus();}
     finally{setBusy(false,'');btn.textContent='使用邀请码进入';}};
   const tryRestore=async()=>{if(busy)return;if(!window.NorthLicense){err.textContent='授权组件没有加载，请刷新页面';return;}setBusy(true,'请按手机提示完成验证…');restore.textContent='等待手机验证…';
