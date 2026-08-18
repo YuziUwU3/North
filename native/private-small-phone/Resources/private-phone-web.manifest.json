@@ -12,12 +12,16 @@
     "gift-effects.js",
     "thought-card-effects.js",
     "glass-theme.css",
+    "wedding-game.js",
+    "wedding-game.css",
     "icon.png"
   ],
   "directories": [
     "assets/incoming-wechat-call-default-v2.mp3",
     "assets/message-notification-user-v1.mp3",
     "assets/pet-room-v1.webp",
+    "assets/wedding/modern-v1",
+    "assets/wedding/chinese-v1",
     "assets/app-icons/glass/black",
     "assets/app-icons/glass/gray",
     "assets/app-icons/glass/pink",

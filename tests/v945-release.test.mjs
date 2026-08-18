@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v980 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v980 · 美化布局保护与在线更新提示'/);
-  assert.match(app,/const url='sw\.js\?v=980&r=v980-update-prompt-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='980'/);
-  assert.match(html,/app\.js\?v=980/);
-  assert.match(sw,/const BUILD='980'/);
-  assert.match(sw,/north-shell-v980/);
-  assert.match(index,/小手机\.html\?v=980/);
-  assert.match(repair,/小手机\.html\?v=980/);
+test('v984 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v984 · 现代中式婚礼双风格'/);
+  assert.match(app,/const url='sw\.js\?v=984&r=v984-modern-chinese-wedding-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='984'/);
+  assert.match(html,/app\.js\?v=984/);
+  assert.match(sw,/const BUILD='984'/);
+  assert.match(sw,/north-shell-v984/);
+  assert.match(index,/小手机\.html\?v=984/);
+  assert.match(repair,/小手机\.html\?v=984/);
 });
 
-test('the private iOS package embeds web v979 and keeps 1.0.100 delivery',()=>{
-  assert.match(privateBundle,/<string>979<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.100;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 100;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.100 \(100\)'/);
+test('the private iOS package embeds web v984 and keeps 1.0.105 delivery',()=>{
+  assert.match(privateBundle,/<string>984<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.105;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 105;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.105 \(105\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
