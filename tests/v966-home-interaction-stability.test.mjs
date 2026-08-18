@@ -13,14 +13,14 @@ const plist=fs.readFileSync(path.join(root,'native/private-small-phone/Resources
 const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'),'utf8');
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
-test('v989 web keeps private 1.0.110 compatibility',()=>{
-  assert.match(app,/APP_VER='v989 · 婚礼单章重做与首章身份锁定'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='989'/);
-  assert.match(sw,/BUILD='989'/);
-  assert.match(plist,/<string>989<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 110;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.110;/g)||[]).length,12);
-  assert.match(native,/1\.0\.110 \(110\)/);
+test('v990 web keeps private 1.0.111 compatibility',()=>{
+  assert.match(app,/APP_VER='v990 · 婚期日历、经期状态与婚礼影集'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='990'/);
+  assert.match(sw,/BUILD='990'/);
+  assert.match(plist,/<string>990<\/string>/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 111;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.111;/g)||[]).length,12);
+  assert.match(native,/1\.0\.111 \(111\)/);
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{

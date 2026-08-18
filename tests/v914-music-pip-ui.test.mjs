@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v989 web source keeps private 1.0.110 compatibility',()=>{
-  assert.match(app,/APP_VER='v989 · 婚礼单章重做与首章身份锁定'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 110;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.110;/);
+test('v990 web source keeps private 1.0.111 compatibility',()=>{
+  assert.match(app,/APP_VER='v990 · 婚期日历、经期状态与婚礼影集'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 111;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.111;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

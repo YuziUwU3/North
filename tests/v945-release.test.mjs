@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v989 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v989 · 婚礼单章重做与首章身份锁定'/);
-  assert.match(app,/const url='sw\.js\?v=989&r=v989-wedding-scene-regenerate-first-frame-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='989'/);
-  assert.match(html,/app\.js\?v=989/);
-  assert.match(sw,/const BUILD='989'/);
-  assert.match(sw,/north-shell-v989/);
-  assert.match(index,/小手机\.html\?v=989/);
-  assert.match(repair,/小手机\.html\?v=989/);
+test('v990 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v990 · 婚期日历、经期状态与婚礼影集'/);
+  assert.match(app,/const url='sw\.js\?v=990&r=v990-calendar-period-wedding-album-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='990'/);
+  assert.match(html,/app\.js\?v=990/);
+  assert.match(sw,/const BUILD='990'/);
+  assert.match(sw,/north-shell-v990/);
+  assert.match(index,/小手机\.html\?v=990/);
+  assert.match(repair,/小手机\.html\?v=990/);
 });
 
-test('the private iOS package embeds web v989 and keeps 1.0.110 delivery',()=>{
-  assert.match(privateBundle,/<string>989<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.110;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 110;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.110 \(110\)'/);
+test('the private iOS package embeds web v990 and keeps 1.0.111 delivery',()=>{
+  assert.match(privateBundle,/<string>990<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.111;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 111;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.111 \(111\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

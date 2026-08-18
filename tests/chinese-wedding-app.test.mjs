@@ -109,7 +109,7 @@ test('both ceremonies lock narration and let the model generate only role speech
   assert.match(js,/不要输出 narration、prompt 或 officiant 字段/);
   assert.match(js,/text:weddingSafeText\(list\[i\]&&list\[i\]\.text,fallback\[i\]\.text,28\)/);
   assert.match(js,/不得串位或重复/);
-  assert.equal((js.match(/\{aux:false,max:/g)||[]).length,5,'婚礼首邀、到点邀约、两种婚礼台词和婚后消息都固定走主模型');
+  assert.equal((js.match(/\{aux:false,max:/g)||[]).length,7,'婚礼首邀、到点邀约、两种婚礼台词和婚后消息都固定走主模型');
   assert.doesNotMatch(js,/gameUseAux/);
 });
 

@@ -1,6 +1,6 @@
-const BUILD='989';
-const HOTFIX='v989-wedding-scene-regenerate-first-frame-1';
-const SHELL_CACHE='north-shell-v989';
+const BUILD='990';
+const HOTFIX='v990-calendar-period-wedding-album-1';
+const SHELL_CACHE='north-shell-v990';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

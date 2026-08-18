@@ -2,6 +2,7 @@ import AVFoundation
 import CoreLocation
 import CryptoKit
 import Foundation
+import Photos
 import Security
 import Speech
 import UIKit
@@ -10,7 +11,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 23
+    static let contractVersion = 24
 
     weak var webView: WKWebView? {
         didSet {
@@ -73,6 +74,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 requestID: requestID,
                 arguments: arguments
             )
+        case "media.photo.save":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performPhotoSave(requestID: requestID, arguments: arguments)
         case "device.snapshot":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLocalDeviceSnapshot(
@@ -253,6 +257,60 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             )
         default:
             reply(requestID: requestID, error: "unsupported_action")
+        }
+    }
+
+    private func performPhotoSave(
+        requestID: String,
+        arguments: [String: Any]
+    ) {
+        guard let dataURL = arguments["dataURL"] as? String,
+              let comma = dataURL.firstIndex(of: ","),
+              dataURL[..<comma].lowercased().contains(";base64"),
+              let data = Data(base64Encoded: String(dataURL[dataURL.index(after: comma)...])),
+              let image = UIImage(data: data) else {
+            reply(requestID: requestID, error: "invalid_photo_data")
+            return
+        }
+
+        let save = { [weak self] in
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            }) { success, _ in
+                Task { @MainActor [weak self] in
+                    if success {
+                        self?.reply(
+                            requestID: requestID,
+                            result: ["saved": true]
+                        )
+                    } else {
+                        self?.reply(
+                            requestID: requestID,
+                            error: "photo_save_failed"
+                        )
+                    }
+                }
+            }
+        }
+
+        switch PHPhotoLibrary.authorizationStatus(for: .addOnly) {
+        case .authorized, .limited:
+            save()
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+                Task { @MainActor [weak self] in
+                    if status == .authorized || status == .limited {
+                        save()
+                    } else {
+                        self?.reply(
+                            requestID: requestID,
+                            error: "photo_library_denied"
+                        )
+                    }
+                }
+            }
+        default:
+            reply(requestID: requestID, error: "photo_library_denied")
         }
     }
 

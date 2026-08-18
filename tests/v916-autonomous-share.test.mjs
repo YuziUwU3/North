@@ -11,11 +11,11 @@ const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('v929 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v989 · 婚礼单章重做与首章身份锁定'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='989'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 110;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.110;/);
-  assert.match(bridge, /contractVersion = 23/);
+  assert.match(app, /APP_VER='v990 · 婚期日历、经期状态与婚礼影集'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='990'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 111;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.111;/);
+  assert.match(bridge, /contractVersion = 24/);
 });
 
 test('screen observation continues only after the role explicitly chooses it', () => {
