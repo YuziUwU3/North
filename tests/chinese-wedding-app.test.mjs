@@ -21,14 +21,16 @@ test('Chinese ceremony ships six selected previews, certificate art and its own 
   assert.match(js,/a\.loop=true/);
 });
 
-test('Chinese character art forces black ancient long hair, crown and one red groom robe',()=>{
+test('Chinese character art uses persona-aware black or white ancient long hair, crown and one red groom robe',()=>{
   const js=read('wedding-game.js');
-  assert.match(js,/纯黑色古风长发并佩戴传统发冠/);
+  assert.match(js,/weddingChineseHairColor/);
+  assert.match(js,/白毛\|银毛/);
+  assert.match(js,/人设明确写白发、银发或银白发才使用白色，否则默认黑色/);
   assert.match(js,/固定红色中式新郎喜服/);
-  assert.match(js,/严禁短发、现代发型、非黑发和现代西装/);
+  assert.match(js,/严禁短发、现代发型、与人设冲突的发色和现代西装/);
   assert.match(js,/不同角色可拥有不同长发造型和不同脸/);
-  assert.match(js,/同一场六幕的具体束发结构、刘海分缝、发冠造型必须完全一致/);
-  assert.match(js,/具体脸型、五官比例、刘海分缝、束发结构、每一缕长发、发冠外形与喜服纹样必须一模一样/);
+  assert.match(js,/同一场六幕的具体束发结构、刘海分缝、发色、发冠造型必须完全一致/);
+  assert.match(js,/具体脸型、五官比例、刘海分缝、束发结构、每一缕长发、发色、发冠外形与喜服纹样必须一模一样/);
 });
 
 test('one failed Chinese frame retries against a successful identity frame before preview fallback',()=>{
@@ -89,6 +91,21 @@ test('dialog and choice cards keep one fixed height',()=>{
   assert.match(css,/\.wedding-dialog-host\{height:168px;min-height:168px;max-height:168px\}/);
   assert.match(css,/\.wedding-dialog\{box-sizing:border-box;height:168px!important;min-height:168px!important;max-height:168px!important\}/);
   assert.match(css,/\.wedding-action,\.wedding-choice\{height:46px;min-height:46px;max-height:46px/);
+  assert.match(css,/-webkit-line-clamp:4/);
+  assert.match(css,/overflow:hidden!important/);
+});
+
+test('both ceremonies lock narration and let the model generate only role speech',()=>{
+  const js=read('wedding-game.js');
+  assert.match(js,/function weddingFixedNarrations\(style\)/);
+  assert.match(js,/fixed=weddingFixedNarrations\('modern'\)/);
+  assert.match(js,/fixed=weddingFixedNarrations\('chinese'\)/);
+  assert.match(js,/旁白、司礼词和问题已经固定/);
+  assert.match(js,/不要输出 narration、prompt 或 officiant 字段/);
+  assert.match(js,/text:weddingSafeText\(list\[i\]&&list\[i\]\.text,fallback\[i\]\.text,28\)/);
+  assert.match(js,/不得串位或重复/);
+  assert.equal((js.match(/\{aux:false,max:/g)||[]).length,5,'婚礼邀请、两种婚礼台词和婚后消息都固定走主模型');
+  assert.doesNotMatch(js,/gameUseAux/);
 });
 
 test('Chinese certificate and memory remain separate from modern',()=>{
@@ -100,4 +117,12 @@ test('Chinese certificate and memory remain separate from modern',()=>{
   assert.match(js,/id:'wed_'\+style\+'_'\+weddingHash\(c\.id\)/);
   assert.match(css,/certificate-blank\.png/);
   assert.match(css,/\.wedding-cert-card-chinese/);
+  assert.match(js,/<h2><span>婚<\/span><span>书<\/span><\/h2>/);
+  assert.match(js,/function weddingChineseCertificateDate\(value\)/);
+  assert.match(js,/class="wedding-chinese-meta"/);
+  assert.match(js,/class="wedding-chinese-personal"/);
+  assert.doesNotMatch(js,/class="wedding-chinese-vow">/);
+  assert.doesNotMatch(js,/class="wedding-chinese-names">/);
+  assert.match(css,/right:5\.1%;top:16%/);
+  assert.match(css,/writing-mode:vertical-rl/);
 });

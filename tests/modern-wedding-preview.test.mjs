@@ -11,8 +11,8 @@ const hash=path=>crypto.createHash('sha256').update(fs.readFileSync(`${root}/${p
 test('modern wedding preview v9 is loaded by web and private shells',()=>{
   for(const htmlPath of ['小手机.html',`${privateBundle}/小手机.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-11/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-11/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-12/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-12/);
   }
 });
 
@@ -21,8 +21,8 @@ test('private bundle stages the current wedding code, shell entries, art and BGM
   assert.equal(hash(`${privateBundle}/小手机.html`),hash(`${privateBundle}/index.html`));
   for(const htmlPath of [`${privateBundle}/小手机.html`,`${privateBundle}/index.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-11/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-11/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-12/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-12/);
   }
   assert.match(read(`${privateBundle}/app.js`),/预约婚礼/);
   assert.match(read(`${privateBundle}/app.js`),/weddingCalendarTick/);
@@ -69,11 +69,21 @@ test('generated dialogue is guarded against image/action mismatch',()=>{
   assert.match(js,/field==='kiss_narration'&&!\/手背\//);
   assert.match(js,/field==='ring_narration'/);
   assert.match(js,/field==='vow_narration'/);
-  assert.match(js,/out\[k\]=weddingLineMatchesScene\(k,value\)\?value:f\[k\]/);
+  assert.match(js,/function weddingNarrationText\(v,fallback\)/);
+  assert.match(js,/const WEDDING_NARRATION_MAX=44,WEDDING_DIALOGUE_MAX=48/);
+  assert.match(js,/图片\|画面\|镜头\|构图\|视角\|插画\|CG\|生图\|生成图/);
+  assert.match(js,/function weddingFixedNarrations\(style\)/);
+  assert.match(js,/fixed=weddingFixedNarrations\('modern'\)/);
+  assert.match(js,/locked=k\.includes\('narration'\)\|\|k\.includes\('prompt'\)/);
+  assert.match(js,/旁白、司仪词和每一幕的问题已经固定/);
+  assert.match(js,/每个对象含 text 和 response/);
+  assert.match(js,/两个选项与回应不得串位/);
+  assert.match(js,/不要输出 narration、prompt、officiant 或 blessing 字段/);
   assert.match(js,/function weddingLooksNarration\(text\)/);
   assert.match(js,/他的目光/);
-  assert.match(js,/if\(!weddingLooksNarration\(out\[lineKey\]\)\)continue/);
+  assert.match(js,/for\(const lineKey of roleLines\)if\(weddingLooksNarration/);
   assert.match(js,/out\[lineKey\]=f\[lineKey\]/);
+  assert.match(js,/item\.text=weddingDisplayText\(item,s\.style\)/);
 });
 
 test('vow paper, hand kiss and ring actions are explicit',()=>{
@@ -204,12 +214,27 @@ test('private offline-date menu exposes couple-only background preparation and r
   assert.match(js,/const c=weddingInvitationRole\(\)/);
   assert.match(js,/婚礼只对情侣空间绑定的角色开放/);
   assert.match(entry,/weddingOpenReadyInvite/);
+  assert.match(entry,/模拟一次 · 不保存/);
   assert.match(entry,/weddingRegenerate/);
   assert.match(entry,/后台准备'\+label\+'婚礼/);
   assert.match(entry,/完成后由他发来邀请/);
   assert.match(entry,/等待他发来邀请/);
   assert.match(css,/\.wedding-offline-entry\{/);
   assert.match(css,/\.wedding-offline-actions\{/);
+  const card=js.slice(js.indexOf('function weddingInviteCardHTML('),js.indexOf('function weddingRefreshInviteChat('));
+  assert.doesNotMatch(card,/wedding-mini-ready-actions|wedding-mini-regenerate|wedding-mini-simulate/);
+});
+
+test('wedding reset is scoped, removes wedding state and re-arms next-launch invitation',()=>{
+  const js=read('wedding-game.js'),css=read('wedding-game.css');
+  assert.match(js,/function weddingClearAll\(cid\)/);
+  assert.match(js,/清空所有婚礼记忆、婚书与夫妻关系/);
+  assert.match(js,/st\.records=st\.records\.filter/);
+  assert.match(js,/c\.summaries=.*filter\(x=>!weddingMemorySummary\(x\)\)/);
+  assert.match(js,/st\.invitation=\{cid:c\.id,autoSentAt:0/);
+  assert.match(js,/下次打开小手机会重新收到邀请/);
+  assert.match(js,/S\.calendar=.*filter\(x=>!\(x&&x\.type==='wedding'/);
+  assert.match(css,/\.wedding-clear-all\{/);
 });
 
 test('failed or unavailable image generation falls back per scene to bundled preview art',()=>{
@@ -245,7 +270,7 @@ test('ready entry opens with a natural veil transition and regeneration is style
   assert.match(css,/@keyframes wedding-opening-veil/);
   assert.match(js,/function weddingRegenerate\(cid,style\)/);
   assert.match(js,/\(old\.style\|\|'modern'\)===style/);
-  assert.match(js,/重新生成会覆盖这一种婚礼的旧演出；现代与中式各自独立保存/);
+  assert.match(js,/重新生成'\+label\+'婚礼/);
 });
 
 test('calendar schedules an exact wedding time and only the couple-space role can receive it',()=>{
@@ -310,6 +335,10 @@ test('certificate keeps supplied structure, original role name and fitted center
   assert.match(css,/"Snell Roundhand"/);
   assert.match(js,/getBoundingClientRect\(\)\.width>max/);
   assert.match(css,/@keyframes wedding-cert-fall/);
+  const certificate=js.slice(js.indexOf('function weddingShowCertificate('),js.indexOf('function weddingOpenCertificateRecord('));
+  assert.doesNotMatch(certificate,/回到小手机|回到情侣空间|wedding-cert-actions/);
+  assert.match(certificate,/wedding-cert-close/);
+  assert.match(css,/\.wedding-certificate\{display:flex;align-items:center;justify-content:center/);
 });
 
 test('wedding remains a standalone home app and invitation preview route exists',()=>{
