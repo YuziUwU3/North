@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const app = fs.readFileSync('app.js', 'utf8');
 const wedding = fs.readFileSync('wedding-game.js', 'utf8');
+const css = fs.readFileSync('wedding-game.css', 'utf8');
 const bridge = fs.readFileSync(
   'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift',
   'utf8',
@@ -98,6 +99,20 @@ test('couple-space album reads current scene keys so a chapter replacement updat
   assert.match(wedding, /单独重做某一章后，这里会自动换成最新画面/);
   assert.match(wedding, /setTimeout\(\(\)=>weddingSavePhotoElement\(el\),720\)/);
   assert.match(wedding, /SmallPhoneNative\.request\('media\.photo\.save'/);
+  assert.match(wedding, /function weddingOpenPhotoViewer\(index\)/);
+  assert.match(wedding, /保存高清原图/);
+  assert.match(wedding, /weddingOpenSceneRegenerator\(\\''\+cid\+'\\',\\''\+recordId\+'\\'\)/);
+  assert.match(css, /\.wedding-photo-viewer/);
+  assert.match(css, /\.wedding-album-regenerate/);
+});
+
+test('expired wedding countdown self-recovers after app resume and browser gets the same offline controls', () => {
+  assert.doesNotMatch(wedding, /function weddingOfflineEntryHTML\(\)\{if\(!weddingPrivateApp\(\)\)return''/);
+  assert.match(wedding, /function weddingRecoverReadyInvite\(cid,mid\)/);
+  assert.match(wedding, /立即进入婚礼/);
+  assert.match(wedding, /document\.addEventListener\('visibilitychange'/);
+  assert.match(wedding, /window\.addEventListener\('pageshow'/);
+  assert.match(wedding, /window\.addEventListener\('focus'/);
 });
 
 test('private bridge saves original wedding art to Photos with add-only permission', () => {

@@ -215,12 +215,12 @@ test('private simulation runs the full ceremony but exits before every persisten
   assert.match(css,/\.wedding-simulation-badge/);
 });
 
-test('private offline-date menu exposes couple-only background preparation and ready entry',()=>{
+test('app and browser offline-date menu expose couple-only background preparation and ready entry',()=>{
   const js=read('wedding-game.js'),app=read('app.js'),css=read('wedding-game.css');
   const entry=js.slice(js.indexOf('function weddingOfflineStyleHTML('),js.indexOf('function weddingInvitationRole('));
   assert.match(app,/window\.weddingOfflineEntryHTML\(\)/);
   assert.match(js,/function weddingOfflineEntryHTML\(\)/);
-  assert.match(js,/if\(!weddingPrivateApp\(\)\)return''/);
+  assert.doesNotMatch(js,/function weddingOfflineEntryHTML\(\)\{if\(!weddingPrivateApp\(\)\)return''/);
   assert.match(js,/const c=weddingInvitationRole\(\)/);
   assert.match(js,/婚礼只对情侣空间绑定的角色开放/);
   assert.match(entry,/weddingOpenReadyInvite/);

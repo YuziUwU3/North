@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v990 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v990 · 婚期日历、经期状态与婚礼影集'/);
-  assert.match(app,/const url='sw\.js\?v=990&r=v990-calendar-period-wedding-album-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='990'/);
-  assert.match(html,/app\.js\?v=990/);
-  assert.match(sw,/const BUILD='990'/);
-  assert.match(sw,/north-shell-v990/);
-  assert.match(index,/小手机\.html\?v=990/);
-  assert.match(repair,/小手机\.html\?v=990/);
+  assert.match(app,/APP_VER='v991 · 婚礼影集与邀请恢复'/);
+  assert.match(app,/const url='sw\.js\?v=991&r=v991-wedding-album-invite-recovery-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='991'/);
+  assert.match(html,/app\.js\?v=991/);
+  assert.match(sw,/const BUILD='991'/);
+  assert.match(sw,/north-shell-v991/);
+  assert.match(index,/小手机\.html\?v=991/);
+  assert.match(repair,/小手机\.html\?v=991/);
 });
 
-test('the private iOS package embeds web v990 and keeps 1.0.111 delivery',()=>{
+test('the private iOS package embeds web v990 and keeps 1.0.112 delivery',()=>{
   assert.match(privateBundle,/<string>990<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.111;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 111;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.111 \(111\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.112;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 112;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.112 \(112\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
