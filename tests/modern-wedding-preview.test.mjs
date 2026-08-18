@@ -48,8 +48,8 @@ test('all six CGs use strict scene action contracts and role-specific identity p
   assert.match(js,/不通过时用一句中文说清最关键错误/);
   assert.match(js,/function weddingRetryFailedScene\(c,scene,formalwear,style\)/);
   assert.match(js,/weddingIdentityReference\(scene,style\)/);
-  assert.match(js,/第一张输入图是同一场婚礼已经通过复核的身份参考/);
-  assert.match(js,/必须复制其中新郎的脸型、五官、发型、发色与礼服/);
+  assert.match(js,/第一张输入图是同一场婚礼第一幕的唯一身份参考/);
+  assert.match(js,/必须逐项复制其中新郎的脸型、五官、发型、发色、发冠与礼服/);
 });
 
 test('groom attire is model-chosen black or white formalwear and ignores daily clothing',()=>{
@@ -225,6 +225,8 @@ test('private offline-date menu exposes couple-only background preparation and r
   assert.match(js,/婚礼只对情侣空间绑定的角色开放/);
   assert.match(entry,/weddingOpenReadyInvite/);
   assert.match(entry,/模拟一次 · 不保存/);
+  assert.match(entry,/单独重做某一章/);
+  assert.match(entry,/weddingOpenSceneRegenerator/);
   assert.match(entry,/weddingRegenerate/);
   assert.match(entry,/后台准备'\+label\+'婚礼/);
   assert.match(entry,/完成后由他发来邀请/);
@@ -253,13 +255,44 @@ test('failed or unavailable image generation falls back per scene to bundled pre
   const js=read('wedding-game.js');
   assert.match(js,/if\(!check\.pass\)\{const err=new Error\('动作复核未通过/);
   assert.match(js,/weddingPrepareScene\(c,scene,script\.formalwear,true,style\)/);
-  assert.match(js,/const failed=order\.filter\(scene=>W\.sceneFailures\[scene\]\)/);
+  assert.match(js,/if\(W\.sceneFailures\[scene\]\)/);
   assert.match(js,/weddingRetryFailedScene\(c,scene,script\.formalwear,style\)/);
   assert.match(js,/referenceScene:reference&&reference\.scene/);
   assert.match(js,/W\.sceneImages\[scene\]=weddingScenes\(style\)\[scene\]/);
   assert.match(js,/previewScenes=order\.filter/);
   assert.match(js,/previews\.has\(scene\)/);
   assert.match(js,/if\(!cached\)\{W\.sceneImages\[scene\]=scenes\[scene\]/);
+});
+
+test('all wedding chapters and retries use chapter one as the only identity reference',()=>{
+  const js=read('wedding-game.js');
+  const identity=js.slice(js.indexOf('function weddingIdentityReference('),js.indexOf('async function weddingReferenceIdentityNote('));
+  assert.match(identity,/const first=weddingSceneOrder\(style\)\[0\]/);
+  assert.match(identity,/return src\?\{scene:first,src\}:null/);
+  assert.doesNotMatch(identity,/for\(const key/);
+  const prepare=js.slice(js.indexOf('function weddingPrepareScene('),js.indexOf('async function weddingRetryFailedScene('));
+  assert.match(prepare,/scene===first\?null:weddingIdentityReference\(scene,style\)/);
+  assert.match(prepare,/referenceScene:reference&&reference\.scene/);
+  assert.match(js,/第一张输入图是同一场婚礼第一幕的唯一身份参考/);
+  assert.match(js,/不得参考其他幕的人物外貌/);
+});
+
+test('offline date can rebuild one selected chapter without risking the accepted image',()=>{
+  const js=read('wedding-game.js'),css=read('wedding-game.css');
+  assert.match(js,/function weddingOpenSceneRegenerator\(cid,mid\)/);
+  assert.match(js,/async function weddingRegenerateScene\(cid,mid,scene\)/);
+  assert.match(js,/单独重做现代婚礼某一章|单独重做'\+label\+'婚礼某一章/);
+  assert.match(js,/for\(let attempt=1;attempt<=3&&!accepted;attempt\+\+\)/);
+  assert.match(js,/const first=order\[0\],firstSrc=/);
+  assert.match(js,/reference=\{scene:first,src:firstSrc\}/);
+  assert.match(js,/originalSrc=W\.sceneImages\[scene\]/);
+  assert.match(js,/W\.sceneImages\[scene\]=originalSrc/);
+  assert.match(js,/prepared\.sceneKeys\[scene\]=cacheKey/);
+  assert.match(js,/referenceRule:'first-scene-only'/);
+  assert.match(js,/其他五章没有改变/);
+  assert.match(js,/weddingOpenSceneRegenerator,weddingRegenerateScene/);
+  assert.match(css,/\.wedding-scene-regenerate-grid\{/);
+  assert.match(css,/@keyframes weddingSceneSpin/);
 });
 
 test('story UI has no system badge, segmented progress, or generation overlay',()=>{
