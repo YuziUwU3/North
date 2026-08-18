@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='979'){
+if(window.__NORTH_SHELL_BUILD__!=='980'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -370,7 +370,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v979 · 邀请码成功进入修复';
+const APP_VER='v980 · 美化布局保护与在线更新提示';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1440,9 +1440,17 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 /* ===== 顶部消息通知 ===== */
 let _bannerT;
 let _swReady=null;
+let _swEventsBound=false,_northUpdatePending='',_northUpdatePromptTimer=0;
+function northBuildNumber(v){const m=String(v==null?'':v).match(/\d+/);return m?Number(m[0]):0;}
+function northUpdateLater(){const build=_northUpdatePending;if(build)try{sessionStorage.setItem('north-update-later-'+build,'1');}catch(_){}closeModal();}
+function northUpdateReload(){const build=_northUpdatePending||'';try{sessionStorage.setItem('north-update-reload-'+build,'1');}catch(_){}const next=new URL(location.href);next.searchParams.set('north_update',build||Date.now());location.replace(next.href);}
+function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdatePromptTimer=0;const build=_northUpdatePending;if(!build)return;try{if(sessionStorage.getItem('north-update-later-'+build)==='1')return;}catch(_){}const modal=$('#modal');if(!modal||modal.classList.contains('show')){_northUpdatePromptTimer=setTimeout(northUpdatePrompt,1800);return;}openModal(`<h3>发现新版本 v${esc(build)}</h3><div class="hint" style="line-height:1.8">新版本已经下载完成。点“立即更新”会直接刷新到最新版，不需要退出或划掉小手机；聊天、角色和本机数据不会删除。</div><div class="btns" style="margin-top:14px"><button class="btn g" onclick="northUpdateLater()">稍后</button><button class="btn p" onclick="northUpdateReload()">立即更新</button></div>`);}
+function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
+function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=979&r=v979-license-entry-1';
-  _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
+  const url='sw.js?v=980&r=v980-update-prompt-1';
+  if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
+  _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
@@ -11807,6 +11815,9 @@ async function exportBeautyData(){const pack=beautyPackFrom(S),text=JSON.stringi
   if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('美化包已生成，请在系统面板选择“存储到文件”');else toast('美化包已下载（'+cacheSizeText(blob.size)+'）');}
 function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(v)):v;}
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
+const BEAUTY_LAYOUT_KEYS=['widgets','appLayout','homeLayout','appDock','homeReferenceAppSlots','_glassReferenceLayoutV2','_glassSecondPageLayoutV1'];
+function beautyLayoutSnapshot(me){me=me||{};const out={};BEAUTY_LAYOUT_KEYS.forEach(k=>{out[k]={has:Object.prototype.hasOwnProperty.call(me,k),value:beautyClone(me[k])};});return out;}
+function beautyLayoutRestore(me,snapshot){me=me||{};snapshot=snapshot||{};BEAUTY_LAYOUT_KEYS.forEach(k=>{const row=snapshot[k];if(!row)return;if(row.has)me[k]=beautyClone(row.value);else delete me[k];});}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
   n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','homeSecondPage','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
@@ -11816,8 +11827,8 @@ function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.
   (pack.groups||[]).forEach(src=>{const dst=beautyFind(S.groups,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle','memberBubbleStyles']);});
   if(pack.beautyArchive!=null){S.beautyArchive=beautyClone(pack.beautyArchive);n++;}return n;}
 async function primeBeautyPackImages(pack){const found=new Set();(function walk(v){if(isBigImg(v)){found.add(v);return;}if(!v||typeof v!=='object')return;Object.keys(v).forEach(k=>walk(v[k]));})(pack);for(const img of found)await primeImageForSave(img);return found.size;}
-async function applyBeautyPack(pack){await primeBeautyPackImages(pack);const n=mergeBeautyPack(pack);if(!await saveNowAsync())throw new Error('美化图片保存失败，请检查浏览器存储权限');try{renderLockScreen(true);}catch(_){}render();return n;}
-function importBeautyData(){pickFile('.json',f=>readJsonFile(f,async d=>{const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项），壁纸和图标已恢复');}));}
+async function applyBeautyPack(pack){const layout=beautyLayoutSnapshot(S.me);await primeBeautyPackImages(pack);const n=mergeBeautyPack(pack);beautyLayoutRestore(S.me,layout);if(!await saveNowAsync())throw new Error('美化图片保存失败，请检查浏览器存储权限');try{renderLockScreen(true);}catch(_){}render();return n;}
+function importBeautyData(){pickFile('.json',f=>readJsonFile(f,async d=>{const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项），原桌面排位已保留');}));}
 function cacheMediaSize(v){v=''+(v||'');if(!v)return 0;if(/^idb-audio:/i.test(v)){try{return ((_imgCache&&_imgCache['__audio_'+v.slice(10)])||'').length||0;}catch(_){return 0;}}return /^(data:image\/|data:audio\/|idb:)/i.test(v)?v.length:0;}
 function mergeCacheStat(a,b){a.n+=(b&&b.n)||0;a.bytes+=(b&&b.bytes)||0;return a;}
 function cleanChatMediaMsg(m){const r={n:0,bytes:0};if(!m||typeof m!=='object')return r;

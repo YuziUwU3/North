@@ -13,7 +13,7 @@ const contentView = read('native/private-small-phone/XcodeProject/PhoneCompanion
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('current web and private release versions align', () => {
-  assert.match(app, /APP_VER='v979 · 邀请码成功进入修复'/);
+  assert.match(app, /APP_VER='v980 · 美化布局保护与在线更新提示'/);
   assert.match(project, /CURRENT_PROJECT_VERSION = 100;/);
   assert.match(project, /MARKETING_VERSION = 1\.0\.100;/);
   assert.match(bridge, /contractVersion = 23/);

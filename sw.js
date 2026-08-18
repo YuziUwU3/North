@@ -1,6 +1,6 @@
-const BUILD='979';
-const HOTFIX='v979-license-entry-1';
-const SHELL_CACHE='north-shell-v979';
+const BUILD='980';
+const HOTFIX='v980-update-prompt-1';
+const SHELL_CACHE='north-shell-v980';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -108,7 +108,14 @@ self.addEventListener('activate',event=>{
     const keys=await caches.keys();
     await Promise.all(keys.filter(key=>key.startsWith('north-shell-')&&key!==SHELL_CACHE).map(key=>caches.delete(key)));
     await self.clients.claim();
+    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    windows.forEach(client=>{try{client.postMessage({type:'north-update-ready',build:BUILD});}catch(_){}});
   })());
+});
+
+self.addEventListener('message',event=>{
+  if(!event.data||event.data.type!=='north-version-query')return;
+  try{if(event.source)event.source.postMessage({type:'north-update-ready',build:BUILD});}catch(_){}
 });
 
 self.addEventListener('fetch',event=>{

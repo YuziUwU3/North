@@ -12,15 +12,15 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v979 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v979 · 邀请码成功进入修复'/);
-  assert.match(app,/const url='sw\.js\?v=979&r=v979-license-entry-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='979'/);
-  assert.match(html,/app\.js\?v=979/);
-  assert.match(sw,/const BUILD='979'/);
-  assert.match(sw,/north-shell-v979/);
-  assert.match(index,/小手机\.html\?v=979/);
-  assert.match(repair,/小手机\.html\?v=979/);
+test('v980 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v980 · 美化布局保护与在线更新提示'/);
+  assert.match(app,/const url='sw\.js\?v=980&r=v980-update-prompt-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='980'/);
+  assert.match(html,/app\.js\?v=980/);
+  assert.match(sw,/const BUILD='980'/);
+  assert.match(sw,/north-shell-v980/);
+  assert.match(index,/小手机\.html\?v=980/);
+  assert.match(repair,/小手机\.html\?v=980/);
 });
 
 test('the private iOS package embeds web v979 and keeps 1.0.100 delivery',()=>{

@@ -33,6 +33,13 @@ const oldChat = [{ content: "keep chat" }];
 const S = {
   me: {
     avatar: "old-avatar", persona: "keep persona", homeBg: "old-bg", appIcons: {},
+    widgets: ["dashboard", "vinyl", "sweetie"],
+    appLayout: [["wechat"], ["music"], []],
+    homeLayout: [["w:dashboard", "wechat"], ["music"], []],
+    appDock: ["calendar", "games", "mail", "settings"],
+    homeReferenceAppSlots: { wechat: 3 },
+    _glassReferenceLayoutV2: 1,
+    _glassSecondPageLayoutV1: 1,
     phoneFriend: { id: "pf-1", messages: { one: oldChat }, bubbleStyle: { old: true } },
   },
   phoneapp: { roleAvatars: {}, regions: {}, sms: { one: oldChat } },
@@ -54,14 +61,30 @@ const context = vm.createContext({
   renderLockScreen: () => { lockRendered++; },
 });
 
-for (const name of ["beautyClone", "beautyAssign", "beautyFind", "mergeBeautyPack", "primeBeautyPackImages", "applyBeautyPack"]) {
+for (const name of ["beautyClone", "beautyAssign", "beautyLayoutSnapshot", "beautyLayoutRestore", "beautyFind", "mergeBeautyPack", "primeBeautyPackImages", "applyBeautyPack"]) {
   vm.runInContext(functionSource(name), context);
 }
+vm.runInContext(source.match(/const BEAUTY_LAYOUT_KEYS=\[[^;]+;/)[0], context);
+
+const originalLayout = JSON.parse(JSON.stringify({
+  widgets: S.me.widgets,
+  appLayout: S.me.appLayout,
+  homeLayout: S.me.homeLayout,
+  appDock: S.me.appDock,
+  homeReferenceAppSlots: S.me.homeReferenceAppSlots,
+  _glassReferenceLayoutV2: S.me._glassReferenceLayoutV2,
+  _glassSecondPageLayoutV1: S.me._glassSecondPageLayoutV1,
+}));
 
 const image = "data:image/png;base64," + "x".repeat(2200);
 const pack = {
   type: "north-beauty-pack", ver: 1,
-  me: { avatar: image, homeBg: image, appIcons: { wechat: image }, persona: "must not import" },
+  me: {
+    avatar: image, homeBg: image, appIcons: { wechat: image }, persona: "must not import",
+    widgets: ["sweetie"], appLayout: [["music"]], homeLayout: [["w:sweetie", "music"]],
+    appDock: ["music"], homeReferenceAppSlots: { music: 0 },
+    _glassReferenceLayoutV2: 0, _glassSecondPageLayoutV1: 0,
+  },
   phoneFriend: { bubbleStyle: { bg: "pink" }, messages: { bad: true } },
   phoneapp: { roleAvatars: { c1: image }, sms: { bad: true } },
   music: { bg: image, songs: [{ id: "bad" }] },
@@ -73,6 +96,15 @@ const count = await context.applyBeautyPack(pack);
 assert.ok(count >= 10);
 assert.equal(S.me.homeBg, image);
 assert.equal(S.me.persona, "keep persona");
+assert.deepEqual(JSON.parse(JSON.stringify({
+  widgets: S.me.widgets,
+  appLayout: S.me.appLayout,
+  homeLayout: S.me.homeLayout,
+  appDock: S.me.appDock,
+  homeReferenceAppSlots: S.me.homeReferenceAppSlots,
+  _glassReferenceLayoutV2: S.me._glassReferenceLayoutV2,
+  _glassSecondPageLayoutV1: S.me._glassSecondPageLayoutV1,
+})), originalLayout, "beauty import must preserve every home layout field");
 assert.deepEqual(S.me.phoneFriend.messages.one, oldChat);
 assert.deepEqual(S.phoneapp.sms.one, oldChat);
 assert.deepEqual(S.music.songs, [{ id: "song-1" }]);
