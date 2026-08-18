@@ -37,10 +37,11 @@ test('ordinary online chat keeps the real iPhone control protocol and exact all-
     apps: [{ name: '微信' }, { name: '抖音' }],
   });
   assert.match(prompt, /当前按稳定 ID 可控制的 App：微信、抖音/);
-  assert.match(prompt, /\[锁定\|全部已选 App\|仅外置\]/);
-  assert.match(prompt, /立即写入操作记录/);
+  assert.match(prompt, /\[锁定\|全部内外 App\|内外同时\]/);
+  assert.match(prompt, /小手机中已经授权给你的全部内置 App/);
+  assert.match(prompt, /真实 iPhone 当前全部已选 App/);
   assert.match(prompt, /设备回执和新快照确认前绝不能谎称已经锁好/);
-  assert.match(prompt, /不是小手机里的虚拟 App/);
+  assert.match(prompt, /不能把它缩成仅内置或仅外置/);
   assert.match(app, /if\(!rolePhoneInspectionLaneActive\(\)\)return companionRoleControlOnlyPrompt\(c,config\)/);
 });
 
@@ -51,7 +52,7 @@ test('a definite natural claim to lock every app is recovered without depending 
     const state={linked:true,roleAccess:true,permissions:{appControl:true},apps:[{id:'a'},{id:'b'}]};
     function companionState(){return state;}
     function companionReady(st){return !!st.linked;}
-    function companionDispatchRoleByText(action,text,opt){sent.push({action,text,scope:opt.scope,actor:opt.actor});return true;}
+    function companionDispatchRoleAll(action,opt){sent.push({action,actor:opt.actor});return true;}
     ${functionSource('companionNaturalAllControlAction')}
     ${functionSource('companionRecoverNaturalAllControl')}
     this.detect=companionNaturalAllControlAction;
@@ -65,25 +66,31 @@ test('a definite natural claim to lock every app is recovered without depending 
   assert.equal(context.detect('全部解锁。'), 'unlock');
   assert.equal(context.detect('一键全锁。'), 'lock');
   assert.equal(context.detect('一键全解。'), 'unlock');
+  assert.equal(context.detect('解除全锁。'), 'unlock');
   assert.equal(context.detect('我把你的软件全部锁掉了。'), 'lock');
   assert.equal(context.detect('我还没把所有软件锁掉。'), '');
   assert.equal(context.recover('我把你的软件全部锁掉了。', { name: '北', remark: '先生' }), true);
-  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [{ action: 'lock', text: '全部已选 App', scope: 'external', actor: '先生' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [{ action: 'lock', actor: '先生' }]);
 });
 
-test('all-app companion commands dispatch every selected real iPhone app and never an internal app', () => {
+test('all-app companion commands dispatch every selected real iPhone app and every authorized internal app', () => {
   const external = [];
   const internal = [];
   const context = vm.createContext({ external, internal });
   vm.runInContext(`
     const st={
       defaultScope:'both',
+      linked:true,
+      roleAccess:true,
+      permissions:{appControl:true},
       apps:[{id:'real.wechat',name:'微信'},{id:'real.video',name:'视频'}],
       bindings:[{externalAppId:'real.wechat',internalAppId:'wechat'}]
     };
     const S={couple:{grant:{wechat:true}}};
     const LOCKABLE={wechat:'微信'};
     function companionState(){return st;}
+    function companionReady(value){return !!(value&&value.linked);}
+    function companionScopeForAction(){return 'appControl';}
     function companionScope(value){return ['internal','external','both'].includes(value)?value:'';}
     function companionUnifiedLimitInternalIds(){return [];}
     function companionBindingMirrorsLock(){return true;}
@@ -95,6 +102,7 @@ test('all-app companion commands dispatch every selected real iPhone app and nev
     ${functionSource('companionMentionedExternalTargets')}
     ${functionSource('companionExternalTargetsByText')}
     ${functionSource('companionDispatchRoleByText')}
+    ${functionSource('companionDispatchRoleAll')}
     this.dispatch=companionDispatchRoleByText;
   `, context);
   assert.equal(context.dispatch('lock', '全部已选 App', { scope: 'external', actor: '角色' }), true);
@@ -105,7 +113,32 @@ test('all-app companion commands dispatch every selected real iPhone app and nev
     { action: 'unlock', id: 'real.wechat', actor: '角色' },
     { action: 'unlock', id: 'real.video', actor: '角色' },
   ]);
-  assert.deepEqual(internal, []);
+  assert.deepEqual(JSON.parse(JSON.stringify(internal)), [
+    { action: 'lock', id: 'wechat', scope: 'internal' },
+    { action: 'unlock', id: 'wechat', scope: 'internal' },
+  ]);
+});
+
+test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or all-unlock', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionNaturalAllControlAction')}
+    ${functionSource('companionRequestedAllControlAction')}
+    ${functionSource('companionStripSupersededAllControlTags')}
+    this.detect=companionRequestedAllControlAction;
+    this.strip=companionStripSupersededAllControlTags;
+  `, context);
+  const wrongLock='我已经把全部软件锁好了。\n[锁定|云程、放映室、音乐、惊悚抉择、规则怪谈、角色扮演|仅内置]';
+  const wrongUnlock='解除全锁了。\n[解锁|云程、放映室、音乐、惊悚抉择、规则怪谈、角色扮演|仅内置]';
+  assert.equal(context.detect(wrongLock),'lock');
+  assert.equal(context.detect(wrongUnlock),'unlock');
+  assert.doesNotMatch(context.strip(wrongLock,'lock'),/\[锁定\|/);
+  assert.doesNotMatch(context.strip(wrongUnlock,'unlock'),/\[解锁\|/);
+  const apply=functionSource('applyControlTags');
+  assert.ok(apply.indexOf('companionRequestedAllControlAction(content)') < apply.indexOf("content.replace(/[\\[【]\\s*(锁定|上锁|解锁"));
+  assert.match(apply,/companionDispatchRoleAll\(allControlAction/);
+  assert.match(apply,/changed=companionReads\.changed\|\|phonePwdChanged\|\|diaryPwdChanged\|\|!!allControlAction/);
 });
 
 test('control extraction uses deterministic all-app recovery first and retries parser failures once', () => {
@@ -115,6 +148,8 @@ test('control extraction uses deterministic all-app recovery first and retries p
   assert.match(extract, /aux:attempt===0/);
   assert.equal(functionSource('companionRoleControlOnlyPrompt', bundled), functionSource('companionRoleControlOnlyPrompt'));
   assert.equal(functionSource('companionNaturalAllControlAction', bundled), functionSource('companionNaturalAllControlAction'));
+  assert.equal(functionSource('companionRequestedAllControlAction', bundled), functionSource('companionRequestedAllControlAction'));
+  assert.equal(functionSource('companionDispatchRoleAll', bundled), functionSource('companionDispatchRoleAll'));
   assert.equal(functionSource('extractControl', bundled), extract);
 });
 

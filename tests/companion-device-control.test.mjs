@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v976 · 伴生全锁与关联修复'/);
+  assert.match(app, /const APP_VER='v977 · 内外全锁与解除修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -517,7 +517,8 @@ test('role collective references resolve only the recently named external app gr
   assert.doesNotMatch(resolved.text, /哔哩哔哩/);
   context.rows.push({ role: 'user', content: '把全部已选 App 都锁上。' });
   const all = context.resolve(state, { id: 'role' }, '全部', '都锁好了。');
-  assert.equal(all.text.split('、').length, 5);
+  assert.equal(all.text, '全部内外 App');
+  assert.equal(all.scope, 'both');
 });
 
 test('resolved four-app reference dispatches exactly four stable external ids', () => {
