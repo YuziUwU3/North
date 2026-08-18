@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v975 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v975 · 独立授权与旧云锁移除'/);
-  assert.match(app,/const url='sw\.js\?v=975&r=v975-license-isolation-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='975'/);
-  assert.match(html,/app\.js\?v=975/);
-  assert.match(sw,/const BUILD='975'/);
-  assert.match(sw,/north-shell-v975/);
-  assert.match(index,/小手机\.html\?v=975/);
-  assert.match(repair,/小手机\.html\?v=975/);
+test('v976 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v976 · 伴生全锁与关联修复'/);
+  assert.match(app,/const url='sw\.js\?v=976&r=v976-companion-all-control-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='976'/);
+  assert.match(html,/app\.js\?v=976/);
+  assert.match(sw,/const BUILD='976'/);
+  assert.match(sw,/north-shell-v976/);
+  assert.match(index,/小手机\.html\?v=976/);
+  assert.match(repair,/小手机\.html\?v=976/);
 });
 
-test('the private iOS package advances to v975 and 1.0.97 delivery',()=>{
-  assert.match(privateBundle,/<string>975<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.97;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 97;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.97 \(97\)'/);
+test('the private iOS package advances to v976 and 1.0.98 delivery',()=>{
+  assert.match(privateBundle,/<string>976<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.98;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 98;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.98 \(98\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

@@ -7,11 +7,11 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v975 web keeps private 1.0.97 compatibility', () => {
-  assert.match(app, /APP_VER='v975 · 独立授权与旧云锁移除'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='975'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 97;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.97;/g) || []).length, 12);
+test('v976 web keeps private 1.0.98 compatibility', () => {
+  assert.match(app, /APP_VER='v976 · 伴生全锁与关联修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='976'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 98;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.98;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {

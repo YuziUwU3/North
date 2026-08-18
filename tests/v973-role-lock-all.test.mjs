@@ -40,6 +40,7 @@ test('ordinary online chat keeps the real iPhone control protocol and exact all-
   assert.match(prompt, /\[锁定\|全部已选 App\|仅外置\]/);
   assert.match(prompt, /立即写入操作记录/);
   assert.match(prompt, /设备回执和新快照确认前绝不能谎称已经锁好/);
+  assert.match(prompt, /不是小手机里的虚拟 App/);
   assert.match(app, /if\(!rolePhoneInspectionLaneActive\(\)\)return companionRoleControlOnlyPrompt\(c,config\)/);
 });
 
@@ -60,8 +61,51 @@ test('a definite natural claim to lock every app is recovered without depending 
   assert.equal(context.detect('全部 App 都给你解开了。'), 'unlock');
   assert.equal(context.detect('再不听话我就把所有软件锁了。'), '');
   assert.equal(context.detect('要不要把全部软件锁掉？'), '');
+  assert.equal(context.detect('全部锁定。'), 'lock');
+  assert.equal(context.detect('全部解锁。'), 'unlock');
+  assert.equal(context.detect('一键全锁。'), 'lock');
+  assert.equal(context.detect('一键全解。'), 'unlock');
+  assert.equal(context.detect('我把你的软件全部锁掉了。'), 'lock');
+  assert.equal(context.detect('我还没把所有软件锁掉。'), '');
   assert.equal(context.recover('我把你的软件全部锁掉了。', { name: '北', remark: '先生' }), true);
   assert.deepEqual(JSON.parse(JSON.stringify(sent)), [{ action: 'lock', text: '全部已选 App', scope: 'external', actor: '先生' }]);
+});
+
+test('all-app companion commands dispatch every selected real iPhone app and never an internal app', () => {
+  const external = [];
+  const internal = [];
+  const context = vm.createContext({ external, internal });
+  vm.runInContext(`
+    const st={
+      defaultScope:'both',
+      apps:[{id:'real.wechat',name:'微信'},{id:'real.video',name:'视频'}],
+      bindings:[{externalAppId:'real.wechat',internalAppId:'wechat'}]
+    };
+    const S={couple:{grant:{wechat:true}}};
+    const LOCKABLE={wechat:'微信'};
+    function companionState(){return st;}
+    function companionScope(value){return ['internal','external','both'].includes(value)?value:'';}
+    function companionUnifiedLimitInternalIds(){return [];}
+    function companionBindingMirrorsLock(){return true;}
+    function companionDispatchRoleExternal(action,app,opt){external.push({action,id:app.id,actor:opt.actor});return {ok:true};}
+    function companionDispatchBound(action,id,opt){internal.push({action,id,scope:opt.scope});return {ok:true};}
+    function companionBindingForInternal(){return null;}
+    function _appKeys(){return [];}
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionMentionedExternalTargets')}
+    ${functionSource('companionExternalTargetsByText')}
+    ${functionSource('companionDispatchRoleByText')}
+    this.dispatch=companionDispatchRoleByText;
+  `, context);
+  assert.equal(context.dispatch('lock', '全部已选 App', { scope: 'external', actor: '角色' }), true);
+  assert.equal(context.dispatch('unlock', '全部已选 App', { scope: 'external', actor: '角色' }), true);
+  assert.deepEqual(JSON.parse(JSON.stringify(external)), [
+    { action: 'lock', id: 'real.wechat', actor: '角色' },
+    { action: 'lock', id: 'real.video', actor: '角色' },
+    { action: 'unlock', id: 'real.wechat', actor: '角色' },
+    { action: 'unlock', id: 'real.video', actor: '角色' },
+  ]);
+  assert.deepEqual(internal, []);
 });
 
 test('control extraction uses deterministic all-app recovery first and retries parser failures once', () => {
@@ -89,6 +133,7 @@ test('companion controls resolve a stable app id even after polling reorders the
 test('a refreshed native id repairs the saved association without duplicating the old app', () => {
   const context = vm.createContext({});
   vm.runInContext(`
+    function companionBindingBackupWrite(){return true;}
     ${functionSource('companionRememberBindingTarget')}
     ${functionSource('companionRepairBindings')}
     this.repair=companionRepairBindings;
@@ -107,6 +152,39 @@ test('a refreshed native id repairs the saved association without duplicating th
   assert.equal(rebound.has('old-token'), true);
 });
 
+test('an App association survives a later state overwrite through its independent local backup', () => {
+  const values = new Map();
+  const localStorage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, String(value)); },
+  };
+  const context = vm.createContext({ localStorage });
+  vm.runInContext(`
+    const LOCKABLE={wechat:'微信'};
+    function cloudId(){return 'owner.1';}
+    function uid(){return 'fixed';}
+    ${functionSource('companionBindingBackupKey')}
+    ${functionSource('companionBindingBackupRows')}
+    ${functionSource('companionBindingBackupWrite')}
+    ${functionSource('companionBindingBackupRestore')}
+    this.write=companionBindingBackupWrite;
+    this.restore=companionBindingBackupRestore;
+  `, context);
+  const saved = {
+    deviceId: 'iphone-1',
+    bindings: [{ id: 'binding.1', internalAppId: 'wechat', externalAppId: 'real.wechat', externalBindingCode: '013', externalAppName: '微信' }],
+  };
+  assert.equal(context.write(saved), true);
+  const overwritten = { deviceId: 'iphone-1', bindings: [] };
+  assert.equal(context.restore(overwritten), true);
+  assert.deepEqual(JSON.parse(JSON.stringify(overwritten.bindings)), saved.bindings);
+
+  assert.equal(context.write({ deviceId: 'iphone-1', bindings: [] }), true);
+  const explicitlyUnbound = { deviceId: 'iphone-1', bindings: [] };
+  assert.equal(context.restore(explicitlyUnbound), false);
+  assert.deepEqual(explicitlyUnbound.bindings, []);
+});
+
 test('association metadata is durably saved and bundled code stays synchronized', () => {
   const bind = functionSource('companionBindExternal');
   assert.match(bind, /companionRememberBindingTarget\(binding,app\)/);
@@ -114,7 +192,7 @@ test('association metadata is durably saved and bundled code stays synchronized'
   assert.match(bind, /关联没有保存成功/);
   assert.match(bind, /st\.bindings=oldBindings;app\.name=oldName/);
   assert.ok(bind.indexOf('await saveNowAsync()') < bind.indexOf("companionDispatchBound('limit'"));
-  for (const name of ['companionAppByRef', 'companionRememberBindingTarget', 'companionRepairBindings', 'companionBindExternal', 'companionRenameExternal', 'companionOwnerAction']) {
+  for (const name of ['companionBindingBackupKey', 'companionBindingBackupRows', 'companionBindingBackupWrite', 'companionBindingBackupRestore', 'companionAppByRef', 'companionRememberBindingTarget', 'companionRepairBindings', 'companionBindExternal', 'companionRenameExternal', 'companionOwnerAction']) {
     assert.equal(functionSource(name, bundled), functionSource(name), `${name} must match the private bundle`);
   }
 });
