@@ -129,7 +129,7 @@ test('August 19 invitation is automatic once, then manual requests may resend',(
   assert.match(js,/if\(st\.invitation\.autoSentAt\|\|weddingLocalDay\(at\)<WEDDING_RELEASE_DAY\)return false/);
   assert.match(js,/source==='auto'&&!st\.invitation\.autoSentAt/);
   assert.match(js,/function weddingResetQixiInvitationOnce\(\)/);
-  assert.match(js,/v985-qixi-engagement/);
+  assert.match(js,/v986-qixi-engagement/);
   assert.match(js,/st\.invitation\.autoSentAt=0/);
   assert.match(js,/m\.cancelledAt=m\.cancelledAt\|\|Date\.now\(\)/);
   assert.match(js,/function weddingHandleInviteRequest\(c,text\)/);
