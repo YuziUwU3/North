@@ -85,7 +85,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     <div class="section">
       <div class="it"><span>内置语音<br><small style="color:#888">开：角色语音条和语音电话走部署后台；关：若设置里填了外置海螺，则走外置海螺。</small></span><span class="sw ${aiVoiceRelayOn()?'on':''}" onclick="aiToggleVoiceApi()"></span></div>
       <div style="margin:0 14px 10px;padding:10px 12px;border:1px solid rgba(255,72,92,.48);border-radius:10px;background:rgba(255,72,92,.08);color:#ff5b6f;font-size:13px;font-weight:700;line-height:1.7">语音扣点明码标价<br>1～50字：1点<br>51～100字：2点<br>101～150字：3点<br>最多300字：6点<br>生成失败：不扣点</div>
-      <div class="it"><span>内置语音语言<br><small style="color:#888">只影响内置AI语音；外置语音仍使用角色里的语言。</small></span><span class="v"><select onchange="aiSetVoiceLanguage(this.value)" style="background:#24262d;color:#eee;border:1px solid #3b3e48;border-radius:6px;padding:6px"><option value="" ${!relayLang?'selected':''}>暂未设置（沿用角色）</option><option value="zh" ${relayLang==='zh'?'selected':''}>中文</option><option value="粤" ${relayLang==='粤'?'selected':''}>粤语</option><option value="英" ${relayLang==='英'?'selected':''}>英语</option><option value="日" ${relayLang==='日'?'selected':''}>日语</option><option value="韩" ${relayLang==='韩'?'selected':''}>韩语</option></select></span></div>
+      <div class="it"><span>内置语音语言<br><small style="color:#888">只影响内置AI语音；外置语音仍使用角色里的语言。</small></span><span class="v"><select onchange="aiSetVoiceLanguage(this.value)" style="background:#24262d;color:#eee;border:1px solid #3b3e48;border-radius:6px;padding:6px"><option value="" ${!relayLang?'selected':''}>暂未设置（沿用角色）</option><option value="zh" ${relayLang==='zh'?'selected':''}>中文</option><option value="粤" ${relayLang==='粤'?'selected':''}>粤语</option><option value="英" ${relayLang==='英'?'selected':''}>英语</option><option value="日" ${relayLang==='日'?'selected':''}>日语</option><option value="韩" ${relayLang==='韩'?'selected':''}>韩语</option><option value="法" ${relayLang==='法'?'selected':''}>法语</option><option value="德" ${relayLang==='德'?'selected':''}>德语</option><option value="俄" ${relayLang==='俄'?'selected':''}>俄语</option></select></span></div>
     </div>
     <div class="section">
       <div class="it"><span>影院字幕识别<br><small style="color:${aiAsrReady()===false?'#e6a0a8':'#888'}">${aiAsrReady()===false?'后台尚未配置识别渠道，暂时不能开启。':(aiAsrRouteCount()>1?'阿里主路线 + 腾讯备用路线；只用于影院提取字幕。':'只用于影院提取字幕。')}</small></span><span class="sw ${aiAsrRelayOn()?'on':''}" onclick="aiToggleAsrApi()"></span></div>
@@ -137,7 +137,7 @@ async function aiTestAsr(){
   },{hint:'影院字幕接口测试录音中'});
   if(!started)aiAsrTestFinish('❌ 麦克风没有启动，请检查浏览器录音权限');
 }
-function aiSetVoiceLanguage(lang){S.settings.tts=S.settings.tts||{};S.settings.tts.relayLang=['zh','粤','英','日','韩'].includes(lang)?lang:'';save();aiRenderStable();toast(lang?'内置语音已设为'+({zh:'中文','粤':'粤语','英':'英语','日':'日语','韩':'韩语'}[lang]||lang):'内置语音暂时沿用角色语言');}
+function aiSetVoiceLanguage(lang){S.settings.tts=S.settings.tts||{};S.settings.tts.relayLang=['zh','粤','英','日','韩','法','德','俄'].includes(lang)?lang:'';save();aiRenderStable();toast(lang?'内置语音已设为'+({zh:'中文','粤':'粤语','英':'英语','日':'日语','韩':'韩语','法':'法语','德':'德语','俄':'俄语'}[lang]||lang):'内置语音暂时沿用角色语言');}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
 async function aiPullVoices(){toast('正在拉取可用音色…');
@@ -154,7 +154,7 @@ function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=id;save();closeModal();toast('已设为默认音色');if(cur().p==='aiaccount')render();}
 function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='';save();toast('已清空默认音色');render();}
-function aiVoiceTestText(){const lang=aiVoiceRelayOn()?((S.settings.tts||{}).relayLang||'zh'):'zh';return {zh:'我在测试这条语音的花销和声音效果。','粤':'我而家試緊呢把聲嘅效果同埋收費。','英':'Hi, I am testing the cost and sound of this voice.','日':'こんにちは、この音声の費用と聞こえ方をテストしています。','韩':'안녕하세요, 이 음성의 비용과 소리를 테스트하고 있어요.'}[lang]||'我在测试这条语音的花销和声音效果。';}
+function aiVoiceTestText(){const lang=aiVoiceRelayOn()?((S.settings.tts||{}).relayLang||'zh'):'zh';return {zh:'我在测试这条语音的花销和声音效果。','粤':'我而家試緊呢把聲嘅效果同埋收費。','英':'Hi, I am testing the cost and sound of this voice.','日':'こんにちは、この音声の費用と聞こえ方をテストしています。','韩':'안녕하세요, 이 음성의 비용과 소리를 테스트하고 있어요.','法':'Bonjour, je teste le coût et le rendu de cette voix.','德':'Hallo, ich teste die Kosten und den Klang dieser Stimme.','俄':'Привет, я проверяю стоимость и звучание этого голоса.'}[lang]||'我在测试这条语音的花销和声音效果。';}
 async function aiTestVoice(){const text=aiVoiceTestText();
   if(_aiVoiceTestBusy){toast('语音还在生成中，请稍等');return;}
   if(!aiVoiceEnabled()){toast('先打开语音API');return;}

@@ -80,8 +80,21 @@ context.ttsUseRelay = () => false;
 assert.equal(context.ttsContentLang({ voice: { lang: "英" } }), "英", "external voice must keep the role language");
 assert.equal(context.ttsLanguageBoost({ voice: { lang: "日" } }), "Japanese");
 assert.equal(context.ttsLanguageBoost({ voice: { lang: "粤" } }), "Chinese,Yue");
+assert.equal(context.ttsLanguageBoost({ voice: { lang: "法" } }), "French");
+assert.equal(context.ttsLanguageBoost({ voice: { lang: "德" } }), "German");
+assert.equal(context.ttsLanguageBoost({ voice: { lang: "俄" } }), "Russian");
 assert.equal(context.normVoiceLang("yue-HK"), "粤");
+assert.equal(context.normVoiceLang("French"), "法");
+assert.equal(context.normVoiceLang("de-DE"), "德");
+assert.equal(context.normVoiceLang("Russian"), "俄");
 assert.equal(context.voiceLangName("粤"), "粤语");
+assert.equal(context.voiceLangName("法"), "法语");
+assert.equal(context.voiceLangName("德"), "德语");
+assert.equal(context.voiceLangName("俄"), "俄语");
+assert.equal(context.hasForeign("Je suis là.", "法"), true);
+assert.equal(context.hasForeign("Grüß dich.", "德"), true);
+assert.equal(context.hasForeign("Я здесь.", "俄"), true);
+assert.equal(context.hasForeign("I am here.", "俄"), false);
 assert.equal(context.voiceTagNeedsLangFix("[语音|Tell me why.|为什么这样？|语气:质问]", { voice: { lang: "英" } }), false);
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "british" }), "en-GB");
 assert.equal(context.normVoiceAccent({ lang: "\u82f1", accent: "en-US" }), "en-US");
@@ -98,6 +111,13 @@ const cantoneseUtterance = {};
 context.applySystemVoice(cantoneseUtterance, { lang: "粤", accent: "auto", voiceURI: "" });
 assert.equal(cantoneseUtterance.lang, "yue-HK");
 assert.equal(cantoneseUtterance.voice.voiceURI, "hk-voice");
+context._voices = [{ voiceURI: "fr-voice", lang: "fr-FR" }, { voiceURI: "de-voice", lang: "de-DE" }, { voiceURI: "ru-voice", lang: "ru-RU" }];
+for (const [lang, locale, voiceURI] of [["法", "fr-FR", "fr-voice"], ["德", "de-DE", "de-voice"], ["俄", "ru-RU", "ru-voice"]]) {
+  const localized = {};
+  context.applySystemVoice(localized, { lang, accent: "auto", voiceURI: "" });
+  assert.equal(localized.lang, locale);
+  assert.equal(localized.voice.voiceURI, voiceURI);
+}
 
 const minimax02 = { base: "https://api.minimax.io", model: "speech-02-turbo" };
 const eleven3 = { base: "https://api.elevenlabs.io", model: "eleven_v3" };
@@ -163,6 +183,9 @@ assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_vo
 assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /language_boost: safeTTSLanguageBoost\(languageBoost\)/);
 assert.match(backend, /"Chinese,Yue"/);
+assert.match(backend, /"French"/);
+assert.match(backend, /"German"/);
+assert.match(backend, /"Russian"/);
 assert.match(backend, /body\.voice_setting \|\| null, body\.language_boost/);
 assert.match(backend, /voice_setting: \{ voice_id: voiceId, \.\.\.safeTTSVoiceSetting\(setting\) \}/);
 assert.match(backend, /if \(allowed\.has\(emotion\)\) out\.emotion = emotion/);
@@ -192,6 +215,12 @@ assert.equal(routeContext.ttsUseRelay(), true, "relay must remain active after e
 assert.match(source, /model:tts\.model\|\|'speech-02-turbo'/);
 assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);
 assert.match(source, /id="v_accent"/);
+assert.match(source, /option value="法"[^>]*>法语<\/option>/);
+assert.match(source, /option value="德"[^>]*>德语<\/option>/);
+assert.match(source, /option value="俄"[^>]*>俄语<\/option>/);
+assert.match(source, /Bonjour, voici ma voix/);
+assert.match(source, /Hallo, das ist meine Stimme/);
+assert.match(source, /Привет, это мой голос/);
 assert.match(source, /accent:\$\('#v_accent'\)\.value/);
 assert.match(source, /applySystemVoice\(u,v\)/);
 assert.match(source, /'https:\/\/api\.fish\.audio','s2\.1-pro-free'/);

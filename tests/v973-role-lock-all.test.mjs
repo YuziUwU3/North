@@ -53,6 +53,7 @@ test('a definite natural claim to lock every app is recovered without depending 
     function companionState(){return state;}
     function companionReady(st){return !!st.linked;}
     function companionDispatchRoleAll(action,opt){sent.push({action,actor:opt.actor});return true;}
+    ${functionSource('companionAllControlClauseAction')}
     ${functionSource('companionNaturalAllControlAction')}
     ${functionSource('companionRecoverNaturalAllControl')}
     this.detect=companionNaturalAllControlAction;
@@ -67,8 +68,15 @@ test('a definite natural claim to lock every app is recovered without depending 
   assert.equal(context.detect('一键全锁。'), 'lock');
   assert.equal(context.detect('一键全解。'), 'unlock');
   assert.equal(context.detect('解除全锁。'), 'unlock');
+  assert.equal(context.detect('解除全部软件锁定。'), 'unlock');
+  assert.equal(context.detect('取消所有应用的锁定。'), 'unlock');
   assert.equal(context.detect('我把你的软件全部锁掉了。'), 'lock');
   assert.equal(context.detect('我还没把所有软件锁掉。'), '');
+  assert.equal(context.detect('不解开全部，只解开三个。'), '');
+  assert.equal(context.detect('“乖一天”换不回全部。选三个，今晚给你解开三个。'), '');
+  assert.equal(context.detect('All of them.\n（全部。）\nBut "good for one day" does not earn back everything.\n（但“乖了一天”换不回全部。）\nPick three. I will unlock three for you tonight.\n（选三个。今晚给你解开三个。）'), '');
+  assert.equal(context.detect('我不会全部解开，只给你解开三个。'), '');
+  assert.equal(context.detect('全部不解开。'), '');
   assert.equal(context.recover('我把你的软件全部锁掉了。', { name: '北', remark: '先生' }), true);
   assert.deepEqual(JSON.parse(JSON.stringify(sent)), [{ action: 'lock', actor: '先生' }]);
 });
@@ -117,12 +125,15 @@ test('all-app companion commands dispatch every selected real iPhone app and eve
     { action: 'lock', id: 'wechat', scope: 'internal' },
     { action: 'unlock', id: 'wechat', scope: 'internal' },
   ]);
+  assert.match(functionSource('companionDispatchRoleExternal'), /companionSendCommand\(st,action,app/);
+  assert.match(functionSource('companionSendCommand'), /SmallPhoneNative\.request\('device\.command',command\)/);
 });
 
 test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or all-unlock', () => {
   const context = vm.createContext({});
   vm.runInContext(`
     ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionAllControlClauseAction')}
     ${functionSource('companionNaturalAllControlAction')}
     ${functionSource('companionRequestedAllControlAction')}
     ${functionSource('companionStripSupersededAllControlTags')}
@@ -145,6 +156,7 @@ test('an explicit user all-control request upgrades a matching internal-only mod
   const context = vm.createContext({});
   vm.runInContext(`
     ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionAllControlClauseAction')}
     ${functionSource('companionNaturalAllControlAction')}
     ${functionSource('companionRequestedAllControlAction')}
     this.detect=companionRequestedAllControlAction;
@@ -154,6 +166,28 @@ test('an explicit user all-control request upgrades a matching internal-only mod
   assert.equal(context.detect('我不想这么做。', '把所有软件全部锁定。'), '');
   assert.equal(context.detect('好。\n[解锁|云程、音乐|仅内置]', '把所有软件全部锁定。'), '');
   assert.equal(context.detect('好。\n[锁定|云程、音乐|仅内置]', '要不要把所有软件锁定？'), '');
+  assert.equal(context.detect('选三个。今晚给你解开三个。\n[解锁|云程、音乐、放映室|仅内置]', '把这三个解开，不要解开全部。'), '');
+});
+
+test('a negative mention of all never upgrades a partial target to all external apps', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    function companionLatestUserText(){return '把这三个解开，不要解开全部。';}
+    function companionRoleRequestedScope(){return 'both';}
+    function companionMentionedExternalTargets(){return [];}
+    function companionRoleReferenceCount(){return 3;}
+    function companionRecentExternalGroup(){return [{name:'云程'},{name:'音乐'},{name:'放映室'}];}
+    function companionRecentUniqueExternal(){return null;}
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionAllControlClauseAction')}
+    ${functionSource('companionNaturalAllControlAction')}
+    ${functionSource('companionResolveRoleActionTarget')}
+    this.resolve=companionResolveRoleActionTarget;
+  `, context);
+  const resolved=context.resolve({}, {}, '这几个', '“乖一天”换不回全部。今晚只给你解开三个。');
+  assert.equal(resolved.text, '云程、音乐、放映室');
+  assert.equal(resolved.scope, 'both');
+  assert.notEqual(resolved.text, '全部内外 App');
 });
 
 test('control extraction uses deterministic all-app recovery first and retries parser failures once', () => {
@@ -163,6 +197,7 @@ test('control extraction uses deterministic all-app recovery first and retries p
   assert.match(extract, /attempt<2/);
   assert.match(extract, /aux:attempt===0/);
   assert.equal(normalized(functionSource('companionRoleControlOnlyPrompt', bundled)), normalized(functionSource('companionRoleControlOnlyPrompt')));
+  assert.equal(normalized(functionSource('companionAllControlClauseAction', bundled)), normalized(functionSource('companionAllControlClauseAction')));
   assert.equal(normalized(functionSource('companionNaturalAllControlAction', bundled)), normalized(functionSource('companionNaturalAllControlAction')));
   assert.equal(normalized(functionSource('companionRequestedAllControlAction', bundled)), normalized(functionSource('companionRequestedAllControlAction')));
   assert.equal(normalized(functionSource('companionDispatchRoleAll', bundled)), normalized(functionSource('companionDispatchRoleAll')));

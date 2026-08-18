@@ -811,7 +811,7 @@ function safeTTSVoiceSetting(input: TTSVoiceSetting | null | undefined) {
 
 function safeTTSLanguageBoost(input: unknown) {
   const value = String(input || "auto");
-  return new Set(["auto", "Chinese", "Chinese,Yue", "English", "Japanese", "Korean"]).has(value) ? value : "auto";
+  return new Set(["auto", "Chinese", "Chinese,Yue", "English", "Japanese", "Korean", "French", "German", "Russian"]).has(value) ? value : "auto";
 }
 
 async function minimaxTTS(text: string, voiceId: string, model: string, setting?: TTSVoiceSetting, languageBoost?: unknown) {

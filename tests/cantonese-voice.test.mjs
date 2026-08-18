@@ -61,7 +61,7 @@ assert.match(source, /我喺度呀，頭先有啲走神/);
 assert.match(source, /粵語|粤语原文必须使用自然/);
 
 assert.match(account, /option value="粤"/);
-assert.match(account, /\['zh','粤','英','日','韩'\]/);
+assert.match(account, /\['zh','粤','英','日','韩','法','德','俄'\]/);
 assert.match(backend, /"Chinese,Yue"/);
 assert.match(backend, /return "16k_yue"/);
 
