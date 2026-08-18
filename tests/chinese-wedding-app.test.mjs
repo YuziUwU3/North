@@ -33,12 +33,15 @@ test('Chinese character art uses persona-aware black or white ancient long hair,
   assert.match(js,/具体脸型、五官比例、刘海分缝、束发结构、每一缕长发、发色、发冠外形与喜服纹样必须一模一样/);
 });
 
-test('one failed Chinese frame retries against a successful identity frame before preview fallback',()=>{
+test('every failed Chinese frame retries twice against a successful identity frame before preview fallback',()=>{
   const js=read('wedding-game.js');
   const prepare=js.slice(js.indexOf('async function weddingPrepareInvitation'),js.indexOf('async function weddingLoadPreparedScenes'));
   assert.match(prepare,/const failed=order\.filter/);
+  assert.match(prepare,/for\(let i=0;i<failed\.length;i\+\+\)/);
   assert.match(prepare,/weddingIdentityReference\(scene,style\)/);
   assert.match(prepare,/await weddingRetryFailedScene\(c,scene,script\.formalwear,style\)/);
+  assert.match(js,/for\(let attempt=1;attempt<=2;attempt\+\+\)/);
+  assert.match(js,/weddingTimed\(weddingRetryFailedSceneBase\(c,scene,formalwear,style\),120000/);
   assert.match(js,/第一张输入图是同一场婚礼已经通过复核的身份参考/);
   assert.match(js,/W\.sceneImages\[scene\]=weddingScenes\(style\)\[scene\]/);
 });
@@ -104,7 +107,7 @@ test('both ceremonies lock narration and let the model generate only role speech
   assert.match(js,/不要输出 narration、prompt 或 officiant 字段/);
   assert.match(js,/text:weddingSafeText\(list\[i\]&&list\[i\]\.text,fallback\[i\]\.text,28\)/);
   assert.match(js,/不得串位或重复/);
-  assert.equal((js.match(/\{aux:false,max:/g)||[]).length,5,'婚礼邀请、两种婚礼台词和婚后消息都固定走主模型');
+  assert.equal((js.match(/\{aux:false,max:/g)||[]).length,5,'婚礼首邀、到点邀约、两种婚礼台词和婚后消息都固定走主模型');
   assert.doesNotMatch(js,/gameUseAux/);
 });
 
@@ -115,6 +118,8 @@ test('Chinese certificate and memory remain separate from modern',()=>{
   assert.match(js,/用喜秤为她挑起红盖头/);
   assert.match(js,/\(x\.style\|\|'modern'\)!==style/);
   assert.match(js,/id:'wed_'\+style\+'_'\+weddingHash\(c\.id\)/);
+  assert.match(js,/function weddingCompletedStyles\(c\)/);
+  assert.match(js,/我知道我们已经举行过现代与中式两场现实婚礼/);
   assert.match(css,/certificate-blank\.png/);
   assert.match(css,/\.wedding-cert-card-chinese/);
   assert.match(js,/<h2><span>婚<\/span><span>书<\/span><\/h2>/);
@@ -125,4 +130,5 @@ test('Chinese certificate and memory remain separate from modern',()=>{
   assert.doesNotMatch(js,/class="wedding-chinese-names">/);
   assert.match(css,/right:5\.1%;top:16%/);
   assert.match(css,/writing-mode:vertical-rl/);
+  assert.match(css,/\.wedding-chinese-meta p b\{text-orientation:upright;letter-spacing:\.08em\}/);
 });

@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v987 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v987 · 婚礼旁白与婚书排版修正'/);
-  assert.match(app,/const url='sw\.js\?v=987&r=v987-wedding-narration-certificate-fix-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='987'/);
-  assert.match(html,/app\.js\?v=987/);
-  assert.match(sw,/const BUILD='987'/);
-  assert.match(sw,/north-shell-v987/);
-  assert.match(index,/小手机\.html\?v=987/);
-  assert.match(repair,/小手机\.html\?v=987/);
+test('v988 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v988 · 婚礼邀约与生成重试修正'/);
+  assert.match(app,/const url='sw\.js\?v=988&r=v988-wedding-invite-retry-memory-fix-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='988'/);
+  assert.match(html,/app\.js\?v=988/);
+  assert.match(sw,/const BUILD='988'/);
+  assert.match(sw,/north-shell-v988/);
+  assert.match(index,/小手机\.html\?v=988/);
+  assert.match(repair,/小手机\.html\?v=988/);
 });
 
-test('the private iOS package embeds web v987 and keeps 1.0.108 delivery',()=>{
-  assert.match(privateBundle,/<string>987<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.108;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 108;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.108 \(108\)'/);
+test('the private iOS package embeds web v988 and keeps 1.0.109 delivery',()=>{
+  assert.match(privateBundle,/<string>988<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.109;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 109;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.109 \(109\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

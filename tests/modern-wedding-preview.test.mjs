@@ -11,8 +11,8 @@ const hash=path=>crypto.createHash('sha256').update(fs.readFileSync(`${root}/${p
 test('modern wedding preview v9 is loaded by web and private shells',()=>{
   for(const htmlPath of ['小手机.html',`${privateBundle}/小手机.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-12/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-12/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-13/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-13/);
   }
 });
 
@@ -21,8 +21,8 @@ test('private bundle stages the current wedding code, shell entries, art and BGM
   assert.equal(hash(`${privateBundle}/小手机.html`),hash(`${privateBundle}/index.html`));
   for(const htmlPath of [`${privateBundle}/小手机.html`,`${privateBundle}/index.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-12/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-12/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-13/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-13/);
   }
   assert.match(read(`${privateBundle}/app.js`),/预约婚礼/);
   assert.match(read(`${privateBundle}/app.js`),/weddingCalendarTick/);
@@ -161,25 +161,35 @@ test('invitation shows background preparation progress, then sends role line and
   assert.match(js,/data-wedding-countdown/);
   assert.match(js,/function weddingPrepareInvitation\(c,m\)/);
   assert.match(js,/WEDDING_PREP_DEFAULT_MS=11\*60\*1000/);
-  assert.match(js,/WEDDING_READY_DELAY_MS=60\*1000/);
+  assert.match(js,/WEDDING_READY_DELAY_MS=10\*1000/);
   assert.match(js,/data-wedding-preparing/);
   assert.match(js,/预计还需约/);
   assert.match(js,/请勿退出小手机或锁屏/);
   assert.doesNotMatch(js,/可以先离开聊天，准备会在小手机内继续/);
   assert.match(js,/for\(let i=0;i<order\.length;i\+\+\)/);
-  assert.match(js,/function weddingArrivalLine\(c,style\)/);
-  assert.match(js,/必须明确说出“七夕”和“订婚宴”/);
-  assert.match(js,/我为我和恋人准备的现实/);
+  assert.match(js,/function weddingArrivalLine\(c,style,script\)/);
+  assert.match(js,/function weddingGenerateArrivalLine\(c,style\)/);
+  assert.match(js,/像你平时私下对她说话/);
+  assert.match(js,/不是订婚宴/);
+  assert.match(js,/script\.arrival_line=await weddingGenerateArrivalLine/);
+  assert.match(js,/prepared=weddingState\(\)\.prepared\[m\.id\],text=weddingArrivalLine/);
+  assert.doesNotMatch(js,/const text=await weddingArrivalLine/);
+  assert.match(js,/婚礼已准备就绪，新郎正在向你走来/);
+  assert.match(js,/styleName\+'婚礼已准备就绪/);
+  assert.doesNotMatch(js,/画面已全部生成 · 正在完成最后复核|婚礼已全部生成，开放倒计时/);
+  assert.doesNotMatch(js,/约一分钟后可以进入/);
+  assert.match(js,/for\(let attempt=1;attempt<=2;attempt\+\+\)/);
+  assert.match(js,/两次重试均失败/);
   assert.match(js,/m\.eventAt=m\.preparedAt\+WEDDING_READY_DELAY_MS/);
   assert.match(js,/phase:'ready'/);
   assert.match(js,/function weddingOpenReadyInvite\(cid,mid\)/);
   assert.match(js,/function weddingEnsureInviteFormat\(m\)/);
   assert.match(js,/m\.schema=2/);
   assert.match(js,/preparedAt/);
-  assert.match(js,/只输出一条普通微信正文，不要模仿卡片格式/);
+  assert.match(js,/只输出一条普通微信正文/);
   assert.match(js,/function weddingInvitationIntroLine\(c,opt\)/);
   assert.match(js,/function weddingSendInvitationPersonalized\(c,source,opt\)/);
-  assert.match(js,/按你本人的人设、关系、记忆和说话习惯/);
+  assert.match(js,/按你本人的人设、关系、记忆和日常说话习惯/);
   assert.match(app,/这是我本人主动发出的现实婚礼形式选择卡/);
   assert.match(app,/这是我本人发出的现实/);
   assert.match(js,/role\|type\|content\|phase\|json/);
@@ -228,9 +238,11 @@ test('private offline-date menu exposes couple-only background preparation and r
 test('wedding reset is scoped, removes wedding state and re-arms next-launch invitation',()=>{
   const js=read('wedding-game.js'),css=read('wedding-game.css');
   assert.match(js,/function weddingClearAll\(cid\)/);
+  assert.match(js,/Object\.assign\(window,\{[^}]*weddingClearAll/);
   assert.match(js,/清空所有婚礼记忆、婚书与夫妻关系/);
   assert.match(js,/st\.records=st\.records\.filter/);
   assert.match(js,/c\.summaries=.*filter\(x=>!weddingMemorySummary\(x\)\)/);
+  assert.match(js,/const list=memoryList\(c,'main'\),removed=list\.filter/);
   assert.match(js,/st\.invitation=\{cid:c\.id,autoSentAt:0/);
   assert.match(js,/下次打开小手机会重新收到邀请/);
   assert.match(js,/S\.calendar=.*filter\(x=>!\(x&&x\.type==='wedding'/);
@@ -291,15 +303,20 @@ test('calendar schedules an exact wedding time and only the couple-space role ca
   assert.match(js,/data-wedding-style/);
 });
 
-test('completion writes one five-star important memory and sends a fresh post-wedding message each replay',()=>{
-  const js=read('wedding-game.js');
-  assert.match(js,/addSummary\(c,text,5,'','main'\)/);
+test('completion writes one five-star character memory instead of a dialogue summary and sends a fresh post-wedding message each replay',()=>{
+  const js=read('wedding-game.js'),app=read('app.js');
+  assert.match(js,/function weddingStoreRoleMemory\(c,record\)/);
+  assert.match(js,/const styles=weddingCompletedStyles\(c\),both=/);
+  assert.match(js,/list=memoryList\(c,'main'\)/);
+  assert.match(js,/entry\.importance=5/);
+  assert.match(js,/entry\.rolePerspective=true/);
+  assert.match(app,/if\(v&&typeof v==='object'&&v\.rolePerspective\)return String\(v\.text/);
+  assert.match(js,/c\.summaries=.*filter\(x=>!\(x&&x\.weddingRecordId===record\.id\)\)/);
+  assert.match(js,/for\(const old of weddingState\(\)\.records\)/);
+  assert.match(js,/function weddingMigrateRoleMemories\(\)/);
+  assert.match(js,/oldPerspective=!!\(old&&old\.rolePerspective\)/);
   assert.match(js,/function weddingRoleCity\(c\)/);
-  assert.match(js,/day=weddingChineseDay\(record\.date\),city=weddingRoleCity\(c\)/);
-  assert.match(js,/'、在'\+city\+'正式举行/);
-  assert.match(js,/text='我和'/);
-  assert.match(js,/style=record\.style==='chinese'\?'chinese':'modern'/);
-  assert.match(js,/我清楚记得这不是/);
+  assert.match(js,/day\+'，我在'\+place\+'和'/);
   assert.match(js,/亲吻她的手背、为她的左手无名指戴上婚戒/);
   assert.match(js,/function weddingAfterMessage\(c,s,record,memory\)/);
   assert.match(js,/之前婚礼后发过这些话/);
@@ -310,6 +327,13 @@ test('completion writes one five-star important memory and sends a fresh post-we
   assert.match(js,/现实中的\'\+styleName\+\'婚礼/);
   assert.match(js,/id:'wed_'\+style\+'_'\+weddingHash\(c\.id\)/);
   assert.match(js,/st\.records=st\.records\.filter\(x=>x&&x!==record/);
+});
+
+test('role-perspective wedding memory keeps role I and the user name distinct in the memory editor',()=>{
+  const app=read('app.js'),source=app.match(/function memoryText\(v\)\{[^\n]+\}/)?.[0];
+  assert.ok(source);
+  const memoryText=new Function('aboutMeNoteText',source+';return memoryText;')(()=>{throw new Error('role memory must bypass user-memory rewriting');});
+  assert.equal(memoryText({rolePerspective:true,text:'2026年08月19日，我在伦敦和North举行了现实中的现代婚礼。'}),'2026年08月19日，我在伦敦和North举行了现实中的现代婚礼。');
 });
 
 test('marriage state and one certificate per style are exposed in couple space',()=>{
