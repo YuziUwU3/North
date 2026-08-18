@@ -136,21 +136,37 @@ test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or
   assert.doesNotMatch(context.strip(wrongLock,'lock'),/\[锁定\|/);
   assert.doesNotMatch(context.strip(wrongUnlock,'unlock'),/\[解锁\|/);
   const apply=functionSource('applyControlTags');
-  assert.ok(apply.indexOf('companionRequestedAllControlAction(content)') < apply.indexOf("content.replace(/[\\[【]\\s*(锁定|上锁|解锁"));
+  assert.ok(apply.indexOf('companionRequestedAllControlAction(content,requestText)') < apply.indexOf("content.replace(/[\\[【]\\s*(锁定|上锁|解锁"));
   assert.match(apply,/companionDispatchRoleAll\(allControlAction/);
   assert.match(apply,/changed=companionReads\.changed\|\|phonePwdChanged\|\|diaryPwdChanged\|\|!!allControlAction/);
 });
 
+test('an explicit user all-control request upgrades a matching internal-only model action', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    ${functionSource('companionAllExternalIntent')}
+    ${functionSource('companionNaturalAllControlAction')}
+    ${functionSource('companionRequestedAllControlAction')}
+    this.detect=companionRequestedAllControlAction;
+  `, context);
+  assert.equal(context.detect('好。\n[锁定|云程、音乐|仅内置]', '把所有软件全部锁定。'), 'lock');
+  assert.equal(context.detect('行。\n[解锁|云程、音乐|仅内置]', '解除全锁。'), 'unlock');
+  assert.equal(context.detect('我不想这么做。', '把所有软件全部锁定。'), '');
+  assert.equal(context.detect('好。\n[解锁|云程、音乐|仅内置]', '把所有软件全部锁定。'), '');
+  assert.equal(context.detect('好。\n[锁定|云程、音乐|仅内置]', '要不要把所有软件锁定？'), '');
+});
+
 test('control extraction uses deterministic all-app recovery first and retries parser failures once', () => {
   const extract = functionSource('extractControl');
+  const normalized = value => value.replace(/\r\n/g, '\n');
   assert.ok(extract.indexOf('companionRecoverNaturalAllControl(reply,c)') < extract.indexOf('chatAPI('));
   assert.match(extract, /attempt<2/);
   assert.match(extract, /aux:attempt===0/);
-  assert.equal(functionSource('companionRoleControlOnlyPrompt', bundled), functionSource('companionRoleControlOnlyPrompt'));
-  assert.equal(functionSource('companionNaturalAllControlAction', bundled), functionSource('companionNaturalAllControlAction'));
-  assert.equal(functionSource('companionRequestedAllControlAction', bundled), functionSource('companionRequestedAllControlAction'));
-  assert.equal(functionSource('companionDispatchRoleAll', bundled), functionSource('companionDispatchRoleAll'));
-  assert.equal(functionSource('extractControl', bundled), extract);
+  assert.equal(normalized(functionSource('companionRoleControlOnlyPrompt', bundled)), normalized(functionSource('companionRoleControlOnlyPrompt')));
+  assert.equal(normalized(functionSource('companionNaturalAllControlAction', bundled)), normalized(functionSource('companionNaturalAllControlAction')));
+  assert.equal(normalized(functionSource('companionRequestedAllControlAction', bundled)), normalized(functionSource('companionRequestedAllControlAction')));
+  assert.equal(normalized(functionSource('companionDispatchRoleAll', bundled)), normalized(functionSource('companionDispatchRoleAll')));
+  assert.equal(normalized(functionSource('extractControl', bundled)), normalized(extract));
 });
 
 test('companion controls resolve a stable app id even after polling reorders the array', () => {

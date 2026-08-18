@@ -258,6 +258,8 @@ test('component glass tint and opacity are user-adjustable without changing layo
   assert.match(app,/组件玻璃色调/);
   assert.match(app,/组件透明度/);
   assert.match(css,/\.home\.glass-widget-custom .*--ng-widget-rgb/);
+  assert.match(css,/\[class\*="north-pack-"\] \.home\.glass-widget-custom:not\(\.tpink\):not\(\.twhite\).*--ng-widget-alpha/);
+  assert.match(css,/north-native-app\.north-glass-ui \.home\.glass-widget-custom \.glass-second-portrait[\s\S]*background-color:rgba\(var\(--ng-widget-rgb\),var\(--ng-widget-alpha\)\)!important/);
 });
 
 test('dashboard photo is a direct isolated upload target and sweetie text is readable',()=>{

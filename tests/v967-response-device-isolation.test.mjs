@@ -97,7 +97,7 @@ test('native no-backdrop fallback restores opaque-enough page-two cards in every
   assert.match(glass, /north-native-app\.north-glass-ui\.north-pack-pink \.glass-second-portrait,[\s\S]*?rgba\(244,181,208,\.55\)/);
   assert.match(glass, /north-native-app\.north-glass-ui\.north-pack-blue \.glass-second-portrait,[\s\S]*?rgba\(169,205,244,\.52\)/);
   assert.match(glass, /north-native-app\.north-glass-ui\.north-pack-gray \.glass-second-portrait,[\s\S]*?rgba\(228,232,239,\.56\)/);
-  assert.match(glass, /home\.glass-widget-custom \.glass-second-portrait,[\s\S]*?rgba\(var\(--ng-widget-rgb\),\.56\)/);
+  assert.match(glass, /home\.glass-widget-custom \.glass-second-portrait,[\s\S]*?rgba\(var\(--ng-widget-rgb\),var\(--ng-widget-alpha\)\)/);
   assert.match(glass, /glass-second-portrait-copy\{background-color:rgba\(5,6,8,\.7\)!important\}/);
   assert.doesNotMatch(glass, /html\.north-glass-ui \.glass-second-portrait\{[^}]*background-color:rgba\(18,19,23,\.62\)/);
 });
