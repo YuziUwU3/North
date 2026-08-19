@@ -16,7 +16,7 @@ test('restore-all can continue with a context-driven inspection',()=>{
   assert.match(app,/function remoteControlRunRestoreAll\(c\)/);
   assert.match(app,/function remoteControlAfterRestorePlan\(c\)/);
   assert.match(app,/remoteControlAfterRestorePlan\(c\)/);
-  assert.match(app,/function remoteControlContextCandidates\(c\)/);
+  assert.match(app,/function remoteControlContextCandidates\(c,ctxOverride\)/);
   assert.match(app,/targetType:'wechatList'/);
   assert.match(app,/wechat\.concat\(rest\)\.slice\(0,6\)/);
 });
@@ -27,7 +27,8 @@ test('remote control keeps chat context and restores v727 role-chosen ordering',
   assert.match(app,/function remoteControlIntentContext\(c\)/);
   assert.match(app,/function remoteControlMentionedWechatTargets\(c\)/);
   assert.match(app,/contextMentioned:true/);
-  assert.match(app,/if\(required\.some\(a=>a&&a\.contextMentioned\)\)return required\.filter\(a=>a&&a\.app==='wechat'\)/);
+  assert.match(app,/if\(required\.some\(a=>a&&a\.contextMentioned\)\)return remoteControlDedupPlan\(required\.filter\(a=>a&&a\.app==='wechat'\)/);
+  assert.match(app,/本次远程操控的原始目标，执行中不得忘记/);
   assert.match(app,/async function remoteControlOrderPlan\(c,required\)/);
   assert.match(app,/picked\.concat\(apps\)\.forEach/);
 });

@@ -6,7 +6,7 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 
 test('remote viewing reuses real stored records',()=>{
-  assert.match(app,/function remoteControlPhoneSnapshot\(\)/);
+  assert.match(app,/function remoteControlPhoneSnapshot\(cid\)/);
   assert.match(app,/p\.recents\|\|\[\]/);
   assert.match(app,/Object\.keys\(p\.sms\|\|\{\}\)/);
   assert.match(app,/p\.voicemail\|\|\[\]/);
@@ -27,9 +27,11 @@ test('remote viewing opens real apps and stores only viewed facts',()=>{
   assert.match(app,/targetType==='dySearchHistory'[\s\S]*?dyTab='search'/);
 });
 
-test('v727 inspection visits every available app in a role-chosen order',()=>{
+test('broad inspection visits every available app while an explicit goal stays focused',()=>{
   assert.match(app,/function remoteControlRequiredPlan\(c\)/);
-  assert.match(app,/let required=remoteControlRequiredPlan\(c\);required=await remoteControlOrderPlan\(c,required\)/);
+  assert.match(app,/let required=remoteControlRequiredPlan\(c\);required=remoteControlDedupPlan\(await remoteControlOrderPlan\(c,required\)\)/);
+  assert.match(app,/direct&&\!remoteControlContextWantsBroad\(direct\)/);
+  assert.match(app,/remoteControlContextCandidates\(c,direct\)/);
   assert.match(app,/async function remoteControlOrderPlan\(c,required\)/);
   assert.match(app,/下面列出的软件都必须查看/);
   assert.match(app,/只决定软件顺序，不能漏掉、增加或重复任何app/);
@@ -45,7 +47,8 @@ test('chat and DM detail choices remain role-driven',()=>{
   assert.match(app,/function remoteControlWechatCandidates\(c\)/);
   assert.match(app,/function remoteControlWechatChoicePlan\(c\)/);
   assert.match(app,/targetType:'wechatList'/);
-  assert.match(app,/required\.splice\(i\+1,0,\.\.\.choices\)/);
+  assert.match(app,/remoteControlAppendChoices\(required,i\+1,choices\)/);
+  assert.match(app,/function remoteControlAppendChoices\(plan,at,choices\)/);
   assert.match(app,/function remoteControlWechatEnterFromList\(a\)/);
   assert.match(app,/function remoteControlWechatExitToList\(\)/);
   assert.match(app,/function remoteControlDmChoicePlan\(c,app\)/);

@@ -9,8 +9,8 @@ const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 
 assert.match(
   source,
-  /c\.p==='wechat'\|\|c\.p==='chat'\|\|c\.p==='contactInfo'/,
-  "white WeChat theme must include the contact profile page",
+  /\['wechat','chat','contactInfo','friendInfo','contactSettings','roleMoments','roleFeatures'\]\.includes\(c\.p\)/,
+  "white WeChat theme must include every role profile subpage",
 );
 assert.match(
   source,

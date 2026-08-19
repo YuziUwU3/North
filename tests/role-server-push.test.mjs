@@ -257,7 +257,8 @@ test('every visible conversation message resets a random 30-60 minute server qui
 test('zero interval uses random daily scheduling while a nonzero interval is exact', () => {
   assert.match(edge, /fixed > 0 \? fixed : randomDueMinutes\(profile\)/);
   assert.match(edge, /const daily = Math\.max\(1, Math\.min\(24, Number\(profile\.daily_limit \|\| 1\)\)\)/);
-  assert.match(functionSource('roleServerPushProfile'), /configured=Math\.max\(0,Math\.min\(1440,Number\(S\.settings\.proactiveIdleMin\)\|\|0\)\)/);
+  assert.match(functionSource('roleServerPushProfile'), /configured=proactiveIdleMinutes\(c\)/);
+  assert.match(functionSource('proactiveIdleMinutes'), /c&&c\.proactive&&c\.proactive\.idleMin/);
   assert.match(functionSource('roleServerPushProfile'), /idleMinutes:configured/);
 });
 

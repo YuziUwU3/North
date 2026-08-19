@@ -75,9 +75,11 @@ const photoNote = '[系统：这是一次【主动消息】。【本轮允许主
 assert.equal(captionContext.ok(photoNote, '刚看到窗外的晚霞特别好看，拍给你。\n[图片|窗外粉紫色晚霞]'), true);
 assert.equal(captionContext.ok(photoNote, '醒了吗。\n[图片|桌面上的咖啡]'), false, 'an unrelated wake-up check must not carry a random photo');
 
-const delayContext = vm.createContext({S: {settings: {proactiveIdleMin: 1}}});
-vm.runInContext(functionSource('initiativeConfiguredIntervalMs') + ';' + functionSource('initiativeDelayMs') + ';globalThis.delay=initiativeDelayMs();', delayContext);
-assert.equal(delayContext.delay, 60000, 'one minute in settings must mean one real minute');
+const delayContext = vm.createContext({initiativeRandomDelayMs:()=>999999});
+vm.runInContext(functionSource('initiativeConfiguredIntervalMs') + ';' + functionSource('initiativeDelayMs') + ';globalThis.first=initiativeDelayMs({proactive:{idleMin:1}});globalThis.second=initiativeDelayMs({proactive:{idleMin:3}});', delayContext);
+assert.equal(delayContext.first, 60000, 'one minute on a role must mean one real minute');
+assert.equal(delayContext.second, 180000, 'each role must keep an independent proactive interval');
+assert.doesNotMatch(functionSource('initiativeConfiguredIntervalMs'), /S\.settings\.proactiveIdleMin/, 'the scheduler must not read the retired global interval');
 
 const quietContext = vm.createContext({activityHash:()=>0});
 vm.runInContext(functionSource('initiativeSilenceMs') + ';globalThis.quiet=initiativeSilenceMs;', quietContext);

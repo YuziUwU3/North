@@ -58,10 +58,10 @@ test('role Moments detect only close recent repetition', () => {
 });
 
 test('every role Moment entry point uses generation and duplicate-safe publishing', () => {
-  assert.match(functionSource('doAutoMoment'), /roleMomentGenerate/);
-  assert.match(functionSource('doAutoMoment'), /publishRoleMoment/);
-  assert.match(functionSource('refreshMoments'), /roleMomentGenerate/);
-  assert.match(functionSource('refreshMoments'), /publishRoleMoment/);
+  assert.match(functionSource('doAutoMoment'), /publishRoleSocialAutonomous\(c,'moment'/);
+  assert.match(functionSource('refreshMoments'), /publishRoleSocialAutonomous\(c,'moment'/);
+  assert.match(functionSource('publishRoleSocialAutonomous'), /roleMomentGenerate/);
+  assert.match(functionSource('publishRoleSocialAutonomous'), /publishRoleMoment/);
   assert.match(functionSource('postRoleMoment'), /^function postRoleMoment\([^]*return publishRoleMoment/);
   assert.match(functionSource('roleMomentGenerate'), /for\(let attempt=0;attempt<2;attempt\+\+\)/);
   assert.match(functionSource('publishRoleMoment'), /roleMomentSimilarity\(c,tx\)\.hard/);
