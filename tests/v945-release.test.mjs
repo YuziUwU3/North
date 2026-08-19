@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v998 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v998 · 动态自主配图与角色资料优化'/);
-  assert.match(app,/const url='sw\.js\?v=998&r=v998-social-image-profile-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='998'/);
-  assert.match(html,/app\.js\?v=998/);
-  assert.match(sw,/const BUILD='998'/);
-  assert.match(sw,/north-shell-v998/);
-  assert.match(index,/小手机\.html\?v=998/);
-  assert.match(repair,/小手机\.html\?v=998/);
+test('v999 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v999 · 角色朋友圈与资料设置优化'/);
+  assert.match(app,/const url='sw\.js\?v=999&r=v999-role-moments-profile-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='999'/);
+  assert.match(html,/app\.js\?v=999/);
+  assert.match(sw,/const BUILD='999'/);
+  assert.match(sw,/north-shell-v999/);
+  assert.match(index,/小手机\.html\?v=999/);
+  assert.match(repair,/小手机\.html\?v=999/);
 });
 
-test('the private iOS package embeds web v998 and keeps 1.0.119 delivery',()=>{
-  assert.match(privateBundle,/<string>998<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.119;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 119;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.119 \(119\)'/);
+test('the private iOS package embeds web v999 and keeps 1.0.120 delivery',()=>{
+  assert.match(privateBundle,/<string>999<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.120;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 120;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.120 \(120\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

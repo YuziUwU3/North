@@ -7,7 +7,7 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const wedding=fs.readFileSync(new URL('../wedding-game.js',import.meta.url),'utf8');
 const bridge=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift',import.meta.url),'utf8');
 
-test('v998 removes synchronous camera JPEG work and preserves the camera audio session',()=>{
+test('v999 removes synchronous camera JPEG work and preserves the camera audio session',()=>{
   assert.match(app,/async function callVideoElementFrame/);
   assert.match(app,/canvas\.toBlob\(/);
   assert.match(app,/privateNativeAppOn\(\)\?480:640/);
@@ -18,11 +18,11 @@ test('v998 removes synchronous camera JPEG work and preserves the camera audio s
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v998 · 动态自主配图与角色资料优化'/);
+  assert.match(app,/APP_VER='v999 · 角色朋友圈与资料设置优化'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-998/);
-  assert.match(html,/sw\.js\?v=998&r=v998-social-image-profile-1/);
+  assert.match(html,/north-sw-reloaded-999/);
+  assert.match(html,/sw\.js\?v=999&r=v999-role-moments-profile-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

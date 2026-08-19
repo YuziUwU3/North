@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='998'){
+if(window.__NORTH_SHELL_BUILD__!=='999'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -374,7 +374,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v998 · 动态自主配图与角色资料优化';
+const APP_VER='v999 · 角色朋友圈与资料设置优化';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -529,9 +529,9 @@ function previewSeed(mode){const s=defState(),now=Date.now(),parts=String(mode||
   {id:'preview_1',name:'沈砚',remark:'先生＾＾',avatar:portrait,persona:'克制、可靠，会认真记住相处里的细节。',signature:'世界很大，我只认真走向你。',relation:'恋人',gender:'男',city:'上海',region:'中国 上海',wxid:'shenyan_0414',phone:'150 0613 5912',tags:['恋人','重要的人'],note:'记得他不喝太甜的咖啡。',profilePhotos:[photo1,photo2,photo3],momentCover:cover,star:true,pinned:true,createdAt:Date.now()-682*86400000,deleted:false,blocked:false,proactive:{enabled:true,times:2}},
   {id:'preview_2',name:'北',remark:'北',avatar:portrait,persona:'',signature:'',deleted:false,blocked:false,proactive:{enabled:false}},
   {id:'preview_3',name:'共同生活',remark:'共同生活',avatar:portrait,persona:'',signature:'',deleted:false,blocked:false,proactive:{enabled:false}}
-];s.messages={preview_1:[{id:'pm1',role:'assistant',type:'text',content:'到了告诉我，我去接你。',time:now-2*60000}],preview_2:[{id:'pm2',role:'assistant',type:'voice',content:'别忘了好好吃饭。',time:now-18*60000}],preview_3:[{id:'pm3',role:'assistant',type:'text',content:'今天晚上一起吃饭吗？',time:now-42*60000}]};s.moments=[{id:'preview_m1',authorId:'preview_1',text:'晚一点没关系，我会等你。',images:[photo1],time:now-45*60000,likes:['我'],comments:[{name:'我',text:'那你不许先睡。'}],acct:'main',pinned:true},{id:'preview_m2',authorId:'preview_1',text:'今天的咖啡刚好，窗边的位置也留给你。',images:[photo2],time:now-22*3600000,likes:['北'],comments:[],acct:'main'},{id:'preview_m3',authorId:'preview_1',text:'散步经过熟悉的路口，忽然觉得有人一起回家是一件很好的事。',images:[photo3],time:now-3*86400000,likes:[],comments:[],acct:'main'}];s.music={songs:[{id:'preview_song',title:'私人收藏',artist:'North',cover:portrait}],lastSongId:'preview_song'};s.me.lockNotes=[{id:'pl1',title:'先生＾＾',body:'到了告诉我，我去接你。',time:now-60000,icon:'chat',target:{type:'chat',id:'preview_1'}},{id:'pl2',title:'北',body:'给你发来一条语音消息',time:now-8*60000,icon:'message',target:{type:'chat',id:'preview_2'}}];return s;}
+];s.messages={preview_1:[{id:'pm1',role:'assistant',type:'text',content:'到了告诉我，我去接你。',time:now-2*60000}],preview_2:[{id:'pm2',role:'assistant',type:'voice',content:'别忘了好好吃饭。',time:now-18*60000}],preview_3:[{id:'pm3',role:'assistant',type:'text',content:'今天晚上一起吃饭吗？',time:now-42*60000}]};s.moments=[{id:'preview_m1',authorId:'preview_1',text:'晚一点没关系，我会等你。',images:[photo1],time:now-45*60000,likes:['我'],comments:[{name:'我',text:'那你不许先睡。'}],acct:'main',pinned:true},{id:'preview_m2',authorId:'preview_1',text:'今天的咖啡刚好，窗边的位置也留给你。',images:[photo2],time:now-22*3600000,likes:['北'],comments:[],acct:'main'},{id:'preview_m3',authorId:'preview_1',text:'散步经过熟悉的路口，忽然觉得有人一起回家是一件很好的事。',images:[],time:now-3*86400000,likes:[],comments:[],acct:'main'}];s.music={songs:[{id:'preview_song',title:'私人收藏',artist:'North',cover:portrait}],lastSongId:'preview_song'};s.me.lockNotes=[{id:'pl1',title:'先生＾＾',body:'到了告诉我，我去接你。',time:now-60000,icon:'chat',target:{type:'chat',id:'preview_1'}},{id:'pl2',title:'北',body:'给你发来一条语音消息',time:now-8*60000,icon:'message',target:{type:'chat',id:'preview_2'}}];return s;}
 function previewHomePage(page){requestAnimationFrame(()=>{const sw=$('#appswipe');if(!sw)return;const viewportWidth=Math.min(window.innerWidth||Infinity,document.documentElement.clientWidth||Infinity,sw.getBoundingClientRect().width||Infinity);const w=Math.max(1,Math.floor(Number.isFinite(viewportWidth)?viewportWidth:(sw.clientWidth||1)));sw.querySelectorAll('.apppage').forEach(pg=>{pg.style.setProperty('width',w+'px','important');pg.style.setProperty('min-width',w+'px','important');pg.style.setProperty('max-width',w+'px','important');pg.style.setProperty('flex','0 0 '+w+'px','important');});_homePage=homePageClamp(page);sw.scrollLeft=_homePage*w;homePageDots(_homePage);});}
-function previewRoute(){if(!NORTH_PREVIEW)return;const mode=String(NORTH_PREVIEW_PARAMS||'black-home'),root=document.documentElement;root.classList.add('north-real-preview');root.classList.toggle('north-preview-tablet',mode.includes('tablet'));S.me.locked=mode.includes('lock');glassReferenceLayout();_homePage=mode.includes('apps2')?1:0;if(mode.includes('wechat-friend-info'))stack=[{p:'friendInfo',id:'preview_1'}];else if(mode.includes('wechat-contact-settings'))stack=[{p:'contactSettings',id:'preview_1'}];else if(mode.includes('wechat-role-moments'))stack=[{p:'roleMoments',id:'preview_1'}];else if(mode.includes('wechat-profile'))stack=[{p:'contactInfo',id:'preview_1'}];else if(mode.includes('wechat')){wxTab='chats';stack=[{p:'wechat'}];}else if(mode.includes('settings'))stack=[{p:'settings'}];else stack=[{p:'home'}];render();previewHomePage(_homePage);if(mode.includes('banner')){const b=$('#msgBanner'),c=S.contacts&&S.contacts[0];if(b&&c){b.innerHTML=`${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">到了告诉我，我去接你。</div></div>`;b.className='msgbanner show';}}}
+function previewRoute(){if(!NORTH_PREVIEW)return;const mode=String(NORTH_PREVIEW_PARAMS||'black-home'),root=document.documentElement;root.classList.add('north-real-preview');root.classList.toggle('north-preview-tablet',mode.includes('tablet'));S.me.locked=mode.includes('lock');glassReferenceLayout();_homePage=mode.includes('apps2')?1:0;if(mode.includes('wechat-friend-info'))stack=[{p:'friendInfo',id:'preview_1'}];else if(mode.includes('wechat-contact-settings'))stack=[{p:'contactSettings',id:'preview_1'}];else if(mode.includes('wechat-role-moment-detail'))stack=[{p:'roleMomentDetail',id:'preview_1',pid:'preview_m1'}];else if(mode.includes('wechat-role-moments'))stack=[{p:'roleMoments',id:'preview_1'}];else if(mode.includes('wechat-role-features'))stack=[{p:'roleFeatures',id:'preview_1'}];else if(mode.includes('wechat-profile'))stack=[{p:'contactInfo',id:'preview_1'}];else if(mode.includes('wechat')){wxTab='chats';stack=[{p:'wechat'}];}else if(mode.includes('settings'))stack=[{p:'settings'}];else stack=[{p:'home'}];render();previewHomePage(_homePage);if(mode.includes('banner')){const b=$('#msgBanner'),c=S.contacts&&S.contacts[0];if(b&&c){b.innerHTML=`${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">到了告诉我，我去接你。</div></div>`;b.className='msgbanner show';}}}
 function cid(){return 'c'+Math.random().toString(36).slice(2,9);}
 function genWxid(){return 'wx_'+Math.random().toString(36).slice(2,9);}
 function curMonth(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
@@ -1467,7 +1467,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=998&r=v998-social-image-profile-1';
+  const url='sw.js?v=999&r=v999-role-moments-profile-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -1980,6 +1980,7 @@ function buildSystem(c,opt){
   s+='\n- 微信支持“拍一拍”：当你本人想轻轻拍一下'+S.me.name+'时，可以单独输出 [拍一拍]，系统会显示“'+(c.remark||c.name)+'拍了拍你”。这是一项动作，不要把标签写进普通聊天；不想拍就不要输出。';
   s+='\n- 对方说“想要花花”“送我花”“想收个礼物”“有没有小惊喜”等时，你能准确理解ta是在表达想收礼。是否当场送、送什么、怎样回应，仍由你结合本人性格、关系、记忆和现实能力自主决定；真正决定送出时才单独输出 [送礼|礼物名|价格|想说的话]。';
   s+='\n- 礼物卡支持附言：送礼时可写 [送礼|礼物名|价格|你想对ta说的话]，最后一句会固定显示在玩偶或戒指特效下方；没有特别想说的话时仍可沿用三段格式。';
+  s+='\n- 如果'+S.me.name+'刚发来一张图片，并明确让你“把这张图发朋友圈/拿去官宣/配文发布”，你要自己写符合人设和关系的文案，然后输出 [发朋友圈|文案]。系统会自动把ta刚发的那张原图附到这条朋友圈；你不能说看不到，也不要另生成或替换图片。';
   s+=thoughtEggPrompt(c);
   s+='\n- 【当前语音语言最终规则】本轮真正使用的语音语言是'+(voiceLangName(_voiceLang)||'中文')+'，它覆盖上面可能出现的旧角色语音语言。'+(_voiceLang==='zh'?'语音内容直接写中文。':'所有语音必须用 [语音|'+voiceLangName(_voiceLang)+'原文|普通话中文翻译]。'+voiceOriginalRule(_voiceLang));
   s+='\n- 当'+S.me.name+'说想玩“你画我猜”、想一起画画或让你邀请ta玩画画游戏时，可以主动发一张邀请卡：单独一行 [你画我猜]。不要在微信里直接开始画，等ta接受卡片进入游戏大厅。';
@@ -2072,7 +2073,8 @@ function render(){
   else if(c.p==='friendInfo')html=renderFriendInfo(c.id);
   else if(c.p==='contactSettings')html=renderContactSettings(c.id);
   else if(c.p==='roleMoments')html=renderRoleMoments(c.id);
-  else if(c.p==='roleFeatures')html=renderRoleManagement(c.id);
+  else if(c.p==='roleMomentDetail')html=renderRoleMomentDetail(c.id,c.pid);
+  else if(c.p==='roleFeatures')html=renderRoleManagement(c.id,c.group);
   else if(c.p==='hislogin')html=renderHisLogin(c.id);
   else if(c.p==='hiswx')html=renderHisWx();
   else if(c.p==='hischat')html=renderHisChat(c.id,c.fid);
@@ -2094,12 +2096,12 @@ function render(){
   else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
-  const _wxGlassPages=['wechat','chat','contactInfo','friendInfo','contactSettings','roleMoments','roleFeatures','newfriends','wxsearch','pffriends','pfchat','pfgroup','group'];
+  const _wxGlassPages=['wechat','chat','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','newfriends','wxsearch','pffriends','pfchat','pfgroup','group'];
   const _isWxPage=_wxGlassPages.includes(c.p);
   const _glass=glassThemeOn()&&!_isWxPage?' glass-app':'';
   const _wxG='';
   const _setG=glassThemeOn()&&c.p==='settings'?' settings-glass':'';
-  const _wxL=(S.me.wxTheme==='white'&&['wechat','chat','contactInfo','friendInfo','contactSettings','roleMoments','roleFeatures'].includes(c.p))?' wxlight':'';
+  const _wxL=(S.me.wxTheme==='white'&&['wechat','chat','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p))?' wxlight':'';
   const _wxP=c.p==='wechat'?' wx-premium':'';
   const _wxSection=c.p==='wechat'?' wx-'+String(wxTab||'chats'):'';
   app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+'">'+html+'</div>';
@@ -8838,19 +8840,20 @@ async function hisReset(cid){if(!await uiConfirm('清空「他的微信」全部
 setInterval(()=>{if(_hisLogin&&Date.now()>=_hisLogin.until)hisKicked();},3000);
 function contactRoleMoments(id){return (S.moments||[]).filter(p=>p&&p.authorId===id&&(p.acct||'main')===actId()).sort((a,b)=>(+b.time||0)-(+a.time||0));}
 function contactRegion(c){return String(c.region||c.city||charHomeCity(c)||'未设置').trim()||'未设置';}
-function contactMomentThumbs(c){const ms=contactRoleMoments(c.id),out=[];for(const p of ms){for(const im of (p.images||[])){if(im&&!out.includes(im))out.push(im);if(out.length===3)return out;}if(!p.images||!p.images.length)out.push('');if(out.length===3)return out;}return out;}
-function renderContactInfo(id){const c=getC(id);if(!c)return '';const thumbs=contactMomentThumbs(c),ms=contactRoleMoments(id),gender=c.gender==='女'?'♀':c.gender==='男'?'♂':'',genderClass=c.gender==='女'?'female':'male';
+function contactMomentThumbs(c){const ms=contactRoleMoments(c.id),out=[];for(const p of ms){for(const im of (p.images||[])){if(im&&!out.includes(im))out.push(im);if(out.length===3)return out;}}return out;}
+function contactGenderIcon(gender){if(gender!=='男'&&gender!=='女')return'';const female=gender==='女',path=female?'<circle cx="12" cy="9" r="4.25"/><path d="M12 13.25v6M9.4 16.8h5.2"/>':'<circle cx="9.4" cy="14.4" r="4.25"/><path d="M12.45 11.35 18 5.8M13.9 5.8H18v4.1"/>';return `<i class="${female?'female':'male'}" aria-label="${gender}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg></i>`;}
+function renderContactInfo(id){const c=getC(id);if(!c)return '';const thumbs=contactMomentThumbs(c),ms=contactRoleMoments(id);
   return `<div class="wx-real-profile">
     <div class="wx-real-nav"><button onclick="back()" aria-label="返回">‹</button><span></span><button onclick="go('contactSettings',{id:'${id}'})" aria-label="联系人设置">•••</button></div>
     <div class="wx-real-scroll">
       <button class="wx-profile-hero" onclick="go('friendInfo',{id:'${id}'})">
-        ${av(c.avatar,'lg')}<span class="wx-profile-copy"><b>${esc(c.remark||c.name)} ${gender?`<i class="${genderClass}">${gender}</i>`:''}</b><small>昵称：${esc(c.name)}</small><small>微信号：${esc(c.wxid||'未设置')}</small><small>地区：${esc(contactRegion(c))}</small></span>
+        ${av(c.avatar,'lg')}<span class="wx-profile-copy"><b>${esc(c.remark||c.name)} ${contactGenderIcon(c.gender)}</b><small>昵称：${esc(c.name)}</small><small>微信号：${esc(c.wxid||'未设置')}</small><small>地区：${esc(contactRegion(c))}</small></span>
       </button>
       <div class="wx-profile-block">
         <button class="wx-profile-row wx-profile-data" onclick="go('friendInfo',{id:'${id}'})"><span><b>朋友资料</b><small>备注、电话、标签、照片与角色公开信息</small></span><em>›</em></button>
       </div>
       <div class="wx-profile-block">
-        <button class="wx-profile-row wx-profile-moments" onclick="go('roleMoments',{id:'${id}'})"><b>朋友圈</b><span class="wx-profile-thumbs">${thumbs.length?thumbs.map((im,i)=>im?`<i><img src="${im}" alt="朋友圈照片 ${i+1}"></i>`:`<i class="text-thumb">${esc((ms[i]&&cleanMomentText(ms[i].text)||'动态').slice(0,8))}</i>`).join(''):'<small>还没有动态</small>'}</span><em>›</em></button>
+        <button class="wx-profile-row wx-profile-moments" onclick="go('roleMoments',{id:'${id}'})"><b>朋友圈</b><span class="wx-profile-thumbs">${thumbs.length?thumbs.map((im,i)=>`<i><img src="${im}" alt="朋友圈照片 ${i+1}"></i>`).join(''):`<small>${ms.length?ms.length+' 条纯文字动态':'还没有动态'}</small>`}</span><em>›</em></button>
       </div>
       <div class="wx-profile-actions">
         <button onclick="openChat('${id}')"><span>${svgIc('message',25,'currentColor',1.7)}</span>发消息</button>
@@ -8865,7 +8868,11 @@ function contactPhotosOpen(id){const c=getC(id);if(!c)return;c.profilePhotos=Arr
 function contactPhotoAdd(id){pickFile('image/*',async f=>{const c=getC(id);if(!c)return;c.profilePhotos=Array.isArray(c.profilePhotos)?c.profilePhotos:[];c.profilePhotos.unshift(await compress(f,900,.72));c.profilePhotos=c.profilePhotos.slice(0,12);save();contactPhotosOpen(id);});}
 function contactSharedGroups(id){return (S.groups||[]).filter(g=>g&&Array.isArray(g.members)&&g.members.includes(id));}
 function contactSharedGroupsOpen(id){const rows=contactSharedGroups(id);openModal(`<h3>共同群聊</h3>${rows.length?rows.map(g=>`<div class="section"><div class="it" onclick="closeModal();go('group',{id:'${g.id}'})"><span>${esc(g.name||'群聊')}</span><span class="v">进入 ›</span></div></div>`).join(''):'<div class="empty">暂时没有共同群聊</div>'}<button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
-function renderFriendInfo(id){const c=getC(id);if(!c)return '';const groups=contactSharedGroups(id),date=c.createdAt?new Date(c.createdAt).toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'}):'很久以前';
+function contactAddedDateKey(c){if(S.couple&&S.couple.cid===c.id&&/^\d{4}-\d{2}-\d{2}$/.test(String(S.couple.startDate||'')))return S.couple.startDate;if(/^\d{4}-\d{2}-\d{2}$/.test(String(c.friendAddedDate||'')))return c.friendAddedDate;const text=String(c.id||c.name||'角色'),seed=Array.from(text).reduce((n,ch)=>(n*33+ch.charCodeAt(0))>>>0,5381),base=Math.min(+c.createdAt||Date.now(),Date.now()),days=45+(seed%1048),d=new Date(base-days*86400000);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
+function contactAddedDateText(c){const key=contactAddedDateKey(c),p=key.split('-').map(Number);return p.length===3&&p.every(Number.isFinite)?`${p[0]}年${p[1]}月${p[2]}日`:'很久以前';}
+function contactAddedDateEdit(id){const c=getC(id);if(!c)return;if(S.couple&&S.couple.cid===id){coupleSet();return;}openModal(`<h3>添加时间</h3><div class="hint">未绑定情侣空间的角色会先生成一个固定日期，你也可以手动改。保存后不会再次随机变化。</div><div class="field"><label>添加日期</label><input id="contact_added_date" type="date" value="${contactAddedDateKey(c)}"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="contactAddedDateSave('${id}')">保存</button></div>`);}
+function contactAddedDateSave(id){const c=getC(id),el=$('#contact_added_date');if(!c||!el||!/^\d{4}-\d{2}-\d{2}$/.test(el.value)){toast('请选择正确日期');return;}c.friendAddedDate=el.value;save();closeModal();render();toast('添加时间已保存');}
+function renderFriendInfo(id){const c=getC(id);if(!c)return '';const groups=contactSharedGroups(id),date=contactAddedDateText(c),coupleDate=!!(S.couple&&S.couple.cid===id&&S.couple.startDate);
   return `<div class="wx-subpage"><div class="wx-real-nav titled"><button onclick="back()">‹</button><b>朋友资料</b><span></span></div><div class="wx-real-scroll wx-info-scroll">
     <div class="wx-info-label">备注</div><div class="wx-info-group">
       <button onclick="contactFieldEdit('${id}','remark','备注名')"><span>备注名</span><em>${esc(c.remark||'未设置')}　›</em></button>
@@ -8879,7 +8886,7 @@ function renderFriendInfo(id){const c=getC(id);if(!c)return '';const groups=cont
       <button onclick="contactSharedGroupsOpen('${id}')"><span>我和ta的共同群聊</span><em>${groups.length} 个　›</em></button>
       <button onclick="contactFieldEdit('${id}','signature','签名')"><span>签名</span><em>${esc(c.signature||'未设置')}　›</em></button>
       <button onclick="go('roleFeatures',{id:'${id}'})"><span>角色功能</span><em>记忆、人设、作息与更多　›</em></button>
-      <button onclick="toast('添加于 ${esc(date)}')"><span>添加时间</span><em>${esc(date)}</em></button>
+      <button onclick="contactAddedDateEdit('${id}')"><span>添加时间</span><em>${esc(date)}${coupleDate?' · 相恋日期':''}　›</em></button>
     </div><div style="height:24px"></div>
   </div></div>`;}
 function contactStarToggle(id){const c=getC(id);if(!c)return;c.star=!c.star;save();render();toast(c.star?'已设为星标朋友':'已取消星标');}
@@ -8895,11 +8902,14 @@ function renderContactSettings(id){const c=getC(id);if(!c)return '';
   </div></div>`;}
 function roleMomentCover(c){return c.momentCover||((c.profilePhotos||[])[0])||'';}
 function roleMomentCoverChange(id){pickFile('image/*',async f=>{const c=getC(id);if(!c)return;c.momentCover=await compressBackground(f);save();render();toast('朋友圈封面已更换');});}
-function roleMomentDetail(id,pid){const c=getC(id),p=(S.moments||[]).find(x=>x.id===pid);if(!c||!p)return;openModal(`<h3>${esc(c.remark||c.name)}的动态</h3><div class="wx-moment-detail"><div class="tx">${esc(cleanMomentText(p.text)||'（仅分享了照片）')}</div>${(p.images||[]).length?`<div class="wx-contact-photo-grid">${p.images.map((im,i)=>`<button onclick="viewImg('${im}')"><img src="${im}" alt="动态图片 ${i+1}"></button>`).join('')}</div>`:''}<small>${fmtDT(p.time)}</small>${(p.likes||[]).length?`<p>♡ ${p.likes.map(esc).join('，')}</p>`:''}${(p.comments||[]).map(cm=>`<p><b>${esc(cm.name)}：</b>${esc(cm.text)}</p>`).join('')}</div><button class="btn p" style="margin-top:12px" onclick="closeModal();momentMenu('${pid}')">点赞或评论</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function roleMomentCard(c,p,pinned){const tx=cleanMomentText(p.text)||'',img=(p.images||[])[0]||'';return `<button class="wx-role-moment-card ${pinned?'pinned':''}" onclick="roleMomentDetail('${c.id}','${p.id}')">${pinned?'<strong>置顶</strong>':''}<span class="copy"><b>${esc(c.remark||c.name)}</b><small>${esc(tx||'分享了照片')}</small>${pinned?'<i>♡</i>':`<i>${fmtDT(p.time)}</i>`}</span>${img?`<img src="${img}" alt="动态配图">`:'<span class="moment-text-art">“</span>'}<em>›</em></button>`;}
-function renderRoleMoments(id){const c=getC(id);if(!c)return '';const ms=contactRoleMoments(id),cover=roleMomentCover(c),pinned=ms.find(p=>p.pinned)||ms[0],rest=ms.filter(p=>!pinned||p.id!==pinned.id);
-  return `<div class="wx-role-moments"><div class="wx-role-cover" onclick="roleMomentCoverChange('${id}')">${cover?`<img src="${cover}" alt="朋友圈封面">`:'<span></span>'}<div class="shade"></div><button onclick="event.stopPropagation();back()">‹</button><div class="identity"><b>${esc(c.remark||c.name)}</b>${av(c.avatar,'lg')}</div></div><div class="wx-role-bio">${esc(c.signature||'这个人很神秘，什么都没留下')}</div><div class="wx-role-feed">${pinned?roleMomentCard(c,pinned,true):'<div class="empty">还没有发布过朋友圈</div>'}${rest.map(p=>roleMomentCard(c,p,false)).join('')}${ms.length?'<div class="wx-role-feed-end">— 已展示全部朋友圈 —</div>':''}</div></div>`;}
-function renderRoleManagement(id){const c=getC(id);if(!c)return '';const sp=getSpy(c);
+function roleMomentDetail(id,pid){go('roleMomentDetail',{id,pid});}
+function renderRoleMomentDetail(id,pid){const c=getC(id),p=(S.moments||[]).find(x=>x&&x.id===pid&&x.authorId===id);if(!c||!p)return `<div class="wx-subpage"><div class="wx-real-nav titled"><button onclick="back()">‹</button><b>详情</b><span></span></div><div class="empty">这条朋友圈已不存在</div></div>`;const images=(p.images||[]).filter(Boolean),tx=cleanMomentText(p.text)||'（仅分享了照片）';return `<div class="wx-role-detail"><div class="wx-real-nav titled"><button onclick="back()">‹</button><b>详情</b><span></span></div><div class="wx-role-detail-scroll"><div class="wx-role-detail-author">${av(c.avatar,'sm')}<div><b>${esc(c.remark||c.name)}</b><small>${fmtDT(p.time)}</small></div></div><div class="wx-role-detail-text">${esc(tx)}</div>${images.length?`<div class="wx-role-detail-media ${images.length>1?'multi':''}">${images.map((im,i)=>`<button onclick="viewImg('${im}')"><img src="${im}" alt="朋友圈图片 ${i+1}"></button>`).join('')}</div>`:''}<div class="wx-role-detail-time">发布于 ${fmtDT(p.time)}</div><div class="wx-role-detail-actions"><button onclick="momentMenu('${p.id}')">${svgIc('heart',22,'currentColor',1.6)}<span>${(p.likes||[]).length?(p.likes||[]).length:'赞'}</span></button><button onclick="momentMenu('${p.id}')">${svgIc('message',22,'currentColor',1.6)}<span>${(p.comments||[]).length?(p.comments||[]).length:'评论'}</span></button></div>${(p.likes||[]).length|| (p.comments||[]).length?`<div class="wx-role-detail-social">${(p.likes||[]).length?`<div class="likes">♡ ${p.likes.map(esc).join('，')}</div>`:''}${(p.comments||[]).map(cm=>`<div class="comment"><b>${esc(cm.name)}：</b>${esc(cm.text)}</div>`).join('')}</div>`:''}</div><button class="wx-role-detail-compose" onclick="momentMenu('${p.id}')"><span>发表评论</span>${svgIc('message',21,'currentColor',1.6)}</button></div>`;}
+function roleMomentDateParts(t){const p=roleTimeParts(t||Date.now());return{year:p.year,month:p.month,day:p.day,time:String(p.hour).padStart(2,'0')+':'+String(p.minute).padStart(2,'0')};}
+function roleMomentCard(c,p,pinned){const tx=cleanMomentText(p.text)||'',img=(p.images||[])[0]||'',d=roleMomentDateParts(p.time);return `<button class="wx-role-moment-card ${pinned?'pinned':''} ${img?'has-image':'no-image'}" onclick="roleMomentDetail('${c.id}','${p.id}')"><time>${pinned?'<b>置顶</b>':`<b>${String(d.day).padStart(2,'0')}</b><small>${d.month}月</small>`}</time><span class="moment-main"><span class="copy"><small>${esc(tx||'分享了照片')}</small><i>${d.year}年${d.month}月${d.day}日 ${d.time}</i></span>${img?`<img src="${img}" alt="动态配图">`:''}</span><em>›</em></button>`;}
+function roleMomentTimeline(c,rows){let lastYear=0,out='';rows.forEach(p=>{const d=roleMomentDateParts(p.time);if(d.year!==lastYear){out+=`<div class="wx-role-year">${d.year}年</div>`;lastYear=d.year;}out+=roleMomentCard(c,p,false);});return out;}
+function renderRoleMoments(id){const c=getC(id);if(!c)return '';const ms=contactRoleMoments(id),cover=roleMomentCover(c),pinned=ms.find(p=>p.pinned),rest=ms.filter(p=>!pinned||p.id!==pinned.id);
+  return `<div class="wx-role-moments"><div class="wx-role-cover" onclick="roleMomentCoverChange('${id}')">${cover?`<img src="${cover}" alt="朋友圈封面">`:'<span></span>'}<div class="shade"></div><button onclick="event.stopPropagation();back()">‹</button><div class="identity"><b>${esc(c.remark||c.name)}</b>${av(c.avatar,'lg')}</div></div><div class="wx-role-bio">${esc(c.signature||'这个人很神秘，什么都没留下')}</div><div class="wx-role-feed">${pinned?roleMomentCard(c,pinned,true):''}${rest.length?roleMomentTimeline(c,rest):(!pinned?'<div class="empty">还没有发布过朋友圈</div>':'')}${ms.length?'<div class="wx-role-feed-end">— 已展示全部朋友圈 —</div>':''}</div></div>`;}
+function renderRoleManagementAll(id){const c=getC(id);if(!c)return '';const sp=getSpy(c);
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">角色功能</span><span class="r" onclick="editContact('${id}')">编辑</span></div>
   <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">
     <div class="list"><div class="row" style="padding:18px 14px">${av(c.avatar,'lg')}
@@ -8958,6 +8968,12 @@ function renderRoleManagement(id){const c=getC(id);if(!c)return '';const sp=getS
     </div>
     <div style="padding:0 12px 20px"><button class="btn p" onclick="openChat('${id}')">发消息</button></div>
   </div>`;}
+function roleFeatureTabs(id,group){const rows=[['profile','资料与记忆'],['chat','聊天与主动'],['privacy','隐私与数据']];return `<div class="wx-feature-tabs">${rows.map(x=>`<button class="${group===x[0]?'on':''}" onclick="go('roleFeatures',{id:'${id}',group:'${x[0]}'})">${x[1]}</button>`).join('')}</div>`;}
+function roleFeatureSection(html,start,end){const a=html.indexOf(`<div class="wx-feature-title">${start}</div>`),b=end?html.indexOf(`<div class="wx-feature-title">${end}</div>`,a):-1;return a<0?'':html.slice(a,b<0?html.length:b);}
+function renderRoleManagement(id,group){const c=getC(id);if(!c)return '';const active=['profile','chat','privacy'].includes(group)?group:'',bg=S.me.wxTheme==='white'?'#ededed':'#000';
+  if(!active)return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">角色权限与功能</span><span class="r" onclick="editContact('${id}')">编辑</span></div><div class="scroll" style="background:${bg}"><div class="list"><div class="row" style="padding:18px 14px">${av(c.avatar,'lg')}<div class="meta"><div class="n" style="font-size:19px">${esc(c.name)}</div><div class="s">${esc(c.relation||'')}</div><div class="s">${esc(c.signature||'')}</div>${(c.city||charHomeCity(c))?`<div class="s">所在地：${esc(c.city||charHomeCity(c))}</div>`:''}</div></div></div><div class="wx-feature-title">按类别设置</div><div class="wx-feature-category-list"><button class="wx-feature-category" onclick="go('roleFeatures',{id:'${id}',group:'profile'})"><i>${svgIc('user',24,'currentColor',1.7)}</i><span><b>资料、记忆与外观</b><small>人设、关系、记忆、作息、音色和聊天样式</small></span><em>›</em></button><button class="wx-feature-category" onclick="go('roleFeatures',{id:'${id}',group:'chat'})"><i>${svgIc('message',24,'currentColor',1.7)}</i><span><b>聊天、主动联系与发布</b><small>通话、通知、角色专属间隔、朋友圈与 X</small></span><em>›</em></button><button class="wx-feature-category" onclick="go('roleFeatures',{id:'${id}',group:'privacy'})"><i>${svgIc('lock',24,'currentColor',1.7)}</i><span><b>隐私、查岗与数据</b><small>手机查看授权、定位、聊天数据和联系人管理</small></span><em>›</em></button></div></div>`;
+  const all=renderRoleManagementAll(id),first=all.indexOf('<div class="wx-feature-title">基础资料与记忆</div>'),footer=all.indexOf('<div style="padding:0 12px 20px">',first),prefix=all.slice(0,first),suffix=all.slice(footer),parts={profile:roleFeatureSection(all,'基础资料与记忆','聊天与通话'),chat:roleFeatureSection(all,'聊天与通话','隐私授权与查岗')+roleFeatureSection(all,'内容发布','聊天数据与联系人'),privacy:roleFeatureSection(all,'隐私授权与查岗','内容发布')+roleFeatureSection(all,'聊天数据与联系人','')},titles={profile:'资料与记忆',chat:'聊天与主动',privacy:'隐私与数据'};
+  return prefix.replace('<span class="t">角色功能</span>',`<span class="t">${titles[active]}</span>`)+roleFeatureTabs(id,active)+parts[active]+suffix;}
 function cToggleModel(id){const c=getC(id);if(!c)return;c.model=(c.model==='aux')?'chat':'aux';save();render();
   if(c.model==='aux'&&!(S.settings.aux&&S.settings.aux.model))toast('副模型未配置',3000);
   else{_wechatActualModelRoute.set(String(c.id),c.model==='aux'?'aux':'main');toast(c.model==='aux'?'已切换副模型':'已切换主模型',3000);}}
@@ -9907,7 +9923,8 @@ function cleanTweetBody(t){return cleanRolePunct(String(t||'').replace(/^[\s「"
 function cleanTweetText(t){let raw=String(t||'').replace(/\r/g,'').trim(),picked='';raw=raw.replace(/[\[【]\s*发推\s*[\|｜:：]\s*([^\]】\n]{1,320})[\]】]/g,(m,tx)=>{if(!picked)picked=tx;return'\n';});raw=raw.replace(/[\[【]\s*发推\s*[\]】]\s*[「"']?([^\n]{1,320})[」"']?/g,(m,tx)=>{if(!picked)picked=tx;return'\n';});const seen=new Set(),lines=[];raw.split(/\n+/).map(x=>x.trim()).filter(x=>x&&!CTLLEAK.test(x)).forEach(x=>{const c=cleanTweetBody(x),k=c.replace(/\s+/g,'').toLowerCase();if(c&&k&&!seen.has(k)){seen.add(k);lines.push(c);}});let v=lines.join('\n').trim();if(picked){const p=cleanTweetBody(picked),np=p.replace(/\s+/g,'').toLowerCase(),nv=v.replace(/\s+/g,'').toLowerCase();if(p&&(!v||nv===np||nv.includes(np)))v=p;}return cleanTweetBody(v||picked);}
 function repairTweetTexts(){let changed=false;(S.x&&S.x.tweets||[]).forEach(t=>{if(!t||(t.who==='me'&&!t._remote))return;const next=cleanTweetText(t.text);if(next&&next!==t.text){t.text=next;changed=true;}});return changed;}
 function parseMomentCommandLine(line){const t=normTag(line);let m=t.match(/^\[发朋友圈\|([\s\S]*?)\]$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\|([^\]]+)\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]||m[2]);return null;}
-function postRoleMoment(c,tx,opt){return publishRoleMoment(c,tx,opt);}
+function roleMomentRequestedUserImage(c,opt){const ask=String(opt&&opt.userText||'').trim();if(!c||!/(?:这张|刚才|上面|这个)?\s*(?:图|图片|照片).{0,24}(?:朋友圈|官宣|动态)|(?:朋友圈|官宣|动态).{0,24}(?:这张|刚才|上面|这个)?\s*(?:图|图片|照片)/.test(ask))return'';const recent=msgs(c.id).slice(-16);for(let i=recent.length-1;i>=0;i--){const m=recent[i];if(m&&m.role==='user'&&m.type==='image'&&m.src&&Date.now()-(m.time||Date.now())<48*3600000)return m.src;}return'';}
+function postRoleMoment(c,tx,opt){opt=Object.assign({},opt||{});if(!Array.isArray(opt.images)||!opt.images.length){const src=roleMomentRequestedUserImage(c,opt);if(src)opt.images=[src];}return publishRoleMoment(c,tx,opt);}
 function stripPostedMomentEcho(content,posted){let out=''+(content||'');(posted||[]).forEach(tx=>{if(!tx)return;const escRe=tx.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');out=out.replace(new RegExp('^[\\s\\n「"\'【\\[]*'+escRe+'[\\s」"\'】\\]]*','m'),'');});return out;}
 function consumeMomentCommands(content,c,opt){const posted=[];let out=''+(content||'');
   out=out.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,180})[\]】]/g,(mm,tx)=>{const body=cleanMomentBody(tx);if(body){postRoleMoment(c,body,opt);posted.push(body);}return '';});
@@ -10621,7 +10638,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd,_userText);
     content=_naturalOn?content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,''):applyGrudgeTags(content,c);content=applyStarTags(content);content=cohabConsumeOnlineState(content,c,id);
-    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c);content=consumeMomentCommands(content,c,{toast:true});content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);
+    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c);content=consumeMomentCommands(content,c,{toast:true,userText:_userText});content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     const _nativeInspectionQueued=maybeSpyIntent(content,c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}else{const _phoneGuard=guardUnverifiedRolePhoneReply(content,note);content=_phoneGuard.content;if(_phoneGuard.focus){if(queueNativeInspection(id,_lu,_phoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}}else maybeSpyIntent(content,c,id,_lu);}
@@ -10657,7 +10674,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(_initiativeNoLocation&&/^[\[【]\s*位置(?:\s*[|｜:：]|\s*[\]】])/.test(line))continue;
       if(photoTail>0&&isPhotoPromptFragment(line)){photoTail--;continue;}
       if(/^\[联网\|/.test(line))continue;
-      const mt0=parseMomentCommandLine(line);if(mt0!=null){if(mt0)postRoleMoment(c,mt0,{toast:true});continue;}
+      const mt0=parseMomentCommandLine(line);if(mt0!=null){if(mt0)postRoleMoment(c,mt0,{toast:true,userText:_userText});continue;}
       if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏|换气泡)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
@@ -10668,7 +10685,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
       mm=line.match(/^\[婚礼日程\|(\d{4}-\d{2}-\d{2})(?:\|((?:[01]\d|2[0-3]):[0-5]\d))?\]$/);if(mm)continue;
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('已加日程 '+mm[1]);continue;}
-      mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){postRoleMoment(c,mm[1],{toast:true});continue;}
+      mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){postRoleMoment(c,mm[1],{toast:true,userText:_userText});continue;}
       mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){publishRoleTweet(c,mm[1],{toast:true});continue;}
       if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
       await sleep(got?roleMessageGap(line):0);
@@ -11458,7 +11475,7 @@ async function callAI(sysNote,opts){if(!_call)return;
     content=content.replace(/[\[【]\s*日程\s*[\|｜:：](\d{4}-\d{2}-\d{2})\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,d,tt)=>{S.calendar.push({id:uid(),date:d,title:(tt||'日程').trim(),type:'event',contactId:c.id});save();toast('已加日程 '+d);return '';});
     content=content.replace(/[\[【]\s*送礼\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{giftSend(_call.id,(nm||'礼物').trim(),+pr||0);return '';});
     // 通话里也能：发朋友圈 / 发推 / 转账（执行后不读出来）
-    content=consumeMomentCommands(content,c,{toast:false});
+    content=consumeMomentCommands(content,c,{toast:false,userText:(_luc&&msgToText(_luc))||''});
     content=content.replace(/[\[【]\s*发推\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{publishRoleTweet(c,tx);return '';});
     content=content.replace(/[\[【]\s*(转账|红包)\s*[\|｜:：，,、\s]+([0-9]+(?:\.[0-9]{1,2})?)\s*(?:[\|｜:：，,、\s]+([^\]】]*))?[\]】]/g,(mm,kind,amt,note)=>{const ty=(kind==='红包'?'redpacket':'transfer'),av=+amt||0;if(msgs(_call.id).some(x=>x.role==='assistant'&&x.type===ty&&Math.abs((+x.amount||0)-av)<0.01&&Date.now()-(x.time||0)<180000))return '';/* 3分钟内同额转账/红包不重复 */const tc={role:'assistant',type:ty,amount:av,note:(note||'').trim(),received:false,id:uid(),time:Date.now()};msgs(_call.id).push(tc);notifyIncoming(c,tc);save();return '';});
     const _requestedVoiceCue=(_luc&&_call._voiceCueMsg!==_luc.id)?ttsRequestedCue(msgToText(_luc)):'',_turnVoiceCue=_requestedVoiceCue||_callCueTag||ttsAutoCue(content,c);if(_requestedVoiceCue&&_luc)_call._voiceCueMsg=_luc.id;
@@ -11934,7 +11951,7 @@ async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.b
   for(const c of picks){try{if(!await publishRoleSocialAutonomous(c,'moment',{source:'refresh'}))toast((c.remark||c.name)+'这次没有重复发布');}catch(e){toast('生成失败：'+e.message);}}}
 
 /* ---------- 通用弹窗 ---------- */
-function openModal(html){const m=$('#modal'),p=cur().p,host=document.fullscreenElement;if(!m._home)m._home=m.parentNode;if(document.body.classList.contains('cin-theater-open')&&host&&!host.contains(m))host.appendChild(m);m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&['wechat','chat','contactInfo','friendInfo','contactSettings','roleMoments','roleFeatures'].includes(p));m.classList.toggle('north-glass-modal',glassThemeOn());$('#modalSheet').innerHTML=html;m.classList.add('show');}
+function openModal(html){const m=$('#modal'),p=cur().p,host=document.fullscreenElement;if(!m._home)m._home=m.parentNode;if(document.body.classList.contains('cin-theater-open')&&host&&!host.contains(m))host.appendChild(m);m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&['wechat','chat','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(p));m.classList.toggle('north-glass-modal',glassThemeOn());$('#modalSheet').innerHTML=html;m.classList.add('show');}
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}
 function closeModal(){const m=$('#modal');m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */

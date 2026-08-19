@@ -39,3 +39,42 @@ test('remote facts distinguish the controlling role from the phone owner',()=>{
   assert.match(app,/actorOwn:x\.who===actorId/);
   assert.match(app,/本次远程操控的原始目标，执行中不得忘记/);
 });
+
+test('role profile visuals use centered vector gender and real image-only previews',()=>{
+  assert.match(app,/function contactGenderIcon\(gender\)/);
+  assert.match(app,/contactGenderIcon\(c\.gender\)/);
+  assert.match(app,/function contactMomentThumbs\(c\)[\s\S]*?return out;/);
+  assert.doesNotMatch(app,/function contactMomentThumbs\(c\)[^\n]*out\.push\(''\)/);
+  assert.doesNotMatch(app,/moment-text-art/);
+  assert.match(html,/\.wx-profile-hero\{[^}]*padding:34px 22px 30px/);
+  assert.match(html,/\.wx-role-cover \.avatar\.lg\{[^}]*aspect-ratio:1\/1/);
+});
+
+test('role feature settings are split into three short categories without removing original controls',()=>{
+  assert.match(app,/function renderRoleManagementAll\(id\)/);
+  assert.match(app,/function renderRoleManagement\(id,group\)/);
+  for(const group of ['profile','chat','privacy'])assert.match(app,new RegExp(`group:'${group}'`));
+  for(const label of ['资料、记忆与外观','聊天、主动联系与发布','隐私、查岗与数据'])assert.match(app,new RegExp(label));
+  for(const control of ['editMemory','saveProactiveIdle','saveSpy','clearHistory'])assert.match(app,new RegExp(control));
+  assert.match(html,/\.wx-feature-category-list/);
+});
+
+test('friend added date follows couple date or a stable editable fallback',()=>{
+  assert.match(app,/function contactAddedDateKey\(c\)/);
+  assert.match(app,/S\.couple&&S\.couple\.cid===c\.id/);
+  assert.match(app,/c\.friendAddedDate/);
+  assert.match(app,/function contactAddedDateEdit\(id\)/);
+  assert.match(app,/相恋日期/);
+});
+
+test('role moments use a dated timeline, full detail route, and can inherit the requested chat image',()=>{
+  assert.match(app,/c\.p==='roleMomentDetail'/);
+  assert.match(app,/function renderRoleMomentDetail\(id,pid\)/);
+  assert.match(app,/function roleMomentTimeline\(c,rows\)/);
+  assert.match(app,/发布于 \$\{fmtDT\(p\.time\)\}/);
+  assert.match(app,/function roleMomentRequestedUserImage\(c,opt\)/);
+  assert.match(app,/opt\.images=\[src\]/);
+  assert.match(app,/consumeMomentCommands\(content,c,\{toast:true,userText:_userText\}\)/);
+  assert.match(html,/\.wx-role-detail\{/);
+  assert.match(html,/\.wx-role-moment-card \.moment-main>img/);
+});
