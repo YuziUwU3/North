@@ -50,13 +50,14 @@ test('role profile visuals use centered vector gender and real image-only previe
   assert.match(html,/\.wx-role-cover \.avatar\.lg\{[^}]*aspect-ratio:1\/1/);
 });
 
-test('role feature settings are split into three short categories without removing original controls',()=>{
+test('role feature settings expose five direct categories with calls separated',()=>{
   assert.match(app,/function renderRoleManagementAll\(id\)/);
   assert.match(app,/function renderRoleManagement\(id,group\)/);
-  for(const group of ['profile','chat','privacy'])assert.match(app,new RegExp(`group:'${group}'`));
-  for(const label of ['资料、记忆与外观','聊天、主动联系与发布','隐私、查岗与数据'])assert.match(app,new RegExp(label));
+  for(const group of ['profile','chat','calls','publish','privacy'])assert.match(app,new RegExp(`group:'${group}'`));
+  for(const label of ['资料、记忆与外观','聊天与主动联系','通话与通话记录','朋友圈与 X 发布','隐私、查岗与数据'])assert.match(app,new RegExp(label));
+  assert.doesNotMatch(app,/设置角色权限与功能/);
   for(const control of ['editMemory','saveProactiveIdle','saveSpy','clearHistory'])assert.match(app,new RegExp(control));
-  assert.match(html,/\.wx-feature-category-list/);
+  assert.match(html,/\.role-setting-direct/);
 });
 
 test('friend added date follows couple date or a stable editable fallback',()=>{
@@ -77,4 +78,25 @@ test('role moments use a dated timeline, full detail route, and can inherit the 
   assert.match(app,/consumeMomentCommands\(content,c,\{toast:true,userText:_userText\}\)/);
   assert.match(html,/\.wx-role-detail\{/);
   assert.match(html,/\.wx-role-moment-card \.moment-main>img/);
+});
+
+test('moments interactions are direct, shared, removable only by the author, and always receive a role reply',()=>{
+  assert.match(app,/function toggleMomentLike\(pid\)/);
+  assert.match(app,/p\.likes\.splice\(i,1\)/);
+  assert.match(app,/function momentCommentFocus\(pid,replyName,targetCid\)/);
+  assert.match(app,/function momentCommentSubmit\(pid,inputId\)/);
+  assert.match(app,/p\.authorId!==['"]me['"]/);
+  assert.match(app,/replyToId:mine\.id/);
+  assert.match(app,/momentReplyFallback\(c,mine\.text\)/);
+  assert.doesNotMatch(app,/function momentMenu\(pid\)[\s\S]{0,400}openModal/);
+  assert.match(html,/\.moment-inline-compose/);
+  assert.match(html,/\.wx-role-moment-card\{[^}]*background:#19191b/);
+});
+
+test('explicit role moment pictures prefer the supplied image and otherwise generate with one retry',()=>{
+  assert.match(app,/function roleMomentImageRequest\(opt\)/);
+  assert.match(app,/function roleMomentRequestedUserImage\(c,opt\)/);
+  assert.match(app,/if\(opt\.images&&opt\.images\.length\)return publishRoleMoment/);
+  assert.match(app,/for\(let attempt=0;attempt<2;attempt\+\+\)/);
+  assert.match(app,/系统会按ta描述的场景生成配图/);
 });

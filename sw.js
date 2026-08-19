@@ -1,6 +1,6 @@
-const BUILD='999';
-const HOTFIX='v999-role-moments-profile-1';
-const SHELL_CACHE='north-shell-v999';
+const BUILD='1000';
+const HOTFIX='v1000-moments-interaction-categories-1';
+const SHELL_CACHE='north-shell-v1000';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
