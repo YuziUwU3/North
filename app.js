@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='993'){
+if(window.__NORTH_SHELL_BUILD__!=='994'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -370,7 +370,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v993 · 婚礼生图稳定修复';
+const APP_VER='v994 · 婚礼付费出图交付修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1032,14 +1032,14 @@ function imageResultURL(d){const direct=d&&d.data&&d.data[0];if(direct&&(direct.
 }
 function imageSizeRatio(size){return size==='1024x1536'?'2:3':size==='1536x1024'?'3:2':'1:1';}
 async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000),ct=(res.headers.get('content-type')||'').toLowerCase();const txt=await res.text(),html=/html/.test(ct)||/^\s*<!doctype\s+html|^\s*<html[\s>]/i.test(txt);let d=null;try{d=txt&&!html?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(html)d={message:'接口返回网页HTML，不是API JSON；已继续尝试 /v1 路径',html:true};if(res.ok&&!html)return {res,d,url};last={res,d,url};if(!html&&![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
-async function imageGenerateExternal(base,key,model,prompt,size,quality){const p=(prompt||'一张生活照').slice(0,3200),target=size||'1024x1536',q=quality==='low'?'low':quality==='high'?'high':'medium';
+async function imageGenerateExternal(base,key,model,prompt,size,quality){const p=(prompt||'一张生活照').slice(0,3200),opt=arguments[6]||{},target=size||'1024x1536',q=quality==='low'?'low':quality==='high'?'high':'medium',requestTimeout=Math.max(30000,Math.min(360000,+opt.timeoutMs||180000));
   const geminiImage=/gemini.*image/i.test(model),gptImage=/^gpt-image(?:-|$)/i.test(model),rich={model,prompt:p,n:1,size:target,quality:q,output_format:'jpeg',output_compression:q==='low'?84:88,...(gptImage?{}:{response_format:geminiImage?'b64_json':'url'}),...(geminiImage?{aspect_ratio:imageSizeRatio(target)}:{})};
-  let out=await imagePostCompat(base,key,'/images/generations',rich,180000),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
-  if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
-  if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},180000);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  let out=await imagePostCompat(base,key,'/images/generations',rich,requestTimeout),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
+  if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   let url=res&&res.ok?imageResultURL(d):'';
   if(url)return {url,endpoint:'images-generations',model};
-  if(!res||!res.ok&&imageShouldRetryChat(res.status,err)){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。必须保持画布尺寸 '+target+'（'+imageSizeRatio(target)+' 比例），不要改成方图。'}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
+  if(opt.allowChatFallback!==false&&(!res||!res.ok&&imageShouldRetryChat(res.status,err))){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。必须保持画布尺寸 '+target+'（'+imageSizeRatio(target)+' 比例），不要改成方图。'}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
   if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
   throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
 }
@@ -1449,7 +1449,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=993&r=v993-wedding-generation-stability-1';
+  const url='sw.js?v=994&r=v994-wedding-paid-image-delivery-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}

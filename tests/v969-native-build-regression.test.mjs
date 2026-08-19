@@ -12,14 +12,14 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('v990 web and private iOS 1.0.114 keep explicit build identities', () => {
-  assert.match(app, /APP_VER='v993 · 婚礼生图稳定修复'/);
-  assert.match(app, /sw\.js\?v=993&r=v993-wedding-generation-stability-1/);
-  assert.match(shell, /north-shell-v993/);
+test('v994 web and private iOS 1.0.115 keep explicit build identities', () => {
+  assert.match(app, /APP_VER='v994 · 婚礼付费出图交付修复'/);
+  assert.match(app, /sw\.js\?v=994&r=v994-wedding-paid-image-delivery-1/);
+  assert.match(shell, /north-shell-v994/);
   assert.match(bundleInfo, /<string>990<\/string>/);
-  assert.match(localWebView, /1\.0\.114 \(114\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 114;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.114;/g) || []).length, 12);
+  assert.match(localWebView, /1\.0\.115 \(115\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 115;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.115;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {
