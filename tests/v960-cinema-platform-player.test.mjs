@@ -80,9 +80,9 @@ test('private cinema screen frames keep ReplayKit orientation and role speech mi
   assert.match(broadcast,/CGImagePropertyOrientation/);
   assert.match(broadcast,/input = input\.oriented\(orientation\)/);
   assert.match(functionSource('playCallMediaWait'),/nativeCinema/);
-  assert.match(functionSource('playCallMediaWait'),/mixMode:nativeCinema\?'cinema':nativeScreenShare\?'screenShare':'call'/);
+  assert.match(functionSource('playCallMediaWait'),/mixMode:nativeCinema\?'cinema':nativeScreenShare\?'screenShare':nativeCamera\?'camera':'call'/);
   assert.doesNotMatch(functionSource('playCallMediaWait'),/cinemaMicPauseForRole/);
-  assert.match(bridge,/mixMode == "cinema" \|\| mixMode == "screenShare"/);
+  assert.match(bridge,/mixMode == "cinema" \|\| mixMode == "screenShare" \|\| mixMode == "camera"/);
   assert.match(bridge,/mixWithMedia: mixWithMedia/);
   assert.match(bridge,/preserveCurrentSession: mixWithMedia/);
   assert.match(pipAudio,/mixWithMedia: Bool = false/);

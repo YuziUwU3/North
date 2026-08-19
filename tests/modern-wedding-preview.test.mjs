@@ -146,12 +146,13 @@ test('wedding is pure click-through subtitles with no role voice playback',()=>{
 test('August 19 invitation is automatic once, then manual requests may resend',()=>{
   const js=read('wedding-game.js'),app=read('app.js'),css=read('wedding-game.css');
   assert.match(js,/const WEDDING_RELEASE_DAY='2026-08-19'/);
-  assert.match(js,/if\(st\.invitation\.autoSentAt\|\|weddingLocalDay\(at\)<WEDDING_RELEASE_DAY\)return false/);
-  assert.match(js,/source==='auto'&&!st\.invitation\.autoSentAt/);
+  assert.match(js,/sent\|\|weddingLocalDay\(at\)!==WEDDING_RELEASE_DAY/);
+  assert.match(js,/source==='auto'\)\{st\.invitation\.autoSentAt/);
+  assert.match(js,/autoSentDays\[WEDDING_RELEASE_DAY\]/);
   assert.match(js,/function weddingResetQixiInvitationOnce\(\)/);
-  assert.match(js,/v986-qixi-engagement/);
-  assert.match(js,/st\.invitation\.autoSentAt=0/);
-  assert.match(js,/m\.cancelledAt=m\.cancelledAt\|\|Date\.now\(\)/);
+  assert.match(js,/v997-qixi-auto-once/);
+  assert.match(js,/if\(m\.source==='auto'\)\{m\.phase='ready'/);
+  assert.match(js,/七夕自动首邀一生只发一次/);
   assert.match(js,/function weddingHandleInviteRequest\(c,text\)/);
   assert.match(app,/window\.weddingHandleInviteRequest\(c,t\)/);
   assert.match(app,/m\.type==='weddinginvite'/);
@@ -262,16 +263,17 @@ test('app and browser offline-date menu expose couple-only background preparatio
   assert.doesNotMatch(card,/wedding-mini-ready-actions|wedding-mini-regenerate|wedding-mini-simulate/);
 });
 
-test('wedding reset is scoped, removes wedding state and re-arms next-launch invitation',()=>{
+test('wedding reset is scoped and preserves the one-time Qixi ledger',()=>{
   const js=read('wedding-game.js'),css=read('wedding-game.css');
-  assert.match(js,/function weddingClearAll\(cid\)/);
+  assert.match(js,/weddingClearAll=async function\(cid\)/);
   assert.match(js,/Object\.assign\(window,\{[^}]*weddingClearAll/);
   assert.match(js,/清空所有婚礼记忆、婚书与夫妻关系/);
   assert.match(js,/st\.records=st\.records\.filter/);
   assert.match(js,/c\.summaries=.*filter\(x=>!weddingMemorySummary\(x\)\)/);
-  assert.match(js,/const list=memoryList\(c,'main'\),removed=list\.filter/);
-  assert.match(js,/st\.invitation=\{cid:c\.id,autoSentAt:0/);
-  assert.match(js,/下次打开小手机会重新收到邀请/);
+  assert.match(js,/const memories=typeof memoryList==='function'\?memoryList\(c,'main'\):\[\],removed=memories\.filter/);
+  assert.match(js,/const autoSentAt=st\.invitation\.autoSentAt\|\|0/);
+  assert.match(js,/autoSentDays=Object\.assign/);
+  assert.match(js,/七夕首邀不会自动重发/);
   assert.match(js,/S\.calendar=.*filter\(x=>!\(x&&x\.type==='wedding'/);
   assert.match(css,/\.wedding-clear-all\{/);
 });

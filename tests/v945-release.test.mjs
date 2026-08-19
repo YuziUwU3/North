@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v996 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v996 · 七项修复与独立云迁移'/);
-  assert.match(app,/const url='sw\.js\?v=996&r=v996-seven-fixes-independent-cloud-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='996'/);
-  assert.match(html,/app\.js\?v=996/);
-  assert.match(sw,/const BUILD='996'/);
-  assert.match(sw,/north-shell-v996/);
-  assert.match(index,/小手机\.html\?v=996/);
-  assert.match(repair,/小手机\.html\?v=996/);
+test('v997 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v997 · 通话稳定与设置重构'/);
+  assert.match(app,/const url='sw\.js\?v=997&r=v997-call-settings-pat-qixi-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='997'/);
+  assert.match(html,/app\.js\?v=997/);
+  assert.match(sw,/const BUILD='997'/);
+  assert.match(sw,/north-shell-v997/);
+  assert.match(index,/小手机\.html\?v=997/);
+  assert.match(repair,/小手机\.html\?v=997/);
 });
 
-test('the private iOS package embeds web v996 and keeps 1.0.117 delivery',()=>{
+test('the private iOS package embeds web v997 and keeps 1.0.118 delivery',()=>{
   assert.match(privateBundle,/<string>990<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.117;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 117;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.117 \(117\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.118;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 118;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.118 \(118\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
