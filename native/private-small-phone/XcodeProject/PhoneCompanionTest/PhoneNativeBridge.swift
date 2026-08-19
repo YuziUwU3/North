@@ -11,7 +11,7 @@ import WebKit
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 24
+    static let contractVersion = 25
 
     weak var webView: WKWebView? {
         didSet {
@@ -92,7 +92,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)
-        case "account.status", "account.password.signin",
+        case "account.status", "account.password.signup",
+             "account.password.signin",
              "account.signout", "account.backup.info",
              "account.backup.upload", "account.backup.restore",
              "companion.controller.claim":
@@ -858,9 +859,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     }
 
     private static let privateAccountBaseURL =
-        "https://lkhlyfpssmrjkkzhuzag.supabase.co"
+        "https://qvuahlqimcfgeoetosnl.supabase.co"
     private static let privateAccountAPIKey =
-        "sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2"
+        "sb_publishable_Q2j6uyn2_cFA3RdHHnG7sw_b7vqXaz0"
     private static let privateAccountKeychainService =
         "com.qianyi.smallphone.private.account.v1"
     private static let privateControllerKeychainService =
@@ -884,7 +885,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             guard let self else { return }
             do {
                 switch action {
-                case "account.password.signin":
+                case "account.password.signup", "account.password.signin":
                     let phone = self.normalizedPrivatePhone(
                         arguments["phone"] as? String ?? ""
                     )
@@ -911,8 +912,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         )
                         return
                     }
+                    let isSignup = action == "account.password.signup"
                     let response = try await self.privateAccountJSONRequest(
-                        path: "/auth/v1/token?grant_type=password",
+                        path: isSignup
+                            ? "/auth/v1/signup"
+                            : "/auth/v1/token?grant_type=password",
                         method: "POST",
                         body: [
                             "email": self.privateAccountLoginEmail(phone),
@@ -924,10 +928,13 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                             from: response.body,
                             fallbackPhone: phone
                           ) else {
-                        self.reply(
-                            requestID: requestID,
-                            result: self.privateAccountPublicResult(response)
-                        )
+                        var result = self.privateAccountPublicResult(response)
+                        if isSignup, response.status >= 200, response.status < 300 {
+                            result["ok"] = false
+                            result["code"] = "signup_session_missing"
+                            result["message"] = "账号已创建，但未能自动登录，请点登录并恢复"
+                        }
+                        self.reply(requestID: requestID, result: result)
                         return
                     }
                     try self.savePrivateAccountSession(session)

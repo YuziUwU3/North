@@ -46,6 +46,10 @@ const code = [
 const ctx = {
   console,
   Date,
+  roleTimeParts: t => {
+    const d = new Date(t || Date.now());
+    return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+  },
   esc: s => String(s),
   hm: t => new Date(t || Date.now()).getHours().toString().padStart(2, "0") + ":" + new Date(t || Date.now()).getMinutes().toString().padStart(2, "0"),
   weekdayCN: t => "周测",

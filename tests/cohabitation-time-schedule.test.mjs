@@ -71,6 +71,8 @@ test('time awareness pins today, yesterday and tomorrow to the real calendar',()
   class FakeDate extends Date{constructor(...args){super(...(args.length?args:[fixed]));}static now(){return fixed;}}
   const sandbox={Date:FakeDate,String,S:{settings:{timeAware:true}}};
   vm.runInNewContext([
+    functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),functionSource('roleTimeParts'),functionSource('roleClockDate'),
+    functionSource('timeZoneOffsetText'),functionSource('timeZoneName'),
     functionSource('hm'),functionSource('weekdayCN'),functionSource('ymdFull'),
     functionSource('dayPartNow'),functionSource('timeAwarenessPrompt'),
     'globalThis.prompt=timeAwarenessPrompt;'
@@ -80,6 +82,32 @@ test('time awareness pins today, yesterday and tomorrow to the real calendar',()
   assert.match(prompt,/今天是周一，昨天是周日，明天是周二/);
   assert.doesNotMatch(prompt,/明天是周日/);
   assert.match(prompt,/共同生活里最高优先级事实/);
+});
+
+test('the selected role timezone changes its clock, calendar and daypart',()=>{
+  const fixed=Date.parse('2026-08-19T12:24:00Z');
+  class FakeDate extends Date{constructor(...args){super(...(args.length?args:[fixed]));}static now(){return fixed;}}
+  const sandbox={Date:FakeDate,String,S:{settings:{timeAware:true,timeZone:'Asia/Shanghai'}}};
+  vm.runInNewContext([
+    functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),functionSource('roleTimeParts'),functionSource('roleClockDate'),
+    functionSource('timeZoneOffsetText'),functionSource('timeZoneName'),functionSource('hm'),functionSource('weekdayCN'),functionSource('ymdFull'),
+    functionSource('dayPartNow'),functionSource('timeAwarenessPrompt'),
+    'globalThis.clock=hm;globalThis.prompt=timeAwarenessPrompt;'
+  ].join('\n'),sandbox);
+  assert.equal(sandbox.clock(fixed),'20:24');
+  assert.match(sandbox.prompt('用户','wechat'),/北京时间，Asia\/Shanghai，UTC\+08:00/);
+  sandbox.S.settings.timeZone='America/New_York';
+  assert.equal(sandbox.clock(fixed),'08:24');
+  assert.match(sandbox.prompt('用户','wechat'),/美国纽约时间，America\/New_York，UTC-04:00/);
+  assert.match(sandbox.prompt('用户','wechat'),/当前时段是【清晨】/);
+});
+
+test('settings expose local, Beijing and all supported global timezones',()=>{
+  assert.match(source,/function timeZoneOptions\(/);
+  assert.match(source,/Intl\.supportedValuesOf\('timeZone'\)/);
+  assert.match(source,/角色所在时区/);
+  assert.match(source,/setTimeZone\(this\.value\)/);
+  assert.match(source,/const timezone=roleTimeZone\(\)/);
 });
 
 test('common life shows a live calendar and reuses the editable role schedule',()=>{

@@ -26,7 +26,7 @@ assert.match(push,/是否使用、使用哪一种、何时使用全由角色本�
 assert.match(app,/function callNativeSharedMediaAudioOn\(\)\{return privateNativeAppOn\(\)&&\(cinemaNativeMediaAudioOn\(\)\|\|callScreenShareOn\(\)\);\}/);
 assert.match(app,/nativeScreenShare=privateNativeAppOn\(\)&&callScreenShareOn\(\)/);
 assert.match(app,/mixMode:nativeCinema\?'cinema':nativeScreenShare\?'screenShare':'call'/);
-assert.match(app,/if\(!callNativeSharedMediaAudioOn\(\)&&!hfAudioPaused&&_callHF&&_callSR\)/);
+assert.match(app,/if\(!callNativeSharedMediaAudioOn\(\)&&!callNativeCameraMediaOn\(\)&&!hfAudioPaused&&_callHF&&_callSR\)/);
 assert.match(app,/如果画面中有影视对白字幕、短视频字幕/,'screen-share frames must ask vision to transcribe visible burned-in captions');
 assert.match(app,/这不等于提取整部视频的字幕文件/,'the fallback must state its real limitation');
 assert.match(bridge,/let mixMode = arguments\["mixMode"\] as\? String \?\? "call"/);

@@ -35,6 +35,7 @@ test('private app stores auth tokens in Keychain and never returns them to JavaS
 
 test('phone and password login, refresh, backup, and restore all use the native bridge', () => {
   for (const action of [
+    'account.password.signup',
     'account.password.signin',
     'account.backup.info',
     'account.backup.upload',
@@ -42,12 +43,16 @@ test('phone and password login, refresh, backup, and restore all use the native 
   ]) {
     assert.match(bridge, new RegExp(action.replaceAll('.', '\\.') ));
   }
+  assert.match(bridge, /\/auth\/v1\/signup/);
   assert.match(bridge, /\/auth\/v1\/token\?grant_type=password/);
   assert.match(bridge, /smallphone\." \+ digits \+ "@example\.com/);
   assert.doesNotMatch(bridge, /\/auth\/v1\/otp/);
   assert.doesNotMatch(bridge, /account\.otp\.(?:send|verify)/);
   assert.match(app, /autocomplete="current-password"/);
+  assert.match(app, /account\.password\.signup/);
   assert.match(app, /account\.password\.signin/);
+  assert.match(app, /创建并绑定/);
+  assert.match(app, /独立的私人小手机云账号/);
   assert.doesNotMatch(app, /privatePhoneAccountSendOTP|privatePhoneAccountVerifyOTP/);
   assert.match(bridge, /\/auth\/v1\/token\?grant_type=refresh_token/);
   assert.match(bridge, /SHA256\.hash\(data: snapshotData\)/);

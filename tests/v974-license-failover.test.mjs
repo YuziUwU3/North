@@ -71,5 +71,5 @@ test('only the license route receives the standby project', () => {
   assert.match(app, /endpoints:\[\s*\{id:'primary',baseUrl:GATE_URL,apiKey:GATE_KEY\},\s*\{id:'license-failover',baseUrl:LICENSE_FAILOVER_URL,apiKey:LICENSE_FAILOVER_KEY\}/);
   assert.match(app, /aiCore:\{enabled:false,url:GATE_URL\+'\/functions\/v1\/phone-ai'/);
   assert.match(bridge, /"lovbzibismsjqvjujilz\.supabase\.co"/);
-  assert.match(bridge, /privateAccountBaseURL\s*=\s*"https:\/\/lkhlyfpssmrjkkzhuzag\.supabase\.co"/);
+  assert.match(bridge, /privateAccountBaseURL\s*=\s*"https:\/\/qvuahlqimcfgeoetosnl\.supabase\.co"/);
 });

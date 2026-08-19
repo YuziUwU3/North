@@ -509,10 +509,10 @@ final class CompanionSyncService: ObservableObject {
     private var lastPushRegistrationSignature = ""
 
     private let serverURL = URL(
-        string: "https://lkhlyfpssmrjkkzhuzag.supabase.co"
+        string: "https://qvuahlqimcfgeoetosnl.supabase.co"
     )!
     private let publishableKey =
-        "sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2"
+        "sb_publishable_Q2j6uyn2_cFA3RdHHnG7sw_b7vqXaz0"
 
     private let appGroupID = "group.com.qianyi.PhoneCompanionTest"
     private let reportRequestKey = "report.today.request.v3"

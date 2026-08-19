@@ -11,11 +11,11 @@ const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('current release versions align', () => {
-  assert.match(app, /APP_VER='v995 · 婚礼恢复操作修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='995'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 116;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.116;/);
-  assert.match(bridge, /contractVersion = 24/);
+  assert.match(app, /APP_VER='v996 · 七项修复与独立云迁移'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='996'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 117;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.117;/);
+  assert.match(bridge, /contractVersion = 25/);
 });
 
 test('shared-screen vision owns a finite native background task', () => {

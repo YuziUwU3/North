@@ -169,6 +169,12 @@ test('co-living condenses the user-selected number of completed rounds into isol
   assert.doesNotMatch(source,/c\.summaries\.push\([^\n]*共同生活/);
 });
 
+test('co-living summary is durably stored before reporting success',()=>{
+  const summarize=functionSource('cohabSummarize');
+  assert.match(summarize,/d\.summarySeq=targetSeq;d\.summaryRetryAt=0;await saveNowAsync\(\);return items\.length/);
+  assert.doesNotMatch(summarize,/d\.summaryRetryAt=0;save\(\);return items\.length/);
+});
+
 test('old dates and co-living summaries share the role-perspective memory rule',()=>{
   assert.match(source,/function offSummaryPerspectiveRule\(c\)/);
   assert.match(source,/禁止写成第三人称旁白、剧本梗概、镜头描述/);

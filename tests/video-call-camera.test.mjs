@@ -83,6 +83,14 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 116/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.116/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 117/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.117/);
+});
+
+test('private iOS camera preview keeps one media session across recognized sentences',()=>{
+  const keep=functionSource('callNativeCameraMediaOn'),callAI=functionSource('callAI');
+  assert.match(keep,/privateNativeAppOn\(\)&&callVideoCameraOn\(\)/);
+  assert.match(callAI,/!callNativeSharedMediaAudioOn\(\)&&!callNativeCameraMediaOn\(\)&&!hfAudioPaused/);
+  assert.match(callAI,/_callBusy 会丢弃角色回声/);
+  assert.doesNotMatch(functionSource('callVideoCameraOn'),/pause\(|stop\(/);
 });

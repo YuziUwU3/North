@@ -15,4 +15,11 @@ assert.equal(context.taskC().id,'bound');
 context.S.couple=null;
 assert.equal(context.taskC(),null,'there is no fallback task owner without a bound couple');
 
+const auto=fn('autoAssignTasks'),generate=fn('genTasks');
+assert.match(auto,/taskAutoState\(c\)/);
+assert.match(auto,/genTasks\(\{automatic:true\}\)/);
+assert.match(generate,/if\(!Array\.isArray\(arr\)\)arr=\[\]/,'invalid model JSON must fall back to built-in tasks');
+assert.match(generate,/if\(!automatic\)toast\('没布置成功，再点一次'\)/,'automatic failures must stay silent');
+assert.match(generate,/st\.nextAt=Date\.now\(\)\+Math\.min\(6\*3600000,15\*60000\*Math\.pow\(2,attempts-1\)\)/,'automatic retries must back off persistently');
+
 console.log('task couple lock tests passed');
