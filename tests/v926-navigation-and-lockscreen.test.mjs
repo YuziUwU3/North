@@ -36,7 +36,7 @@ test('malformed legacy offline records are normalized before opening a date', ()
   assert.ok(Array.isArray(ctx.value.memory));
   assert.ok(Array.isArray(ctx.value.history));
   assert.equal(ctx.value.started, true);
-  assert.match(source, /type="button" class="it offline-role-entry"/);
+  assert.match(source, /type="button" class="offline-role-entry"/);
 });
 
 test('native role navigation only consumes a fresh real notification tap once', async () => {

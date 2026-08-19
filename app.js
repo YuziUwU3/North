@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='994'){
+if(window.__NORTH_SHELL_BUILD__!=='995'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -370,7 +370,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v994 · 婚礼付费出图交付修复';
+const APP_VER='v995 · 婚礼恢复操作修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1449,7 +1449,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=994&r=v994-wedding-paid-image-delivery-1';
+  const url='sw.js?v=995&r=v995-wedding-recovery-actions-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2043,6 +2043,7 @@ function render(){
   else if(c.p==='mgroom')html=renderMGRoom(c.id);
   else if(c.p==='uc')html=renderUC();
   else if(c.p==='calllog')html=renderCallLog(c.id);
+  else if(c.p==='offline')html=renderOfflineHub();
   else if(c.p==='off')html=renderOff(c.id,c.mode);
   else if(c.p==='rphub')html=renderRPHub();
   else if(c.p==='rpset')html=renderRPSetup(c.id);
@@ -2890,6 +2891,7 @@ function homeLayoutInit(){
   if(overflow.length){clean[0]=clean[0].filter(k=>!APPDEFS[k]||keepFirst.has(k));clean[1]=overflow.concat(clean[1]);}
   Object.keys(APPDEFS).forEach(k=>{if(!seen.has(k)){clean[1].push(k);seen.add(k);}});
   Object.keys(HOME_SHORTCUTS).forEach(k=>{if(!seen.has(k)){clean[1].push(k);seen.add(k);}});
+  if(clean[1].length>12){clean[2]=clean[1].slice(12).concat(clean[2]);clean[1]=clean[1].slice(0,12);}
   S.me.homeLayout=clean;S.me.appDock=dock;
   homeLayoutSyncLegacy();
 }
@@ -3296,7 +3298,7 @@ function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里�
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
 function curAppKey(){const p=cur().p;
-  const map={browser:'browser',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',gs:'games',drawguess:'games',uc:'games',mgroom:'games',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
+  const map={browser:'browser',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',gs:'games',drawguess:'games',uc:'games',mgroom:'games',offline:'offline',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
   if(map[p])return map[p];
   if(p==='wechat'&&wxTab==='moments')return 'moments';
   return null;}
@@ -6285,10 +6287,8 @@ function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messag
   o.msgs.push({id:uid(),who:'旁白',source:'me',text:'你答应了TA的约会邀请：'+o.when+' 在「'+o.loc+'」见面。'});save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'答应了你的约会邀请，'+o.when+'在「'+o.loc+'」见面。是你主动约的ta，你先到了——用旁白【】描写你到场的场景/动作开场，主动热情点。]');}
 function declineDate(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
-function openOfflineMenu(){S.offline=S.offline||{};offlineRepairState();const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
-  openModal(`<h3>线下约会</h3>${cohabMenuCard(cs)}${typeof window.weddingOfflineEntryHTML==='function'?window.weddingOfflineEntryHTML():''}<div class="offline-once-label"><span>单次约会</span><small>原功能保持不变</small></div><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
-   ${cs.map(c=>{const o=offData(c.id),latest=(o.history||[]).find(h=>h&&h.msgs&&h.msgs.length);return `<div class="section"><button type="button" class="it offline-role-entry" onclick="offlinePickTap(event,'${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o.started?'约会中 · '+esc(o.loc||''):offlineCanResume(o)?'上次约会未结束 · 点击继续':(o.memory.length?'有'+o.memory.length+'条约会重点记忆':'未约过')}</div></div><span class="v">›</span></button>${latest&&!o.started?`<div style="padding:0 12px 11px;display:grid;gap:7px"><button class="btn g" style="margin:0" onclick="event.stopPropagation();offReinjectLatestHandoff('${c.id}')">重新注入最近约会原文</button><button class="btn g" style="margin:0" onclick="event.stopPropagation();offRetryLatestSummary('${c.id}')">重新总结最近一场约会</button></div>`:''}</div>`;}).join('')}
-   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function openOfflineMenu(){S.offline=S.offline||{};offlineRepairState();closeModal();if(cur().p==='offline')render();else go('offline');}
+function renderOfflineHub(){S.offline=S.offline||{};offlineRepairState();const cs=S.contacts.filter(c=>!c.deleted),wedding=typeof window.weddingOfflineEntryHTML==='function'?window.weddingOfflineEntryHTML():'';return `<main class="offline-hub"><header class="offline-hub-nav"><button type="button" class="offline-hub-back" onclick="back()" aria-label="返回">‹</button><div><small>PRIVATE MOMENTS</small><b>线下约会</b></div><span aria-hidden="true">✦</span></header><section class="offline-hub-hero"><div class="offline-hub-orbit" aria-hidden="true"><i></i><i></i><i></i></div><small>BETWEEN US · REAL MOMENTS</small><h1>把见面，变成<br>只属于你们的故事</h1><p>共同生活、婚礼仪式与单次约会，都在这里独立发生并留下真实记忆。</p></section><div class="offline-hub-content">${cs.length?`<section class="offline-hub-block offline-hub-life"><div class="offline-hub-section-title"><div><small>CONTINUOUS LIFE</small><h2>共同生活</h2></div><span>持续日常</span></div>${cohabMenuCard(cs)}</section><section class="offline-hub-block offline-hub-wedding"><div class="offline-hub-section-title"><div><small>PRIVATE CEREMONY</small><h2>婚礼仪式</h2></div><span>仅限情侣</span></div>${wedding}</section><section class="offline-hub-block offline-hub-once"><div class="offline-hub-section-title"><div><small>ONE DAY TOGETHER</small><h2>单次约会</h2></div><span>独立现场</span></div><p class="offline-hub-intro">进入有场景、动作、旁白与对话的独立约会空间。结束后会总结为角色记忆，微信里的他也会记得这次见面。</p><div class="offline-hub-roles">${cs.map(c=>{const o=offData(c.id),latest=(o.history||[]).find(h=>h&&h.msgs&&h.msgs.length);return `<article class="offline-hub-role"><button type="button" class="offline-role-entry" onclick="offlinePickTap(event,'${c.id}')"><span class="offline-role-avatar">${av(c.avatar,'sm')}</span><span class="offline-role-meta"><b>${esc(c.remark||c.name)}</b><small>${o.started?'约会进行中 · '+esc(o.loc||'等待继续'):offlineCanResume(o)?'上次约会尚未结束 · 点击继续':(o.memory.length?'已珍藏 '+o.memory.length+' 条约会记忆':'还没有一起约会')}</small></span><i>›</i></button>${latest&&!o.started?`<div class="offline-role-tools"><button type="button" onclick="event.stopPropagation();offReinjectLatestHandoff('${c.id}')">重新注入原文</button><button type="button" onclick="event.stopPropagation();offRetryLatestSummary('${c.id}')">重新总结</button></div>`:''}</article>`;}).join('')}</div></section>`:`<section class="offline-hub-empty"><i>🌹</i><h2>故事还在等一个主角</h2><p>先创建角色，再回来安排你们第一次真正的见面。</p><button type="button" onclick="openWeChat()">去微信创建角色</button></section>`}</div></main>`;}
 let _offlinePickAt=0;
 function offlinePickTap(ev,cid){if(ev){try{ev.preventDefault();ev.stopPropagation();}catch(_){}}const now=Date.now();if(now-_offlinePickAt<350)return;_offlinePickAt=now;offlineEnter(cid);}
 function offlineEnter(cid){offlineRepairState();closeModal();const o=offData(cid);if(o.started){offlineFocusStart(cid,o);save();_off={id:cid,busy:false};go('off',{id:cid});return;}if(offlineCanResume(o)){offlineResume(cid,o);return;}offlineInvite(cid);}

@@ -54,7 +54,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v994 · 婚礼付费出图交付修复/);
+assert.match(source, /v995 · 婚礼恢复操作修复/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -302,7 +302,10 @@ assert.match(source, /function offDeleteHistory\(id,hid\)/,'a failed or placehol
 assert.match(source, /onclick="offDeleteHistory\('\$\{id\}','\$\{h\.id\}'\)"/);
 assert.match(source, /function offlinePickTap\(ev,cid\)/);
 assert.match(source, /onclick="offlinePickTap\(event,'\$\{c\.id\}'\)"/);
-assert.match(source, /<button type="button" class="it offline-role-entry"/);
+assert.match(source, /function renderOfflineHub\(\)/);
+assert.match(source, /<main class="offline-hub">/);
+assert.match(source, /<button type="button" class="offline-role-entry"/);
+assert.match(source, /if\(cur\(\)\.p==='offline'\)render\(\);else go\('offline'\)/);
 assert.doesNotMatch(source, /onkeydown="if\(event\.key==='Enter'\|\|event\.key===' '\)\{offlinePickTap/);
 assert.doesNotMatch(source, /ontouchend="offlinePickTap/);
 assert.doesNotMatch(source, /onpointerup="offlinePickTap/);
@@ -442,7 +445,7 @@ assert.match(source, /function offHistoryMemoryIds\(h\)/);
 assert.match(source, /offHistoryHasMemory\(h,m\.id\)&&h\.msgs&&h\.msgs\.length/);
 assert.match(source, /onclick="offRetrySummary\('\$\{id\}','\$\{hist\.id\}','single'\)"/);
 assert.match(source, /function offRetryLatestSummary\(id\)/);
-assert.match(source, /offRetryLatestSummary\('\$\{c\.id\}'\)[^<]*">重新总结最近一场约会<\/button>/);
+assert.match(source, /offRetryLatestSummary\('\$\{c\.id\}'\)[^<]*">重新总结<\/button>/);
 assert.match(source, /label=hist&&hist\.summaryMode==='single'/);
 assert.match(source, /<summary[^>]*>\$\{label\}/);
 assert.match(source, /offSummaryNoticeStart\(c,hid\)/);
@@ -654,6 +657,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=994/);
+assert.match(html, /app\.js\?v=995/);
 
 console.log("offline date tests passed");

@@ -96,14 +96,15 @@ test('couple-space album reads current scene keys so a chapter replacement updat
   assert.match(wedding, /const key=prepared\.sceneKeys&&prepared\.sceneKeys\[scene\]/);
   assert.match(wedding, /prepared\.sceneKeys\[scene\]=cacheKey/);
   assert.match(wedding, /prepared\.sceneRevisions\[scene\]=\(prepared\.sceneRevisions\[scene\]\|\|0\)\+1/);
-  assert.match(wedding, /单独重做某一章后，这里会自动换成最新画面/);
+  assert.match(wedding, /在线下约会重做某一章后，这里会自动换成最新画面/);
   assert.match(wedding, /setTimeout\(\(\)=>weddingSavePhotoElement\(el\),720\)/);
   assert.match(wedding, /SmallPhoneNative\.request\('media\.photo\.save'/);
   assert.match(wedding, /function weddingOpenPhotoViewer\(index\)/);
   assert.match(wedding, /保存高清原图/);
-  assert.match(wedding, /weddingOpenSceneRegenerator\(\\''\+cid\+'\\',\\''\+recordId\+'\\'\)/);
+  const album=wedding.slice(wedding.indexOf('async function weddingOpenPhotoAlbum'),wedding.indexOf('async function weddingAfterMessage'));
+  assert.doesNotMatch(album,/weddingOpenSceneRegenerator/);
   assert.match(css, /\.wedding-photo-viewer/);
-  assert.match(css, /\.wedding-album-regenerate/);
+  assert.doesNotMatch(css, /\.wedding-album-regenerate/);
 });
 
 test('expired wedding countdown self-recovers after app resume and browser gets the same offline controls', () => {
@@ -119,9 +120,20 @@ test('a deleted ready card recovers from the latest prepared wedding instead of 
   assert.match(wedding, /function weddingLatestPreparedEntry\(c,style\)/);
   assert.match(wedding, /function weddingResolvePreparedInvite\(c,m\)/);
   assert.match(wedding, /if\(!ref&&token&&weddingState\(\)\.prepared\[token\]\)/);
-  assert.match(wedding, /原邀请卡即使已经删除，也可以从这里继续进入/);
+  assert.match(wedding, /原邀请卡即使已经删除，也可以从这里继续进入或重新准备/);
   assert.match(wedding, /weddingRecoverReadyInvite\(\\''\+c\.id\+'\\',\\''\+token\+'\\',\\''\+style\+'\\'\)/);
+  assert.match(wedding, /weddingStartSimulation\(\\''\+c\.id\+'\\',\\''\+token\+'\\',\\''\+style\+'\\'\)/);
+  assert.match(wedding, /weddingOpenSceneRegenerator\(\\''\+c\.id\+'\\',\\''\+token\+'\\'\)/);
+  assert.match(wedding, /重新生成'\+label\+'婚礼/);
   assert.match(wedding, /m\.preparedId=ref\.id/);
+});
+
+test('deleted-card recovery actions reuse prepared content without forcing a new full generation', () => {
+  assert.match(wedding, /const direct=token&&st\.prepared\[token\]/);
+  assert.match(wedding, /if\(direct&&direct\.cid===cid\)return\{c,m:null,record:null,prepared:direct,preparedId:token,token\}/);
+  assert.match(wedding, /if\(!prepared&&mid\)\{const context=weddingSceneContext\(c\.id,mid\)/);
+  assert.match(wedding, /const invite=m&&m\.phase==='ready'&&!m\.supersededAt\?m:\{id:preparedId,preparedId,eventAt:Date\.now\(\),style,phase:'ready'\}/);
+  assert.match(wedding, /weddingEnterPrepared\(c,invite,prepared,true\)/);
 });
 
 test('private bridge saves original wedding art to Photos with add-only permission', () => {

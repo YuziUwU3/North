@@ -11,9 +11,19 @@ const hash=path=>crypto.createHash('sha256').update(fs.readFileSync(`${root}/${p
 test('modern wedding preview v9 is loaded by web and private shells',()=>{
   for(const htmlPath of ['小手机.html',`${privateBundle}/小手机.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-16/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-16/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-17/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-17/);
   }
+});
+
+test('wedding lives only inside offline date and removes its legacy home shortcut',()=>{
+  const wedding=read('wedding-game.js'),app=read('app.js');
+  assert.doesNotMatch(wedding,/APPDEFS\.wedding=\{/);
+  assert.match(wedding,/delete APPDEFS\.wedding/);
+  assert.match(wedding,/pg\.filter\(k=>k!=='wedding'\)/);
+  assert.match(wedding,/S\.me\.appDock=S\.me\.appDock\.filter\(k=>k!=='wedding'\)/);
+  assert.match(wedding,/function weddingOfflineEntryHTML\(\)/);
+  assert.match(app,/if\(clean\[1\]\.length>12\)\{clean\[2\]=clean\[1\]\.slice\(12\)\.concat\(clean\[2\]\);clean\[1\]=clean\[1\]\.slice\(0,12\);\}/);
 });
 
 test('private bundle stages the current wedding code, shell entries, art and BGM',()=>{
@@ -21,8 +31,8 @@ test('private bundle stages the current wedding code, shell entries, art and BGM
   assert.equal(hash(`${privateBundle}/小手机.html`),hash(`${privateBundle}/index.html`));
   for(const htmlPath of [`${privateBundle}/小手机.html`,`${privateBundle}/index.html`]){
     const html=read(htmlPath);
-    assert.match(html,/wedding-game\.css\?v=wedding-dual-16/);
-    assert.match(html,/wedding-game\.js\?v=wedding-dual-16/);
+    assert.match(html,/wedding-game\.css\?v=wedding-dual-17/);
+    assert.match(html,/wedding-game\.js\?v=wedding-dual-17/);
   }
   assert.match(read(`${privateBundle}/app.js`),/预约婚礼/);
   assert.match(read(`${privateBundle}/app.js`),/weddingCalendarTick/);
@@ -218,7 +228,7 @@ test('private simulation runs the full ceremony but exits before every persisten
   const js=read('wedding-game.js'),css=read('wedding-game.css');
   assert.match(js,/function weddingPrivateApp\(\)/);
   assert.match(js,/function weddingStartSimulation\(cid,mid,style\)/);
-  assert.match(js,/weddingEnterPrepared\(c,m,prepared,true\)/);
+  assert.match(js,/weddingEnterPrepared\(c,invite,prepared,true\)/);
   assert.match(js,/simulation:\!\!W\.session\.simulation/);
   assert.match(js,/模拟一次 · 不保存/);
   assert.match(js,/if\(s\.simulation\)\{s\.saved=true;return weddingShowCertificate/);
@@ -416,10 +426,10 @@ test('certificate keeps supplied structure, original role name and fitted center
   assert.match(css,/\.wedding-certificate\{display:flex;align-items:center;justify-content:center/);
 });
 
-test('wedding remains a standalone home app and invitation preview route exists',()=>{
+test('wedding has no standalone home app and invitation preview route still exists',()=>{
   const js=read('wedding-game.js');
-  assert.match(js,/APPDEFS\.wedding=/);
-  assert.match(js,/APPRUN\.wedding=\(\)=>weddingOpen\(\)/);
-  assert.match(js,/t:'婚礼'/);
+  assert.doesNotMatch(js,/APPDEFS\.wedding=/);
+  assert.doesNotMatch(js,/APPRUN\.wedding=\(\)=>weddingOpen\(\)/);
+  assert.match(js,/delete APPDEFS\.wedding/);
   assert.match(js,/#wedding-invitation-preview/);
 });
