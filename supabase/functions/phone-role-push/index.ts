@@ -21,11 +21,24 @@ function base64url(value: Uint8Array | string) {
 }
 
 function pemBytes(pem: string) {
-  const body = pem.replaceAll("\\n", "\n")
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/\s+/g, "");
-  return Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
+  let value = String(pem || "").replace(/^\uFEFF/, "").trim();
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (value.startsWith('"') && value.endsWith('"')) {
+      try { value = JSON.parse(value); } catch (_) { /* keep the original text */ }
+    }
+    value = value.replaceAll("\\r\\n", "\n").replaceAll("\\n", "\n").replaceAll("\\r", "\n").trim();
+    const block = value.match(/-----BEGIN(?: EC)? PRIVATE KEY-----([\s\S]*?)-----END(?: EC)? PRIVATE KEY-----/);
+    const body = (block?.[1] || value).replace(/\s+/g, "").replaceAll("-", "+").replaceAll("_", "/");
+    const bytes = Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
+    if (bytes[0] === 0x30) return bytes;
+    const nested = new TextDecoder().decode(bytes).replace(/^\uFEFF/, "").trim();
+    if (nested.includes("PRIVATE KEY-----") || (nested.startsWith('"') && nested.endsWith('"'))) {
+      value = nested;
+      continue;
+    }
+    throw new Error("invalid-apns-private-key-der");
+  }
+  throw new Error("invalid-apns-private-key-wrapper");
 }
 
 function derToRaw(signature: Uint8Array) {
@@ -448,6 +461,29 @@ async function roleMessage(
   }
 }
 
+function pushException(error: unknown) {
+  const value = error instanceof Error ? `${error.name}: ${error.message}` : String(error || "unknown-error");
+  return value.replace(/https?:\/\/\S+/g, "[endpoint]").slice(0, 240);
+}
+
+async function apnsFetch(url: string, init: RequestInit) {
+  const failures: string[] = [];
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort("apns-timeout"), 12_000);
+    try {
+      const response = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(timeout);
+      return { response, attempt, failures };
+    } catch (error) {
+      clearTimeout(timeout);
+      failures.push(pushException(error));
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+  }
+  return { response: null, attempt: 2, failures };
+}
+
 async function sendAPNs(
   deviceToken: string,
   environment: string,
@@ -463,7 +499,12 @@ async function sendAPNs(
   const bundleId = Deno.env.get("APNS_BUNDLE_ID") || "";
   if (!deviceToken) return { status: "no-token", error: "" };
   if (!keyId || !teamId || !privateKey || !bundleId) return { status: "apns-not-configured", error: "" };
-  const jwt = await apnsJWT(teamId, keyId, privateKey);
+  let jwt = "";
+  try {
+    jwt = await apnsJWT(teamId, keyId, privateKey);
+  } catch (error) {
+    return { status: "failed-apns-jwt", error: pushException(error), diagnostic: { stage: "jwt" } };
+  }
   const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
   const parts = roleMessageParts(body, 10);
   if (!parts.length) return { status: "failed-empty", error: "empty-notification" };
@@ -472,13 +513,15 @@ async function sendAPNs(
     const part = parts[index];
     const call = part.match(/^[\[【]来电[|｜](语音|视频)[\]】]$/);
     const kind = call ? "call" : "message";
-    const response = await fetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
+    const requestId = crypto.randomUUID();
+    const request = await apnsFetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
       method: "POST",
       headers: {
         authorization: `bearer ${jwt}`,
         "apns-topic": bundleId,
         "apns-push-type": "alert",
         "apns-priority": "10",
+        "apns-id": requestId,
         "apns-expiration": String(Math.floor(Date.now() / 1000) + 3600),
         "content-type": "application/json",
       },
@@ -500,13 +543,21 @@ async function sendAPNs(
         },
       }),
     });
+    const response = request.response;
+    if (!response) {
+      return {
+        status: "failed-apns-network",
+        error: request.failures.at(-1) || "apns-network-error",
+        diagnostic: { stage: "alert-network", attempts: request.attempt, failures: request.failures },
+      };
+    }
     if (!response.ok) {
       const apnsId = response.headers.get("apns-id") || "";
       const detail = (await response.text()).slice(0, 320);
       return {
         status: `failed-${response.status}`,
         error: detail,
-        diagnostic: { stage: "alert", httpStatus: response.status, apnsId },
+        diagnostic: { stage: "alert", httpStatus: response.status, apnsId, attempts: request.attempt },
       };
     }
     const apnsId = response.headers.get("apns-id") || "";
@@ -528,21 +579,36 @@ async function sendCompanionWake(deviceToken: string, environment: string, comma
   if (!keyId || !teamId || !privateKey || !bundleId) {
     return { ok: false, status: "apns-not-configured", apnsId: "", error: "" };
   }
-  const jwt = await apnsJWT(teamId, keyId, privateKey);
+  let jwt = "";
+  try {
+    jwt = await apnsJWT(teamId, keyId, privateKey);
+  } catch (error) {
+    return { ok: false, status: "failed-apns-jwt", apnsId: "", error: pushException(error) };
+  }
   const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
-  const response = await fetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
+  const request = await apnsFetch(`${host}/3/device/${encodeURIComponent(deviceToken)}`, {
     method: "POST",
     headers: {
       authorization: `bearer ${jwt}`,
       "apns-topic": bundleId,
       "apns-push-type": "background",
       "apns-priority": "5",
+      "apns-id": crypto.randomUUID(),
       "apns-collapse-id": "phone-companion-commands",
       "apns-expiration": String(Math.floor(Date.now() / 1000) + 900),
       "content-type": "application/json",
     },
     body: JSON.stringify({ aps: { "content-available": 1 }, companion: { commandId } }),
   });
+  const response = request.response;
+  if (!response) {
+    return {
+      ok: false,
+      status: "failed-apns-network",
+      apnsId: "",
+      error: request.failures.at(-1) || "apns-network-error",
+    };
+  }
   const apnsId = response.headers.get("apns-id") || "";
   const detail = response.ok ? "" : (await response.text()).slice(0, 240);
   return {

@@ -123,7 +123,7 @@ test('common life shows a live calendar and reuses the editable role schedule',(
   assert.match(schedule,/请假安排/);
   assert.match(schedule,/角色也能在共同生活或同步微信里自主请假/);
   assert.match(render,/id="cohabLiveTime"/);
-  assert.match(source,/cohabClock\.textContent=cohabClockText\(\)/);
+  assert.match(source,/const cohabClock=\$\('#cohabLiveTime'\),cohab=cohabClock&&cohabClockText\(\);if\(cohabClock&&cohabClock\.textContent!==cohab\)cohabClock\.textContent=cohab/);
   assert.match(html,/\.cohab-meta time\{/);
 });
 

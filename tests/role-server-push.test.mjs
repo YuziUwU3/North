@@ -14,6 +14,7 @@ const allDayMigration = readFileSync(join(root, 'supabase', 'migrations', '20260
 const unifiedPushMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110004_private_phone_unified_push.sql'), 'utf8');
 const legacyClaimMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110005_private_phone_unified_push_legacy_rpc.sql'), 'utf8');
 const resetMemoryMigration = readFileSync(join(root, 'supabase', 'migrations', '202608110006_phone_role_push_reset_memory.sql'), 'utf8');
+const receiptMigration = readFileSync(join(root, 'supabase', 'migrations', '202608200002_phone_role_push_receipt_reconciliation.sql'), 'utf8');
 const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
 const notificationService = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'RoleNotificationService', 'NotificationService.swift'), 'utf8');
 
@@ -281,8 +282,36 @@ test('returned role messages are deduplicated and appended to the matching chat'
     pull.indexOf('await persistWechatMessagesNow()') < pull.indexOf("phone_role_push_ack"),
     'server rows must be durably persisted before they are acknowledged'
   );
+  assert.match(pull, /receiptPending/);
+  assert.match(pull, /roleServerPushReceiptMark/);
+  assert.ok(
+    pull.indexOf('await persistWechatMessagesNow()') < pull.indexOf('roleServerPushReceiptMark') &&
+    pull.indexOf('roleServerPushReceiptMark') < pull.indexOf('await saveNowAsync()') &&
+    pull.indexOf('await saveNowAsync()') < pull.indexOf("phone_role_push_ack"),
+    'chat rows and the durable receipt must both be saved before the server ack'
+  );
   assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);
   assert.match(app, /visibilitychange[\s\S]{0,1600}roleServerPushPull\(true\)/);
+});
+
+test('recently consumed real pushes can be reconciled without resurrecting deleted messages', () => {
+  assert.match(receiptMigration, /push_status = 'sent'/);
+  assert.match(receiptMigration, /consumed_at >= now\(\) - interval '24 hours'/);
+  assert.match(receiptMigration, /order by \(consumed_at is not null\), created_at asc/);
+  assert.match(receiptMigration, /'consumedAt', x\.consumed_at/);
+  const rowsSource = functionSource('roleServerPushReceiptRows');
+  const hasSource = functionSource('roleServerPushReceiptHas');
+  const markSource = functionSource('roleServerPushReceiptMark');
+  const forgetSource = functionSource('roleServerPushReceiptForget');
+  const S = { _rolePushReceipts: [] };
+  const receipts = Function('S', `${rowsSource}\n${hasSource}\n${markSource}\n${forgetSource}\nreturn {has:roleServerPushReceiptHas,mark:roleServerPushReceiptMark,forget:roleServerPushReceiptForget};`)(S);
+  assert.equal(receipts.mark('push-1', Date.now()), true);
+  assert.equal(receipts.mark('push-1', Date.now()), false);
+  assert.equal(receipts.has('push-1'), true);
+  assert.equal(S._rolePushReceipts.length, 1);
+  receipts.forget(['push-1']);
+  assert.equal(receipts.has('push-1'), false);
+  assert.doesNotMatch(functionSource('deleteRoleMsg'), /_rolePushReceipts|roleServerPushReceiptForget/);
 });
 
 test('server push respects the configured 1-10 message range', () => {

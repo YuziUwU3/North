@@ -36,7 +36,11 @@ function runtime(result) {
     S: { me: { name: 'North' }, moments: [post] },
     _momentReplyBusy: new Set(),
     getC: id => id === role.id ? role : null,
-    msgs: () => [{ role: 'user', text: '朋友圈记得回我' }],
+    msgs: () => [
+      { role: 'user', text: '官宣照只许发给我看' },
+      { role: 'assistant', text: '好，照片和朋友圈都先给你过目' },
+    ],
+    lastRounds: rows => rows,
     msgToText: msg => msg.text || '',
     cleanMomentText: text => String(text || ''),
     selectRelevantMemory: () => ({ items: [{ text: '用户重视真实回复' }] }),
@@ -46,12 +50,16 @@ function runtime(result) {
     chatAPI: async messages => { requests += 1; context.lastRequest = messages; if (result instanceof Error) throw result; return result; },
     cleanReply: text => String(text || '').trim(),
     roleVisibleEnvelopeText: text => String(text || ''),
+    setNaturalInnerThought: (contact, value) => { contact.innerThought = String(value || '').trim(); return true; },
+    honestMoodText: (_contact, value) => value,
+    moodInnerMonologue: (_contact, value) => value,
     save: () => { saves += 1; },
     momentRenderKeepScroll: () => {},
     uid: () => 'reply-1',
     cur: () => ({ p: 'roleMomentDetail' }),
     wxTab: 'moments',
   });
+  vm.runInContext(functionSource('stripHiddenThoughtTags'), context);
   vm.runInContext(functionSource('momentReplySpecific'), context);
   vm.runInContext(functionSource('reactToComment'), context);
   return { context, post, target, role, stats: () => ({ requests, saves }) };
@@ -68,6 +76,22 @@ test('a real Moment model result is appended to the exact comment thread once', 
   });
   assert.equal(run.target._roleReplyStatus, undefined);
   assert.match(run.context.lastRequest[1].content, /刚刚在评论区对你说/);
+  assert.match(run.context.lastRequest[1].content, /微信私聊上下文/);
+  assert.match(run.context.lastRequest[1].content, /North：官宣照只许发给我看/);
+  assert.match(run.context.lastRequest[1].content, /先生：好，照片和朋友圈都先给你过目/);
+  assert.match(run.context.lastRequest[0].content, /当前回复场景（最高优先级）/);
+  assert.match(run.context.lastRequest[0].content, /微信朋友圈评论区回复，不是在微信私聊窗口/);
+  assert.match(run.context.lastRequest[0].content, /必须第一行严格写 \[内心\|简短真实想法\]/);
+});
+
+test('malformed or same-line inner thoughts stay hidden in Moments and ordinary WeChat', () => {
+  const run = runtime('[内心她叫我臭老登，这只小狗胆子越来越大了] 老登怎么了，老登能把你抱起来。');
+  const visible = run.context.momentReplySpecific('[内心她叫我臭老登，这只小狗胆子越来越大了] 老登怎么了，老登能把你抱起来。', run.role);
+  assert.equal(visible, '老登怎么了，老登能把你抱起来。');
+  assert.equal(run.role.innerThought, '她叫我臭老登，这只小狗胆子越来越大了');
+  assert.equal(run.context.stripHiddenThoughtTags('[内心|其实已经心软了]\n还要再哄我一句', run.role), '还要再哄我一句');
+  assert.match(functionSource('cleanWechatVisibleLine'), /stripHiddenThoughtTags/);
+  assert.match(source, /hadHiddenThought=hiddenThoughtTagPresent\(line\);line=stripHiddenThoughtTags\(line,c\)/);
 });
 
 test('a failed Moment model call records failure and never fabricates a role comment', async () => {

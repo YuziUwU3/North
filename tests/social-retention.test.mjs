@@ -38,7 +38,9 @@ test('role replies to moment comments use the exact thread and recent WeChat con
   const begin=source.indexOf('async function reactToComment(');
   const end=source.indexOf('function ',begin+20);
   const block=source.slice(begin,end);
-  assert.match(block,/msgs\(c\.id\)\.slice\(-6\)/);
+  assert.match(block,/lastRounds\(msgs\(c\.id\),12\)\.slice\(-80\)/);
+  assert.match(block,/最近的微信私聊上下文/);
+  assert.match(block,/按时间顺序，已标明说话人/);
   assert.match(block,/selectRelevantMemory\(c,query,4\)/);
   assert.match(block,/buildSystem\(c,\{natural:wechatNaturalOn\(\),query,selectiveMemory:true,memoryItems:memory\.items\}\)/);
   assert.match(block,/memoryRetrievalPrompt\(c,memory\)/);

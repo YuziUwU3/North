@@ -61,7 +61,7 @@ test('Moment comment repair keeps the July 30 contextual reply behavior without 
   const submit = functionSource(app, 'momentCommentSubmit');
   const reply = functionSource(app, 'reactToComment');
   assert.match(submit, /reactToComment\(p,targetCid\|\|'',comment\)/);
-  assert.match(reply, /最近的微信聊天/);
+  assert.match(reply, /最近的微信私聊上下文/);
   assert.match(reply, /朋友圈下面的评论（按先后顺序）/);
   assert.match(reply, /刚刚在评论区对你说/);
   assert.match(reply, /selectRelevantMemory\(c,query,4\)/);

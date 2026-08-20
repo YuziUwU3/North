@@ -610,3 +610,9 @@ v1006 接手说明｜后台模型、通话与朋友圈回复修复候选（2026-
 当前候选：网页 v1006、私人 iOS 1.0.127 (127)、原生桥 25。Windows 完整回归 857／857；独立云 phone-role-push 已部署。不得把提交、ZIP、云函数部署或 Windows 测试写成 Mac／真机通过。
 Mac 必须完整解压 SmallPhone_v1006_CallMomentsBackgroundRepair，全新打开 PhoneCompanionTest.xcodeproj，执行 Product → Clean Build Folder 后再编译安装，不覆盖旧工程。
 真机按顺序验收：普通微信回复；电话声音与字幕且不连接超时；朋友圈真实评论回复与失败重试不伪造；设置 → 聊天与媒体立即模拟后台主动消息，确认 App 已退到桌面后收到通知，再返回 App 查看服务器模型和 APNs 的真实结果。
+
+
+v1007 接手说明｜后台收件、朋友圈上下文、内心格式与 iOS 稳定性修复候选（2026-08-20）
+当前候选：网页 v1007、私人 iOS 1.0.128 (128)、原生桥 25。Windows 完整回归 865／865；独立云数据库补偿迁移和 APNs 函数已部署。不得把这些写成 Mac 编译或全新 v1007 真机包已通过。
+Mac 必须完整解压 SmallPhone_v1007_BackgroundInboxMomentsStabilityRepair，全新打开 PhoneCompanionTest.xcodeproj，执行 Product → Clean Build Folder 后再编译安装，不覆盖旧工程。
+真机按顺序验收：普通微信回复和通话冒烟；微信与朋友圈的正确／异常内心标签都不可见；朋友圈评论能续上微信私聊且失败不伪造；立即模拟后退到后台收到真实通知，返回同一角色聊天页能看到同一条真实消息；连续切换网页和私人 App、多个页面及组件，观察温度、触摸和页面是否仍会半屏。
