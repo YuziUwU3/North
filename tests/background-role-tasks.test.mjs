@@ -23,7 +23,10 @@ test('chat media settings expose an explicit real background message test', () =
   assert.match(app, /async function roleServerPushOneMinuteTest\(id\)/);
   assert.match(app, /roleBackgroundPreflight\(id,false\)/);
   assert.match(app, /roleBackgroundEnqueue\(id,'one_minute_test'/);
-  assert.match(app, /Date\.now\(\)\+10000/);
+  assert.match(app, /roleBackgroundEnqueue\(id,'one_minute_test',[^\n]*Date\.now\(\),baseline,false\)/);
+  assert.match(app, /roleBackgroundDispatchNow\(true\)/);
+  assert.match(app, /request\.keepalive=true/);
+  assert.doesNotMatch(app, /setTimeout\(\(\)=>roleBackgroundDispatchNow\(\),12000\)/);
   assert.match(app, /不会生成本地假回复/);
   const begin = app.indexOf('async function roleServerPushOneMinuteTest');
   const end = app.indexOf('function roleAppWatchToggle', begin);

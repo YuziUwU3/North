@@ -38,13 +38,24 @@ test('role replies to moment comments use the exact thread and recent WeChat con
   const begin=source.indexOf('async function reactToComment(');
   const end=source.indexOf('function ',begin+20);
   const block=source.slice(begin,end);
-  assert.match(block,/msgs\(c\.id\)\.slice\(-12\)/);
-  assert.match(block,/buildSystem\(c,\{selectiveMemory:true/);
+  assert.match(block,/msgs\(c\.id\)\.slice\(-6\)/);
+  assert.match(block,/buildSystem\(c\)/);
   assert.match(block,/targetComment/);
-  assert.match(block,/timeout:45000/);
-  assert.equal((block.match(/await chatAPI\(/g)||[]).length,1,'Moment comments must use one bounded real model request');
+  assert.doesNotMatch(block,/timeout:/);
+  assert.equal((block.match(/await chatAPI\(/g)||[]).length,1,'Moment comments must use the July 30 single real model request');
   assert.match(block,/momentReplySpecific/);
-  assert.match(source,/function momentReplySpecific\(txt\)[^\n]*看到了\|我看到了\|收到/);
-  assert.match(block,/不要泛泛说“看到了”“收到”“等我”/);
+  assert.doesNotMatch(source,/function momentReplySpecific\(txt\)[^\n]*看到了\|我看到了\|收到/);
+  assert.match(block,/像真人回评论那样接话、回应或调侃/);
+  assert.doesNotMatch(functionBlock('momentReplyStatusHTML'),/正在回复|正在真实回复/);
   assert.doesNotMatch(source,/function momentReplyFallback\(/);
+});
+
+function functionBlock(name){const begin=source.indexOf('function '+name+'('),end=source.indexOf('\nfunction ',begin+10);assert.ok(begin>=0);return source.slice(begin,end<0?source.length:end);}
+
+test('role-set app limits keep counting and locking without a floating countdown badge',()=>{
+  const tick=functionBlock('usageTick');
+  assert.match(tick,/au\.used\[key\]=\(au\.used\[key\]\|\|0\)\+1/);
+  assert.match(tick,/if\(remain<=0\)/);
+  assert.match(tick,/S\.couple\.locks/);
+  assert.doesNotMatch(tick,/textContent='⏳|style\.display=.*block/);
 });

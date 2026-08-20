@@ -62,14 +62,16 @@ test('Moment comment repair keeps the July 30 contextual reply behavior without 
   const reply = functionSource(app, 'reactToComment');
   assert.match(submit, /reactToComment\(p,targetCid\|\|'',comment\)/);
   assert.match(reply, /最近的微信聊天/);
-  assert.match(reply, /当前评论区（按先后顺序）/);
-  assert.match(reply, /刚刚对你说的这一句/);
-  assert.match(reply, /timeout:45000/);
-  assert.equal((reply.match(/await chatAPI\(/g) || []).length, 1, 'July 30 behavior is restored to one bounded real reply request');
+  assert.match(reply, /朋友圈下面的评论（按先后顺序）/);
+  assert.match(reply, /刚刚在评论区对你说/);
+  assert.doesNotMatch(reply, /timeout:/);
+  assert.equal((reply.match(/await chatAPI\(/g) || []).length, 1, 'July 30 behavior is restored to one direct real reply request');
   assert.match(reply, /_roleReplyStatus='failed'/);
   assert.match(reply, /if\(!txt\).*return;/s);
   assert.ok(reply.indexOf("if(!txt)") < reply.indexOf('live.comments.push'), 'failure must return before any role comment is appended');
   assert.match(functionSource(app, 'momentReplyStatusHTML'), /角色未回复 · 点此重试/);
+  assert.doesNotMatch(functionSource(app, 'momentReplyStatusHTML'), /正在回复|正在真实回复/);
+  assert.doesNotMatch(functionSource(app, 'momentReplySpecific'), /看到了|收到|知道了|好的|让我想想/);
 });
 
 test('the newest role Moment is always the single pinned card', () => {

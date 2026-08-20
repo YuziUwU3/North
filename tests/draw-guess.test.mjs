@@ -240,14 +240,15 @@ test('mobile layout keeps the player below the canvas and separates normal guess
   assert.match(functionSource('dgMount'),/onselectstart/);
 });
 
-test('blank-canvas free mode has no guessing and the hall usage badge stays hidden',()=>{
+test('blank-canvas free mode has no guessing and role-set limit badges stay hidden globally',()=>{
   const render=functionSource('renderDrawGuess'),tick=functionSource('usageTick'),next=functionSource('dgNewRound');
   assert.match(render,/photo\?'我说你画':'你画我猜'/);
   assert.match(render,/photo\?`<button[^`]+>发送<\/button>`/);
   assert.doesNotMatch(render,/photo\?`[^`]*提交答案/s);
   assert.match(functionSource('dgGenerateRoleDrawing'),/g\.activity='正在构思'/);
   assert.doesNotMatch(render,/上传图片|重新上传图片/);
-  assert.match(tick,/cur\(\)\.p==='drawguess'\?'none':'block'/);
+  assert.match(tick,/hide\(\);\/\* 限额继续真实计时并到点锁定/);
+  assert.doesNotMatch(tick,/textContent='⏳|style\.display=.*block/);
   assert.match(next,/dgOpenSetup\(cid\)/,'a new round must reopen the three-mode chooser');
   assert.doesNotMatch(next,/mode=_dg\.mode|dgBeginState\(cid,mode\)/);
 });
