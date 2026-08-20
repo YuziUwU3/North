@@ -46,7 +46,8 @@ test('foreground and background automations have one owner and respect occupied 
   assert.match(app, /roleBackgroundAvailable==='function'&&roleBackgroundAvailable\(c\.id\)\)return false/);
   assert.match(app, /localRuns:Object\.assign\(\{\},st\.automationRuns\|\|\{\}\)/);
   assert.match(app, /suspended=!!\(roleOnlineProactiveBlocked\(c\.id\)/);
-  assert.match(edge, /if \(config\.suspended === true\) return null/);
+  assert.match(edge, /if \(profileTemporarilySuspended\(profile\)\) return null/);
+  assert.doesNotMatch(edge, /if \(config\.suspended === true\) return null/);
   assert.match(edge, /localRuns\.morningSleep/);
   assert.match(edge, /Math\.max\(serverCount, localCount\)/);
 });

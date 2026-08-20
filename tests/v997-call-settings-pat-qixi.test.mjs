@@ -7,7 +7,7 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const wedding=fs.readFileSync(new URL('../wedding-game.js',import.meta.url),'utf8');
 const bridge=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift',import.meta.url),'utf8');
 
-test('v1000 removes synchronous camera JPEG work and preserves the camera audio session',()=>{
+test('v1003 removes synchronous camera JPEG work and preserves the camera audio session',()=>{
   assert.match(app,/async function callVideoElementFrame/);
   assert.match(app,/canvas\.toBlob\(/);
   assert.match(app,/privateNativeAppOn\(\)\?480:640/);
@@ -18,11 +18,11 @@ test('v1000 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1000 · 朋友圈交互与伴生控制修复'/);
+  assert.match(app,/APP_VER='v1003 · 回复链路回归修复'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1000/);
-  assert.match(html,/sw\.js\?v=1000&r=v1000-moments-companion-repair-1/);
+  assert.match(html,/north-sw-reloaded-1003/);
+  assert.match(html,/sw\.js\?v=1003&r=v1003-reply-regression-repair-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
@@ -40,14 +40,13 @@ test('settings use an iOS-style categorized home without changing the underlying
   assert.match(html,/\.ios-settings-icon svg/);
 });
 
-test('role WeChat supports mutual pat actions and hides the control tag',()=>{
-  assert.match(app,/function chatPatRole\(id\)/);
-  assert.match(app,/你拍了拍「/);
-  assert.match(app,/function consumeChatPatTags/);
-  assert.match(app,/拍了拍你/);
+test('role WeChat removes mutual pat actions while still hiding stale model tags',()=>{
+  assert.doesNotMatch(app,/function chatPatRole\(id\)/);
+  assert.doesNotMatch(app,/function consumeChatPatTags/);
+  assert.doesNotMatch(app,/微信支持“拍一拍”/);
+  assert.doesNotMatch(app,/m\.type!==['"]sys['"]\|\|m\._rolePat/);
   assert.match(app,/TAGWORDS='[^']*拍一拍/);
-  assert.match(app,/微信支持“拍一拍”/);
-  assert.match(app,/m\.type!==['"]sys['"]\|\|m\._rolePat/);
+  assert.ok(app.includes("replace(/[\\[【]\\s*拍一拍\\s*[\\]】]/g,'')"));
 });
 
 test('Qixi auto invitation is durable and finalizes in place while manual and calendar paths remain',()=>{

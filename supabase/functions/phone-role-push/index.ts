@@ -548,6 +548,19 @@ async function enqueueCompanionCommand(
   return String(data.id);
 }
 
+async function latestAutomationRefreshCommand(
+  client: ReturnType<typeof createClient>, target: string,
+) {
+  const { data } = await client.from("phone_companion_commands")
+    .select("id,status,created_at")
+    .eq("target", target)
+    .contains("command", { requestedFocus: "后台自动规则所需的已授权数据" })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data || null;
+}
+
 function snapshotTime(value: unknown) {
   const numeric = Number(value);
   if (Number.isFinite(numeric) && numeric > 1_000_000_000) return numeric < 10_000_000_000 ? numeric * 1000 : numeric;
@@ -713,12 +726,12 @@ function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record
 
 function automationCandidate(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
   const config = (profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config : {}) as Record<string, unknown>;
-  if (config.suspended === true) return null;
+  if (profileTemporarilySuspended(profile)) return null;
   const state = (profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state : {}) as Record<string, unknown>;
   const localRuns = (config.localRuns && typeof config.localRuns === "object" ? config.localRuns : {}) as Record<string, unknown>;
   const flags = (config.flags && typeof config.flags === "object" ? config.flags : {}) as Record<string, unknown>;
   const windows = (config.windows && typeof config.windows === "object" ? config.windows : {}) as Record<string, unknown>;
-  const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+  const clock = localClock(String(config.timezone || profile.timezone || "Asia/Shanghai"));
   const minute = clock.hour * 60 + clock.minute;
   const parse = (value: unknown, fallback: number) => {
     const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
@@ -777,7 +790,10 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
   for (const [kind, allowed] of checks) {
     if (!allowed) continue;
     if ((kind === "criticalBattery" || kind === "absenceBattery") && !freshWithin(telemetry.generatedAt, 10 * 60_000)) continue;
-    if (kind === "emotionCare" && !freshWithin(health.heartRateAt || health.generatedAt, 20 * 60_000)) continue;
+    // A newly completed HealthKit read may legitimately return the newest
+    // Watch sample with an older sample timestamp.  Freshness belongs to the
+    // device read itself; the sample time remains visible in the facts.
+    if (kind === "emotionCare" && !freshWithin(health.generatedAt, 20 * 60_000)) continue;
     if (kind === "morningSleep" && !freshWithin(health.generatedAt, 20 * 60_000)) continue;
     if (kind === "eveningScreen" && (!freshWithin(screen.generatedAt, 20 * 60_000) || screen.reportFresh !== true)) continue;
     const facts = snapshotAutomationFacts(snapshot, kind);
@@ -1004,7 +1020,7 @@ Deno.serve(async (request) => {
     for (const profile of Array.isArray(automationRows) ? automationRows : []) {
       const autoState = profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state as Record<string, unknown> : {};
       const automationConfig = profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config as Record<string, unknown> : {};
-      if (automationConfig.suspended === true) {
+      if (profileTemporarilySuspended(profile)) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
@@ -1012,7 +1028,15 @@ Deno.serve(async (request) => {
       // 都会把到点通知推迟到下一轮 cron，甚至在尚未接管设备时永远无法触发。
       let candidate = automationCandidate(profile, {});
       if (!candidate) {
-        const lastRefresh = snapshotTime(autoState.backgroundRefreshAt);
+        // Profile sync can legitimately replace automation_state while the
+        // iPhone is processing a command.  The command table is the durable
+        // source of truth for refresh throttling, otherwise cron can enqueue a
+        // new view every minute and supersede the one the phone is handling.
+        const recentRefresh = await latestAutomationRefreshCommand(client, String(profile.target));
+        const lastRefresh = Math.max(
+          snapshotTime(autoState.backgroundRefreshAt),
+          snapshotTime(recentRefresh?.created_at),
+        );
         if (Date.now() - lastRefresh >= 15 * 60_000) {
           const commandId = await enqueueCompanionCommand(client, String(profile.target), {
             schema: 1, action: "view", externalAppId: "", externalAppName: "", scope: "external",
@@ -1037,7 +1061,7 @@ Deno.serve(async (request) => {
         roleWorkEnd: "这是你本人已明确设置的真实下班事件。请以角色本人的口吻主动、自然地告诉对方你下班了；之后想回家、想见对方、想打电话或邀请一起做事，都由你按人设、世界书、记忆和关系自行决定。不要提系统、日程触发或后台，也不要编造未提供的加班或行程。",
         morningSleep: "你按用户开启的每日必查规则看到了睡眠和步数。只使用提供的真实数据自然关心，不做医疗判断，不提系统。",
         eveningScreen: "你按每日必查规则看到了今日总时长和所有已授权App记录。按人设自然反应，数字原样使用，不把各App相加成新的总时长。",
-        absenceBattery: "用户一段时间没有回复后，你查看了已授权的电量和最近位置。这些只是真实事实；是否发消息、发起来电或保持安静，由你依据人设、世界书、记忆和当前关系自主决定。不要把最近位置说成持续跟踪。",
+        absenceBattery: "用户至少3小时没有回复后，你因为担心而查看了已授权的电量和最近位置。这些只是真实事实；查完必须马上采取一种对方可见的行动：发1到2句消息，或发起来电。禁止保持安静，也不要把最近位置说成持续跟踪。",
         criticalBattery: "你发现已授权iPhone电量为5%或更低。按人设立即提醒充电，不提系统通知或持续监控。",
         emotionCare: "用户刚才表达难过，你只把最新心率作为关心线索，不得据此证明撒谎、哭泣、疾病或作医疗诊断。",
         manualUnlock: "你收到了用户亲自成功解锁App的真实记录。按人设立即自然反应，不得凭空认定欺骗、背叛或做坏事。",
@@ -1054,7 +1078,7 @@ Deno.serve(async (request) => {
       const oldState = profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state as Record<string, unknown> : {};
       const runs = oldState.runs && typeof oldState.runs === "object" ? { ...(oldState.runs as Record<string, unknown>) } : {};
       runs[candidate.key] = new Date().toISOString();
-      const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
+      const clock = localClock(String(automationConfig.timezone || profile.timezone || "Asia/Shanghai"));
       const nextState: Record<string, unknown> = { ...oldState, runs, lastKind: candidate.kind, lastAt: new Date().toISOString() };
       if (candidate.kind === "absenceBattery") {
         nextState.absenceBatteryAt = new Date().toISOString();

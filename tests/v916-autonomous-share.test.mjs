@@ -11,10 +11,10 @@ const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('v929 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v1000 · 朋友圈交互与伴生控制修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1000'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 121;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.121;/);
+  assert.match(app, /APP_VER='v1003 · 回复链路回归修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1003'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 124;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.124;/);
   assert.match(bridge, /contractVersion = 25/);
 });
 
@@ -58,7 +58,7 @@ test('pet growth never reverses except explicit milk stage', () => {
 
 test('cohabitation schedule drives state while manual state lasts through its slot', () => {
   assert.match(app, /function cohabScheduleSync/);
-  assert.match(app, /cohabAdvance\(id\);if\(await cohabDailyRequiredMaybe/);
+  assert.match(app, /cohabAdvance\(id\);if\(await cohabPhoneFactRetryMaybe\(id\)\)return;if\(await cohabDailyRequiredMaybe/);
   assert.match(app, /d\.stateSource==='owner-manual'/);
   assert.match(app, /当前生活状态已按新时间同步/);
   assert.match(app, /作息表会按真实钟点自动把共同生活状态推进/);

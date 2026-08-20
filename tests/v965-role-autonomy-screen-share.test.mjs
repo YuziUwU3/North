@@ -44,7 +44,7 @@ assert.match(app,/roleSchedule:roleServerScheduleConfig\(c\)/);
 assert.match(push,/roleWorkStart/);
 assert.match(push,/roleWorkEnd/);
 assert.match(push,/let candidate = automationCandidate\(profile, \{\}\)/,'work schedule must run before companion-device refresh');
-assert.ok(push.indexOf('let candidate = automationCandidate(profile, {})')<push.indexOf('const lastRefresh = snapshotTime(autoState.backgroundRefreshAt)'),'work schedule must not depend on a paired device snapshot');
+assert.ok(push.indexOf('let candidate = automationCandidate(profile, {})')<push.indexOf('const lastRefresh = Math.max('),'work schedule must not depend on a paired device snapshot');
 assert.match(push,/真实作息事件/);
 assert.match(push,/由你按人设、世界书、记忆和关系自行决定/);
 assert.match(app,/function currentRoleActivity\(\)\{return null;\}/);

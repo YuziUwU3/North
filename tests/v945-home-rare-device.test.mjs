@@ -63,6 +63,6 @@ test('own WeChat text and image messages can be deleted without changing recall 
   assert.equal(vision.has('mine-image'),false);
   assert.match(app,/删除这张图片/);
   assert.match(app,/删除这条消息/);
-  assert.match(app,/me\?`msgMenu\('\$\{c\.id\}','\$\{m\.id\}'\)`:`viewImg/);
+  assert.match(app,/class="imgmsg" onclick="event\.stopPropagation\(\);msgMenu\('\$\{c\.id\}','\$\{m\.id\}'\)"/);
   assert.match(app,/function recallMsg\(cid,mid\)/);
 });

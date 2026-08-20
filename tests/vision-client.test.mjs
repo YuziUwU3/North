@@ -145,6 +145,6 @@ assert.equal(fallbackCalls.length, duplicateBefore, "an identical backup must be
 
 const imageBubble = functionSource("buildPart");
 assert.doesNotMatch(imageBubble, /正在让聊天模型看图片|图片理解失败 · 点这里重试|已看清|备用.*聊天模型/);
-assert.match(imageBubble, /viewImg\('\$\{m\.src\}'\)/, "the image itself must remain tappable without an out-of-character status caption");
+assert.match(imageBubble, /msgMenu\('\$\{c\.id\}','\$\{m\.id\}'\)/, "the image bubble must open the message menu without an out-of-character status caption");
 
 console.log("vision client protocol tests passed");

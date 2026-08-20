@@ -680,6 +680,9 @@ struct ContentView: View {
         }
 
         applyManualLocks()
+        if !lockedAppTokens.contains(token) {
+            synchronizeManualUnlockEvent()
+        }
     }
 
     private func lockAllSelectedApps() {
@@ -701,6 +704,17 @@ struct ContentView: View {
         lockedAppTokens.removeAll()
         lockStatusText = "已经解除全部手动锁定"
         applyManualLocks()
+        synchronizeManualUnlockEvent()
+    }
+
+    private func synchronizeManualUnlockEvent() {
+        Task { @MainActor in
+            _ = await CompanionSyncService.shared.synchronize(
+                locationManager: locationManager,
+                wellnessService: CompanionWellnessService.shared,
+                quiet: true
+            )
+        }
     }
 
     private func applyManualLocks() {
