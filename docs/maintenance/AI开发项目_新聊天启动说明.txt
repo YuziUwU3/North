@@ -604,3 +604,9 @@ v1003 接手说明｜回复链路回归修复候选（2026-08-20）
 当前候选：网页 v1003、私人 iOS 1.0.124 (124)、原生桥 25。Git 提交前最后正常历史基线仍是 v1000；v1003 是包含 v1001／v1002 功能与回复回归修复的新候选。
 Mac 必须完整解压 SmallPhone_v1003_ReplyPipelineRegressionRepair，全新打开 PhoneCompanionTest.xcodeproj。先测普通回复和朋友圈，再做共同生活屏幕时间读取并立刻复测两者；重开 App 后确认旧自动重试不再运行。
 Windows 完整回归 850／850。Mac 编译、签名和真实 iPhone 未完成；不得把 ZIP、提交或推送等同于真机通过。
+
+
+v1006 接手说明｜后台模型、通话与朋友圈回复修复候选（2026-08-20）
+当前候选：网页 v1006、私人 iOS 1.0.127 (127)、原生桥 25。Windows 完整回归 857／857；独立云 phone-role-push 已部署。不得把提交、ZIP、云函数部署或 Windows 测试写成 Mac／真机通过。
+Mac 必须完整解压 SmallPhone_v1006_CallMomentsBackgroundRepair，全新打开 PhoneCompanionTest.xcodeproj，执行 Product → Clean Build Folder 后再编译安装，不覆盖旧工程。
+真机按顺序验收：普通微信回复；电话声音与字幕且不连接超时；朋友圈真实评论回复与失败重试不伪造；设置 → 聊天与媒体立即模拟后台主动消息，确认 App 已退到桌面后收到通知，再返回 App 查看服务器模型和 APNs 的真实结果。

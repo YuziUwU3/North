@@ -39,7 +39,9 @@ test('role replies to moment comments use the exact thread and recent WeChat con
   const end=source.indexOf('function ',begin+20);
   const block=source.slice(begin,end);
   assert.match(block,/msgs\(c\.id\)\.slice\(-6\)/);
-  assert.match(block,/buildSystem\(c\)/);
+  assert.match(block,/selectRelevantMemory\(c,query,4\)/);
+  assert.match(block,/buildSystem\(c,\{natural:wechatNaturalOn\(\),query,selectiveMemory:true,memoryItems:memory\.items\}\)/);
+  assert.match(block,/memoryRetrievalPrompt\(c,memory\)/);
   assert.match(block,/targetComment/);
   assert.doesNotMatch(block,/timeout:/);
   assert.equal((block.match(/await chatAPI\(/g)||[]).length,1,'Moment comments must use the July 30 single real model request');
@@ -48,6 +50,20 @@ test('role replies to moment comments use the exact thread and recent WeChat con
   assert.match(block,/像真人回评论那样接话、回应或调侃/);
   assert.doesNotMatch(functionBlock('momentReplyStatusHTML'),/正在回复|正在真实回复/);
   assert.doesNotMatch(source,/function momentReplyFallback\(/);
+});
+
+test('failed moment comment retries retain the exact role target without inventing a reply',()=>{
+  const submit=functionBlock('momentCommentSubmit');
+  const target=functionBlock('momentCommentReplyContact');
+  const retryStart=source.indexOf('function momentRetryComment('),retry=source.slice(retryStart,source.indexOf('async function reactToComment(',retryStart));
+  const reply=source.slice(source.indexOf('async function reactToComment('),source.indexOf('async function refreshMoments',source.indexOf('async function reactToComment(')));
+  assert.match(submit,/comment\._roleReplyContactId=targetCid/);
+  assert.match(target,/cm\._roleReplyContactId&&getC\(cm\._roleReplyContactId\)/);
+  assert.match(target,/p\.authorId!=='me'&&getC\(p\.authorId\)/);
+  assert.match(retry,/const target=momentCommentReplyContact\(p,cm\)/);
+  assert.match(retry,/reactToComment\(p,target,cm\)/);
+  assert.match(reply,/targetComment\._roleReplyContactId=c\.id/);
+  assert.doesNotMatch(retry,/comments\.push|text:/,'retry only re-runs the real role request and never inserts fallback text');
 });
 
 function functionBlock(name){const begin=source.indexOf('function '+name+'('),end=source.indexOf('\nfunction ',begin+10);assert.ok(begin>=0);return source.slice(begin,end<0?source.length:end);}

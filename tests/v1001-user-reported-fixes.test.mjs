@@ -64,6 +64,8 @@ test('Moment comment repair keeps the July 30 contextual reply behavior without 
   assert.match(reply, /最近的微信聊天/);
   assert.match(reply, /朋友圈下面的评论（按先后顺序）/);
   assert.match(reply, /刚刚在评论区对你说/);
+  assert.match(reply, /selectRelevantMemory\(c,query,4\)/);
+  assert.match(reply, /selectiveMemory:true/);
   assert.doesNotMatch(reply, /timeout:/);
   assert.equal((reply.match(/await chatAPI\(/g) || []).length, 1, 'July 30 behavior is restored to one direct real reply request');
   assert.match(reply, /_roleReplyStatus='failed'/);

@@ -23,7 +23,7 @@ test('shared timers and stale web data cannot call the private companion cloud',
   assert.match(app, /companionPollSnapshot=async function\(force\)\{if\(!privateCompanionAppOn\(\)\)return false/);
   assert.match(app, /companionNotifyNative=async function\(commandId\)\{if\(!privateCompanionAppOn\(\)\)return \{pushed:false,reason:'private-app-only'\}/);
   assert.match(app, /roleBackgroundEnqueue=async function\(\.\.\.args\)\{if\(!privateCompanionAppOn\(\)\)return null/);
-  assert.match(app, /roleBackgroundDispatchNow=async function\(\)\{if\(!privateCompanionAppOn\(\)\)return false/);
+  assert.match(app, /roleBackgroundDispatchNow=async function\(\.\.\.args\)\{if\(!privateCompanionAppOn\(\)\)return false;return roleBackgroundDispatchNowPrivateCore\(\.\.\.args\)/);
   assert.match(app, /roleServerPushPull=async function\(force\)\{if\(!privateCompanionAppOn\(\)\)return false/);
 });
 

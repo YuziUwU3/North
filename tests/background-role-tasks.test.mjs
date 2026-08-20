@@ -26,6 +26,8 @@ test('chat media settings expose an explicit real background message test', () =
   assert.match(app, /roleBackgroundEnqueue\(id,'one_minute_test',[^\n]*Date\.now\(\),baseline,false\)/);
   assert.match(app, /roleBackgroundDispatchNow\(true\)/);
   assert.match(app, /request\.keepalive=true/);
+  assert.match(app, /roleBackgroundDispatchNow=async function\(\.\.\.args\)/);
+  assert.match(app, /roleBackgroundDispatchNowPrivateCore\(\.\.\.args\)/);
   assert.doesNotMatch(app, /setTimeout\(\(\)=>roleBackgroundDispatchNow\(\),12000\)/);
   assert.match(app, /不会生成本地假回复/);
   const begin = app.indexOf('async function roleServerPushOneMinuteTest');
@@ -33,6 +35,21 @@ test('chat media settings expose an explicit real background message test', () =
   assert.doesNotMatch(app.slice(begin, end), /msgs\(|pushMsg|notifyIncoming/);
   assert.match(edge, /task\.kind === "one_minute_test"/);
   assert.match(sql, /one_minute_test/);
+});
+
+test('background generation uses the role current model and reports the real task and APNs result', () => {
+  assert.match(app, /function roleServerModelRoute\(c\)/);
+  assert.match(app, /modelRoute:c&&c\.proactive&&c\.proactive\.serverPush\?roleServerModelRoute\(c\):null/);
+  assert.match(app, /关闭后清除模型线路/);
+  assert.match(app, /if\(!roleServerModelRoute\(c\)\)missing\.push/);
+  assert.match(edge, /name: "profile-current"/);
+  assert.match(edge, /automation\.modelRoute/);
+  assert.ok(edge.indexOf('name: "profile-current"') < edge.indexOf('Deno.env.get("OPENAI_API_KEY")'));
+  assert.match(app, /action:'task_status'/);
+  assert.match(edge, /input\?\.action === "task_status"/);
+  assert.match(edge, /providerReason:/);
+  assert.match(edge, /pushStatus:/);
+  assert.match(app, /APNs 已被 Apple 接受/);
 });
 
 test('app awareness is gated, limited, mutually exclusive and cooled down', () => {

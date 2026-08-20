@@ -266,6 +266,22 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
     || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频)|送礼[|｜][^\]】]+|一起听[|｜][^\]】]+|放映邀请[|｜][^\]】]+|约会[|｜][^\]】]+|角色扮演[|｜][^\]】]+|你画我猜)[\]】]$/.test(part));
 }
 
+function profileModelBase(value: unknown) {
+  try {
+    const url = new URL(String(value || "").trim());
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || !host || host === "localhost" || host === "::1" ||
+      /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) ||
+      /^169\.254\./.test(host) || /^172\.(?:1[6-9]|2\d|3[01])\./.test(host)) return "";
+    url.hash = "";
+    url.search = "";
+    url.pathname = url.pathname.replace(/\/+$/, "").replace(/\/chat\/completions$/i, "");
+    return url.toString().replace(/\/$/, "").slice(0, 500);
+  } catch (_) {
+    return "";
+  }
+}
+
 async function roleMessage(
   profile: Record<string, unknown>,
   recentBodies: string[],
@@ -275,6 +291,19 @@ async function roleMessage(
 ) {
   const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
   const providerFailures: string[] = [];
+  const automation = (profile.automation_config && typeof profile.automation_config === "object"
+    ? profile.automation_config : {}) as Record<string, unknown>;
+  const syncedRoute = (automation.modelRoute && typeof automation.modelRoute === "object"
+    ? automation.modelRoute : {}) as Record<string, unknown>;
+  const syncedBase = profileModelBase(syncedRoute.base);
+  const syncedKey = String(syncedRoute.key || "").trim().slice(0, 2000);
+  const syncedModel = String(syncedRoute.model || "").trim().slice(0, 200);
+  if (syncedBase && syncedKey && syncedModel) providers.push({
+    name: "profile-current",
+    key: syncedKey,
+    base: syncedBase,
+    model: syncedModel,
+  });
   const key = Deno.env.get("OPENAI_API_KEY") || "";
   if (key) providers.push({
     name: "configured",
@@ -878,14 +907,55 @@ async function persistAndPush(
   return push.status === "sent";
 }
 
+async function backgroundTaskStatus(
+  client: ReturnType<typeof createClient>,
+  input: Record<string, unknown>,
+) {
+  const target = String(input.target || "").trim();
+  const ownerSecret = String(input.ownerSecret || "");
+  const roleId = String(input.roleId || "").trim().slice(0, 120);
+  const taskId = String(input.taskId || "").trim();
+  if (!target || !ownerSecret || !roleId || !/^[0-9a-f-]{36}$/i.test(taskId)) {
+    return reply({ error: "invalid-task-status-request" }, 400);
+  }
+  const { data: owner, error: ownerError } = await client.rpc("phone_role_push_status", {
+    p_target: target, p_owner_secret: ownerSecret, p_role_id: roleId,
+  });
+  if (ownerError || !owner || owner.ok !== true) return reply({ error: "owner-not-linked" }, 403);
+  const { data: task } = await client.from("phone_role_background_tasks")
+    .select("id,status,attempts,due_at,completed_at,payload")
+    .eq("id", taskId).eq("target", target).eq("role_id", roleId).maybeSingle();
+  if (!task?.id) return reply({ error: "task-not-found" }, 404);
+  const { data: outbox } = await client.from("phone_role_push_outbox")
+    .select("id,push_status,push_error,push_diagnostic,created_at")
+    .eq("target", target).eq("role_id", roleId).eq("dedupe_key", `task:${taskId}`).maybeSingle();
+  const payload = task.payload && typeof task.payload === "object"
+    ? task.payload as Record<string, unknown> : {};
+  const delivery = payload.delivery && typeof payload.delivery === "object"
+    ? payload.delivery as Record<string, unknown> : {};
+  return reply({
+    ok: true,
+    taskStatus: String(task.status || ""),
+    attempts: Number(task.attempts || 0),
+    dueAt: task.due_at || null,
+    completedAt: task.completed_at || null,
+    providerReason: String(delivery.providerReason || ""),
+    pushStatus: String(outbox?.push_status || delivery.pushStatus || ""),
+    pushError: String(outbox?.push_error || delivery.pushError || "").slice(0, 320),
+    pushDiagnostic: outbox?.push_diagnostic || delivery.pushDiagnostic || {},
+    outboxCreatedAt: outbox?.created_at || null,
+  });
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (request.method === "GET") return serveAvatar(request);
   if (request.method !== "POST") return reply({ error: "method-not-allowed" }, 405);
   try {
     const input = await request.json().catch(() => ({}));
-    if (input?.action !== "dispatch_due") return reply({ error: "invalid-action" }, 400);
     const { url, client } = supabaseAdmin();
+    if (input?.action === "task_status") return backgroundTaskStatus(client, input);
+    if (input?.action !== "dispatch_due") return reply({ error: "invalid-action" }, 400);
     let backgroundSent = 0, automationSent = 0;
 
     const { data: taskRows, error: taskError } = await client.rpc("phone_role_background_claim_due", { p_limit: 20 });
@@ -998,6 +1068,17 @@ Deno.serve(async (request) => {
       const backgroundDelivered = decision.kind === "message"
         ? await persistAndPush(client, url, profile, decision.body, task.kind, `task:${task.id}`)
         : false;
+      const { data: deliveryOutbox } = decision.kind === "message"
+        ? await client.from("phone_role_push_outbox")
+          .select("push_status,push_error,push_diagnostic").eq("dedupe_key", `task:${task.id}`).maybeSingle()
+        : { data: null };
+      const delivery = {
+        providerReason: decision.kind === "unavailable" ? String(decision.reason || "unknown").slice(0, 600) : "",
+        pushStatus: String(deliveryOutbox?.push_status || (backgroundDelivered ? "sent" : "")),
+        pushError: String(deliveryOutbox?.push_error || "").slice(0, 320),
+        pushDiagnostic: deliveryOutbox?.push_diagnostic || {},
+        checkedAt: new Date().toISOString(),
+      };
       if (backgroundDelivered) backgroundSent += 1;
       if (backgroundDelivered && task.kind === "app_watch_test" && appTestDetected) {
         await client.from("phone_role_background_tasks").insert({
@@ -1008,10 +1089,10 @@ Deno.serve(async (request) => {
       }
       const shouldRetry = (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < 5;
       const taskUpdate = shouldRetry
-        ? { status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null }
+        ? { status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null, payload: { ...payload, delivery } }
         : decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered
-        ? { status: "failed", completed_at: new Date().toISOString(), claimed_until: null }
-        : { status: decision.kind === "message" ? "completed" : "canceled", completed_at: new Date().toISOString(), claimed_until: null };
+        ? { status: "failed", completed_at: new Date().toISOString(), claimed_until: null, payload: { ...payload, delivery } }
+        : { status: decision.kind === "message" ? "completed" : "canceled", completed_at: new Date().toISOString(), claimed_until: null, payload: { ...payload, delivery } };
       await client.from("phone_role_background_tasks").update(taskUpdate).eq("id", task.id);
     }
 

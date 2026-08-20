@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1005 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1005 · 朋友圈与后台送达修复'/);
-  assert.match(app,/const url='sw\.js\?v=1005&r=v1005-moments-background-delivery-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1005'/);
-  assert.match(html,/app\.js\?v=1005/);
-  assert.match(sw,/const BUILD='1005'/);
-  assert.match(sw,/north-shell-v1005/);
-  assert.match(index,/小手机\.html\?v=1005/);
-  assert.match(repair,/小手机\.html\?v=1005/);
+test('v1006 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1006 · 通话、朋友圈与后台消息修复'/);
+  assert.match(app,/const url='sw\.js\?v=1006&r=v1006-call-moments-background-repair-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1006'/);
+  assert.match(html,/app\.js\?v=1006/);
+  assert.match(sw,/const BUILD='1006'/);
+  assert.match(sw,/north-shell-v1006/);
+  assert.match(index,/小手机\.html\?v=1006/);
+  assert.match(repair,/小手机\.html\?v=1006/);
 });
 
-test('the private iOS package embeds web v1005 and keeps 1.0.126 delivery',()=>{
-  assert.match(privateBundle,/<string>1005<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.126;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 126;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.126 \(126\)'/);
+test('the private iOS package embeds web v1006 and keeps 1.0.127 delivery',()=>{
+  assert.match(privateBundle,/<string>1006<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.127;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 127;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.127 \(127\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

@@ -1,6 +1,6 @@
-const BUILD='1005';
-const HOTFIX='v1005-moments-background-delivery-1';
-const SHELL_CACHE='north-shell-v1005';
+const BUILD='1006';
+const HOTFIX='v1006-call-moments-background-repair-1';
+const SHELL_CACHE='north-shell-v1006';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
