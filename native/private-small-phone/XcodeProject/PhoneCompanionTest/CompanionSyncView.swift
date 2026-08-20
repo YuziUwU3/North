@@ -899,7 +899,19 @@ final class CompanionSyncService: ObservableObject {
         if wantsLocation {
             locationManager.resumeTrackingIfAuthorized()
             locationManager.refreshCurrentLocation()
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            // A first Core Location fix commonly arrives after the old fixed
+            // 1.2-second delay (especially immediately after authorization).
+            // Wait for a usable, recent reading instead of declaring failure
+            // while the native location request is still in flight.
+            let deadline = Date().addingTimeInterval(8)
+            while Date() < deadline {
+                if let location = locationManager.currentLocation,
+                   location.horizontalAccuracy >= 0,
+                   abs(location.timestamp.timeIntervalSinceNow) <= 120 {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
         }
         if wantsHealth, !wellnessService.healthSyncEnabled {
             // An explicit owner request for all/health data must cross the
@@ -934,8 +946,16 @@ final class CompanionSyncService: ObservableObject {
             }
         }
 
-        if wantsLocation, locationManager.currentLocation == nil {
-            readErrors["location"] = "本次没有取得可用定位"
+        if wantsLocation {
+            let location = locationManager.currentLocation
+            let usable = location.map {
+                $0.horizontalAccuracy >= 0
+                    && abs($0.timestamp.timeIntervalSinceNow) <= 120
+            } ?? false
+            if !usable {
+                readErrors["location"] = locationManager.lastError
+                    ?? "本次在 8 秒内没有取得可用定位"
+            }
         }
         if wantsHealth {
             if !wellnessReadCompleted {
@@ -978,8 +998,8 @@ final class CompanionSyncService: ObservableObject {
                 ? (healthWasRead ? "success" : "unavailable")
                 : "not-requested",
             "location": wantsLocation
-                ? (locationManager.currentLocation == nil
-                    ? "unavailable" : "success")
+                ? (readErrors["location"] == nil
+                    ? "success" : "unavailable")
                 : "not-requested"
         ]
         // Written only after every requested reader has returned a value or

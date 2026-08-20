@@ -40,21 +40,29 @@ test('remote facts distinguish the controlling role from the phone owner',()=>{
   assert.match(app,/本次远程操控的原始目标，执行中不得忘记/);
 });
 
-test('role profile visuals use centered vector gender and real image-only previews',()=>{
+test('role profile visuals use centered vector gender and the latest three image-or-text previews',()=>{
   assert.match(app,/function contactGenderIcon\(gender\)/);
   assert.match(app,/contactGenderIcon\(c\.gender\)/);
-  assert.match(app,/function contactMomentThumbs\(c\)[\s\S]*?return out;/);
-  assert.doesNotMatch(app,/function contactMomentThumbs\(c\)[^\n]*out\.push\(''\)/);
+  assert.match(app,/function contactMomentThumbs\(c\)[^\n]*contactRoleMoments\(c\.id\)\.slice\(0,3\)/);
+  assert.match(app,/return\{image,text\}/);
+  assert.match(app,/item\.image\?`<i><img[^`]+`:`<i class="text"><span>/);
+  assert.match(html,/\.wx-profile-thumbs i\.text span/);
   assert.doesNotMatch(app,/moment-text-art/);
   assert.match(html,/\.wx-profile-hero\{[^}]*padding:34px 22px 30px/);
   assert.match(html,/\.wx-role-cover \.avatar\.lg\{[^}]*aspect-ratio:1\/1/);
 });
 
-test('role feature settings are split into three short categories without removing original controls',()=>{
+test('role settings expose five direct independent pages without nested horizontal tabs',()=>{
   assert.match(app,/function renderRoleManagementAll\(id\)/);
   assert.match(app,/function renderRoleManagement\(id,group\)/);
-  for(const group of ['profile','chat','privacy'])assert.match(app,new RegExp(`group:'${group}'`));
-  for(const label of ['资料、记忆与外观','聊天、主动联系与发布','隐私、查岗与数据'])assert.match(app,new RegExp(label));
+  for(const group of ['profile','chat','calls','social','privacy'])assert.match(app,new RegExp(`group:'${group}'`));
+  for(const label of ['资料与记忆','聊天与主动','通话记录','朋友圈与 X','隐私、查岗与数据'])assert.match(app,new RegExp(label));
+  assert.doesNotMatch(app,/function roleFeatureTabs\(/);
+  assert.doesNotMatch(app,/roleFeatureTabs\(id,active\)/);
+  assert.match(app,/parts\[active\]\+suffix/);
+  assert.match(app,/placeCall\('\$\{id\}','voice'\)/);
+  assert.match(app,/placeCall\('\$\{id\}','video'\)/);
+  assert.match(app,/go\('calllog',\{id:'\$\{id\}'\}\)/);
   for(const control of ['editMemory','saveProactiveIdle','saveSpy','clearHistory'])assert.match(app,new RegExp(control));
   assert.match(html,/\.wx-feature-category-list/);
 });

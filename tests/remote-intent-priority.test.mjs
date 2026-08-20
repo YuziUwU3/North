@@ -16,7 +16,8 @@ test('the role decides order while v727 guarantees the full inspection plan',()=
   const end=app.indexOf('function remoteControlNormalizePlan',start);
   const body=app.slice(start,end);
   assert.ok(start>=0&&end>start);
-  assert.match(body,/chatAPI\(/);
+  assert.match(body,/remoteControlModelCall\(/);
+  assert.match(body,/,4800\)/);
   assert.match(body,/temp:\.78/);
   assert.match(body,/return order\.flatMap/);
   assert.match(body,/picked\.concat\(apps\)\.forEach/);

@@ -18,9 +18,23 @@ test('v727 remote control does not include later page dwell wrappers',()=>{
 
 test('v727 uses its original direct role planning flow',()=>{
   assert.doesNotMatch(app,/function remoteControlTimed\(task,ms,fallback\)/);
+  assert.match(app,/function remoteControlModelCall\(messages,opt,timeoutMs\)/);
+  assert.match(app,/remote-control-model-timeout/);
   assert.match(app,/const reaction=await remoteControlRoleReaction\(c,a,r\)/);
   assert.match(app,/await remoteControlDecisionPlan\(c,ctl\.actions\)/);
   assert.match(app,/await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
+});
+
+test('remote-control model waits are bounded and visible list decisions keep progress moving',()=>{
+  const start=app.indexOf('let _remoteCtl=');
+  const end=app.indexOf('let _wxLoginTimer=',start);
+  const remote=app.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.doesNotMatch(remote,/await chatAPI\(/,'remote-control model calls must use the bounded helper');
+  assert.match(remote,/remoteControlModelCall\(/);
+  assert.match(remote,/remoteControlProgress\(/);
+  assert.match(remote,/本次远程操控的原始目标，执行中不得忘记/);
+  assert.match(remote,/msgs\(c&&c\.id\)\|\|\[\]\)\.slice\(-8\)/);
 });
 
 test('remote control contains no friend-request rejection route',()=>{
