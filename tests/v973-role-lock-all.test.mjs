@@ -42,7 +42,8 @@ test('ordinary online chat keeps the real iPhone control protocol and exact all-
   assert.match(prompt, /真实 iPhone 当前全部已选 App/);
   assert.match(prompt, /设备回执和新快照确认前绝不能谎称已经锁好/);
   assert.match(prompt, /不能把它缩成仅内置或仅外置/);
-  assert.match(app, /if\(!rolePhoneInspectionLaneActive\(\)\)return companionRoleControlOnlyPrompt\(c,config\)/);
+  assert.match(app, /if\(!inspection\)return companionRoleControlOnlyPrompt\(c,config\)/);
+  assert.match(app, /companionRolePrompt=function\(c,opt\)\{return privateCompanionAppOn\(\)\?companionRolePromptPrivateCore\(c,opt\):'';\}/);
 });
 
 test('a definite natural claim to lock every app is recovered without depending on a model parser', () => {

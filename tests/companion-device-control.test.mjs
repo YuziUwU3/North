@@ -126,7 +126,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1003 · 回复链路回归修复'/);
+  assert.match(app, /const APP_VER='v1004 · 回复与后台隔离修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -197,6 +197,14 @@ test('all-data replies hide diagnostics and remain entirely model generated', ()
   assert.doesNotMatch(online + cohab, /rolePhoneInspectionExactSummary/);
 });
 
+test('private companion inspection context is scoped away from ordinary chat replies', () => {
+  assert.match(app, /const companionPrompt=companionRolePrompt\(c,opt\)/);
+  assert.match(app, /companionRolePrompt=function\(c,opt\)/);
+  assert.match(app, /if\(!inspection\)return companionRoleControlOnlyPrompt\(c,config\)/);
+  assert.match(functionSource('doSpyViewCore'), /companionInspection:true/);
+  assert.match(functionSource('queueNativeInspection'), /lu\._phoneInspectionUsed=true/);
+});
+
 test('native all-data read crosses HealthKit authorization and uses the report extension outside direct-data regions', () => {
   const sync = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'CompanionSyncView.swift'), 'utf8');
   const rootView = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'SmallPhonePrivateRootView.swift'), 'utf8');
@@ -236,7 +244,8 @@ test('all-data read cannot let the role speak before the same native session is 
   const chatGuard = app.indexOf('guardUnverifiedRolePhoneReply(content,note)', chatQueue);
   assert.ok(chatQueue >= 0 && chatGuard > chatQueue);
   assert.match(app.slice(chatQueue, chatGuard), /if\(_nativeInspectionQueued\).*return true/);
-  assert.match(functionSource('aiReply'), /rolePhoneInspectionGenerationStale\(id,_inspectionStartEpoch\)/);
+  assert.match(functionSource('aiReply'), /nativeInspectionPending\(_lu,id\)/);
+  assert.doesNotMatch(functionSource('aiReply'), /if\(rolePhoneInspectionBlocksOrdinary\(id\)\)return/);
   assert.match(functionSource('aiReply'), /queueNativeInspection\(id,_lu,_phoneGuard\.focus/);
 
   const callQueue = app.indexOf('const _nativeCallInspectionQueued=!_screenShareEvent&&!_inspectionCompletion&&!_videoVision&&maybeSpyIntent');
@@ -352,6 +361,9 @@ test('telemetry wording starts a real read instead of claiming a failed refresh'
   const falseResult = context.guard('步数和屏幕时间，这次没刷出来，你手表又没戴吧。', '');
   assert.equal(falseResult.content, '我先实际看一眼。');
   assert.equal(falseResult.focus, 'iPhone全部数据');
+  const ordinary = context.guard('我在，你慢慢说。', '');
+  assert.equal(ordinary.content, '我在，你慢慢说。');
+  assert.equal(ordinary.focus, '');
   assert.equal(context.focus('我看看步数和屏幕使用时间。'), 'iPhone全部数据');
   assert.equal(context.focus('我看看最新心率。'), 'iPhone最新心率');
 });

@@ -85,7 +85,8 @@ test('public web cannot reuse imported real-iPhone companion cache', () => {
   assert.match(functionSource('companionRoleExternalFocus'), /if\(!privateNativeAppOn\(\)\)return false/);
   assert.match(functionSource('cohabPhoneTargets'), /st=privateNativeAppOn\(\)&&S\.couple/);
   assert.match(functionSource('cohabPhonePrompt'), /当前环境没有真实 iPhone 伴生读取能力/);
-  assert.match(app, /if\(_main&&privateNativeAppOn\(\)\)\{const companionPrompt=companionRolePrompt\(c\)/);
+  assert.match(app, /if\(_main&&privateNativeAppOn\(\)\)\{const companionPrompt=companionRolePrompt\(c,opt\)/);
+  assert.match(app, /companionRolePrompt=function\(c,opt\)\{return privateCompanionAppOn\(\)\?companionRolePromptPrivateCore\(c,opt\):'';\}/);
   assert.match(functionSource('initiativeQueueNote'), /ambient=privateNativeAppOn\(\)\?companionAmbientContext/);
   assert.match(functionSource('initiativeGroundingContext'), /ambient=privateNativeAppOn\(\)\?companionAmbientContext/);
   assert.match(app, /你给ta定的每日使用时长 & 今日已用/);

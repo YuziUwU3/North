@@ -62,9 +62,10 @@ test('all sleeping animals use separate slots inside the left pink bed', () => {
   assert.match(pet, /total>=4\?9\.5/);
 });
 
-test('role profile no longer exposes real-test shortcuts', () => {
+test('role profile keeps old test shortcuts removed while settings owns the requested real push test', () => {
   assert.doesNotMatch(app, /查看当前软件立即测试/);
   assert.doesNotMatch(app, /一分钟后台通知真实测试/);
   assert.doesNotMatch(app, /function roleAppWatchImmediateTest/);
-  assert.doesNotMatch(app, /function roleServerPushOneMinuteTest/);
+  assert.match(app, /function roleServerPushOneMinuteTest/);
+  assert.match(app, /roleServerPushSettingsTestHTML/);
 });

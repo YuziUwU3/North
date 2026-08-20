@@ -28,7 +28,7 @@ test('shared timers and stale web data cannot call the private companion cloud',
 });
 
 test('role prompts and action tags cannot leak private-device facts into web replies', () => {
-  assert.match(app, /companionRolePrompt=function\(c\)\{return privateCompanionAppOn\(\)\?companionRolePromptPrivateCore\(c\):'';\}/);
+  assert.match(app, /companionRolePrompt=function\(c,opt\)\{return privateCompanionAppOn\(\)\?companionRolePromptPrivateCore\(c,opt\):'';\}/);
   assert.match(app, /companionAmbientContext=function\(c,now\)\{return privateCompanionAppOn\(\)\?companionAmbientContextPrivateCore\(c,now\):'';\}/);
   assert.match(app, /companionApplyReadTags=function\(content,c\)\{return privateCompanionAppOn\(\)\?companionApplyReadTagsPrivateCore\(content,c\):\{content:String\(content\|\|''\),changed:false\};\}/);
 });

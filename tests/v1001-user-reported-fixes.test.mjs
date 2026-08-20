@@ -64,7 +64,8 @@ test('Moment comment repair keeps the July 30 contextual reply behavior without 
   assert.match(reply, /最近的微信聊天/);
   assert.match(reply, /当前评论区（按先后顺序）/);
   assert.match(reply, /刚刚对你说的这一句/);
-  assert.match(reply, /for\(let attempt=0;attempt<2&&!txt;attempt\+\+\)/);
+  assert.match(reply, /timeout:45000/);
+  assert.equal((reply.match(/await chatAPI\(/g) || []).length, 1, 'July 30 behavior is restored to one bounded real reply request');
   assert.match(reply, /_roleReplyStatus='failed'/);
   assert.match(reply, /if\(!txt\).*return;/s);
   assert.ok(reply.indexOf("if(!txt)") < reply.indexOf('live.comments.push'), 'failure must return before any role comment is appended');

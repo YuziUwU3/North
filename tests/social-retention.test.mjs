@@ -39,9 +39,10 @@ test('role replies to moment comments use the exact thread and recent WeChat con
   const end=source.indexOf('function ',begin+20);
   const block=source.slice(begin,end);
   assert.match(block,/msgs\(c\.id\)\.slice\(-12\)/);
-  assert.match(block,/buildSystem\(c\)/);
+  assert.match(block,/buildSystem\(c,\{selectiveMemory:true/);
   assert.match(block,/targetComment/);
-  assert.match(block,/attempt<2/);
+  assert.match(block,/timeout:45000/);
+  assert.equal((block.match(/await chatAPI\(/g)||[]).length,1,'Moment comments must use one bounded real model request');
   assert.match(block,/momentReplySpecific/);
   assert.match(source,/function momentReplySpecific\(txt\)[^\n]*看到了\|我看到了\|收到/);
   assert.match(block,/不要泛泛说“看到了”“收到”“等我”/);

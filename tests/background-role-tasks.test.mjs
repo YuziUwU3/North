@@ -17,8 +17,17 @@ test('reply and device work can be handed to the server without racing user acti
   assert.match(edge, /currentTask\?\.status === "canceled"/);
 });
 
-test('role profile no longer exposes the one minute real test', () => {
-  assert.doesNotMatch(app, /roleServerPushOneMinuteTest|one_minute_test.*Date\.now\(\)\+60000/s);
+test('chat media settings expose an explicit real background message test', () => {
+  assert.match(app, /function roleServerPushSettingsTestHTML\(\)/);
+  assert.match(app, /立即模拟后台主动消息/);
+  assert.match(app, /async function roleServerPushOneMinuteTest\(id\)/);
+  assert.match(app, /roleBackgroundPreflight\(id,false\)/);
+  assert.match(app, /roleBackgroundEnqueue\(id,'one_minute_test'/);
+  assert.match(app, /Date\.now\(\)\+10000/);
+  assert.match(app, /不会生成本地假回复/);
+  const begin = app.indexOf('async function roleServerPushOneMinuteTest');
+  const end = app.indexOf('function roleAppWatchToggle', begin);
+  assert.doesNotMatch(app.slice(begin, end), /msgs\(|pushMsg|notifyIncoming/);
   assert.match(edge, /task\.kind === "one_minute_test"/);
   assert.match(sql, /one_minute_test/);
 });
