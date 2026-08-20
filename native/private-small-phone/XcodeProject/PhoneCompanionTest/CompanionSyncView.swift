@@ -895,7 +895,13 @@ final class CompanionSyncService: ObservableObject {
             "睡眠", "步数", "心率", "心跳", "心电", "ecg", "hrv", "健康"
         ].contains { normalized.contains($0) }
 
-        await refreshDataAccessState()
+        // The ordinary foreground status poll runs repeatedly while the web
+        // UI is open. It must reuse cached authorization/data instead of
+        // reopening the Screen Time reader on every poll. Explicit usage
+        // requests still refresh the authorization boundary below.
+        if wantsUsage {
+            await refreshDataAccessState()
+        }
         if wantsLocation {
             locationManager.resumeTrackingIfAuthorized()
             locationManager.refreshCurrentLocation()
@@ -919,10 +925,19 @@ final class CompanionSyncService: ObservableObject {
             // only a role-access preference and cannot enable HealthKit.
             await wellnessService.setHealthSyncEnabled(true)
         }
-        let wellnessReadCompleted = await refreshWellnessWithTimeout(
-            wellnessService: wellnessService,
-            forceHealth: wantsHealth
-        )
+        // A plain "状态" snapshot is used for lightweight UI synchronization.
+        // Refreshing HealthKit every 20 seconds here caused needless work and
+        // amplified WKWebView thermal/compositor failures. Only a real health
+        // request is allowed to cross the HealthKit refresh boundary.
+        let wellnessReadCompleted: Bool
+        if wantsHealth {
+            wellnessReadCompleted = await refreshWellnessWithTimeout(
+                wellnessService: wellnessService,
+                forceHealth: true
+            )
+        } else {
+            wellnessReadCompleted = true
+        }
 
         var report = latestDirectUsageSnapshot
         var readErrors: [String: String] = [:]

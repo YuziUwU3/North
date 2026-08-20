@@ -26,12 +26,24 @@ function base64url(value: Uint8Array | string) {
 }
 
 function pemBytes(pem: string) {
-  const normalized = pem.replaceAll("\\n", "\n");
-  const body = normalized
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/\s+/g, "");
-  return Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
+  let value = String(pem || "").replace(/^\uFEFF/, "").trim();
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (value.startsWith('"') && value.endsWith('"')) {
+      try { value = JSON.parse(value); } catch (_) { /* keep the original text */ }
+    }
+    value = value.replaceAll("\\r\\n", "\n").replaceAll("\\n", "\n").replaceAll("\\r", "\n").trim();
+    const block = value.match(/-----BEGIN(?: EC)? PRIVATE KEY-----([\s\S]*?)-----END(?: EC)? PRIVATE KEY-----/);
+    const body = (block?.[1] || value).replace(/\s+/g, "").replaceAll("-", "+").replaceAll("_", "/");
+    const bytes = Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
+    if (bytes[0] === 0x30) return bytes;
+    const nested = new TextDecoder().decode(bytes).replace(/^\uFEFF/, "").trim();
+    if (nested.includes("PRIVATE KEY-----") || (nested.startsWith('"') && nested.endsWith('"'))) {
+      value = nested;
+      continue;
+    }
+    throw new Error("invalid-apns-private-key-der");
+  }
+  throw new Error("invalid-apns-private-key-wrapper");
 }
 
 function derToRaw(signature: Uint8Array) {

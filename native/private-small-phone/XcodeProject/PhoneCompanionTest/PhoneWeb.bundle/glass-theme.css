@@ -323,6 +323,16 @@ html.north-native-app.north-glass-ui .glass-second-portrait-copy{backdrop-filter
 html.north-native-app.north-glass-ui .glass-second-portrait,
 html.north-native-app.north-glass-ui .glass-second-photos{background-color:rgba(18,19,23,.62)!important}
 html.north-native-app.north-glass-ui .glass-second-portrait-copy{background-color:rgba(5,6,8,.7)!important}
+/* WKWebView 在长聊天、多组件和热／内存压力叠加时，大量实时背景取景层会出现内容只剩一半、图层丢失并阻断点按。
+   私人原生 App 统一使用现有渐变／实色玻璃底，不再为每个消息气泡、卡片和弹层创建独立的 backdrop 合成层；网页与 Android 视觉不变。 */
+html.north-native-app.north-glass-ui .phone *,
+html.north-native-app.north-glass-ui .phone *::before,
+html.north-native-app.north-glass-ui .phone *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* Safari/PWA 与原生 WKWebView 使用同一套 iOS WebKit 合成器；网页也可能在另一个 WebKit 进程里独立丢层。
+   只限 iPhone/iPad 触屏 WebKit，桌面网页和 Android 仍保留完整实时模糊。 */
+html.north-ios-webkit.north-glass-ui .phone *,
+html.north-ios-webkit.north-glass-ui .phone *::before,
+html.north-ios-webkit.north-glass-ui .phone *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 html.north-native-app.north-glass-ui.north-pack-pink .glass-second-portrait,
 html.north-native-app.north-glass-ui.north-pack-pink .glass-second-photos,
 html.north-native-app.north-glass-ui .home.tpink .glass-second-portrait,

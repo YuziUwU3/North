@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1006'){
+if(window.__NORTH_SHELL_BUILD__!=='1007'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -8,7 +8,8 @@ const NORTH_PREVIEW_PARAMS=(()=>{try{return new URLSearchParams(location.search)
 const NORTH_PREVIEW=!!NORTH_PREVIEW_PARAMS;
 const NORTH_VIEWPORT_DIAG=(()=>{try{return new URLSearchParams(location.search).get('northViewportDiag')==='1';}catch(_){return false;}})();
 const NORTH_ANDROID=(()=>{try{return /Android/i.test(String(navigator.userAgent||''));}catch(_){return false;}})();
-try{document.documentElement.classList.toggle('north-android',NORTH_ANDROID);}catch(_){}
+const NORTH_IOS_WEBKIT=(()=>{try{return /iP(?:hone|ad|od)/i.test(String(navigator.userAgent||''))||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;}catch(_){return false;}})();
+try{document.documentElement.classList.toggle('north-android',NORTH_ANDROID);document.documentElement.classList.toggle('north-ios-webkit',NORTH_IOS_WEBKIT);}catch(_){}
 /* ☁️ 云同步（Supabase）：云地址+key 在「设置→云同步」里各自填(不写死在公开代码里)，
    你和每个网友各填各的 Supabase，数据各进各的云、互不相干 */
 function cloudUrl(){return (((S.settings&&S.settings.cloudUrl)||'').trim()).replace(/\/+$/,'');}
@@ -374,7 +375,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1006 · 通话、朋友圈与后台消息修复';
+const APP_VER='v1007 · 后台收件、朋友圈上下文与内心格式修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -413,7 +414,8 @@ hist:12, histUnit:'rounds', timeAware:true, timeZone:'', replyDelay:2, sound:tru
   phoneapp:{tab:'recents',line:'main',aliasNum:'',recents:[],sms:{},read:{},contacts:[],voicemail:[],favorites:[],blocked:{},keypad:'',rolePhones:{},roleAvatars:{},regions:{},aliasThreads:{},simCall:null,trash:[],stranger:{enabled:false,freq:60,max:3,today:'',n:0,nextAt:0,smsEnabled:false,smsFreq:90,smsMax:3,smsToday:'',smsN:0,smsNextAt:0}},
   _proactiveDone:{},
   _proactiveCount:{},
-  _mailCount:{}
+  _mailCount:{},
+  _rolePushReceipts:[]
 };}
 const CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state',RECOVERY_HISTORY_IDB_KEY='__recovery_history_state',CORE_INLINE_LIMIT=3.5*1024*1024;
 let _coreBootRef=null,_coreOverflowMode=false,_coreMirrorWrite=Promise.resolve(true),_coreQueuedSave=null,_coreLogicalBytes=0,_coreSavePending=false,_coreFailureAt=0,_appBootFinished=false,_recoverySnapshotAt=0,_recoverySnapshotWrite=Promise.resolve(true);
@@ -1467,7 +1469,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1006&r=v1006-call-moments-background-repair-1';
+  const url='sw.js?v=1007&r=v1007-background-inbox-moments-inner-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -1515,7 +1517,8 @@ function lockOpenTarget(n){if(!n||!n.target){lockOpen();return;}const t=n.target
 function lockNoteHTML(n,i){const fresh=n&&n.id===_lockFreshId;return `<div class="locknote${fresh?' fresh':''}"${fresh?' style="animation-delay:0ms"':''} onclick="lockOpenTarget(lockNotes().find(x=>x.id==='${n.id}')||null)">${lockAvatarHTML(n)}<div class="ltxt"><div class="lt">${esc(n.title)}</div><div class="lb">${esc(n.body||'打开查看')}</div></div><div class="lk">${hm(n.time)}</div></div>`;}
 function lockTimeMask(value){const safe=String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 108"><text x="150" y="96" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="100" font-weight="520" letter-spacing="-1.5">${safe}</text></svg>`;return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;}
 function applyLockTimeMaterial(el,value){if(!el)return;el.style.setProperty('--lock-time-mask',lockTimeMask(value));}
-function renderLockClock(){const e=$('#lockScreen');if(!e)return;const t=e.querySelector('.locktime'),d=e.querySelector('.lockdate'),v=hm();if(t){t.textContent=v;t.dataset.time=v;applyLockTimeMaterial(t,v);}if(d)d.textContent=lockDateText();}
+let _lockClockPaintKey='';
+function renderLockClock(force){const e=$('#lockScreen');if(!e||!force&&(document.hidden||!e.classList.contains('show')))return;const t=e.querySelector('.locktime'),d=e.querySelector('.lockdate'),v=hm(),date=lockDateText(),key=v+'|'+date;if(!force&&_lockClockPaintKey===key&&(!t||t.textContent===v)&&(!d||d.textContent===date))return;_lockClockPaintKey=key;if(t){t.textContent=v;t.dataset.time=v;applyLockTimeMaterial(t,v);}if(d)d.textContent=date;}
 function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=S.me.lockBg||S.me.homeBg||'',notes=lockNotes().slice(0,4);
   applyLockAppearance(el);const clock=hm();el.innerHTML=`<div class="lockbg" style="${bg?'background-image:url('+bg+');':''}"></div><div class="lockshade"></div><div class="locktop"><div class="lockdate">${lockDateText()}</div><div class="locktime" data-time="${clock}">${clock}</div></div><div class="locknotes">${notes.length?notes.map(lockNoteHTML).join(''):'<div class="lockempty">暂无新通知</div>'}</div><div class="lockbottom"><button class="lockquick" onclick="lockQuickTorch(event)" title="手电筒">${svgIc('flashlight',24,'#fff',1.75)}</button><div class="lockhint" onclick="lockOpen()"><div class="lockup"></div><div>上滑进入小手机</div><div class="lockhandle"></div></div><button class="lockquick" onclick="lockQuickCamera(event)" title="相机">${svgIc('camera',24,'#fff',1.75)}</button></div>`;applyLockTimeMaterial(el.querySelector('.locktime'),clock);_lockFreshId='';}
 function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return false;let on=false;try{on=S.me.locked===false&&cur().p==='home'&&homePageClamp(_homePage)===0&&!_call;}catch(_){}e.classList.toggle('show',!!on);e.style.display=on?'':'none';e.setAttribute('aria-hidden',on?'false':'true');e.tabIndex=on?0:-1;return !!on;}
@@ -1996,7 +1999,7 @@ function buildSystem(c,opt){
   if(S.settings.imgGen&&imageGenerationAvailable()&&rolePhotoGender(c).cn==='成年男性')s+='\n  · 【男性照片铁律，优先级最高】你是男性，任何包含你本人的图片描述都必须明确写“同一个成年男性角色本人”，绝对不能把自己写成女人、女生、女孩、女性身体、女性手部或女模自拍。除非'+S.me.name+'在本轮亲口明确要求某位女性入镜，否则图片描述中的女性人数必须是0；你自己不能擅自补女友、妻子、女性路人或女性摄影者。“恋人、对象、用户、我、收照片的人”都不等于女性。若ta要“你和我牵手/合照”，优先写成ta的第一人称镜头、你这个男性的手牵住镜头前中性手部，或只拍手、影子和背身，不推断ta的性别。';
   s+=voiceEnglishPrompt({lang:_voiceLang,accent:(c.voice&&c.voice.accent)||'auto'});
   s=wechatNaturalSlimSystem(s,opt);
-  if(_natural)s+='\n\n# 角色内心想法（仅展示，不控制角色）\n每次回复最前面单独一行写 [内心|你此刻真实、简短的内心想法]。这只是你本人对当前对话的私下想法，不是心情值，不改变任何数值、亲密度、行为权限或自主决定；不要为了迎合系统而指定自己必须生气、开心、来电、回拨或做任何动作。内容不要写成系统说明，也不要在可见聊天里复述。';
+  if(_natural)s+='\n\n# 角色内心想法（仅展示，不控制角色）\n每次回复最前面必须单独一行写 [内心|你此刻真实、简短的内心想法]。格式中的半角竖线“|”不可省略，左右方括号必须完整；禁止写成 [内心想法内容]、[内心：想法内容]，也禁止把内心标签和可见回复写在同一行。这一整行只是你本人对当前对话的私下想法，不是心情值，不改变任何数值、亲密度、行为权限或自主决定；不要为了迎合系统而指定自己必须生气、开心、来电、回拨或做任何动作。内心内容绝不能在微信消息或朋友圈评论的可见正文里复述。';
   return s;
 }
 
@@ -9336,9 +9339,15 @@ async function roleServerPushApplyAction(c,line,rowId,base){line=String(line||''
   else return false;
   const created=list.slice(before);created.forEach((msg,i)=>{if(!msg)return;msg._rolePushId=rowId;msg._rolePushPart=i;msg._serverProactive=true;if(!msg.time)msg.time=base+i*900;});save();return created.length>0;}
 function roleServerPushParts(c,body){const max=Math.max(1,Math.min(10,+c.msgMax||4)),out=[];for(const line of splitChatBubbles(String(body||''),max)){if(roleServerPushActionTag(line))continue;for(const msg of lineToMsgs(line,c)){if(out.length>=max)break;if(msg&&['text','image','location'].includes(msg.type))out.push(msg);}if(out.length>=max)break;}return out;}
-async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||!S.couple||!isMain()||!force&&document.hidden)return false;const now=Date.now();if(!force&&now-_roleServerPushPullAt<45000)return false;_roleServerPushPullAt=now;_roleServerPushPullBusy=true;try{await roleServerPushSyncEnabled();const rows=await companionRpc('phone_role_push_pull',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_limit:20});if(!Array.isArray(rows)||!rows.length)return true;const ack=[],pendingCalls=[];let changed=false,needsPersist=false;for(const row of rows){if(!row||!row.id)continue;const c=getC(row.roleId);if(!c)continue;if(c.deleted){ack.push(row.id);continue;}const rowAt=companionTime(row.createdAt)||0;if(c._memoryResetAt&&rowAt&&rowAt<=+c._memoryResetAt){ack.push(row.id);continue;}if(roleOnlineProactiveBlocked(c.id)){roleServerPushSyncSoon(c.id);continue;}const list=msgs(c.id);if(list.some(m=>m&&m._rolePushId===row.id)){ack.push(row.id);needsPersist=true;continue;}const rawBody=String(row.body||'').slice(0,1200).trim(),callKind=roleServerPushCallKind(rawBody),body=roleServerPushVisibleBody(rawBody);if(!rawBody){ack.push(row.id);continue;}const base=rowAt||Date.now(),actionLines=splitChatBubbles(body,10).filter(roleServerPushActionTag);let actionApplied=false;for(const actionLine of actionLines){if(await roleServerPushApplyAction(c,actionLine,row.id,base)){actionApplied=true;break;}}const parts=roleServerPushParts(c,body);if(!parts.length&&!callKind&&!actionApplied){ack.push(row.id);continue;}parts.forEach((msg,i)=>{msg.time=base+i*900;msg.id=msg.id||uid();msg._rolePushId=row.id;msg._rolePushPart=i;msg._serverProactive=true;list.push(msg);});if(actionApplied){changed=true;needsPersist=true;}if(parts.length){changed=true;needsPersist=true;const notice=parts.find(m=>m.type==='text')||parts[0];if(row.pushStatus!=='sent')notifyIncoming(c,notice);else if(cur().p!=='chat'||cur().id!==c.id){if(!_call)showMsgBanner(c,notice);playMessageDing();}}if(callKind){const fresh=Date.now()-base<=10*60000;if(fresh&&!_call&&!offlineFocusActive()&&!cinemaRoleOccupied(c.id)){pendingCalls.push({c,callKind});}else if(!fresh){list.push({id:uid(),role:'user',type:'sys',content:'未接来电 · '+(callKind==='video'?'视频通话':'语音通话'),time:base,_rolePushId:row.id,_serverProactive:true});changed=true;needsPersist=true;}}ack.push(row.id);}
+function roleServerPushReceiptRows(){const cutoff=Date.now()-30*86400000,rows=Array.isArray(S._rolePushReceipts)?S._rolePushReceipts:[];S._rolePushReceipts=rows.filter(x=>x&&x.id&&(+x.at||0)>=cutoff).slice(-400);return S._rolePushReceipts;}
+function roleServerPushReceiptHas(id){id=String(id||'');return !!id&&roleServerPushReceiptRows().some(x=>String(x.id)===id);}
+function roleServerPushReceiptMark(id,at){id=String(id||'');if(!id||roleServerPushReceiptHas(id))return false;const rows=roleServerPushReceiptRows();rows.push({id,at:+at||Date.now()});if(rows.length>400)rows.splice(0,rows.length-400);return true;}
+function roleServerPushReceiptForget(ids){const set=new Set((ids||[]).map(String));if(!set.size)return;S._rolePushReceipts=roleServerPushReceiptRows().filter(x=>!set.has(String(x.id)));}
+async function roleServerPushPull(force){if(_roleServerPushPullBusy||!gateOK()||!S.couple||!isMain()||!force&&document.hidden)return false;const now=Date.now();if(!force&&now-_roleServerPushPullAt<45000)return false;_roleServerPushPullAt=now;_roleServerPushPullBusy=true;try{await roleServerPushSyncEnabled();const rows=await companionRpc('phone_role_push_pull',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_limit:20});if(!Array.isArray(rows)||!rows.length)return true;const ack=[],receiptPending=[],pendingCalls=[];let changed=false,needsPersist=false;const queueAck=(row,remember)=>{const id=String(row&&row.id||'');if(!id||ack.includes(id))return;ack.push(id);if(remember&&!roleServerPushReceiptHas(id))receiptPending.push({id,at:companionTime(row.createdAt)||Date.now()});};for(const row of rows){if(!row||!row.id)continue;if(roleServerPushReceiptHas(row.id)){queueAck(row,false);continue;}const c=getC(row.roleId);if(!c)continue;if(c.deleted){queueAck(row,true);continue;}const rowAt=companionTime(row.createdAt)||0;if(c._memoryResetAt&&rowAt&&rowAt<=+c._memoryResetAt){queueAck(row,true);continue;}if(roleOnlineProactiveBlocked(c.id)){roleServerPushSyncSoon(c.id);continue;}const list=msgs(c.id);if(list.some(m=>m&&m._rolePushId===row.id)){queueAck(row,true);continue;}const rawBody=String(row.body||'').slice(0,1200).trim(),callKind=roleServerPushCallKind(rawBody),body=roleServerPushVisibleBody(rawBody);if(!rawBody){queueAck(row,true);continue;}const base=rowAt||Date.now(),actionLines=splitChatBubbles(body,10).filter(roleServerPushActionTag);let actionApplied=false;for(const actionLine of actionLines){if(await roleServerPushApplyAction(c,actionLine,row.id,base)){actionApplied=true;break;}}const parts=roleServerPushParts(c,body);if(!parts.length&&!callKind&&!actionApplied){queueAck(row,true);continue;}parts.forEach((msg,i)=>{msg.time=base+i*900;msg.id=msg.id||uid();msg._rolePushId=row.id;msg._rolePushPart=i;msg._serverProactive=true;list.push(msg);});if(actionApplied){changed=true;needsPersist=true;}if(parts.length){changed=true;needsPersist=true;const notice=parts.find(m=>m.type==='text')||parts[0];if(row.pushStatus!=='sent')notifyIncoming(c,notice);else if(cur().p!=='chat'||cur().id!==c.id){if(!_call)showMsgBanner(c,notice);playMessageDing();}}if(callKind){const fresh=Date.now()-base<=10*60000;if(fresh&&!_call&&!offlineFocusActive()&&!cinemaRoleOccupied(c.id)){pendingCalls.push({c,callKind});}else if(!fresh){list.push({id:uid(),role:'user',type:'sys',content:'未接来电 · '+(callKind==='video'?'视频通话':'语音通话'),time:base,_rolePushId:row.id,_serverProactive:true});changed=true;needsPersist=true;}}queueAck(row,true);}
     if(changed)save();
     if(needsPersist&&!(await persistWechatMessagesNow()))return false;
+    const newlyRemembered=[];for(const row of receiptPending){if(roleServerPushReceiptMark(row.id,row.at))newlyRemembered.push(row.id);}
+    if(newlyRemembered.length&&!(await saveNowAsync())){roleServerPushReceiptForget(newlyRemembered);return false;}
     if(changed){if(cur().p==='chat')refreshChatMessages(cur().id);else if(cur().p==='home')render();}
     if(ack.length)await companionRpc('phone_role_push_ack',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_ids:ack});
     pendingCalls.forEach(({c,callKind})=>setTimeout(()=>{if(incomingCall(c.id,callKind,{serverPush:true})&&_call){_call._pro=true;_call._proReason='这是角色本人从后台主动发起的来电；具体动机、情绪和开场由角色依据人设与真实上下文自主决定';}},350));return true;
@@ -10444,12 +10453,13 @@ function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］�
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
   return t;}
 function setNaturalInnerThought(c,value){if(!c||!wechatNaturalOn())return false;const text=String(value||'').replace(/\s+/g,' ').trim().slice(0,120);if(!text)return false;c.innerThought=text;c.innerThoughtAt=Date.now();return true;}
+function hiddenThoughtTagPresent(line){return /[\[【]\s*(?:内心|心情(?!值))\s*(?:[|｜:：]\s*)?[^\]】]*[\]】]/.test(String(line||''));}
+function stripHiddenThoughtTags(line,c){return String(line||'').replace(/[\[【]\s*(内心|心情(?!值))\s*(?:[|｜:：]\s*)?([^\]】]*)\s*[\]】]/g,(m,kind,value)=>{value=String(value||'').trim();if(c&&kind==='内心')setNaturalInnerThought(c,value);else if(c&&kind==='心情'&&!wechatNaturalOn()&&value){const mood=honestMoodText(c,value);c.mood=typeof moodInnerMonologue==='function'?moodInnerMonologue(c,mood):mood;}return '';}).replace(/[ \t]{2,}/g,' ').trim();}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
 const CONTROL_TAG_RE=new RegExp('[\\[【]\\s*(?:'+TAGWORDS+')(?:\\s*[\\|｜:：][^\\]】]*)?\\s*[\\]】]','g');
 function stripCallControlTags(line,c,id,keepActions){let t=normTag(line);
-  t=t.replace(/[\[【]\s*内心\s*[\|｜:：]\s*([^\]】]*)\s*[\]】]/g,(m,v)=>{if(c)setNaturalInnerThought(c,v);return '';});
+  t=stripHiddenThoughtTags(t,c);
   t=t.replace(/[\[【]\s*心情值\s*[\|｜:：]\s*([+\-]?\d{1,3})\s*[\]】]/g,(m,n)=>{if(c&&id)adjMood(id,parseInt(n,10)||0);return '';});
-  t=t.replace(/[\[【]\s*心情\s*[\|｜:：]\s*([^\]】]*)\s*[\]】]/g,(m,v)=>{if(c&&!wechatNaturalOn()){const mood=honestMoodText(c,(v||'').trim());c.mood=typeof moodInnerMonologue==='function'?moodInnerMonologue(c,mood):mood;}return '';});
   t=t.replace(CONTROL_TAG_RE,'').replace(/\[[^\]]*\]/g,'');
   if(!keepActions)t=t.replace(/【[^】]*】/g,'');
   return t.trim();}
@@ -10520,7 +10530,7 @@ function wxNarrationNameRe(cch){
   return '(?:'+names.map(wxEscRe).join('|')+')';
 }
 function cleanWechatVisibleLine(line,cch){
-  let t=cleanRolePunct(line).trim();
+  let t=stripHiddenThoughtTags(cleanRolePunct(line),cch).trim();
   if(!t)return '';
   if(wxKnownTagLine(t))return t;
   const nr=wxNarrationNameRe(cch);
@@ -10694,7 +10704,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(nativeInspectionPending(_lu,id)){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}/* 同一条消息若刚发起真实读取，等待读取结果；否则普通回复照常落地。 */
     const _replyCandidate=String(content||'').trim(),lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;
     for(let i=0;i<lines.length;i++){
-      let line=cleanRolePunct(normalizeImageLine(normTag(lines[i])));if(!line)continue;
+      let line=cleanRolePunct(normalizeImageLine(normTag(lines[i]))),hadHiddenThought=hiddenThoughtTagPresent(line);line=stripHiddenThoughtTags(line,c);if(hadHiddenThought)save();if(!line)continue;
       if(_initiativeNoImage&&/^[\[【]\s*(?:图片|照片|自拍)(?:\s*[|｜:：]|\s*[\]】])/.test(line)){photoTail=3;continue;}
       if(_initiativeNoLocation&&/^[\[【]\s*位置(?:\s*[|｜:：]|\s*[\]】])/.test(line))continue;
       if(photoTail>0&&isPhotoPromptFragment(line)){photoTail--;continue;}
@@ -11952,7 +11962,7 @@ function doPostMoment(){const t=$('#mm_t').value.trim();if(!t&&!(window._mmImgs|
   const p={id:uid(),authorId:'me',text:cleanMomentText(t)||t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[],acct:actId(),visible};
   S.moments.unshift(p);save();closeModal();render();reactToMyMoment(p);}
 function cleanRolePunct(t){return String(t||'');}
-function cleanReply(t){return cleanRolePunct((t||'').replace(/\[(心情|拍一拍|记住|闹钟|来电|联网|骰子|送礼|代付成功|日程|婚礼日程|监督目标|目标完成|转账|红包|位置|图片|文件|角色扮演|你画我猜)[^\]]*\]/g,'').replace(/^["「]+|["」]+$/g,'').trim()).trim();}
+function cleanReply(t){return cleanRolePunct(stripHiddenThoughtTags(t).replace(/\[(心情值|拍一拍|记住|闹钟|来电|联网|骰子|送礼|代付成功|日程|婚礼日程|监督目标|目标完成|转账|红包|位置|图片|文件|角色扮演|你画我猜)[^\]]*\]/g,'').replace(/^["「]+|["」]+$/g,'').trim()).trim();}
 function recordVisit(cid,where){const c=getC(cid);if(!c)return;if(!S.visitors)S.visitors=[];S.visitors.unshift({cid,name:c.remark||c.name,avatar:c.avatar,where:where||'朋友圈',time:Date.now()});if(S.visitors.length>40)S.visitors.length=40;save();}
 function momentVisibleTo(p,cid){if(!p||p.authorId!=='me')return true;if(!p.visible||!p.visible.length)return true;return p.visible.indexOf(cid)>=0;}
 async function reactToMyMoment(p){const pool=S.contacts.filter(c=>!c.deleted&&!c.blocked&&momentVisibleTo(p,c.id));
@@ -11962,21 +11972,21 @@ async function reactToMyMoment(p){const pool=S.contacts.filter(c=>!c.deleted&&!c
     else if(txt){p.comments.push({name:c.remark||c.name,cid:c.id,text:txt.slice(0,40)});}
     save();if(cur().p==='wechat'&&wxTab==='moments')momentRenderKeepScroll();}catch(e){}}}
 const _momentReplyBusy=new Set();
-function momentReplySpecific(txt){txt=cleanReply(roleVisibleEnvelopeText(txt)).trim();return txt.slice(0,80);/* 7 月 30 日行为：角色本人选择的“嗯、好”等短回复也是有效真回复，不能误判成失败。 */}
+function momentReplySpecific(txt,c){txt=stripHiddenThoughtTags(roleVisibleEnvelopeText(txt),c);txt=cleanReply(txt).trim();return txt.slice(0,80);/* 7 月 30 日行为：角色本人选择的“嗯、好”等短回复也是有效真回复，不能误判成失败。 */}
 function momentCommentReplyContact(p,cm){if(!p||!cm)return'';if(cm._roleReplyContactId&&getC(cm._roleReplyContactId))return cm._roleReplyContactId;if(p.authorId!=='me'&&getC(p.authorId))return p.authorId;const comments=p.comments||[],at=comments.indexOf(cm),before=at>=0?comments.slice(0,at):comments;for(let i=before.length-1;i>=0;i--){const row=before[i];if(row&&row.cid&&row.cid!=='me'&&getC(row.cid)&&(!cm.replyToName||row.name===cm.replyToName))return row.cid;}return'';}
 function momentRetryComment(pid,commentId){const p=(S.moments||[]).find(x=>x&&x.id===pid),comments=p&&p.comments||[],cm=comments.find(x=>x&&String(x.id||'')===String(commentId||''))||[...comments].reverse().find(x=>x&&x.cid==='me'&&x._roleReplyStatus==='failed');if(!p||!cm||cm.cid!=='me')return;const target=momentCommentReplyContact(p,cm);if(!target)return;cm._roleReplyContactId=target;save();reactToComment(p,target,cm);}
 async function reactToComment(p,toContactId,targetComment){const c=getC(toContactId||p.authorId);if(!c||!targetComment)return;const key=String(p.id)+':'+String(targetComment.id||targetComment.time||targetComment.text);if(_momentReplyBusy.has(key))return;_momentReplyBusy.add(key);try{
   targetComment._roleReplyContactId=c.id;targetComment._roleReplyStatus='pending';targetComment._roleReplyStartedAt=Date.now();delete targetComment._roleReplyError;save();momentRenderKeepScroll();
   const whoPosted=p.authorId==='me'?S.me.name:(p.authorId===c.id?'你自己':((getC(p.authorId)||{}).remark||(getC(p.authorId)||{}).name||'某人'));
   const thread=(p.comments||[]).slice(-24).map(cm=>((cm.name||'某人')+(cm.replyToName?' 回复 '+cm.replyToName:'')+'：'+(cm.text||'')).slice(0,320)).join('\n').slice(-6000);
-  const recent=msgs(c.id).slice(-6).map(msgToText).filter(Boolean).map(x=>String(x).slice(-900)).join('\n').slice(-5000);
-  const ctx=(recent?'你和'+S.me.name+'最近的微信聊天：\n'+recent+'\n\n':'')
+  const recent=lastRounds(msgs(c.id),12).slice(-80).map(m=>{const text=msgToText(m);if(!text)return'';const speaker=m.role==='assistant'?(c.remark||c.name||'角色'):S.me.name;return speaker+'：'+String(text).slice(-900);}).filter(Boolean).join('\n').slice(-10000);
+  const ctx=(recent?'你和'+S.me.name+'最近的微信私聊上下文（按时间顺序，已标明说话人）：\n'+recent+'\n\n':'')
     +'这是'+whoPosted+'发的朋友圈："'+(cleanMomentText(p.text).slice(0,1200)||'仅分享了图片')+'"\n'
     +(thread?'这条朋友圈下面的评论（按先后顺序）：\n'+thread+'\n\n':'')
     +S.me.name+'刚刚在评论区对你说："'+targetComment.text+'"\n'
-    +'请你以本人身份，针对ta这句评论的具体内容自然地回一句。先看懂ta说了什么，再像真人回评论那样接话、回应或调侃；不要答非所问，不要带方括号标记，只输出可直接发在评论区的一句话。';
-  const query=ctx.slice(-14000),memory=selectRelevantMemory(c,query,4),system=buildSystem(c,{natural:wechatNaturalOn(),query,selectiveMemory:true,memoryItems:memory.items})+memoryRetrievalPrompt(c,memory);
-  let txt='',lastError='';try{const r=await chatAPI([{role:'system',content:system},{role:'user',content:ctx}]);txt=momentReplySpecific(r);if(!txt)lastError='模型没有返回可直接发布的回复';}catch(e){lastError=String(e&&e.message||'回复接口失败').slice(0,160);}
+    +'请你以本人身份，针对ta这句评论的具体内容自然地回一句。先看懂ta说了什么，再像真人回评论那样接话、回应或调侃；不要答非所问。可见评论正文不要带方括号标记，只保留一句可直接发在评论区的话。';
+  const query=ctx.slice(-18000),memory=selectRelevantMemory(c,query,4),system=buildSystem(c,{natural:wechatNaturalOn(),query,selectiveMemory:true,memoryItems:memory.items})+memoryRetrievalPrompt(c,memory)+'\n\n# 当前回复场景（最高优先级）\n你现在是在微信朋友圈评论区回复，不是在微信私聊窗口。上面的“微信私聊上下文”是你和'+S.me.name+'此前真实的私聊记录，用来帮助你延续你们正在聊的事情和关系状态；“朋友圈评论”才是本次要直接回复的目标。可见部分只输出一条可发布在这条朋友圈评论区的本人回复。若上面的自然模式要求内心标签，则必须第一行严格写 [内心|简短真实想法]，第二行再写唯一一条可见评论；竖线不可省略，禁止写成 [内心想法]，也禁止把内心与评论挤在同一行。';
+  let txt='',lastError='';try{const r=await chatAPI([{role:'system',content:system},{role:'user',content:ctx}]);txt=momentReplySpecific(r,c);if(!txt)lastError='模型没有返回可直接发布的回复';}catch(e){lastError=String(e&&e.message||'回复接口失败').slice(0,160);}
   const live=S.moments.find(x=>x&&x.id===p.id);if(!live)return;live.comments=live.comments||[];const liveTarget=live.comments.find(cm=>cm===targetComment||cm&&targetComment.id&&cm.id===targetComment.id);if(!txt){if(liveTarget){liveTarget._roleReplyStatus='failed';liveTarget._roleReplyError=lastError||'角色没有形成真实回复';delete liveTarget._roleReplyStartedAt;save();momentRenderKeepScroll();}return;}if(live.comments.some(cm=>cm&&cm.replyToId===targetComment.id&&cm.cid===c.id)){if(liveTarget){delete liveTarget._roleReplyStatus;delete liveTarget._roleReplyError;delete liveTarget._roleReplyStartedAt;}save();return;}if(liveTarget){delete liveTarget._roleReplyStatus;delete liveTarget._roleReplyError;delete liveTarget._roleReplyStartedAt;}live.comments.push({id:uid(),name:c.remark||c.name,cid:c.id,text:txt,time:Date.now(),replyToId:targetComment.id||'',replyToName:targetComment.name||S.me.name});save();const page=cur();if((page.p==='wechat'&&wxTab==='moments')||page.p==='roleMomentDetail')momentRenderKeepScroll();
 }finally{_momentReplyBusy.delete(key);}}
 async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.blocked);if(!pool.length){toast('先创建角色');return;}
@@ -12230,7 +12240,7 @@ const roleAppWatchSavePrivateCore=roleAppWatchSave;
 roleAppWatchSave=function(id){if(!privateCompanionAppOn())return;return roleAppWatchSavePrivateCore(id);};
 
 /* ---------- 时钟 & 启动 ---------- */
-function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
+function paintBatt(){const b=$('#battinfo');if(!b)return;const value='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');if(b.textContent!==value)b.textContent=value;}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 function hydrateStoredImageNodes(){document.querySelectorAll('[data-idb-avatar]').forEach(el=>{const key=el.getAttribute('data-idb-avatar'),src=_imgCache[key];if(src){el.removeAttribute('data-idb-avatar');el.innerHTML='<img src="'+src+'">';}});document.querySelectorAll('img[src^="idb:"]').forEach(el=>{const src=_imgCache[(el.getAttribute('src')||'').slice(4)];if(src)el.src=src;});}
 function refreshHydratedUI(){hydrateStoredImageNodes();const a=document.activeElement,editing=a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable);if(!editing)render();if(_call&&_call.state==='incoming'&&!_call.opened){const c=getC(_call.id);if(c)showCallBanner(c);}}
@@ -12241,7 +12251,8 @@ window.addEventListener('pagehide',()=>{roleBackgroundFlush();audioMarkWakeRequi
 window.addEventListener('beforeunload',()=>{audioMarkWakeRequired();sleepMarkAway();callBackgroundHold();lockPrepareAway(true);if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}});
 window.addEventListener('pageshow',e=>{lockResumeFromAway();setTimeout(sleepAutoEndOnOpen,80);setTimeout(callResumeHold,120);setTimeout(suspicionTick,100);setTimeout(routeHash,120);setTimeout(()=>androidResumeRepair(!!e.persisted),260);setTimeout(()=>companionPollSnapshot(true),760);setTimeout(()=>roleServerPushPull(true),820);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){roleBackgroundFlush();audioMarkWakeRequired();if(_callHF&&!callHFMayStayInNativeBackground()){callHFStop();audioRouteReset(false);}_storeWarned=false;sleepMarkAway();callBackgroundHold();lockPrepareAway();if(_savePending){saveNow();persistWechatMessagesNow().catch(()=>{});}}else{lockResumeFromAway();sleepAutoEndOnOpen();try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}try{if(window.SmallPhoneNativeSpeech&&window.SmallPhoneNativeSpeech.flushPending)window.SmallPhoneNativeSpeech.flushPending().catch(()=>{});}catch(e){}audioProbeMicPermission();callResumeHold();setTimeout(routeHash,120);setTimeout(()=>androidResumeRepair(false),280);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);setTimeout(()=>Object.keys(_roleServerPushTestJobs).forEach(id=>{const row=_roleServerPushTestJobs[id];if(row&&row.taskId)roleServerPushTestPoll(id,row.taskId,true);}),1350);setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
-setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();const homeClock=$('#homeLiveTime');if(homeClock)homeClock.textContent=hm();const cohabClock=$('#cohabLiveTime');if(cohabClock)cohabClock.textContent=cohabClockText();paintBatt();renderLockClock();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
+function northUiClockTick(){if(typeof document!=='undefined'&&document.hidden)return;const now=hm(),c=$('#clock');if(c&&c.textContent!==now)c.textContent=now;const homeClock=$('#homeLiveTime');if(homeClock&&homeClock.textContent!==now)homeClock.textContent=now;const cohabClock=$('#cohabLiveTime'),cohab=cohabClock&&cohabClockText();if(cohabClock&&cohabClock.textContent!==cohab)cohabClock.textContent=cohab;paintBatt();renderLockClock(false);if(cur().p==='home'){const host=$('#app'),hh=host&&host.querySelector('.hh');if(hh&&hh.textContent!==now)hh.textContent=now;}}
+setInterval(northUiClockTick,1000);
 registerSW();['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev,accountSwitchFromEvent,{passive:false}));window.addEventListener('hashchange',routeHash);window.addEventListener('focus',()=>{sleepAutoEndOnOpen();setTimeout(suspicionTick,100);setTimeout(routeHash,120);setTimeout(()=>companionPollSnapshot(true),960);setTimeout(()=>roleServerPushPull(true),1020);});document.addEventListener('fullscreenchange',cinemaFullscreenChanged);document.addEventListener('webkitfullscreenchange',cinemaFullscreenChanged);
 function northViewportRect(selector){const el=document.querySelector(selector);if(!el)return null;const r=el.getBoundingClientRect();return {top:+r.top.toFixed(2),bottom:+r.bottom.toFixed(2),left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),height:+r.height.toFixed(2)};}
 function northViewportSafeInsets(){const probe=document.createElement('i');probe.setAttribute('aria-hidden','true');probe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:0;height:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);pointer-events:none;visibility:hidden';document.documentElement.appendChild(probe);const s=getComputedStyle(probe),out={top:parseFloat(s.paddingTop)||0,right:parseFloat(s.paddingRight)||0,bottom:parseFloat(s.paddingBottom)||0,left:parseFloat(s.paddingLeft)||0};probe.remove();return out;}
